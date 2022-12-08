@@ -5,59 +5,53 @@
 ## Getting Started
 `sbomnix` requires common Nix tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
 
-### Running without installing
+### Running without installation
 `sbomnix` requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
 ```
-# Install requirements:
 $ cd /path/to/sbomnix/
 $ pip3 install -r requirements.txt
-
-# After requirements have been installed, run sbomnix with '-m':
+```
+After requirements have been installed, you can run sbomnix with 'python3 -m':
+```
 $ python3 -m sbomnix.sbomnix 
 usage: sbomnix.py [-h] [--verbose VERBOSE] [--runtime] [--meta [META]] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
 ```
 
 ### Installation
-This README.md assumes you have installed `sbomnix` on your system. To install the tools from source, run:
+Examples in this README.md assume you have installed `sbomnix` on your system and that command `sbomnix` is in `$PATH`. To install `sbomnix` from source, run:
 ```
 $ python3 setup.py install --user
 ```
 
 ## Usage examples
-Generate SBOM based on derivation file:
+#### Generate SBOM based on derivation file
 ```
 $ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv
-INFO     Loading derivations referenced by "/nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv"
-WARNING  Command line argument '--meta' missing: SBOM will not include license information
+...
 INFO     Wrote: sbom.cdx.json
 INFO     Wrote: sbom.csv
 ```
-Generate SBOM based on derivation file, including meta (license) information:
-```
-# First, generate meta information:
-$ nix-env -qa --meta --json '.*' >meta.json
 
-# Use --meta to tell sbomnix to read meta information from the json file
+#### Generate SBOM based on derivation file, including meta information
+First, generate package meta information json file:
+```
+$ nix-env -qa --meta --json '.*' >meta.json
+```
+Use `--meta` to tell sbomnix to read meta information from the given json file:
+```
 $ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv --meta meta.json
-INFO     Loading derivations referenced by "/nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv"
-INFO     Loading meta info from "meta.json"
-INFO     Wrote: sbom.cdx.json
-INFO     Wrote: sbom.csv
 ```
-Generate SBOM based on derivation file, including meta (license) information. Only include runtime dependencies to the SBOM:
+
+#### Generate SBOM based on derivation file, including only runtime dependencies
+Use --runtime to tell sbomnix to only include runtime dependencies to the SBOM:
 ```
-# Use --runtime to tell sbomnix to only include runtime dependencies
 $ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv --meta meta.json --runtime
-INFO     Loading derivations referenced by "/nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv"
-INFO     Loading meta info from "meta.json"
-INFO     Wrote: sbom.cdx.json
-INFO     Wrote: sbom.csv
 ```
-Generate SBOM based on output path:
+#### Generate SBOM based on output path (rather than derivation file)
 ```
 $ sbomnix /path/to/result 
 ```
-Show help message:
+#### Show help message
 ```
 $ sbomnix --help
 ```
