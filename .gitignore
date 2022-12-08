@@ -1,0 +1,8 @@
+temp/
+venv/
+**/.vscode
+__pycache__/
+*.py[cod]
+*.csv
+*.log
+*.json

@@ -1,0 +1,6 @@
+pandas
+colorlog
+pycodestyle
+packageurl-python
+pylint
+black

@@ -1,0 +1,220 @@
+import functools
+import json
+import logging
+import re
+import itertools
+
+from sbomnix.utils import (
+    LOGGER_NAME,
+    LOG_SPAM,
+)
+
+###############################################################################
+
+_LOG = logging.getLogger(LOGGER_NAME)
+
+###############################################################################
+
+
+class SkipDrv(RuntimeError):
+    """This derivation cannot be treated as package."""
+
+    pass
+
+
+# see parseDrvName built-in Nix function
+# https://nixos.org/nix/manual/#ssec-builtins
+R_VERSION = re.compile(r"^(\S+?)-([0-9]\S*)$")
+
+
+def components_lt(left, right):
+    """Port from nix/src/libexpr/names.cc"""
+    try:
+        lnum = int(left)
+    except (ValueError):
+        lnum = None
+    try:
+        rnum = int(right)
+    except (ValueError):
+        rnum = None
+    if lnum is not None and rnum is not None:
+        return lnum < rnum
+    if left == "" and rnum is not None:
+        return True
+    if left == "pre" and right != "pre":
+        return True
+    if right == "pre":
+        return False
+    if rnum is not None:
+        return True
+    if lnum is not None:
+        return False
+    return left < right
+
+
+def category(char):
+    """Classify `char` into: punctuation, digit, non-digit."""
+    if char in (".", "-"):
+        return 0
+    if char in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"):
+        return 1
+    return 2
+
+
+def split_components(v):
+    """Yield cohesive groups of digits or non-digits. Skip punctuation."""
+    start = 0
+    stop = len(v)
+    while start < stop:
+        cat0 = category(v[start])
+        i = start + 1
+        while i < stop and category(v[i]) == cat0:
+            i += 1
+        if cat0 != 0:
+            yield v[start:i]
+        start = i
+
+
+def compare_versions(left, right):
+    """Compare two versions with the same logic as `nix-env -u`.
+
+    Returns -1 if `left` is older than `right`, 1 if `left` is newer
+    than `right`, and 0 if both versions are considered equal.
+
+    See https://nixos.org/nix/manual/#ssec-version-comparisons for rules
+    and examples.
+    """
+    if left == right:
+        return 0
+    for (lc, rc) in itertools.zip_longest(
+        split_components(left), split_components(right), fillvalue=""
+    ):
+        if lc == rc:
+            continue
+        if components_lt(lc, rc):
+            return -1
+        if components_lt(rc, lc):
+            return 1
+    return 0
+
+
+################################################################################
+
+
+def split_name(fullname):
+    """Returns the pure package name and version of a derivation."""
+    if fullname.endswith(".drv"):
+        fullname = fullname[:-4]
+    m = R_VERSION.match(fullname)
+    if m:
+        return m.group(1), m.group(2)
+    return fullname, None
+
+
+def dump(obj):
+    for attr in vars(obj):
+        _LOG.log(LOG_SPAM, "obj.%s = %r" % (attr, getattr(obj, attr)))
+
+
+def load(path):
+    _LOG.debug("")
+    with open(path) as f:
+        d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
+    d_obj.store_path = path
+    _LOG.debug("load derivation: %s" % d_obj)
+    dump(d_obj)
+    d_obj.to_dict()
+    return d_obj
+
+
+def destructure(env):
+    """Decodes Nix 2.0 __structuredAttrs."""
+    return json.loads(env["__json"])
+
+
+IGNORE_EXT = {
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+    ".tar.lz",
+    ".tgz",
+    ".zip",
+    ".gem",
+    ".patch",
+    ".patch.gz",
+    ".patch.xz",
+    ".diff",
+}
+
+
+@functools.total_ordering
+class Derive(object):
+    """Nix derivation as found as .drv files in the Nix store."""
+
+    store_path = None
+
+    def __init__(
+        self,
+        _outputs=None,
+        _inputDrvs=None,
+        _inputSrcs=None,
+        _system=None,
+        _builder=None,
+        _args=None,
+        envVars={},
+        _derivations=None,
+        name=None,
+        patches=None,
+    ):
+        """Create a derivation from a .drv file.
+
+        The derivation files are just accidentally Python-syntax, but
+        hey! :-)
+        """
+        envVars = dict(envVars)
+        _LOG.log(LOG_SPAM, envVars)
+        self.name = name or envVars.get("name")
+        if not self.name:
+            self.name = destructure(envVars)["name"]
+        for e in IGNORE_EXT:
+            if self.name.endswith(e):
+                raise SkipDrv()
+
+        self.pname, self.version = split_name(self.name)
+        if not self.version:
+            raise SkipDrv()
+        self.patches = patches or envVars.get("patches", "")
+        # self.info = envVars.get('info')
+        self.system = envVars.get("system")
+
+    def __repr__(self):
+        return "<Derive({})>".format(repr(self.name))
+
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return NotImplementedError()
+        return self.name == other.name and self.patches == other.patches
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __lt__(self, other):
+        if self.pname < other.pname:
+            return True
+        if self.pname > other.pname:
+            return False
+        return compare_versions(self.version, other.version) == -1
+
+    def __gt__(self, other):
+        if self.pname > other.pname:
+            return True
+        if self.pname < other.pname:
+            return False
+        return compare_versions(self.version, other.version) == 1
+
+    def to_dict(self):
+        ret = {}
+        for attr in vars(self):
+            ret[attr] = getattr(self, attr)
+        _LOG.log(LOG_SPAM, "dict: %s" % ret)
+        return ret
