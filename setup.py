@@ -5,7 +5,7 @@ import setuptools
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
 
-requires = ["pandas", "tabulate", "colorlog", "packageurl-python"]
+requires = ["pandas", "colorlog", "packageurl-python"]
 
 setuptools.setup(
     name="sbomnix",
@@ -27,7 +27,6 @@ setuptools.setup(
     ],
     keywords="SBOM",
     packages=setuptools.find_packages(include=["sbomnix", "sbomnix.*"]),
-    zip_safe=False,
     entry_points={
         "console_scripts": [
             "sbomnix = sbomnix.sbomnix:main",
