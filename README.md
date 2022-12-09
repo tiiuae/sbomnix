@@ -34,6 +34,7 @@ usage: sbomnix.py [-h] [--verbose VERBOSE] [--runtime] [--meta [META]] [--csv [C
 ### Installation
 Examples in this README.md assume you have installed `sbomnix` on your system and that command `sbomnix` is in `$PATH`. To install `sbomnix` from source, run:
 ```
+$ cd /path/to/sbomnix/
 $ pip3 install --user .
 ```
 
