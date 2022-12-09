@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Unikie
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
 endef
@@ -14,7 +18,7 @@ install-requirements: ## Install all requirements
 	pip3 install -r requirements.txt --no-cache-dir
 	$(call target_success,$@)
 
-pre-push: black style pylint  ## Run pycodestyle, pylint
+pre-push: black style pylint reuse-lint  ## Run pycodestyle, pylint, reuse-lint
 	$(call target_success,$@)
 
 black: clean ## Reformat with black
@@ -27,6 +31,10 @@ style: clean ## Check with pycodestyle (pep8)
 
 pylint: clean ## Check with pylint
 	@for py in $(shell find . -path ./venv -prune -false -o -name "*.py"); do echo "$$py:"; pylint -rn $$py; done
+	$(call target_success,$@)
+
+reuse-lint: clean ## Check with reuse lint
+	reuse lint
 	$(call target_success,$@)
 
 clean: clean-pyc ## Remove all artifacts

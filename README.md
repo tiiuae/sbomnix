@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Unikie
+
+SPDX-License-Identifier: BSD-3-Clause
+-->
+
 # sbomnix
 
 `sbomnix` is a utility that generates SBOMs from nix packages. It uses the dependency scanner from [vulnix](https://github.com/flyingcircusio/vulnix).
@@ -73,3 +79,26 @@ $ sbomnix /path/to/result
 ```
 $ sbomnix --help
 ```
+
+## Contribute
+Any pull requests, suggestions, and error reports are welcome.
+To start development, we recommend using lightweight [virtual environments](https://docs.python.org/3/library/venv.html) by running the following commands:
+```
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix/
+$ python3 -mvenv venv
+$ source venv/bin/activate
+$ pip3 install -e .
+```
+Next, run `make install-requirements` to set up the virtualenv:
+```
+$ make install-requirements
+```
+Run `make help` to see the list of other make targets.
+Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.
+
+To deactivate the virtualenv, run `deactivate` in your shell.
+
+
+## License
+This project is licensed under the BSD 3-Clause license - see the [BSD-3-Clause.txt](LICENSES/BSD-3-Clause.txt) file for details.

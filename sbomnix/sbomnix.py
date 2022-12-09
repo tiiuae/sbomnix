@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# SPDX-FileCopyrightText: 2022 Unikie
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # pylint: disable=fixme
 
 """ Python script that generates SBOMs from nix packages """

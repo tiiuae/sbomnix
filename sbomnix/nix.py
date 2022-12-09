@@ -1,3 +1,10 @@
+# From: https://github.com/henrirosten/vulnix/blob/master/LICENSE:
+# SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
+
+# SPDX-FileCopyrightText: 2022 Unikie
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
 import os

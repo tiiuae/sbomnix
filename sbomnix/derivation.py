@@ -1,3 +1,10 @@
+# From: https://github.com/henrirosten/vulnix/blob/master/LICENSE:
+# SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
+
+# SPDX-FileCopyrightText: 2022 Unikie
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # pylint: disable=unnecessary-pass, too-many-return-statements
 # pylint: disable=invalid-name, eval-used, unidiomatic-typecheck
 

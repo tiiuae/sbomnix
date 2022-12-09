@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Unikie
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """ setup.py for setuptools """
 
 import setuptools
@@ -5,7 +9,7 @@ import setuptools
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
 
-requires = ["pandas", "colorlog", "packageurl-python"]
+requires = ["pandas", "colorlog", "packageurl-python", "wheel"]
 
 setuptools.setup(
     name="sbomnix",
@@ -18,7 +22,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     python_requires=">=3.8",
     install_requires=requires,
-    license="MIT",
+    license="BSD-3-Clause",
     classifiers=[  # See:https://pypi.org/classifiers/
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT",
