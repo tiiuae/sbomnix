@@ -1,5 +1,7 @@
 """ sbomnix utils """
 
+# pylint: disable=invalid-name
+
 import csv
 import logging
 import subprocess
@@ -56,9 +58,10 @@ def setup_logging(verbosity=1):
 
 
 def exec_cmd(cmd):
+    """Run shell command cmd"""
     command_str = " ".join(cmd)
-    logging.getLogger(LOGGER_NAME).debug("Running: %s" % command_str)
-    ret = subprocess.run(cmd, capture_output=True, encoding="utf-8")
+    logging.getLogger(LOGGER_NAME).debug("Running: %s", command_str)
+    ret = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
     return ret.stdout
 
 

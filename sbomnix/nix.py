@@ -13,7 +13,6 @@ from sbomnix.utils import (
 from sbomnix.derivation import (
     load,
     SkipDrv,
-    Derive,
 )
 
 ###############################################################################
@@ -23,7 +22,7 @@ _LOG = logging.getLogger(LOGGER_NAME)
 ###############################################################################
 
 
-class Store():
+class Store:
     """Nix store"""
 
     def __init__(self, nix_path, runtime=False):
@@ -57,15 +56,13 @@ class Store():
 
         error = ""
         if qpi_deriver and qpi_deriver != "unknown-deriver":
-            error += "Deriver `{}` does not exist.  ".format(qpi_deriver)
+            error += f"Deriver `{qpi_deriver}` does not exist.  "
         if qvd_deriver and qvd_deriver != qpi_deriver:
-            error += "Deriver `{}` does not exist.  ".format(qvd_deriver)
+            error += f"Deriver `{qvd_deriver}` does not exist.  "
         if error:
-            raise RuntimeError(
-                error + "Couldn't find deriver for path `{}`".format(path)
-            )
+            raise RuntimeError(error + f"Couldn't find deriver for path `{path}`")
         raise RuntimeError(
-            "Cannot determine deriver. Is this really a path into the " "nix store?",
+            "Cannot determine deriver. Is this really a path into the nix store?",
             path,
         )
 
@@ -85,8 +82,8 @@ class Store():
         _LOG.debug("")
         if not os.path.exists(path):
             raise RuntimeError(
-                "path `{}` does not exist - cannot load "
-                "derivations referenced from it".format(path)
+                f"path `{path}` does not exist - cannot load "
+                "derivations referenced from it"
             )
         _LOG.info('Loading derivations referenced by "%s"', path)
 
@@ -113,7 +110,7 @@ class Store():
                 self._update(candidate)
 
     def _update(self, drv_path):
-        _LOG.debug("drv_path=%s" % (drv_path))
+        _LOG.debug("drv_path=%s", drv_path)
         if not drv_path.endswith(".drv"):
             return
         try:
@@ -124,10 +121,12 @@ class Store():
         self.target_derivation = drv_path
 
     def get_target_drv_path(self):
-        _LOG.debug("path = %s" % self.target_derivation)
+        """Get the target derivation path"""
+        _LOG.debug("path=%s", self.target_derivation)
         return self.target_derivation
 
     def to_dataframe(self):
+        """Return store derivations as pandas dataframe"""
         _LOG.debug("")
         drv_dicts = [drv.to_dict() for drv in self.derivations]
         return pd.DataFrame.from_records(drv_dicts)

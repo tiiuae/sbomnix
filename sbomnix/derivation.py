@@ -1,3 +1,8 @@
+# pylint: disable=unnecessary-pass, too-many-return-statements
+# pylint: disable=invalid-name, eval-used, unidiomatic-typecheck
+
+""" Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
+
 import functools
 import json
 import logging
@@ -31,11 +36,11 @@ def components_lt(left, right):
     """Port from nix/src/libexpr/names.cc"""
     try:
         lnum = int(left)
-    except (ValueError):
+    except ValueError:
         lnum = None
     try:
         rnum = int(right)
-    except (ValueError):
+    except ValueError:
         rnum = None
     if lnum is not None and rnum is not None:
         return lnum < rnum
@@ -111,19 +116,15 @@ def split_name(fullname):
     return fullname, None
 
 
-def dump(obj):
-    for attr in vars(obj):
-        _LOG.log(LOG_SPAM, "obj.%s = %r" % (attr, getattr(obj, attr)))
-
-
 def load(path):
+    """Load derivation from path"""
     _LOG.debug("")
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
     d_obj.store_path = path
-    _LOG.debug("load derivation: %s" % d_obj)
-    dump(d_obj)
-    d_obj.to_dict()
+    _LOG.debug("load derivation: %s", d_obj)
+    if _LOG.level <= LOG_SPAM:
+        _LOG.log(LOG_SPAM, "deivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
@@ -148,7 +149,7 @@ IGNORE_EXT = {
 
 
 @functools.total_ordering
-class Derive(object):
+class Derive:
     """Nix derivation as found as .drv files in the Nix store."""
 
     store_path = None
@@ -161,7 +162,7 @@ class Derive(object):
         _system=None,
         _builder=None,
         _args=None,
-        envVars={},
+        envVars=None,
         _derivations=None,
         name=None,
         patches=None,
@@ -171,6 +172,8 @@ class Derive(object):
         The derivation files are just accidentally Python-syntax, but
         hey! :-)
         """
+        if envVars is None:
+            envVars = {}
         envVars = dict(envVars)
         _LOG.log(LOG_SPAM, envVars)
         self.name = name or envVars.get("name")
@@ -184,11 +187,10 @@ class Derive(object):
         if not self.version:
             raise SkipDrv()
         self.patches = patches or envVars.get("patches", "")
-        # self.info = envVars.get('info')
         self.system = envVars.get("system")
 
     def __repr__(self):
-        return "<Derive({})>".format(repr(self.name))
+        return f"<Derive({repr(self.name)})>"
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -213,8 +215,9 @@ class Derive(object):
         return compare_versions(self.version, other.version) == 1
 
     def to_dict(self):
+        """Return derivation as dictionary"""
+
         ret = {}
         for attr in vars(self):
             ret[attr] = getattr(self, attr)
-        _LOG.log(LOG_SPAM, "dict: %s" % ret)
         return ret

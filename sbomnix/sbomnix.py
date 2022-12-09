@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# pylint: disable=fixme
+
 """ Python script that generates SBOMs from nix packages """
 
 import argparse
@@ -37,8 +39,8 @@ def getargs():
         "writes SBOM file(s) as specified in output arguments."
     )
     epil = (
-        "Example: ./%s /path/to/derivation.drv "
-        "--meta /path/to/meta.json --runtime" % os.path.basename(__file__)
+        f"Example: ./{os.path.basename(__file__)} /path/to/derivation.drv "
+        "--meta /path/to/meta.json --runtime"
     )
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
@@ -86,8 +88,8 @@ def parse_meta_entry(meta, key):
 def parse_json_metadata(json_filename):
     """Parse package metadata from the specified json file"""
 
-    with open(json_filename, "r") as inf:
-        _LOG.info('Loading meta info from "%s"' % json_filename)
+    with open(json_filename, "r", encoding="utf-8") as inf:
+        _LOG.info('Loading meta info from "%s"', json_filename)
         json_dict = json.loads(inf.read())
 
         dict_selected = {}
@@ -132,8 +134,8 @@ def licenses_entry_from_row(row, column_name, cdx_license_type):
     # Parse the ";" separated licenses to cdx license format
     license_strings = license_str.split(";")
     for license_string in license_strings:
-        license = {"license": {cdx_license_type: license_string}}
-        licenses.append(license)
+        license_dict = {"license": {cdx_license_type: license_string}}
+        licenses.append(license_dict)
     return licenses
 
 
@@ -176,7 +178,7 @@ def sbomdb_to_cdx(df_sbomdb, cdx_path, target_path):
     cdx["bomFormat"] = "CycloneDX"
     cdx["specVersion"] = "1.3"
     cdx["version"] = 1
-    cdx["serialNumber"] = "urn:uuid:{}".format(uuid.uuid4())
+    cdx["serialNumber"] = f"urn:uuid:{uuid.uuid4()}"
     cdx["metadata"] = {}
     tool = {}
     tool["vendor"] = "Unikie"
@@ -192,10 +194,10 @@ def sbomdb_to_cdx(df_sbomdb, cdx_path, target_path):
         else:
             cdx["components"].append(component)
 
-    with open(cdx_path, "w") as outfile:
+    with open(cdx_path, "w", encoding="utf-8") as outfile:
         json_string = json.dumps(cdx, indent=2)
         outfile.write(json_string)
-        _LOG.info("Wrote: %s" % outfile.name)
+        _LOG.info("Wrote: %s", outfile.name)
 
 
 ################################################################################
@@ -212,7 +214,7 @@ def sbomdb_df(store, meta_json_path=None):
     # meta json was specified
     if meta_json_path is not None:
         df_meta = parse_json_metadata(meta_json_path)
-        if logging.root.level <= logging.DEBUG:
+        if _LOG.level <= logging.DEBUG:
             df_to_csv_file(df_meta, "meta.csv")
         # Join based on package name including the version number
         df_sbomdb = df_store.merge(
