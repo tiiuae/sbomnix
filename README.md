@@ -20,7 +20,8 @@ Table of Contents
    * [Generate SBOM including only runtime dependencies](#generate-sbom-including-only-runtime-dependencies)
    * [Generate SBOM based on output path](#generate-sbom-based-on-output-path)
    * [Show help message](#show-help-message)
-
+* [Contribute](#contribute)
+* [License](#license)
 
 ## Getting Started
 `sbomnix` requires common Nix tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
