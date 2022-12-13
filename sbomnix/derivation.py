@@ -194,7 +194,8 @@ class Derive:
         if not self.version:
             raise SkipDrv()
         self.patches = patches or envVars.get("patches", "")
-        self.system = envVars.get("system")
+        self.system = envVars.get("system", "")
+        self.out = envVars.get("out", "")
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
