@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 from packageurl import PackageURL
 
+from sbomnix.cpe import CPE
 from sbomnix.utils import (
     setup_logging,
     LOGGER_NAME,
@@ -169,6 +170,7 @@ def df_row_to_cdx_component(row):
     component["version"] = row.version
     purl = PackageURL(type="nix", name=row.pname, version=row.version)
     component["purl"] = str(purl)
+    component["cpe"] = CPE().generate(row.pname, row.version)
     cdx_component_add_licenses(component, row)
     return component
 
@@ -245,7 +247,7 @@ def main():
     if not args.meta:
         _LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "
-            "license information"
+            "license information (see '--help' for more details)"
         )
 
     df_sbomdb = sbomdb_df(store, args.meta)

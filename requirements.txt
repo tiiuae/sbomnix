@@ -6,6 +6,7 @@ pandas
 colorlog
 pycodestyle
 packageurl-python
+tabulate
 pylint
 black
 reuse

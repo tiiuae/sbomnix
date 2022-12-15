@@ -14,6 +14,11 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
+install: ## Install sbomnix
+	pip3 install --user .
+	sbomnix -h 2>/dev/null
+	$(call target_success,$@)
+
 install-requirements: ## Install all requirements
 	pip3 install -r requirements.txt --no-cache-dir
 	$(call target_success,$@)

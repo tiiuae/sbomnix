@@ -4,7 +4,10 @@
 
 temp/
 venv/
-**/.vscode
+cpedict/
+build/
+*.egg-info/
+.eggs/
 __pycache__/
 *.py[cod]
 *.csv
