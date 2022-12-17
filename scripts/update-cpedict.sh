@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# SPDX-FileCopyrightText: 2022 Unikie
+# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
 #
-# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-License-Identifier: Apache-2.0
 
 ################################################################################
 
