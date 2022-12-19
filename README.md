@@ -1,7 +1,7 @@
 <!--
-SPDX-FileCopyrightText: 2022 Unikie
+SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
 
-SPDX-License-Identifier: BSD-3-Clause
+SPDX-License-Identifier: Apache-2.0
 -->
 
 # sbomnix
@@ -102,4 +102,4 @@ To deactivate the virtualenv, run `deactivate` in your shell.
 
 
 ## License
-This project is licensed under the BSD 3-Clause license - see the [BSD-3-Clause.txt](LICENSES/BSD-3-Clause.txt) file for details.
+This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt](LICENSES/Apache-2.0.txt) file for details.

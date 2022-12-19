@@ -1,6 +1,6 @@
-# SPDX-FileCopyrightText: 2022 Unikie
+# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
 #
-# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-License-Identifier: Apache-2.0
 
 """ setup.py for setuptools """
 
@@ -16,16 +16,16 @@ setuptools.setup(
     version="0.1.0",
     description="Utility that generates SBOMs from nix packages",
     url="https://github.com/tiiuae/sbomnix",
-    author="Unikie",
+    author="TII",
     author_email="henri.rosten@unikie.com",
     long_description=long_description,
     long_description_content_type="text/markdown",
     python_requires=">=3.8",
     install_requires=requires,
-    license="BSD-3-Clause",
+    license="Apache-2.0",
     classifiers=[  # See:https://pypi.org/classifiers/
         "Development Status :: 3 - Alpha",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3 :: Only",
     ],

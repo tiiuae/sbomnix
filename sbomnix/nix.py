@@ -1,9 +1,8 @@
-# From: https://github.com/henrirosten/vulnix/blob/master/LICENSE:
+# From: https://github.com/flyingcircusio/vulnix/blob/1.10.1/LICENSE:
+# SPDX-License-Identifier: BSD-3-Clause
 # SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
 
-# SPDX-FileCopyrightText: 2022 Unikie
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
 
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
