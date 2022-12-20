@@ -15,9 +15,12 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
 install: install-requirements ## Install sbomnix
-	pip3 install --user .
+	pip3 install .
+	@if ! sbomnix -h 2>/dev/null; then \
+		echo "\033[31mError:\033[0m failed to run sbomnix, maybe it's not in your PATH?"; \
+		exit 1; \
+	fi
 	$(call target_success,$@)
-	@sbomnix -h 2>/dev/null
 
 uninstall: clean ## Uninstall sbomnix
 	pip3 uninstall -y sbomnix 
