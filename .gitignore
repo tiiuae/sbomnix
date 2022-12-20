@@ -9,6 +9,8 @@ build/
 *.egg-info/
 .eggs/
 __pycache__/
+sbomnix_test_data/
+result
 *.py[cod]
 *.csv
 *.log

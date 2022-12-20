@@ -32,9 +32,12 @@ Table of Contents
 $ cd /path/to/sbomnix/
 $ pip3 install -r requirements.txt
 ```
-After requirements have been installed, you can run sbomnix with 'python3 -m':
+After requirements have been installed, you can run sbomnix:
 ```
-$ python3 -m sbomnix.sbomnix 
+$ cd /path/to/sbomnix/
+# Add sbomnix to PYTHONPATH if needed: 
+$ echo :"$PYTHONPATH": | grep :"$(pwd)": || export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+$ python3 sbomnix/main.py
 usage: sbomnix.py [-h] [--verbose VERBOSE] [--runtime] [--meta [META]] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
 ```
 

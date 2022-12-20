@@ -4,9 +4,13 @@
 
 pandas
 colorlog
-pycodestyle
 packageurl-python
 tabulate
+
+# Move to requirements-dev.txt:
+pycodestyle
 pylint
 black
 reuse
+pytest
+jsonschema

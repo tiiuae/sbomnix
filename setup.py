@@ -34,7 +34,7 @@ setuptools.setup(
     scripts=["scripts/update-cpedict.sh"],
     entry_points={
         "console_scripts": [
-            "sbomnix = sbomnix.sbomnix:main",
+            "sbomnix = sbomnix.main:main",
         ]
     },
 )
