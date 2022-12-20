@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+export PYTHONPATH := $(PYTHONPATH):$(shell pwd)
+
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
 endef
