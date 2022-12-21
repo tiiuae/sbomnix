@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: GitHub Actions CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+      - name: Test nix-build
+        run: nix-build '<nixpkgs>' -A hello
+      - name: Run tests
+        run: make pre-push
