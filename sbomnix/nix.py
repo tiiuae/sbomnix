@@ -106,7 +106,19 @@ class Store:
                     )
                     if p.get("deriver") is not None
                     else None,
-                    json.loads(exec_cmd(["nix", "path-info", "-r", "--json", output])),
+                    json.loads(
+                        exec_cmd(
+                            [
+                                "nix",
+                                "--extra-experimental-features",
+                                "nix-command",
+                                "path-info",
+                                "-r",
+                                "--json",
+                                output,
+                            ]
+                        )
+                    ),
                 ):
                     if candidate is not None:
                         self._update(candidate)
