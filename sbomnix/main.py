@@ -187,7 +187,7 @@ def sbomdb_to_cdx(df_sbomdb, cdx_path, target_path):
     cdx["serialNumber"] = f"urn:uuid:{uuid.uuid4()}"
     cdx["metadata"] = {}
     tool = {}
-    tool["vendor"] = "Unikie"
+    tool["vendor"] = "TII"
     tool["name"] = "sbomnix"
     tool["version"] = "0.1.0"
     cdx["metadata"]["tools"] = []
