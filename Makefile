@@ -61,13 +61,12 @@ reuse-lint: clean ## Check with reuse lint
 	reuse lint
 	$(call target_success,$@)
 
-clean: clean-pyc ## Remove all artifacts
-	$(call target_success,$@)
-
-clean-pyc: ## Remove Python artifacts
+clean: ## Remove all artifacts
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '.eggs' -exec rm -rf {} +
 	rm -fr dist/
 	rm -fr build/
+	rm -fr .pytest_cache/
+	$(call target_success,$@)
