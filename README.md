@@ -35,9 +35,7 @@ $ pip3 install -r requirements.txt
 ```
 After requirements have been installed, you can run sbomnix as follows:
 ```bash
-# Add sbomnix to PYTHONPATH if needed: 
-$ echo :"$PYTHONPATH": | grep :"$(pwd)": || export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-
+$ source scripts/env.sh
 $ python3 sbomnix/main.py
 usage: sbomnix.py [-h] [--verbose VERBOSE] [--runtime] [--meta [META]] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
 ```
@@ -94,11 +92,8 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
 $ python3 -mvenv venv
 $ source venv/bin/activate
-$ make install
-```
-Next, run `make install-requirements` to set up the virtualenv:
-```bash
-$ make install-requirements
+$ source scripts/env.sh
+$ make install-dev
 ```
 Run `make help` to see the list of other make targets.
 Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.

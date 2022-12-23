@@ -9,7 +9,7 @@ import setuptools
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
 
-requires = ["pandas", "colorlog", "packageurl-python", "tabulate", "wheel"]
+requires = ["pandas", "colorlog", "packageurl-python", "tabulate", "graphviz", "wheel"]
 
 setuptools.setup(
     name="sbomnix",
@@ -30,11 +30,12 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="SBOM",
-    packages=setuptools.find_packages(include=["sbomnix", "sbomnix.*"]),
+    packages=setuptools.find_packages(include=["sbomnix", "nixgraph"]),
     scripts=["scripts/update-cpedict.sh"],
     entry_points={
         "console_scripts": [
             "sbomnix = sbomnix.main:main",
+            "nixgraph= nixgraph.main:main",
         ]
     },
 )
