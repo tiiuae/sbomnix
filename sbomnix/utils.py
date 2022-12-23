@@ -6,6 +6,7 @@
 
 """ sbomnix utils """
 
+import re
 import sys
 import csv
 import logging
@@ -104,6 +105,13 @@ def exec_cmd(cmd):
             error.stderr,
         )
         raise error
+
+
+def regex_match(regex, string):
+    """Return True if regex matches string"""
+    if not regex or not string:
+        return False
+    return re.match(regex, string) is not None
 
 
 ################################################################################

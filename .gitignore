@@ -15,3 +15,7 @@ result
 *.csv
 *.log
 *.json
+*.png
+*.jpg
+*.pdf
+*.dot

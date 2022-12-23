@@ -2,12 +2,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# common
 pandas
 colorlog
-packageurl-python
 tabulate
+wheel
 
-# Move to requirements-dev.txt:
+# sbomnix
+packageurl-python
+
+# nixgraph
+graphviz
+
+# dev requirements
 pycodestyle
 pylint
 black
