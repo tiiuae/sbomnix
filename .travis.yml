@@ -4,6 +4,10 @@
 
 language: python
 dist: focal
+addons:
+  apt:
+    packages:
+      - graphviz
 python:
   - 3.8
 install:

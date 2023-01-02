@@ -44,6 +44,12 @@ def df_from_csv_file(name):
         sys.exit(1)
 
 
+def df_regex_filter(df, column, regex):
+    """Return rows where column 'column' values match the given regex"""
+    logging.getLogger(LOGGER_NAME).debug("column:'%s', regex:'%s'", column, regex)
+    return df[df[column].str.contains(regex, regex=True, na=False)]
+
+
 def print_df(df, tablefmt="presto"):
     """Pretty-print dataframe to stdout"""
     if df.empty:
