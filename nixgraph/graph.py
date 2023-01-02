@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=too-few-public-methods, invalid-name
+# pylint: disable=too-many-instance-attributes
 
 """ Python script to query and visualize nix package dependencies """
 
@@ -22,6 +23,7 @@ from sbomnix.utils import (
     exec_cmd,
     df_to_csv_file,
     regex_match,
+    df_regex_filter,
 )
 
 ###############################################################################
@@ -62,35 +64,64 @@ class NixDependencyGraph:
         self.digraph = None
         # Keep track of paths drawn to not re-draw them
         self.paths_drawn = set()
+        # Rows that match the query when output format is csv
+        self.df_out_csv = None
         # Default parameters
         self.maxdepth = 1
-        self.merge_edges = False
+        self.inverse_regex = None
         self.until_regex = None
         self.colorize_regex = None
 
     def draw(self, start_path, args):
         """Draw dependency graph"""
+        self._is_csv_out(args.out)
         self.maxdepth = args.depth
-        self.until_regex = f"{args.until}"
-        self.colorize_regex = f"{args.colorize}"
-        concentrate = "true" if self.merge_edges else "false"
+        self.inverse_regex = args.inverse
+        self.until_regex = args.until
+        self.colorize_regex = args.colorize
         self.digraph = gv.Digraph(filename=args.out)
         self.digraph.attr("graph", rankdir="LR")
         self.digraph.attr("node", shape="box")
         self.digraph.attr("node", style="rounded")
         self.digraph.attr("node", margin="0.3,0.1")
-        self.digraph.attr("graph", concentrate=concentrate)
-        nixfilter = NixGraphFilter(target_path=start_path)
+        self.digraph.attr("graph", concentrate="false")
         initlen = len(self.digraph.body)
-        # Generate the graph
-        self._graph(nixfilter)
-        # Render the graph if any nodes were added
+
+        if self.inverse_regex:
+            # If inverse_regex is specified, draw the graph backwards starting
+            # from nodes where src_pname matches the specified regex
+            df = df_regex_filter(self.df, "src_pname", self.inverse_regex)
+            for row in df.itertuples():
+                inverse_path = row.src_path
+                _LOG.debug("Start path inverse: %s", inverse_path)
+                nixfilter = NixGraphFilter(src_path=inverse_path)
+                self._graph(nixfilter)
+        else:
+            # Otherwise, draw the graph starting from the given start_path
+            _LOG.debug("Start path: %s", start_path)
+            nixfilter = NixGraphFilter(target_path=start_path)
+            self._graph(nixfilter)
+
         if len(self.digraph.body) > initlen:
+            # Render the graph if any nodes were added
             self._render(args.out)
+        elif self.df_out_csv is not None and not self.df_out_csv.empty:
+            # Output csv if csv format was specified
+            df_to_csv_file(self.df_out_csv, args.out)
         else:
             _LOG.warning("No matches: nothing to draw")
 
+    def _is_csv_out(self, filename):
+        _fname, extension = os.path.splitext(filename)
+        fileformat = extension[1:]
+        if fileformat == "csv":
+            self.df_out_csv = pd.DataFrame()
+        else:
+            self.df_out_csv = None
+
     def _render(self, filename):
+        if self.df_out_csv is not None:
+            return
         fname, extension = os.path.splitext(filename)
         gformat = extension[1:]
         self.digraph.render(filename=fname, format=gformat, cleanup=True)
@@ -110,6 +141,9 @@ class NixDependencyGraph:
             # Reached leaf: no more matches
             _LOG.debug("%sFound nothing", (DBG_INDENT * (curr_depth - 1)))
             return
+        if self.df_out_csv is not None:
+            df.insert(0, "graph_depth", curr_depth)
+            self.df_out_csv = pd.concat([self.df_out_csv, df])
         for row in df.itertuples():
             self._dbg_print_row(row, curr_depth)
             # Stop drawing if 'until_regex' matches
@@ -125,8 +159,13 @@ class NixDependencyGraph:
             self._add_node(row.target_path, row.target_pname)
             # Add edge between the nodes
             self._add_edge(row)
+
             # Construct the filter for next query in the graph
-            nixfilter = NixGraphFilter(target_path=row.src_path)
+            if self.inverse_regex:
+                nixfilter = NixGraphFilter(src_path=row.target_path)
+            else:
+                nixfilter = NixGraphFilter(target_path=row.src_path)
+
             # Recursively find the next entries
             self._graph(nixfilter, curr_depth)
 
@@ -145,9 +184,13 @@ class NixDependencyGraph:
         return self.df.query(query_str)
 
     def _add_edge(self, row):
+        if self.df_out_csv is not None:
+            return
         self.digraph.edge(row.target_path, row.src_path, style=None)
 
     def _add_node(self, path, pname):
+        if self.df_out_csv is not None:
+            return
         node_id = path
         label = html.escape(str(pname))
         fillcolor = "#EEEEEE"
@@ -202,7 +245,15 @@ class NixDependencies:
 
     def _parse_runtime_dependencies(self, nix_path):
         # map nix_path to output path by calling nix path-info
-        nix_out = exec_cmd(["nix", "path-info", nix_path]).strip()
+        nix_out = exec_cmd(
+            [
+                "nix",
+                "--extra-experimental-features",
+                "nix-command",
+                "path-info",
+                nix_path,
+            ]
+        ).strip()
         _LOG.debug("nix_out: %s", nix_out)
         self.start_path = nix_out
         # nix-store -q --graph outputs runtime dependencies when applied
@@ -213,7 +264,16 @@ class NixDependencies:
 
     def _parse_buildtime_dependencies(self, nix_path):
         # map nix_path to derivation path by calling nix path-info
-        nix_drv = exec_cmd(["nix", "path-info", "--derivation", nix_path]).strip()
+        nix_drv = exec_cmd(
+            [
+                "nix",
+                "--extra-experimental-features",
+                "nix-command",
+                "path-info",
+                "--derivation",
+                nix_path,
+            ]
+        ).strip()
         _LOG.debug("nix_drv: %s", nix_drv)
         self.start_path = nix_drv
         # nix-store -q --graph outputs buildtime dependencies when applied

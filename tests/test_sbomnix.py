@@ -3,13 +3,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Tests for sbomnix.py """
+# pylint: disable=invalid-name
+
+""" Tests for sbomnix """
 
 import os
 import subprocess
 import shutil
 from pathlib import Path
 import json
+import imghdr
+import pandas as pd
 import jsonschema
 import pytest
 
@@ -18,6 +22,7 @@ MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 TEST_WORK_DIR = MYDIR / "sbomnix_test_data"
 TEST_NIX_RESULT = TEST_WORK_DIR / "result"
 SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
+NIXGRAPH = MYDIR / ".." / "nixgraph" / "main.py"
 
 
 ################################################################################
@@ -40,9 +45,9 @@ def set_up_test_data():
     shutil.rmtree(TEST_WORK_DIR)
 
 
-def test_help():
+def test_sbomnix_help():
     """
-    Test command line argument: '-h'
+    Test sbomnix command line argument: '-h'
     """
     cmd = [SBOMNIX, "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
@@ -79,6 +84,101 @@ def test_sbomnix_cdx_runtime():
 ################################################################################
 
 
+def test_nixgraph_help():
+    """
+    Test nixgraph command line argument: '-h'
+    """
+    cmd = [NIXGRAPH, "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_nixgraph_png():
+    """
+    Test nixgraph with png output generates valid png image
+    """
+    png_out = TEST_WORK_DIR / "graph.png"
+    cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", png_out, "--depth", "3"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(png_out).exists()
+    # Check the output is valid png file
+    assert imghdr.what(png_out) == "png"
+
+
+def test_nixgraph_csv():
+    """
+    Test nixgraph with csv output generates valid csv
+    """
+    csv_out = TEST_WORK_DIR / "graph.csv"
+    cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--depth", "3"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(csv_out).exists()
+    # Check the output is valid csv file
+    df_out = pd.read_csv(csv_out)
+    assert not df_out.empty
+
+
+def test_nixgraph_csv_buildtime():
+    """
+    Test nixgraph with buildtime csv output generates valid csv
+    """
+    csv_out = TEST_WORK_DIR / "graph_buildtime.csv"
+    cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--buildtime"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(csv_out).exists()
+    # Check the output is valid csv file
+    df_out = pd.read_csv(csv_out)
+    assert not df_out.empty
+
+
+def test_nixgraph_csv_graph_inverse():
+    """
+    Test nixgraph with '--inverse' argument
+    """
+    csv_out = TEST_WORK_DIR / "graph.csv"
+    cmd = [
+        NIXGRAPH,
+        TEST_NIX_RESULT,
+        "--out",
+        csv_out,
+        "--depth=100",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(csv_out).exists()
+    df_out = pd.read_csv(csv_out)
+    assert not df_out.empty
+
+    csv_out_inv = TEST_WORK_DIR / "graph_inverse.csv"
+    cmd = [
+        NIXGRAPH,
+        TEST_NIX_RESULT,
+        "--out",
+        csv_out_inv,
+        "--depth=100",
+        "--inverse=libunistring",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(csv_out_inv).exists()
+    df_out_inv = pd.read_csv(csv_out_inv)
+    assert not df_out_inv.empty
+
+    # When 'depth' covers the entire graph, the output from
+    # the two above commands should be the same, except for column
+    # 'graph_depth': below, we remove that column from both outputs and
+    # compare the two dataframes
+
+    df_out = df_out.drop("graph_depth", axis=1)
+    df_out = df_out.sort_values(by=["src_path"])
+
+    df_out_inv = df_out_inv.drop("graph_depth", axis=1)
+    df_out_inv = df_out_inv.sort_values(by=["src_path"])
+
+    df_diff = df_difference(df_out, df_out_inv)
+    assert df_diff.empty, df_to_string(df_diff)
+
+
+################################################################################
+
+
 def validate_json(file_path, schema_path):
     """Validate json file matches schema"""
     with open(file_path, encoding="utf-8") as json_file, open(
@@ -87,6 +187,37 @@ def validate_json(file_path, schema_path):
         json_obj = json.load(json_file)
         schema_obj = json.load(schema_file)
         jsonschema.validate(json_obj, schema_obj)
+
+
+def df_to_string(df):
+    """Convert dataframe to string"""
+    return (
+        "\n"
+        + df.to_string(max_rows=None, max_cols=None, index=False, justify="left")
+        + "\n"
+    )
+
+
+def df_difference(df_left, df_right):
+    """Return dataframe that represents diff of two dataframes"""
+    df_right = df_right.astype(df_left.dtypes.to_dict())
+    df = df_left.merge(
+        df_right,
+        how="outer",
+        indicator=True,
+    )
+    # Keep only the rows that differ (that are not in both)
+    df = df[df["_merge"] != "both"]
+    # Rename 'left_only' and 'right_only' values in '_merge' column
+    df["_merge"] = df["_merge"].replace(["left_only"], "EXPECTED ==>  ")
+    df["_merge"] = df["_merge"].replace(["right_only"], "RESULT ==>  ")
+    # Re-order columns: last column ('_merge') becomes first
+    cols = df.columns.tolist()
+    cols = cols[-1:] + cols[:-1]
+    df = df[cols]
+    # Rename '_merge' column to empty string
+    df = df.rename(columns={"_merge": ""})
+    return df
 
 
 ################################################################################

@@ -38,11 +38,20 @@ def getargs():
     parser.add_argument("--depth", help=helps, type=check_positive, default=1)
 
     helps = (
+        "Draw inverse graph starting from nodes that match the specified "
+        "regular expression"
+    )
+    parser.add_argument("--inverse", help=helps)
+
+    helps = (
         "Set the output file name, default is 'graph.png'. "
         "The output filename extension determines the output format. "
         "Common supported formats include: png, jpg, pdf, and dot. "
         "For a full list of supported output formats, see: "
-        "https://graphviz.org/doc/info/output.html."
+        "https://graphviz.org/doc/info/output.html. In addition to graphviz "
+        "supported output formats, the tool supports output in csv to "
+        "allow post-processing the output data. Specify output file with "
+        ".csv extension to output the query result in textual csv format."
     )
     parser.add_argument("--out", nargs="?", help=helps, default="graph.png")
 
