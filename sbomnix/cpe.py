@@ -59,6 +59,7 @@ class _CPE:
         week_ago = datetime.datetime.now() - datetime.timedelta(days=7)
         if cpe_updated < week_ago:
             # Try updating cpe dictionary if it wasn't recently updated
+            _LOG.debug("Attempting periodic update of cpe dictionary")
             if not self._update_cpedict():
                 _LOG.warning(
                     "CPE data is not up-to-date: CPE identifiers will be inaccurate"

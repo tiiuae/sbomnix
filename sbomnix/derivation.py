@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import itertools
+from sbomnix.cpe import CPE
 
 from sbomnix.utils import (
     LOGGER_NAME,
@@ -195,6 +196,7 @@ class Derive:
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "")
+        self.cpe = CPE().generate(self.pname, self.version)
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"

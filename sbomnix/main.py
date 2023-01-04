@@ -18,7 +18,6 @@ import pandas as pd
 import numpy as np
 from packageurl import PackageURL
 
-from sbomnix.cpe import CPE
 from sbomnix.utils import (
     setup_logging,
     LOGGER_NAME,
@@ -170,7 +169,7 @@ def df_row_to_cdx_component(row):
     component["version"] = row.version
     purl = PackageURL(type="nix", name=row.pname, version=row.version)
     component["purl"] = str(purl)
-    component["cpe"] = CPE().generate(row.pname, row.version)
+    component["cpe"] = row.cpe
     cdx_component_add_licenses(component, row)
     return component
 
