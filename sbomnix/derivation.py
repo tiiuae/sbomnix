@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
 
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
 # pylint: disable=unnecessary-pass, too-many-return-statements
 # pylint: disable=invalid-name, eval-used, unidiomatic-typecheck

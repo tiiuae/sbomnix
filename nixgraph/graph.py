@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -305,7 +305,8 @@ class NixDependencies:
         edge = NixDependency(src_path, src_pname, target_path, target_pname)
         self.dependencies.add(edge)
 
-    def _to_dataframe(self):
+    def to_dataframe(self):
+        """Return the dependencies as pandas dataframe"""
         deps = [dep.to_dict() for dep in self.dependencies]
         df = pd.DataFrame.from_records(deps)
         if _LOG.level <= logging.DEBUG:
@@ -314,7 +315,7 @@ class NixDependencies:
 
     def graph(self, args):
         """Draw the dependencies as directed graph"""
-        digraph = NixDependencyGraph(self._to_dataframe())
+        digraph = NixDependencyGraph(self.to_dataframe())
         digraph.draw(self.start_path, args)
 
 
