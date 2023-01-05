@@ -6,6 +6,7 @@
 
 # pylint: disable=unnecessary-pass, too-many-return-statements
 # pylint: disable=invalid-name, eval-used, unidiomatic-typecheck
+# pylint: disable=too-many-instance-attributes
 
 """ Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
 
@@ -14,6 +15,7 @@ import json
 import logging
 import re
 import itertools
+from packageurl import PackageURL
 from sbomnix.cpe import CPE
 
 from sbomnix.utils import (
@@ -192,11 +194,14 @@ class Derive:
 
         self.pname, self.version = split_name(self.name)
         if not self.version:
-            raise SkipDrv()
+            _LOG.debug("missing version information: '%s'", self.pname)
+            self.version = ""
+            # raise SkipDrv()
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "")
         self.cpe = CPE().generate(self.pname, self.version)
+        self.purl = str(PackageURL(type="nix", name=self.pname, version=self.version))
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"

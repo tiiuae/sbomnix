@@ -4,25 +4,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=fixme
+# pylint: disable=fixme,invalid-name
 
 """ Module for generating SBOMs in various formats """
 
 import uuid
 import logging
 import json
-
+import re
 import pandas as pd
 import numpy as np
 from packageurl import PackageURL
+from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store
 from sbomnix.utils import (
     LOGGER_NAME,
     df_to_csv_file,
 )
-
-# from nixgraph.graph import NixDependencies
-
 
 ###############################################################################
 
@@ -32,15 +30,93 @@ _LOG = logging.getLogger(LOGGER_NAME)
 
 
 class SbomDb:
-    """SbomDb allows generating SBOMs in various formats"""
+    """Generates SBOMs in various formats"""
 
     def __init__(self, nix_path, runtime=False, meta_path=None):
-        _LOG.debug("")
         self.store = Store(nix_path, runtime)
-        self.df_sbomdb = self._generate_sbomdb(meta_path)
+        self.df_sbomdb = self._get_sbomdb(meta_path)
+        self.df_runtime_deps = self._get_runtime_deps(nix_path)
+        self.df_buildtime_deps = None
+        # No need to parse buildtime dependencies if 'runtime' was requested:
+        if not runtime:
+            self.df_buildtime_deps = self._get_buildtime_deps(nix_path)
 
-    def _generate_sbomdb(self, meta_path):
-        _LOG.debug("")
+    def _get_runtime_deps(self, nix_path):
+        """Return 'nix_path' runtime dependencies as dataframe"""
+        runtime_deps = NixDependencies(nix_path, buildtime=False)
+        df = runtime_deps.to_dataframe()
+        if df is None:
+            _LOG.warning("Failed finding runtime dependencies for '%s'", nix_path)
+            return None
+        # Join runtime dependency data with sbomdb
+        df_deps = self.df_sbomdb.merge(
+            df,
+            how="left",
+            left_on=["out"],
+            right_on=["target_path"],
+            suffixes=["", "_right"],
+        )
+        return self._src_path_to_purl(df_deps, runtime=True)
+
+    def _get_buildtime_deps(self, nix_path):
+        """Return 'nix_path' buildtime dependencies as dataframe"""
+        buildtime_deps = NixDependencies(nix_path, buildtime=True)
+        df = buildtime_deps.to_dataframe()
+        if df is None:
+            _LOG.warning("Failed finding buildtime dependencies for '%s'", nix_path)
+            return None
+        # Join buildtime dependency data with sbomdb
+        df_deps = self.df_sbomdb.merge(
+            df,
+            how="left",
+            left_on=["store_path"],
+            right_on=["target_path"],
+            suffixes=["", "_right"],
+        )
+        return self._src_path_to_purl(df_deps, runtime=False)
+
+    def _src_path_to_purl(self, df_deps, runtime):
+        """Derive df_deps.purl based on df_deps.src_path"""
+        if runtime:
+            deps_debug_out = "sbomdb_runtime_deps.csv"
+            re_split = re.compile(
+                r"""/nix/store/[^-]+-(.+?)-([0-9].+)|  # with version number
+                    /nix/store/[^-]+-(.+?)""",  # without version number
+                re.X,
+            )
+        else:
+            deps_debug_out = "sbomdb_buildtime_deps.csv"
+            re_split = re.compile(
+                r"""/nix/store/[^-]+-(.+?)-([0-9].+)\.drv|  # with version number
+                    /nix/store/[^-]+-(.+?)\.drv""",  # without version number
+                re.X,
+            )
+        # Add df_deps.purl based on df_deps.src_path
+        selected_columns = ["purl", "src_path"]
+        df_deps = df_deps[selected_columns]
+        df_deps = df_deps[df_deps.src_path.notnull()]
+        # Split src_path to name and version
+        re_cols = ["name", "ver", "name_no_ver"]
+        df_deps[re_cols] = df_deps["src_path"].str.extract(re_split, expand=True)
+        # Drop rows where all re_cols column values are nan
+        df_deps = df_deps.dropna(axis=0, how="all", subset=re_cols)
+        # Construct purl for the depends-on packages, use package name and
+        # version when available, otherwise, use only the name
+        df_deps["depends_on_purl"] = df_deps.apply(
+            lambda x: purl(x["name"], x["ver"])
+            if not pd.isnull(x["ver"])
+            else purl(x["name_no_ver"]),
+            axis=1,
+        )
+        # Only keep the selected_columns
+        selected_columns = ["purl", "depends_on_purl"]
+        df_deps = df_deps[selected_columns]
+        if _LOG.level <= logging.DEBUG:
+            df_to_csv_file(df_deps, deps_debug_out)
+        return df_deps
+
+    def _get_sbomdb(self, meta_path):
+        """Convert SbomDb to dataframe (joined with meta information)"""
         df_store = self.store.to_dataframe()
         df_sbomdb = df_store
         if meta_path is not None:
@@ -91,6 +167,11 @@ class SbomDb:
         df_to_csv_file(self.df_sbomdb, csv_path)
 
 
+def purl(purl_name, purl_version=""):
+    """Return PackageURL string given the name and version"""
+    return str(PackageURL(type="nix", name=purl_name, version=purl_version))
+
+
 ################################################################################
 
 # CycloneDX
@@ -138,8 +219,7 @@ def _df_row_to_cdx_component(row):
     component["bom-ref"] = row.store_path
     component["name"] = row.pname
     component["version"] = row.version
-    purl = PackageURL(type="nix", name=row.pname, version=row.version)
-    component["purl"] = str(purl)
+    component["purl"] = row.purl
     component["cpe"] = row.cpe
     _cdx_component_add_licenses(component, row)
     return component

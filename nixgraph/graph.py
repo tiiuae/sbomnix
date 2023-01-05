@@ -310,7 +310,7 @@ class NixDependencies:
         deps = [dep.to_dict() for dep in self.dependencies]
         df = pd.DataFrame.from_records(deps)
         if _LOG.level <= logging.DEBUG:
-            df_to_csv_file(df, f"deps_{self.dtype}.csv")
+            df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
         return df
 
     def graph(self, args):
