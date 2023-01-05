@@ -142,7 +142,7 @@ def destructure(env):
     return json.loads(env["__json"])
 
 
-IGNORE_EXT = {
+IGNORE_NAMES = {
     ".tar.gz",
     ".tar.bz2",
     ".tar.xz",
@@ -154,6 +154,8 @@ IGNORE_EXT = {
     ".patch.gz",
     ".patch.xz",
     ".diff",
+    "?id=",
+    "?p=",
 }
 
 
@@ -188,15 +190,14 @@ class Derive:
         self.name = name or envVars.get("name")
         if not self.name:
             self.name = destructure(envVars)["name"]
-        for e in IGNORE_EXT:
-            if self.name.endswith(e):
+        for e in IGNORE_NAMES:
+            if e in self.name:
                 raise SkipDrv()
 
         self.pname, self.version = split_name(self.name)
         if not self.version:
             _LOG.debug("missing version information: '%s'", self.pname)
             self.version = ""
-            # raise SkipDrv()
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "")

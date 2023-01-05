@@ -132,7 +132,7 @@ class SbomDb:
                 suffixes=["", "_meta"],
             )
         df_sbom = df_sbomdb.replace(np.nan, "", regex=True)
-        return df_sbom.drop_duplicates(subset="store_path", keep="first")
+        return df_sbom.drop_duplicates(subset=["purl"], keep="first")
 
     def to_cdx(self, cdx_path):
         """Export sbomdb to cyclonedx json file"""
@@ -216,7 +216,7 @@ def _df_row_to_cdx_component(row):
     """Convert one entry from df_sbomdb (row) to cdx component"""
     component = {}
     component["type"] = "application"
-    component["bom-ref"] = row.store_path
+    component["bom-ref"] = row.purl
     component["name"] = row.pname
     component["version"] = row.version
     component["purl"] = row.purl
