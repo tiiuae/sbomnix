@@ -35,11 +35,25 @@ class SbomDb:
     def __init__(self, nix_path, runtime=False, meta_path=None):
         self.store = Store(nix_path, runtime)
         self.df_sbomdb = self._get_sbomdb(meta_path)
-        self.df_runtime_deps = self._get_runtime_deps(nix_path)
-        self.df_buildtime_deps = None
+        # Read runtime and buildtime dependencies
+        df_rdeps = self._get_runtime_deps(nix_path)
+        df_bdeps = None
         # No need to parse buildtime dependencies if 'runtime' was requested:
         if not runtime:
-            self.df_buildtime_deps = self._get_buildtime_deps(nix_path)
+            df_bdeps = self._get_buildtime_deps(nix_path)
+        # Concat buildtime and runtime dependencies dropping duplicates
+        self.df_deps = pd.concat([df_rdeps, df_bdeps], ignore_index=True)
+        self.df_deps.drop_duplicates()
+        # Remove dependencies to packages that don't exist in sbom. Such
+        # packages might exist in df_deps because packages in sbom are
+        # cleaned as per IGNORE_NAMES in derivation.py
+        sbom = list(self.df_sbomdb["purl"].unique())
+        self.df_deps = self.df_deps[self.df_deps["depends_on_purl"].isin(sbom)]
+        # To see which dependencies are dropped, try:
+        # self.df_deps = self.df_deps[~self.df_deps["depends_on_purl"].isin(sbom)]
+        # then run with '--verbose=2' and then check the following file:
+        if _LOG.level <= logging.DEBUG:
+            df_to_csv_file(self.df_deps, "sbomdb_deps.csv")
 
     def _get_runtime_deps(self, nix_path):
         """Return 'nix_path' runtime dependencies as dataframe"""
@@ -76,7 +90,7 @@ class SbomDb:
         return self._src_path_to_purl(df_deps, runtime=False)
 
     def _src_path_to_purl(self, df_deps, runtime):
-        """Derive df_deps.purl based on df_deps.src_path"""
+        """Generate df_deps.purl based on df_deps.src_path"""
         if runtime:
             deps_debug_out = "sbomdb_runtime_deps.csv"
             re_split = re.compile(
@@ -150,12 +164,15 @@ class SbomDb:
         cdx["metadata"]["tools"] = []
         cdx["metadata"]["tools"].append(tool)
         cdx["components"] = []
+        cdx["dependencies"] = []
         for row in self.df_sbomdb.itertuples():
             component = _df_row_to_cdx_component(row)
             if row.store_path == target_path:
                 cdx["metadata"]["component"] = component
             else:
                 cdx["components"].append(component)
+            dependency = _df_row_to_dependency(row, self.df_deps)
+            cdx["dependencies"].append(dependency)
 
         with open(cdx_path, "w", encoding="utf-8") as outfile:
             json_string = json.dumps(cdx, indent=2)
@@ -213,7 +230,7 @@ def _cdx_component_add_licenses(component, row):
 
 
 def _df_row_to_cdx_component(row):
-    """Convert one entry from df_sbomdb (row) to cdx component"""
+    """Convert one entry from sbomdb (row) to cdx component"""
     component = {}
     component["type"] = "application"
     component["bom-ref"] = row.purl
@@ -223,6 +240,17 @@ def _df_row_to_cdx_component(row):
     component["cpe"] = row.cpe
     _cdx_component_add_licenses(component, row)
     return component
+
+
+def _df_row_to_dependency(row, df_deps):
+    """Return cdx dependency structure for sbomdb row"""
+    dependency = {}
+    dependency["ref"] = row.purl
+    df_deps_ons = df_deps[df_deps["purl"] == row.purl]
+    deps_on_purls = list(df_deps_ons["depends_on_purl"].unique())
+    if deps_on_purls:
+        dependency["dependsOn"] = deps_on_purls
+    return dependency
 
 
 ###############################################################################
