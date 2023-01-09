@@ -14,6 +14,7 @@ import json
 import re
 import pandas as pd
 import numpy as np
+from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from packageurl import PackageURL
 from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store
@@ -207,6 +208,11 @@ def _licenses_entry_from_row(row, column_name, cdx_license_type):
     # Parse the ";" separated licenses to cdx license format
     license_strings = license_str.split(";")
     for license_string in license_strings:
+        # Give up generating the 'licenses' entry if license id should be
+        # spdx but it's not:
+        if "spdxid" in column_name and license_string not in SPDX_LICENSES:
+            _LOG.debug("Invalid spdxid license '%s':'%s'", row.name, license_string)
+            return []
         license_dict = {"license": {cdx_license_type: license_string}}
         licenses.append(license_dict)
     return licenses
@@ -216,14 +222,13 @@ def _cdx_component_add_licenses(component, row):
     """Add licenses array to cdx component (if any)"""
     licenses = []
     # First, try reading the license in spdxid-format
-    # TODO: spdxid license data from meta in many cases is not spdxids
-    # but something else, therefore, skipping this for now:
-    # licenses = licenses_entry_from_row(row, "meta_license_spdxid", "id")
+    licenses = _licenses_entry_from_row(row, "meta_license_spdxid", "id")
     # If it fails, try reading the license short name
     if not licenses:
         licenses = _licenses_entry_from_row(row, "meta_license_short", "name")
     # Give up if pacakge does not have license information associated
     if not licenses:
+        _LOG.debug("No license info found for '%s'", row.name)
         return
     # Otherwise, add the licenses entry
     component["licenses"] = licenses

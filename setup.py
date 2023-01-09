@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -9,7 +9,15 @@ import setuptools
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
 
-requires = ["pandas", "colorlog", "packageurl-python", "tabulate", "graphviz", "wheel"]
+requires = [
+    "pandas",
+    "colorlog",
+    "packageurl-python",
+    "tabulate",
+    "graphviz",
+    "reuse",
+    "wheel",
+]
 
 setuptools.setup(
     name="sbomnix",
