@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
 
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
 # pylint: disable=unnecessary-pass, too-many-return-statements
 # pylint: disable=invalid-name, eval-used, unidiomatic-typecheck
+# pylint: disable=too-many-instance-attributes
 
 """ Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
 
@@ -14,6 +15,8 @@ import json
 import logging
 import re
 import itertools
+from packageurl import PackageURL
+from sbomnix.cpe import CPE
 
 from sbomnix.utils import (
     LOGGER_NAME,
@@ -139,7 +142,7 @@ def destructure(env):
     return json.loads(env["__json"])
 
 
-IGNORE_EXT = {
+IGNORE_NAMES = {
     ".tar.gz",
     ".tar.bz2",
     ".tar.xz",
@@ -151,6 +154,8 @@ IGNORE_EXT = {
     ".patch.gz",
     ".patch.xz",
     ".diff",
+    "?id=",
+    "?p=",
 }
 
 
@@ -185,16 +190,19 @@ class Derive:
         self.name = name or envVars.get("name")
         if not self.name:
             self.name = destructure(envVars)["name"]
-        for e in IGNORE_EXT:
-            if self.name.endswith(e):
+        for e in IGNORE_NAMES:
+            if e in self.name:
                 raise SkipDrv()
 
         self.pname, self.version = split_name(self.name)
         if not self.version:
-            raise SkipDrv()
+            _LOG.debug("missing version information: '%s'", self.pname)
+            self.version = ""
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "")
+        self.cpe = CPE().generate(self.pname, self.version)
+        self.purl = str(PackageURL(type="nix", name=self.pname, version=self.version))
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
