@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -66,6 +66,9 @@ def getargs():
         "or when the specified graph depth is reached."
     )
     parser.add_argument("--until", help=helps)
+
+    helps = "Show nix store path in node label, together with package name"
+    parser.add_argument("--pathnames", help=helps, action="store_true")
 
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     parser.add_argument("--verbose", help=helps, type=int, default=1)

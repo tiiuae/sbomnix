@@ -19,6 +19,7 @@ Table of Contents
    * [Example: inverse](#example-inverse)
    * [Example: package buildtime dependencies](#example-package-buildtime-dependencies)
    * [Example: output format](#example-output-format)
+   * [Example: pathnames](#example-pathnames)
 
 
 ## Getting Started
@@ -119,3 +120,14 @@ Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies i
 $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --out="graph.dot"
 ```
 By default `nixgraph` outputs the graph in png image `graph.png`. To change the output file name and format, use the `--out` argument. The output filename extension determines the output format.  As an example, the above command would output the graph in `dot` format. For a full list of supported output formats, see: https://graphviz.org/doc/info/output.html. In addition to graphviz supported output formats, the tool supports output in csv to allow post-processing the output data.
+
+
+#### Example: pathnames
+```bash
+$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=1 --pathnames
+```
+
+`--pathnames` argument allows adding store path to node label in the output graph:
+
+<img src=wget_r1_paths.png>
+<br /><br />
