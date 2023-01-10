@@ -71,6 +71,7 @@ class NixDependencyGraph:
         self.inverse_regex = None
         self.until_regex = None
         self.colorize_regex = None
+        self.pathnames = False
 
     def draw(self, start_path, args):
         """Draw dependency graph"""
@@ -79,6 +80,7 @@ class NixDependencyGraph:
         self.inverse_regex = args.inverse
         self.until_regex = args.until
         self.colorize_regex = args.colorize
+        self.pathnames = args.pathnames
         self.digraph = gv.Digraph(filename=args.out)
         self.digraph.attr("graph", rankdir="LR")
         self.digraph.attr("node", shape="box")
@@ -192,7 +194,13 @@ class NixDependencyGraph:
         if self.df_out_csv is not None:
             return
         node_id = path
-        label = html.escape(str(pname))
+        node_name = html.escape(str(pname))
+        if self.pathnames:
+            beg = '<FONT POINT-SIZE="8">'
+            end = "</FONT>"
+            label = f"<{node_name}<BR/>{beg}{str(path)}{end}>"
+        else:
+            label = node_name
         fillcolor = "#EEEEEE"
         if regex_match(self.colorize_regex, pname):
             fillcolor = "#FFE6E6"
