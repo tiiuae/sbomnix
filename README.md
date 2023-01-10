@@ -1,12 +1,13 @@
 <!--
-SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
 SPDX-License-Identifier: Apache-2.0
 -->
 
 # sbomnix
 
-`sbomnix` is a utility that generates SBOMs from nix packages. It uses the dependency scanner from [vulnix](https://github.com/flyingcircusio/vulnix).
+`sbomnix` is a utility that generates SBOMs for [nix](https://nixos.org/) packages.
+In addition to `sbomnix` this repository is a home to `nixgraph`, a python library and [command line utility](./doc/nixgraph.md) for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
 
 Table of Contents
 =================
@@ -19,12 +20,14 @@ Table of Contents
    * [Generate SBOM including meta information](#generate-sbom-including-meta-information)
    * [Generate SBOM including only runtime dependencies](#generate-sbom-including-only-runtime-dependencies)
    * [Generate SBOM based on output path](#generate-sbom-based-on-output-path)
-   * [Show help message](#show-help-message)
+   * [Visualize package dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
+* [Acknowledgements](#acknowledgements)
 
 ## Getting Started
 `sbomnix` requires common Nix tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
+`nixgraph` requires [graphviz](https://graphviz.org/download/).
 
 ### Running without installation
 `sbomnix` requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
@@ -49,10 +52,18 @@ $ pip3 install .
 ```
 
 ## Usage examples
+In the below examples, we use nix package `wget` as an example target.
+To install wget and print out its derivation path on your local system, try something like:
+```bash
+$ nix-env -i wget && nix-env -q -a --drv-path wget
+installing 'wget-1.21.3'
+wget-1.21.3  /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
+```
+
 #### Generate SBOM based on derivation file
 By default `sbomnix` scans the given derivation and generates an SBOM including both buildtime and runtime dependencies:
 ```bash
-$ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv
+$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
 ...
 INFO     Wrote: sbom.cdx.json
 INFO     Wrote: sbom.csv
@@ -66,23 +77,32 @@ $ nix-env -qa --meta --json '.*' >meta.json
 ```
 Then, run `sbomnix` with `--meta` argument to tell sbomnix to read meta information from the given json file:
 ```bash
-$ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv --meta meta.json
+$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json
 ```
 
 #### Generate SBOM including only runtime dependencies
 Use `--runtime` to tell sbomnix to only include the runtime dependencies to the SBOM:
 ```bash
-$ sbomnix /nix/store/qcvlk255x98i46cg9vphkdw5pghrizsh-hello-2.12.1.drv --meta meta.json --runtime
+$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json --runtime
 ```
 #### Generate SBOM based on output path
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):
 ```bash
 $ sbomnix /path/to/result 
 ```
-#### Show help message
+#### Visualize package dependencies
+`sbomnix` finds the package dependencies using `nixgraph`. 
+Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
+Below, we show an example of visualizing package `wget` runtime dependencies:
 ```bash
-$ sbomnix --help
+$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth 3
 ```
+
+Which outputs the dependency graph as an image (with maxdepth 3):
+
+<img src=doc/wget_runtime.png width="900">
+
+For more examples on querying and visualizing the package dependencies, see: [nixgraph](./doc/nixgraph.md).
 
 ## Contribute
 Any pull requests, suggestions, and error reports are welcome.
@@ -103,3 +123,7 @@ To deactivate the virtualenv, run `deactivate` in your shell.
 
 ## License
 This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt](LICENSES/Apache-2.0.txt) file for details.
+
+
+## Acknowledgements
+`sbomnix` uses nix store derivation scanner ([nix.py](sbomnix/nix.py) and [derivation.py](sbomnix/derivation.py)) originally from [vulnix](https://github.com/flyingcircusio/vulnix).
