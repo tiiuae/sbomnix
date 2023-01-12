@@ -84,7 +84,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 `--inverse` is especially useful when working with larger graphs. 
 
 As an example, consider the following graph for `git`:
-(`nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=2 --colorize="openssl-3|sqlite-3"`)
+(`nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)
 
 <img src=git_r2_col.png width="900">
 <br /><br />
