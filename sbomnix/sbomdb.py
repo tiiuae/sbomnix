@@ -250,6 +250,19 @@ def _df_row_to_cdx_component(row):
     component["purl"] = row.purl
     component["cpe"] = row.cpe
     _cdx_component_add_licenses(component, row)
+    properties = []
+    if row.out:
+        prop = {}
+        prop["name"] = "nix:out_path"
+        prop["value"] = row.out
+        properties.append(prop)
+    if row.store_path:
+        prop = {}
+        prop["name"] = "nix:drv_path"
+        prop["value"] = row.store_path
+        properties.append(prop)
+    if properties:
+        component["properties"] = properties
     return component
 
 
