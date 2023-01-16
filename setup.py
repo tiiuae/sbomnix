@@ -21,7 +21,8 @@ requires = [
 
 setuptools.setup(
     name="sbomnix",
-    version="0.1.0",
+    use_scm_version=True,
+    setup_requires=["setuptools_scm"],
     description="Utility that generates SBOMs from nix packages",
     url="https://github.com/tiiuae/sbomnix",
     author="TII",

@@ -6,10 +6,9 @@
 
 """ Python script to query and visualize nix package dependencies """
 
-import os
 import argparse
 from nixgraph.graph import NixDependencies
-from sbomnix.utils import setup_logging
+from sbomnix.utils import setup_logging, get_version
 
 ###############################################################################
 
@@ -24,12 +23,13 @@ def check_positive(val):
 
 def getargs():
     """Parse command line arguments"""
-    desc = "Visualize nix package dependencies"
-    epil = f"Example: ./{os.path.basename(__file__)} /path/to/derivation.drv "
+    desc = "Visualize nix artifact dependencies"
+    epil = "Example: nixgraph /path/to/derivation.drv "
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
     parser.add_argument("NIX_PATH", nargs=1, help=helps)
+    parser.add_argument("--version", action="version", version=get_version())
 
     helps = "Scan buildtime dependencies instead of runtime dependencies"
     parser.add_argument("--buildtime", help=helps, action="store_true")

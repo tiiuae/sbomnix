@@ -11,8 +11,8 @@ import sys
 import csv
 import logging
 import subprocess
+from importlib.metadata import version, PackageNotFoundError
 from tabulate import tabulate
-
 from colorlog import ColoredFormatter, default_log_colors
 import pandas as pd
 
@@ -118,6 +118,16 @@ def regex_match(regex, string):
     if not regex or not string:
         return False
     return re.match(regex, string) is not None
+
+
+def get_version(package="sbomnix"):
+    """Return package version string"""
+    versionstr = ""
+    try:
+        versionstr = version(package)
+    except PackageNotFoundError:
+        versionstr = "0.0.0"
+    return versionstr
 
 
 ################################################################################
