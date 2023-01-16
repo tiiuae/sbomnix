@@ -131,7 +131,7 @@ class SbomDb:
         return df_deps
 
     def _get_sbomdb(self, meta_path):
-        """Convert SbomDb to dataframe (joined with meta information)"""
+        """Convert self.store to dataframe, join with meta information"""
         df_store = self.store.to_dataframe()
         df_sbomdb = df_store
         if meta_path is not None:
@@ -146,8 +146,9 @@ class SbomDb:
                 right_on=["name"],
                 suffixes=["", "_meta"],
             )
-        df_sbom = df_sbomdb.replace(np.nan, "", regex=True)
-        return df_sbom.drop_duplicates(subset=["purl"], keep="first")
+        df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
+        df_sbomdb.drop_duplicates(subset=["purl"], keep="first", inplace=True)
+        return df_sbomdb.sort_values(by=["name", "out"])
 
     def to_cdx(self, cdx_path):
         """Export sbomdb to cyclonedx json file"""
