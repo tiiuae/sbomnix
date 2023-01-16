@@ -12,6 +12,7 @@ import uuid
 import logging
 import json
 import re
+from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
@@ -159,6 +160,9 @@ class SbomDb:
         cdx["version"] = 1
         cdx["serialNumber"] = f"urn:uuid:{uuid.uuid4()}"
         cdx["metadata"] = {}
+        cdx["metadata"]["timestamp"] = (
+            datetime.now(timezone.utc).astimezone().isoformat()
+        )
         tool = {}
         tool["vendor"] = "TII"
         tool["name"] = "sbomnix"
