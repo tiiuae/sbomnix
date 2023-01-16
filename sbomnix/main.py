@@ -7,11 +7,11 @@
 """ Python script that generates SBOMs from nix packages """
 
 import argparse
-import os
 import logging
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
     setup_logging,
+    get_version,
     LOGGER_NAME,
 )
 
@@ -30,13 +30,13 @@ def getargs():
         "writes SBOM file(s) as specified in output arguments."
     )
     epil = (
-        f"Example: ./{os.path.basename(__file__)} /path/to/derivation.drv "
-        "--meta /path/to/meta.json --runtime"
+        "Example: sbomnix /path/to/derivation.drv --meta /path/to/meta.json --runtime"
     )
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
     parser.add_argument("NIX_PATH", nargs=1, help=helps)
+    parser.add_argument("--version", action="version", version=get_version())
 
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     parser.add_argument("--verbose", help=helps, type=int, default=1)

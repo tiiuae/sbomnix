@@ -21,6 +21,7 @@ from sbomnix.nix import Store
 from sbomnix.utils import (
     LOGGER_NAME,
     df_to_csv_file,
+    get_version,
 )
 
 ###############################################################################
@@ -162,7 +163,7 @@ class SbomDb:
         tool = {}
         tool["vendor"] = "TII"
         tool["name"] = "sbomnix"
-        tool["version"] = "0.1.0"
+        tool["version"] = get_version()
         cdx["metadata"]["tools"] = []
         cdx["metadata"]["tools"].append(tool)
         cdx["components"] = []
