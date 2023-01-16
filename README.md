@@ -97,12 +97,12 @@ $ sbomnix /path/to/result
 Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
 Below, we show an example of visualizing package `wget` runtime dependencies:
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth 3
+$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 ```
 
-Which outputs the dependency graph as an image (with maxdepth 3):
+Which outputs the dependency graph as an image (with maxdepth 2):
 
-<img src=doc/wget_runtime.png width="900">
+<img src="doc/img/wget_runtime.svg" width="900">
 
 For more examples on querying and visualizing the package dependencies, see: [nixgraph](./doc/nixgraph.md).
 

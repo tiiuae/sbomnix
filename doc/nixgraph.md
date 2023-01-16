@@ -44,7 +44,7 @@ INFO     Wrote: graph.png
 By default `nixgraph` scans the given target and generates a graph that shows the direct runtime dependencies.
 The default output is a png image `graph.png`:
 
-<img src=wget_r1.png>
+<img src="img/wget_r1.svg">
 <br /><br />
 
 
@@ -55,7 +55,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 
 By default, when `--depth` argument is not specified, `nixgraph` shows the direct dependencies. Increasing the `--depth` makes `nixgraph` walk the dependency chain deeper. For instance, with `--depth=2`, the output graph for `wget` becomes: 
 
-<img src=wget_r2.png width="900">
+<img src="img/wget_r2.svg" width="900">
 <br /><br />
 
 The value of `--depth` indicates the maximum depth between any two nodes in the resulting graph. For instance, in the above example, `libunistring-1.0` gets included with `--depth=2` because the shortest path between `wget` and `libunistring` is two hops deep (`wget --> libidn2 --> libunistring`). 
@@ -67,7 +67,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 
 `--colorize` allows highlighting nodes that match the specified regular expression:
 
-<img src=wget_r2_col.png width="900">
+<img src="img/wget_r2_col.svg" width="900">
 <br /><br />
 
 
@@ -78,7 +78,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 
 `--inverse` makes it possible to draw the graph backwards starting from nodes that match the specified regular expression. For instance, the above command would show all the dependency paths from `wget` that lead to `glibc`:
 
-<img src=wget_r2_inv.png>
+<img src="img/wget_r2_inv.svg">
 <br /><br />
 
 `--inverse` is especially useful when working with larger graphs. 
@@ -86,7 +86,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 As an example, consider the following graph for `git`:
 (`nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)
 
-<img src=git_r2_col.png width="900">
+<img src="img/git_r2_col.svg" width="900">
 <br /><br />
 
 To find out what are all the runtime dependency paths from `git` to the highlighted nodes `openssl` or `sqlite` in the above graph, run the following command:
@@ -99,7 +99,7 @@ nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=100 --c
 ```
 The output now becomes:
 
-<img src=git_r2_col_inv.png>
+<img src="img/git_r2_col_inv.svg">
 <br /><br />
 
 The output graph shows that there are three dependency paths from git to `openssl-3.0.7` and one dependency path that leads to `sqlite-3.39.4`.
@@ -111,7 +111,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --buildti
 
 Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies instead of runtime dependencies:
 
-<img src=wget_b1.png>
+<img src="img/wget_b1.svg">
 <br /><br />
 
 
@@ -129,5 +129,5 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=1
 
 `--pathnames` argument allows adding store path to node label in the output graph:
 
-<img src=wget_r1_paths.png>
+<img src="img/wget_r1_paths.svg">
 <br /><br />
