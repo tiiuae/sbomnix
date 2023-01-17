@@ -79,3 +79,7 @@ clean: ## Remove build artifacts
 	rm -fr build/
 	rm -fr .pytest_cache/
 	$(call target_success,$@)
+
+pristine: clean ## Pristine clean: remove all untracked files and folders
+	git clean -f -d -x
+	$(call target_success,$@)
