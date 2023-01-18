@@ -47,14 +47,26 @@ class SbomDb:
         # Concat buildtime and runtime dependencies dropping duplicates
         self.df_deps = pd.concat([df_rdeps, df_bdeps], ignore_index=True)
         self.df_deps.drop_duplicates()
-        # Remove dependencies to packages that don't exist in sbom. Such
-        # packages might exist in df_deps because packages in sbom are
-        # cleaned as per IGNORE_NAMES in derivation.py
+        # Remove dependencies to packages that don't exist in sbom.
+        # Below are the reasons why we drop some dependencies here:
+        #  (1) df_sbomdb does not include packages that match the
+        #      IGNORE_NAMES defined in derivation.py. Such instances
+        #      are logged when "--verbose=2" or greater is enabled.
+        #      See e.g. log entries that match "Not a derivation"
+        #      or "Skipping derivation"
+        #  (2) df_sbomdb does not include packages that do not
+        #      have a known deriver. Such instances are logged when
+        #      '--verbose=2' or greater is enabled. See e.g. log entries
+        #      that match "does not have a known deriver"
+        #  (3) df_sbomdb does not include components that don't have their
+        #      own deriver, but are a produced by another deriver
+        #      (e.g. *-bin, *-lib, *-man). To see the full list of
+        #      such dropped dependencies, see (4) below
         sbom = list(self.df_sbomdb["purl"].unique())
         self.df_deps = self.df_deps[self.df_deps["depends_on_purl"].isin(sbom)]
-        # To see which dependencies are dropped, try:
+        # (4) To see full list of dropped dependencies, try:
         # self.df_deps = self.df_deps[~self.df_deps["depends_on_purl"].isin(sbom)]
-        # then run with '--verbose=2' and then check the following file:
+        # ... then run with '--verbose=2' and then check the following file:
         if _LOG.level <= logging.DEBUG:
             df_to_csv_file(self.df_deps, "sbomdb_deps.csv")
 
@@ -95,17 +107,15 @@ class SbomDb:
     def _src_path_to_purl(self, df_deps, runtime):
         """Generate df_deps.purl based on df_deps.src_path"""
         if runtime:
-            deps_debug_out = "sbomdb_runtime_deps.csv"
             re_split = re.compile(
                 r"""/nix/store/[^-]+-(.+?)-([0-9].+)|  # with version number
-                    /nix/store/[^-]+-(.+?)""",  # without version number
+                    /nix/store/[^-]+-(.+)""",  # without version number
                 re.X,
             )
         else:
-            deps_debug_out = "sbomdb_buildtime_deps.csv"
             re_split = re.compile(
                 r"""/nix/store/[^-]+-(.+?)-([0-9].+)\.drv|  # with version number
-                    /nix/store/[^-]+-(.+?)\.drv""",  # without version number
+                    /nix/store/[^-]+-(.+)\.drv""",  # without version number
                 re.X,
             )
         # Add df_deps.purl based on df_deps.src_path
@@ -129,7 +139,8 @@ class SbomDb:
         selected_columns = ["purl", "depends_on_purl"]
         df_deps = df_deps[selected_columns]
         if _LOG.level <= logging.DEBUG:
-            df_to_csv_file(df_deps, deps_debug_out)
+            out = "sbomdb_deps_runtime.csv" if runtime else "sbomdb_deps_buildtime.csv"
+            df_to_csv_file(df_deps, out)
         return df_deps
 
     def _get_sbomdb(self, meta_path):

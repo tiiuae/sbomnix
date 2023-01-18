@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # SPDX-FileCopyrightText: Flying Circus Internet Operations GmbH
 
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
@@ -13,6 +13,7 @@ import pandas as pd
 
 from sbomnix.utils import (
     LOGGER_NAME,
+    LOG_SPAM,
     exec_cmd,
 )
 
@@ -32,14 +33,14 @@ class Store:
     """Nix store"""
 
     def __init__(self, nix_path, runtime=False):
-        _LOG.debug("")
+        _LOG.debug(nix_path)
         self.runtime = runtime
         self.derivations = set()
         self._add_path(nix_path)
         self.target_derivation = self._find_deriver(nix_path)
 
     def _find_deriver(self, path, qpi_deriver=None):
-        _LOG.debug("")
+        _LOG.debug(path)
         if path.endswith(".drv"):
             return path
         # Deriver from QueryPathInfo
@@ -53,9 +54,15 @@ class Store:
         ):
             return qpi_deriver
         # Deriver from QueryValidDerivers
-        qvd_deriver = list(
-            json.loads(exec_cmd(["nix", "show-derivation", path])).keys()
-        )[0]
+        ret = exec_cmd(["nix", "show-derivation", path], raise_on_error=False)
+        if not ret:
+            _LOG.debug("Deriver not found for '%s'", path)
+            return None
+        qvd_json_keys = list(json.loads(ret).keys())
+        if not qvd_json_keys or len(qvd_json_keys) < 1:
+            _LOG.debug("Not qvd_deriver for '%s'", path)
+            return None
+        qvd_deriver = qvd_json_keys[0]
         _LOG.debug("qvd_deriver: %s", qvd_deriver)
         if qvd_deriver and os.path.exists(qvd_deriver):
             return qvd_deriver
@@ -72,8 +79,14 @@ class Store:
             path,
         )
 
+    def _find_path_info_deriver(self, path_info):
+        _LOG.log(LOG_SPAM, "path_info: %s", path_info)
+        return self._find_deriver(
+            path_info.get("path"), qpi_deriver=path_info.get("deriver")
+        )
+
     def _find_outputs(self, path):
-        _LOG.debug("")
+        _LOG.debug(path)
         if not path.endswith(".drv"):
             return [path]
 
@@ -85,7 +98,7 @@ class Store:
 
     def _add_path(self, path):
         """Add the closure of all derivations referenced by a store path."""
-        _LOG.debug("")
+        _LOG.debug(path)
         if not os.path.exists(path):
             raise RuntimeError(
                 f"path `{path}` does not exist - cannot load "
@@ -95,45 +108,39 @@ class Store:
 
         if self.runtime:
             for output in self._find_outputs(path):
-                for candidate in map(
-                    # We cannot use the `deriver` field directly because
-                    # like from `nix-store -qd` that path may not exist.
-                    # However, we know that if it is not present
-                    # the path has no deriver because it is a
-                    # derivation input source so we can skip it.
-                    lambda p: self._find_deriver(
-                        p.get("path"), qpi_deriver=p.get("deriver")
-                    )
-                    if p.get("deriver") is not None
-                    else None,
-                    json.loads(
-                        exec_cmd(
-                            [
-                                "nix",
-                                "--extra-experimental-features",
-                                "nix-command",
-                                "path-info",
-                                "-r",
-                                "--json",
-                                output,
-                            ]
-                        )
-                    ),
-                ):
+                _LOG.debug(output)
+                ret = exec_cmd(
+                    [
+                        "nix",
+                        "--extra-experimental-features",
+                        "nix-command",
+                        "path-info",
+                        "-r",
+                        "--json",
+                        output,
+                    ]
+                )
+                path_info_list = json.loads(ret)
+                for candidate in map(self._find_path_info_deriver, path_info_list):
                     if candidate is not None:
                         self._update(candidate)
         else:
             deriver = self._find_deriver(path)
+            if not deriver:
+                _LOG.fatal("No deriver found for: '%s", path)
+                return
             for candidate in exec_cmd(["nix-store", "-qR", deriver]).splitlines():
                 self._update(candidate)
 
     def _update(self, drv_path):
         _LOG.debug("drv_path=%s", drv_path)
         if not drv_path.endswith(".drv"):
+            _LOG.debug("Not a derivation, skipping: '%s'", drv_path)
             return
         try:
             drv_obj = load(drv_path)
         except SkipDrv:
+            _LOG.debug("Skipping derivation: '%s'", drv_path)
             return
         self.derivations.add(drv_obj)
         self.target_derivation = drv_path
