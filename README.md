@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 # sbomnix
 
 `sbomnix` is a utility that generates SBOMs for [nix](https://nixos.org/) packages.
+
 In addition to `sbomnix` this repository is a home to [nixgraph](./doc/nixgraph.md), a python library and command line utility for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
 
 `sbomnix` originates from the [Ghaf](https://github.com/tiiuae/ghaf) project.
@@ -28,7 +29,7 @@ Table of Contents
 * [Acknowledgements](#acknowledgements)
 
 ## Getting Started
-`sbomnix` requires common Nix tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
+`sbomnix` requires common [nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
 `nixgraph` requires [graphviz](https://graphviz.org/download/).
 
 ### Running without installation
@@ -36,9 +37,9 @@ Table of Contents
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip3 install -r requirements.txt
+$ pip3 install --user -r requirements.txt
 ```
-After requirements have been installed, you can run sbomnix as follows:
+After requirements have been installed, you can run sbomnix without installation as follows:
 ```bash
 $ source scripts/env.sh
 $ python3 sbomnix/main.py
@@ -50,7 +51,7 @@ Examples in this README.md assume you have installed `sbomnix` on your system an
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip3 install .
+$ pip3 install --user .
 ```
 
 ## Usage examples
