@@ -36,13 +36,14 @@ class SbomDb:
     """Generates SBOMs in various formats"""
 
     def __init__(self, nix_path, runtime=False, meta_path=None):
-        self.store = Store(nix_path, runtime)
+        self.runtime = runtime
+        self.store = Store(nix_path, self.runtime)
         self.df_sbomdb = self._get_sbomdb(meta_path)
         # Read runtime and buildtime dependencies
         df_rdeps = self._get_runtime_deps(nix_path)
         df_bdeps = None
         # No need to parse buildtime dependencies if 'runtime' was requested:
-        if not runtime:
+        if not self.runtime:
             df_bdeps = self._get_buildtime_deps(nix_path)
         # Concat buildtime and runtime dependencies dropping duplicates
         self.df_deps = pd.concat([df_rdeps, df_bdeps], ignore_index=True)
@@ -175,6 +176,14 @@ class SbomDb:
         cdx["metadata"]["timestamp"] = (
             datetime.now(timezone.utc).astimezone().isoformat()
         )
+        sbom_type = "buildtime_and_runtime"
+        if self.runtime:
+            sbom_type = "runtime_only"
+        cdx["metadata"]["properties"] = []
+        prop = {}
+        prop["name"] = "sbom_type"
+        prop["value"] = sbom_type
+        cdx["metadata"]["properties"].append(prop)
         tool = {}
         tool["vendor"] = "TII"
         tool["name"] = "sbomnix"
