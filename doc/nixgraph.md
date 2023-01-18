@@ -102,7 +102,7 @@ The output now becomes:
 <img src="img/git_r2_col_inv.svg">
 <br /><br />
 
-The output graph shows that there are three dependency paths from git to `openssl-3.0.7` and one dependency path that leads to `sqlite-3.39.4`.
+The output graph shows that there are three dependency paths from `git` to `openssl-3.0.7` and one dependency path that leads to `sqlite-3.39.4`.
 
 #### Example: package buildtime dependencies
 ```bash

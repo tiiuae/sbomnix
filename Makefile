@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -24,18 +24,18 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install sbomnix
-	pip3 install .
+	pip3 install --user .
 	$(call try_run_sbomnix,$@)
 	$(call target_success,$@)
 
 install-dev: uninstall install-dev-requirements ## Install for development
-	pip3 install -e .
+	pip3 install --user --editable .
 	$(call try_run_sbomnix,$@)
 	$(call target_success,$@)
 
 uninstall: ## Uninstall sbomnix
-	pip3 uninstall -y sbomnix 
 	find . -name '*.egg-info' -exec rm -fr {} +
+	pip3 uninstall -y sbomnix 
 	$(call target_success,$@)
 
 install-dev-requirements: ## Install all requirements
