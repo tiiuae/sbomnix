@@ -43,7 +43,7 @@ After requirements have been installed, you can run sbomnix without installation
 ```bash
 $ source scripts/env.sh
 $ python3 sbomnix/main.py
-usage: sbomnix.py [-h] [--verbose VERBOSE] [--runtime] [--meta [META]] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
+usage: main.py [-h] [--version] [--verbose VERBOSE] [--meta [META]] [--type {runtime,buildtime,both}] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
 ```
 
 ### Installation
@@ -64,7 +64,7 @@ wget-1.21.3  /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
 ```
 
 #### Generate SBOM based on derivation file
-By default `sbomnix` scans the given derivation and generates an SBOM including both buildtime and runtime dependencies:
+By default `sbomnix` scans the given derivation and generates an SBOM including the runtime dependencies:
 ```bash
 $ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
 ...
@@ -83,10 +83,11 @@ Then, run `sbomnix` with `--meta` argument to tell sbomnix to read meta informat
 $ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json
 ```
 
-#### Generate SBOM including only runtime dependencies
-Use `--runtime` to tell sbomnix to only include the runtime dependencies to the SBOM:
+#### Generate SBOM including buildtime dependencies
+By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to include buildtime dependencies using the `--type` argument. 
+Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime-only dependencies:
 ```bash
-$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json --runtime
+$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json --type=buildtime
 ```
 #### Generate SBOM based on output path
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):

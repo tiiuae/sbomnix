@@ -25,7 +25,7 @@ _LOG = logging.getLogger(LOGGER_NAME)
 def getargs():
     """Parse command line arguments"""
     desc = (
-        "This tool finds all dependencies of the specified nix artifact "
+        "This tool finds dependencies of the specified nix artifact "
         "in NIX_PATH and "
         "writes SBOM file(s) as specified in output arguments."
     )
@@ -41,9 +41,6 @@ def getargs():
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     parser.add_argument("--verbose", help=helps, type=int, default=1)
 
-    helps = "Scan only runtime dependencies (default: false)"
-    parser.add_argument("--runtime", help=helps, action="store_true")
-
     helps = (
         "Path to json file that details meta information. "
         "Generate this file with: `nix-env -qa --meta --json '.*' >meta.json` "
@@ -52,6 +49,10 @@ def getargs():
         "to the output of this script (default: None)"
     )
     parser.add_argument("--meta", nargs="?", help=helps, default=None)
+
+    helps = "Set the type of dependencies included to the SBOM (default: runtime)"
+    types = ["runtime", "buildtime", "both"]
+    parser.add_argument("--type", choices=types, help=helps, default="runtime")
 
     group = parser.add_argument_group("output arguments")
     helps = "Path to csv output file (default: ./sbom.csv)"
@@ -75,7 +76,10 @@ def main():
             "Command line argument '--meta' missing: SBOM will not include "
             "license information (see '--help' for more details)"
         )
-    sbomdb = SbomDb(target_path, args.runtime, args.meta)
+    runtime = args.type in ("runtime", "both")
+    buildtime = args.type in ("buildtime", "both")
+
+    sbomdb = SbomDb(target_path, runtime, buildtime, args.meta)
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
     if args.csv:
