@@ -29,7 +29,7 @@ install: ## Install sbomnix
 	$(call target_success,$@)
 
 install-dev: uninstall install-dev-requirements ## Install for development
-	pip3 install --user --editable .
+	pip3 install --editable .
 	$(call try_run_sbomnix,$@)
 	$(call target_success,$@)
 

@@ -13,7 +13,6 @@
 import functools
 import json
 import logging
-import re
 import itertools
 from packageurl import PackageURL
 from sbomnix.cpe import CPE
@@ -34,11 +33,6 @@ class SkipDrv(RuntimeError):
     """This derivation cannot be treated as package."""
 
     pass
-
-
-# see parseDrvName built-in Nix function
-# https://nixos.org/nix/manual/#ssec-builtins
-R_VERSION = re.compile(r"^(\S+?)-([0-9]\S*)$")
 
 
 def components_lt(left, right):
@@ -115,16 +109,6 @@ def compare_versions(left, right):
 ################################################################################
 
 
-def split_name(fullname):
-    """Returns the pure package name and version of a derivation."""
-    if fullname.endswith(".drv"):
-        fullname = fullname[:-4]
-    m = R_VERSION.match(fullname)
-    if m:
-        return m.group(1), m.group(2)
-    return fullname, None
-
-
 def load(path):
     """Load derivation from path"""
     _LOG.debug("")
@@ -140,23 +124,6 @@ def load(path):
 def destructure(env):
     """Decodes Nix 2.0 __structuredAttrs."""
     return json.loads(env["__json"])
-
-
-IGNORE_NAMES = {
-    ".tar.gz",
-    ".tar.bz2",
-    ".tar.xz",
-    ".tar.lz",
-    ".tgz",
-    ".zip",
-    ".gem",
-    ".patch",
-    ".patch.gz",
-    ".patch.xz",
-    ".diff",
-    "?id=",
-    "?p=",
-}
 
 
 @functools.total_ordering
@@ -190,14 +157,9 @@ class Derive:
         self.name = name or envVars.get("name")
         if not self.name:
             self.name = destructure(envVars)["name"]
-        for e in IGNORE_NAMES:
-            if e in self.name:
-                raise SkipDrv()
 
-        self.pname, self.version = split_name(self.name)
-        if not self.version:
-            _LOG.debug("missing version information: '%s'", self.pname)
-            self.version = ""
+        self.pname = envVars.get("pname", self.name)
+        self.version = envVars.get("version", "")
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "")
@@ -210,7 +172,7 @@ class Derive:
     def __eq__(self, other):
         if type(self) != type(other):
             return NotImplementedError()
-        return self.name == other.name and self.patches == other.patches
+        return self.store_path == other.store_path
 
     def __hash__(self):
         return hash(self.name)

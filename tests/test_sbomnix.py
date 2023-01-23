@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2022 Technology Innovation Institute (TII)
+# SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -17,12 +17,13 @@ import pandas as pd
 import jsonschema
 import pytest
 
-
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 TEST_WORK_DIR = MYDIR / "sbomnix_test_data"
 TEST_NIX_RESULT = TEST_WORK_DIR / "result"
 SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
 NIXGRAPH = MYDIR / ".." / "nixgraph" / "main.py"
+COMPARE_DEPS = MYDIR / "compare_deps.py"
+COMPARE_SBOMS = MYDIR / "compare_sboms.py"
 
 
 ################################################################################
@@ -53,13 +54,20 @@ def test_sbomnix_help():
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
-def test_sbomnix_cdx():
+def test_sbomnix_cdx_type_runtime():
     """
-    Test sbomnix generates valid CycloneDX json
+    Test sbomnix '--type=runtime' generates valid CycloneDX json
     """
 
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
-    cmd = [SBOMNIX, TEST_NIX_RESULT, "--cdx", out_path_cdx.as_posix()]
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--type",
+        "runtime",
+    ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
     schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
@@ -67,13 +75,41 @@ def test_sbomnix_cdx():
     validate_json(out_path_cdx.as_posix(), schema_path)
 
 
-def test_sbomnix_cdx_runtime():
+def test_sbomnix_cdx_type_buildtime():
     """
-    Test sbomnix '--runtime' generates valid CycloneDX json
+    Test sbomnix '--type=runtime' generates valid CycloneDX json
     """
 
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
-    cmd = [SBOMNIX, TEST_NIX_RESULT, "--cdx", out_path_cdx.as_posix(), "--runtime"]
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--type",
+        "buildtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+    schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    assert schema_path.exists()
+    validate_json(out_path_cdx.as_posix(), schema_path)
+
+
+def test_sbomnix_cdx_type_both():
+    """
+    Test sbomnix '--type=both' generates valid CycloneDX json
+    """
+
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--type",
+        "both",
+    ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
     schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
@@ -174,6 +210,120 @@ def test_nixgraph_csv_graph_inverse():
 
     df_diff = df_difference(df_out, df_out_inv)
     assert df_diff.empty, df_to_string(df_diff)
+
+
+################################################################################
+
+
+def test_compare_deps_runtime():
+    """
+    Compare nixgraph vs sbom runtime dependencies
+    """
+    graph_csv_out = TEST_WORK_DIR / "graph.csv"
+    cmd = [
+        NIXGRAPH,
+        TEST_NIX_RESULT,
+        "--out",
+        graph_csv_out,
+        "--depth=100",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(graph_csv_out).exists()
+
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--type",
+        "runtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+
+    cmd = [
+        COMPARE_DEPS,
+        "--sbom",
+        out_path_cdx,
+        "--graph",
+        graph_csv_out,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_compare_deps_buildtime():
+    """
+    Compare nixgraph vs sbom buildtime dependencies
+    """
+    graph_csv_out = TEST_WORK_DIR / "graph.csv"
+    cmd = [
+        NIXGRAPH,
+        TEST_NIX_RESULT,
+        "--out",
+        graph_csv_out,
+        "--depth=100",
+        "--buildtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert Path(graph_csv_out).exists()
+
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--type",
+        "buildtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+
+    cmd = [
+        COMPARE_DEPS,
+        "--sbom",
+        out_path_cdx,
+        "--graph",
+        graph_csv_out,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_compare_sboms():
+    """
+    Compare two sbomnix runs with same target produce the same sbom
+    """
+    out_path_cdx_1 = TEST_WORK_DIR / "sbom_cdx_test_1.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx_1.as_posix(),
+        "--type",
+        "buildtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx_1.exists()
+
+    out_path_cdx_2 = TEST_WORK_DIR / "sbom_cdx_test_2.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx_2.as_posix(),
+        "--type",
+        "buildtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx_2.exists()
+
+    cmd = [
+        COMPARE_SBOMS,
+        out_path_cdx_1,
+        out_path_cdx_2,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
 
 
 ################################################################################
