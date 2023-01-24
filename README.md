@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # sbomnix
 
-`sbomnix` is a utility that generates SBOMs for [nix](https://nixos.org/) packages.
+`sbomnix` is a utility that generates SBOMs given [nix](https://nixos.org/) derivations or out paths.
 
 In addition to `sbomnix` this repository is a home to [nixgraph](./doc/nixgraph.md), a python library and command line utility for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
 
@@ -21,7 +21,7 @@ Table of Contents
 * [Usage examples](#usage-examples)
    * [Generate SBOM based on derivation file](#generate-sbom-based-on-derivation-file)
    * [Generate SBOM including meta information](#generate-sbom-including-meta-information)
-   * [Generate SBOM including only runtime dependencies](#generate-sbom-including-only-runtime-dependencies)
+   * [Generate SBOM including buildtime dependencies](#generate-sbom-including-buildtime-dependencies)
    * [Generate SBOM based on output path](#generate-sbom-based-on-output-path)
    * [Visualize package dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)

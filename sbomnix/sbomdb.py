@@ -33,7 +33,7 @@ _LOG = logging.getLogger(LOGGER_NAME)
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(self, nix_path, runtime=False, buildtime=False, meta_path=None):
+    def __init__(self, nix_path, runtime=True, buildtime=False, meta_path=None):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
