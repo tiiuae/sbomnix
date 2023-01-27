@@ -96,7 +96,7 @@ def setup_logging(verbosity=1):
     project_logger.setLevel(level)
 
 
-def exec_cmd(cmd, raise_on_error=True):
+def exec_cmd(cmd, raise_on_error=True, return_error=False):
     """Run shell command cmd"""
     command_str = " ".join(cmd)
     logging.getLogger(LOGGER_NAME).debug("Running: %s", command_str)
@@ -112,6 +112,8 @@ def exec_cmd(cmd, raise_on_error=True):
         )
         if raise_on_error:
             raise error
+        if return_error:
+            return error
         return None
 
 
