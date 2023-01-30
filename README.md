@@ -10,7 +10,9 @@ SPDX-License-Identifier: Apache-2.0
 
 In addition to `sbomnix` this repository is a home to [nixgraph](./doc/nixgraph.md), a python library and command line utility for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
 
-`sbomnix` originates from the [Ghaf](https://github.com/tiiuae/ghaf) project.
+For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans see: [vulnscan](scripts/vulnscan/README.md#example-automating-nix-vulnerability-scans).
+
+`sbomnix` and other tools in this repository originate from the [Ghaf](https://github.com/tiiuae/ghaf) project.
 
 Table of Contents
 =================
