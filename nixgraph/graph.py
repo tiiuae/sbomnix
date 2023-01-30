@@ -244,6 +244,7 @@ class NixDependencies:
         _LOG.debug("nix_path: %s", nix_path)
         self.dependencies = set()
         self.start_path = ""
+        self.nix_store_path = ""
         self.dtype = "buildtime" if buildtime else "runtime"
         _LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
         if buildtime:
@@ -264,6 +265,7 @@ class NixDependencies:
         ).strip()
         _LOG.debug("nix_out: %s", nix_out)
         self.start_path = nix_out
+        self.nix_store_path = _get_nix_store_path(self.start_path)
         # nix-store -q --graph outputs runtime dependencies when applied
         # to output path
         nix_query_out = exec_cmd(["nix-store", "-q", "--graph", nix_out])
@@ -284,6 +286,7 @@ class NixDependencies:
         ).strip()
         _LOG.debug("nix_drv: %s", nix_drv)
         self.start_path = nix_drv
+        self.nix_store_path = _get_nix_store_path(self.start_path)
         # nix-store -q --graph outputs buildtime dependencies when applied
         # to derivation path
         nix_query_out = exec_cmd(["nix-store", "-q", "--graph", nix_drv])
@@ -306,10 +309,10 @@ class NixDependencies:
     def _add_dependency(self, dep_match):
         src_pname = dep_match.group("src_pname")
         src_hash = dep_match.group("src_hash")
-        src_path = f"/nix/store/{src_hash}-{src_pname}"
+        src_path = f"{self.nix_store_path}{src_hash}-{src_pname}"
         target_pname = dep_match.group("target_pname")
         target_hash = dep_match.group("target_hash")
-        target_path = f"/nix/store/{target_hash}-{target_pname}"
+        target_path = f"{self.nix_store_path}{target_hash}-{target_pname}"
         edge = NixDependency(src_path, src_pname, target_path, target_pname)
         self.dependencies.add(edge)
 
@@ -328,6 +331,23 @@ class NixDependencies:
         """Draw the dependencies as directed graph"""
         digraph = NixDependencyGraph(self.to_dataframe())
         digraph.draw(self.start_path, args)
+
+
+################################################################################
+
+
+def _get_nix_store_path(nix_path):
+    """Return nix store path given derivation or out-path"""
+    # If match fails, return '/nix/store/', otherwise, parse the store path
+    # from the given `nix_path`. The only reason this function is needed is
+    # to handle the unlikely case where nix store is not in '/nix/store/'
+    store_path = "/nix/store/"
+    re_nix_store_path = re.compile(r"(?P<store_path>/.+/)[0-9a-z]{32}-")
+    store_path_match = re_nix_store_path.match(nix_path)
+    if store_path_match:
+        store_path = store_path_match.group("store_path")
+        _LOG.debug("Using nix store path: '%s'", store_path)
+    return store_path
 
 
 ################################################################################
