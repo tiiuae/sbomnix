@@ -317,7 +317,7 @@ def main():
     args = getargs()
     setup_logging(args.verbose)
     if not args.TARGET.exists():
-        _LOG.fatal("Invalid path: '%s'", args.sbom)
+        _LOG.fatal("Invalid path: '%s'", args.TARGET)
         sys.exit(1)
     _check_nix()
     target_path = args.TARGET.as_posix()

@@ -8,6 +8,8 @@
 
 import argparse
 import logging
+import pathlib
+import sys
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
     setup_logging,
@@ -35,7 +37,7 @@ def getargs():
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
-    parser.add_argument("NIX_PATH", nargs=1, help=helps)
+    parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
     parser.add_argument("--version", action="version", version=get_version())
 
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
@@ -70,7 +72,10 @@ def main():
     """main entry point"""
     args = getargs()
     setup_logging(args.verbose)
-    target_path = args.NIX_PATH[0]
+    if not args.NIX_PATH.exists():
+        _LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
+        sys.exit(1)
+    target_path = args.NIX_PATH.resolve().as_posix()
     if not args.meta:
         _LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "
