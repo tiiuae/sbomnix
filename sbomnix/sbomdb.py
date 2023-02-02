@@ -59,12 +59,19 @@ class SbomDb:
 
     def _init_sbomdb(self):
         """Initialize self.df_sbomdb"""
-        # Concat buildtime and runtime dependencies dropping duplicates
-        df_paths = pd.concat([self.df_rdeps, self.df_bdeps], ignore_index=True)
-        # Get unique src_paths and target_paths
-        src_paths = df_paths["src_path"].unique().tolist()
-        target_paths = df_paths["target_path"].unique().tolist()
-        paths = set(src_paths + target_paths)
+        if (self.df_bdeps is None or self.df_bdeps.empty) and (
+            self.df_rdeps is None or self.df_rdeps.empty
+        ):
+            # No dependencies, so the only component in the sbom
+            # will be the target itself
+            paths = set([self.target_deriver])
+        else:
+            # Concat buildtime and runtime dependencies dropping duplicates
+            df_paths = pd.concat([self.df_rdeps, self.df_bdeps], ignore_index=True)
+            # Get unique src_paths and target_paths
+            src_paths = df_paths["src_path"].unique().tolist()
+            target_paths = df_paths["target_path"].unique().tolist()
+            paths = set(src_paths + target_paths)
         # Populate store based on the dependencies
         store = Store(self.buildtime)
         for path in paths:
@@ -104,7 +111,7 @@ class SbomDb:
         # Find runtime dependencies
         # Runtime dependencies: drv.out matches with target_path
         dfr = None
-        if self.df_rdeps is not None:
+        if self.df_rdeps is not None and not self.df_rdeps.empty:
             df = self.df_rdeps[self.df_rdeps["target_path"] == drv.out]
             # Find the requested 'uid' values for the dependencies (df.src_path)
             dfr = self.df_sbomdb.merge(
@@ -112,7 +119,7 @@ class SbomDb:
             ).loc[:, [uid]]
         # Find buildtime dependencies
         dfb = None
-        if self.df_bdeps is not None:
+        if self.df_bdeps is not None and not self.df_bdeps.empty:
             # Buildtime dependencies: drv.store_path matches with target_path
             df = self.df_bdeps[self.df_bdeps["target_path"] == drv.store_path]
             # Find the requested 'uid' values for the dependencies (df.src_path)
@@ -121,8 +128,10 @@ class SbomDb:
             ).loc[:, [uid]]
         # Return list of unique dependencies including both build and runtime
         # dependencies as specified by the requested values (uid)
-        df = pd.concat([dfr, dfb], ignore_index=True)
-        return df[uid].unique().tolist()
+        if dfr is not None or dfb is not None:
+            df = pd.concat([dfr, dfb], ignore_index=True)
+            return df[uid].unique().tolist()
+        return None
 
     def to_cdx(self, cdx_path):
         """Export sbomdb to cyclonedx json file"""
