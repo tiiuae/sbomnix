@@ -16,7 +16,7 @@ from sbomnix.utils import (
     LOGGER_NAME,
     LOG_SPAM,
     df_from_csv_file,
-    print_df,
+    df_log,
     exec_cmd,
 )
 
@@ -100,13 +100,12 @@ class _CPE:
             _LOG.log(LOG_SPAM, "no matches for product '%s'", product)
             return None
         if len(df) != 1:
-            # If there are more than one product with the same name,
+            # If there is more than one product with the same name,
             # we cannot determine which vendor name should be used for the CPE.
             # Therefore, if more than one product names match, treat it the
             # same way as if there were no matches (returning None).
-            if _LOG.level <= LOG_SPAM:
-                _LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
-                print_df(df)
+            _LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
+            df_log(df, LOG_SPAM)
             return None
 
         vendor = df["vendor"].values[0]
