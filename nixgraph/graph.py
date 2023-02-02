@@ -111,7 +111,7 @@ class NixDependencyGraph:
             # Output csv if csv format was specified
             df_to_csv_file(self.df_out_csv, args.out)
         else:
-            _LOG.warning("No matches: nothing to draw")
+            _LOG.warning("Nothing to draw")
 
     def _is_csv_out(self, filename):
         _fname, extension = os.path.splitext(filename)
@@ -136,8 +136,8 @@ class NixDependencyGraph:
             return
         df = self._query(nixfilter, curr_depth)
         if df.empty and curr_depth == 1:
-            # First match failed: print to console and stop
-            _LOG.info("No matching packages found")
+            # First match failed: print debug message and stop
+            _LOG.debug("No matching packages found")
             return
         if df.empty:
             # Reached leaf: no more matches
@@ -183,6 +183,8 @@ class NixDependencyGraph:
     def _query(self, nixfilter, depth):
         query_str = nixfilter.get_query_str()
         _LOG.debug("%sFiltering by: %s", (DBG_INDENT * (depth - 1)), query_str)
+        if self.df.empty:
+            return pd.DataFrame()
         return self.df.query(query_str)
 
     def _add_edge(self, row):
@@ -251,6 +253,8 @@ class NixDependencies:
             self._parse_buildtime_dependencies(nix_path)
         else:
             self._parse_runtime_dependencies(nix_path)
+        if len(self.dependencies) <= 0:
+            _LOG.info("No %s dependices", self.dtype)
 
     def _parse_runtime_dependencies(self, nix_path):
         # map nix_path to output path by calling nix path-info
@@ -320,9 +324,11 @@ class NixDependencies:
         """Return the dependencies as pandas dataframe"""
         deps = [dep.to_dict() for dep in self.dependencies]
         df = pd.DataFrame.from_records(deps)
-        df.sort_values(
-            by=["src_pname", "src_path", "target_pname", "target_path"], inplace=True
-        )
+        if not df.empty:
+            df.sort_values(
+                by=["src_pname", "src_path", "target_pname", "target_path"],
+                inplace=True,
+            )
         if _LOG.level <= logging.DEBUG:
             df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
         return df
@@ -346,7 +352,7 @@ def _get_nix_store_path(nix_path):
     store_path_match = re_nix_store_path.match(nix_path)
     if store_path_match:
         store_path = store_path_match.group("store_path")
-        _LOG.debug("Using nix store path: '%s'", store_path)
+    _LOG.debug("Using nix store path: '%s'", store_path)
     return store_path
 
 
