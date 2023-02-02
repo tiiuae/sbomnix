@@ -50,17 +50,16 @@ def df_regex_filter(df, column, regex):
     return df[df[column].str.contains(regex, regex=True, na=False)]
 
 
-def print_df(df, tablefmt="presto"):
-    """Pretty-print dataframe to stdout"""
-    if df.empty:
-        return
-    df = df.fillna("")
-    print(
-        tabulate(
+def df_log(df, loglevel, tablefmt="presto"):
+    """Log dataframe with given loglevel and tablefmt"""
+    if logging.getLogger(LOGGER_NAME).level <= loglevel:
+        if df.empty:
+            return
+        df = df.fillna("")
+        table = tabulate(
             df, headers="keys", tablefmt=tablefmt, stralign="left", showindex=False
         )
-    )
-    print("")
+        logging.getLogger(LOGGER_NAME).log(loglevel, "\n%s\n", table)
 
 
 def setup_logging(verbosity=1):
