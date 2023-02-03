@@ -7,12 +7,14 @@
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
 import os
+import sys
 import logging
 import json
 import pandas as pd
 
 from sbomnix.utils import (
     LOGGER_NAME,
+    LOG_SPAM,
     exec_cmd,
 )
 
@@ -35,61 +37,64 @@ class Store:
         self.buildtime = buildtime
         self.derivations = {}
 
-    def _update(self, drv_path, in_path=None):
+    def _add_cached(self, path, drv):
+        assert path is not None, f"invalid path: {drv}"
+        if path:
+            _LOG.log(LOG_SPAM, "caching path - %s:%s", path, drv)
+            self.derivations[path] = drv
+
+    def _is_cached(self, path):
+        cached = path in self.derivations
+        _LOG.log(LOG_SPAM, "is cached %s:%s", path, cached)
+        return path in self.derivations
+
+    def _update(self, drv_path, nixpath=None):
         _LOG.debug("drv_path=%s", drv_path)
-        if drv_path in self.derivations:
+        if self._is_cached(drv_path):
             _LOG.debug("Skipping redundant path '%s'", drv_path)
             return
         if not drv_path.endswith(".drv"):
             _LOG.debug("Not a derivation, skipping: '%s'", drv_path)
-            self.derivations[drv_path] = None
+            self._add_cached(drv_path, drv=None)
             return
         try:
             drv_obj = load(drv_path)
         except SkipDrv:
             _LOG.debug("Skipping derivation: '%s'", drv_path)
-            self.derivations[drv_path] = None
+            self._add_cached(drv_path, drv=None)
             return
-        if in_path and in_path != drv_obj.store_path and in_path != drv_obj.out:
-            # We end up here if the nix artifact read from 'in_path' does
-            # not have it's own deriver, but it's produced by another
-            # deriver. As an example, 'util-linux-minimal-2.38.1-lib' deriver
-            # is 'util-linux-minimal-2.38.1', so whenever a component depends
-            # on 'util-linux-minimal-2.38.1-lib' the dependency in sbom will
-            # be replaced with dependency to 'util-linux-minimal-2.38.1' because
-            # that's the deriver for 'util-linux-minimal-2.38.1-lib'.
-            # To make the sbomdb dependency lookup find the dependencies for
-            # such cases correctly, we need to fix the drv path so that it points
-            # to the store path of util-linux-minimal-2.38.1-lib, not the path of
-            # util-linux-minimal-2.38.1:
-            if in_path.endswith(".drv"):
-                _LOG.debug("Fix store_path: %s ==> %s", drv_obj.store_path, in_path)
-                drv_obj.store_path = in_path
-            else:
-                _LOG.debug("Fix out path: %s ==> %s", drv_obj.out, in_path)
-                drv_obj.out = in_path
-        self.derivations[drv_obj.store_path] = drv_obj
-        self.derivations[drv_obj.out] = drv_obj
+        if drv_obj.store_path != drv_path:
+            _LOG.fatal("store_path:'%s' != drv_path:'%s'", drv_obj.store_path, drv_path)
+            sys.exit(1)
+        if nixpath and nixpath != drv_obj.store_path and nixpath not in drv_obj.out:
+            # We end up here if the nix artifact read from out path 'nixpath'
+            # does not have it's own deriver, but it's produced by another
+            # deriver. This happens because 'drv_obj' is associated to more
+            # than one 'out' path:
+            drv_obj.add_outpath(nixpath)
+        self._add_cached(drv_path, drv=drv_obj)
+        if nixpath:
+            self._add_cached(nixpath, drv=drv_obj)
 
-    def add_path(self, path):
-        """Add the the derivation referenced by a store path"""
-        _LOG.debug(path)
-        if path in self.derivations:
-            _LOG.debug("Skipping redundant path '%s'", path)
+    def add_path(self, nixpath):
+        """Add the the derivation referenced by a store path (nixpath)"""
+        _LOG.debug(nixpath)
+        if self._is_cached(nixpath):
+            _LOG.debug("Skipping redundant path '%s'", nixpath)
             return
-        if not os.path.exists(path):
+        if not os.path.exists(nixpath):
             raise RuntimeError(
-                f"path `{path}` does not exist - cannot load "
+                f"path `{nixpath}` does not exist - cannot load "
                 "derivations referenced from it"
             )
-        deriver = find_deriver(path)
-        if not deriver:
-            _LOG.debug("No deriver found for: '%s", path)
-            self.derivations[path] = None
+        drv_path = find_deriver(nixpath)
+        if not drv_path:
+            _LOG.debug("No deriver found for: '%s", nixpath)
+            self._add_cached(nixpath, drv=None)
             return
-        self._update(deriver, path)
+        self._update(drv_path, nixpath)
         if self.buildtime:
-            for candidate in exec_cmd(["nix-store", "-qR", deriver]).splitlines():
+            for candidate in exec_cmd(["nix-store", "-qR", drv_path]).splitlines():
                 self._update(candidate)
 
     def to_dataframe(self):

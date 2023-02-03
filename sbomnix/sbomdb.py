@@ -46,6 +46,7 @@ class SbomDb:
         self.df_bdeps = None
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
+        self.df_sbomdb_out_exploded = None
         self._init_sbomdb()
 
     def _init_dependencies(self, nix_path):
@@ -82,7 +83,8 @@ class SbomDb:
         # Clean, drop duplicates, sort
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
-        self.df_sbomdb.sort_values(by=["name", "out"], inplace=True)
+        self.df_sbomdb.sort_values(by=["name", self.uid], inplace=True)
+        self.df_sbomdb_out_exploded = self.df_sbomdb.explode("out")
 
     def _sbomdb_join_meta(self, meta_path):
         """Join self.df_sbomdb with meta information"""
@@ -112,9 +114,9 @@ class SbomDb:
         # Runtime dependencies: drv.out matches with target_path
         dfr = None
         if self.df_rdeps is not None and not self.df_rdeps.empty:
-            df = self.df_rdeps[self.df_rdeps["target_path"] == drv.out]
+            df = self.df_rdeps[self.df_rdeps["target_path"].isin(drv.out)]
             # Find the requested 'uid' values for the dependencies (df.src_path)
-            dfr = self.df_sbomdb.merge(
+            dfr = self.df_sbomdb_out_exploded.merge(
                 df, how="inner", left_on=["out"], right_on=["src_path"]
             ).loc[:, [uid]]
         # Find buildtime dependencies
@@ -236,10 +238,10 @@ def _drv_to_cdx_component(drv, uid="store_path"):
     component["cpe"] = drv.cpe
     _cdx_component_add_licenses(component, drv)
     properties = []
-    if drv.out:
+    for out_path in drv.out:
         prop = {}
         prop["name"] = "nix:out_path"
-        prop["value"] = drv.out
+        prop["value"] = out_path
         properties.append(prop)
     if drv.store_path:
         prop = {}

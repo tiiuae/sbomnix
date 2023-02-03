@@ -162,7 +162,7 @@ class Derive:
         self.version = envVars.get("version", "")
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
-        self.out = envVars.get("out", "")
+        self.out = [envVars.get("out", "")]
         self.cpe = CPE().generate(self.pname, self.version)
         self.purl = str(PackageURL(type="nix", name=self.pname, version=self.version))
 
@@ -190,6 +190,11 @@ class Derive:
         if self.pname < other.pname:
             return False
         return compare_versions(self.version, other.version) == 1
+
+    def add_outpath(self, path):
+        """Add an outpath to derivation"""
+        _LOG.debug("adding outpath to %s:%s", self, path)
+        self.out.append(path)
 
     def to_dict(self):
         """Return derivation as dictionary"""
