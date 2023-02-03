@@ -94,7 +94,7 @@ def compare_versions(left, right):
     """
     if left == right:
         return 0
-    for (lc, rc) in itertools.zip_longest(
+    for lc, rc in itertools.zip_longest(
         split_components(left), split_components(right), fillvalue=""
     ):
         if lc == rc:
