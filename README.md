@@ -34,6 +34,7 @@ Table of Contents
 `sbomnix` requires common [nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
 `nixgraph` requires [graphviz](https://graphviz.org/download/).
 
+
 ### Running without installation
 `sbomnix` requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
 ```bash
@@ -46,6 +47,12 @@ After requirements have been installed, you can run sbomnix without installation
 $ source scripts/env.sh
 $ python3 sbomnix/main.py
 usage: main.py [-h] [--version] [--verbose VERBOSE] [--meta [META]] [--type {runtime,buildtime,both}] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
+```
+
+### Running with nix flakes
+`sbomnix` can as a nix flake like so:
+```bash
+nix run github:tiiuae/sbomnix/main /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
 ```
 
 ### Installation
