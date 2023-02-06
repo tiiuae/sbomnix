@@ -26,19 +26,18 @@ Table of Contents
 To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md). Also, make sure [graphviz](https://graphviz.org/download/) is installed on your system.
 
 ## Usage examples
-In the below examples, we use nix package `wget` as an example target. However, notice that `nixgraph` can be used with output paths too (e.g. anything produces a result symlink).
-To install nix `wget` package and print out its derivation path on your local system, try something like:
+In the below examples, we use nix package `wget` as an example target.
+To install nix `wget` package and print out its out-path on your local system, try something like:
 ```bash
-$ nix-env -i wget && nix-env -q -a --drv-path wget
-installing 'wget-1.21.3'
-wget-1.21.3  /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
+$ nix-shell -p wget --run exit && nix eval -f '<nixpkgs>' 'wget.outPath'
+"/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 
 #### Example: package runtime dependencies
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 
-INFO     Loading runtime dependencies referenced by '/nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv'
+INFO     Loading runtime dependencies referenced by '/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3'
 INFO     Wrote: graph.png
 ```
 By default `nixgraph` scans the given target and generates a graph that shows the direct runtime dependencies.
@@ -50,7 +49,7 @@ The default output is a png image `graph.png`:
 
 #### Example: depth
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2
 ```
 
 By default, when `--depth` argument is not specified, `nixgraph` shows the direct dependencies. Increasing the `--depth` makes `nixgraph` walk the dependency chain deeper. For instance, with `--depth=2`, the output graph for `wget` becomes: 
@@ -62,7 +61,7 @@ The value of `--depth` indicates the maximum depth between any two nodes in the 
 
 #### Example: colorize
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2 --colorize='openssl|libidn'
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --colorize='openssl|libidn'
 ```
 
 `--colorize` allows highlighting nodes that match the specified regular expression:
@@ -73,7 +72,7 @@ $ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
 
 #### Example: inverse
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2 --inverse='glibc'
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --inverse='glibc'
 ```
 
 `--inverse` makes it possible to draw the graph backwards starting from nodes that match the specified regular expression. For instance, the above command would show all the dependency paths from `wget` that lead to `glibc`:
@@ -106,7 +105,7 @@ The output graph shows that there are three dependency paths from `git` to `open
 
 #### Example: package buildtime dependencies
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --buildtime
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --buildtime
 ```
 
 Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies instead of runtime dependencies:
@@ -117,14 +116,14 @@ Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies i
 
 #### Example: output format
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --out="graph.dot"
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --out="graph.dot"
 ```
 By default `nixgraph` outputs the graph in png image `graph.png`. To change the output file name and format, use the `--out` argument. The output filename extension determines the output format.  As an example, the above command would output the graph in `dot` format. For a full list of supported output formats, see: https://graphviz.org/doc/info/output.html. In addition to graphviz supported output formats, the tool supports output in csv to allow post-processing the output data.
 
 
 #### Example: pathnames
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=1 --pathnames
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=1 --pathnames
 ```
 
 `--pathnames` argument allows adding store path to node label in the output graph:

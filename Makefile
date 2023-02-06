@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-SHELL := /bin/bash
+SHELL := bash
 
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"

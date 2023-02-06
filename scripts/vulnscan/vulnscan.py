@@ -102,7 +102,7 @@ class VulnScan:
         run_vulnix = f"vulnix {target_path} {extra_opts}"
         cmd = ["nix-shell", "--packages", packages, "--run", run_vulnix]
         # vulnix exit status is non-zero if it found vulnerabilities,
-        # therefore, we need to se the raise_on_error=False and
+        # therefore, we need to set the raise_on_error=False and
         # return_error=True to be able to read the command's stdout on
         # failure
         ret = exec_cmd(cmd, raise_on_error=False, return_error=True)
