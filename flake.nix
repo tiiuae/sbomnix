@@ -2,41 +2,36 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 {
-  description = "Python shell flake";
+  description = "Flakes file for sbomnix";
 
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+  inputs.nixpkgs.url = github:NixOS/nixpkgs/nixos-unstable;
 
-    mach-nix.url = "github:davhau/mach-nix";
-  };
-
-  outputs = { self, nixpkgs, mach-nix, flake-utils, ... }:
+  outputs = { self, nixpkgs }:
     let
-      pythonVersion = "python39";
-    in
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        mach = mach-nix.lib.${system};
+      pkgs = import nixpkgs { system = "x86_64-linux"; };
+      sbomnix = import ./default.nix { pkgs = pkgs; };
+      sbomnix-shell = import ./shell.nix { pkgs = pkgs; };
+    in rec {
+      
+      # nix package
+      packages.x86_64-linux = {
+        inherit sbomnix;
+        default = sbomnix;
+      };
+      
+      # nix run flake.nix#sbomnix
+      apps.x86_64-linux.sbomnix = {
+        type = "app";
+        program = "${self.packages.x86_64-linux.sbomnix}/bin/sbomnix";
+      };
 
-        sbomnix_app = import (./default.nix) { inherit pkgs; };
-        pythonEnv = mach.mkPython {
-          python = pythonVersion;
-          requirements = builtins.readFile ./requirements.txt;
-        };
-      in
-      {
-        packages = {
-          default = sbomnix_app;
-        };
-        devShells.default = pkgs.mkShellNoCC {
-          packages = [ pythonEnv ];
-
-          shellHook = ''
-            export PYTHONPATH="${pythonEnv}/bin/python"
-          '';
-        };
-      }
-    );
+      # nix run flake.nix#nixgraph
+      apps.x86_64-linux.nixgraph = {
+        type = "app";
+        program = "${self.packages.x86_64-linux.sbomnix}/bin/nixgraph";
+      };
+      
+      # nix develop
+      devShells.x86_64-linux.default = sbomnix-shell;
+    };
 }
