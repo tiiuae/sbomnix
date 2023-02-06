@@ -20,12 +20,16 @@
         pkgs = nixpkgs.legacyPackages.${system};
         mach = mach-nix.lib.${system};
 
+        sbomnix_app = import (./default.nix) { inherit pkgs; };
         pythonEnv = mach.mkPython {
           python = pythonVersion;
           requirements = builtins.readFile ./requirements.txt;
         };
       in
       {
+        packages = {
+          default = sbomnix_app;
+        };
         devShells.default = pkgs.mkShellNoCC {
           packages = [ pythonEnv ];
 
