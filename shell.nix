@@ -7,7 +7,7 @@
 }:
 
 pkgs.mkShell {
-  pname = "sbomnix-dev";
+  name = "sbomnix-dev-shell";
 
   buildInputs = [ 
     pkgs.reuse

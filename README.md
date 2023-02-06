@@ -21,10 +21,10 @@ Table of Contents
    * [Running without installation](#running-without-installation)
    * [Installation](#installation)
 * [Usage examples](#usage-examples)
-   * [Generate SBOM based on derivation file](#generate-sbom-based-on-derivation-file)
+   * [Generate SBOM based on derivation file or out-path](#generate-sbom-based-on-derivation-file-or-out-path)
    * [Generate SBOM including meta information](#generate-sbom-including-meta-information)
    * [Generate SBOM including buildtime dependencies](#generate-sbom-including-buildtime-dependencies)
-   * [Generate SBOM based on output path](#generate-sbom-based-on-output-path)
+   * [Generate SBOM based on result symlink](#generate-sbom-based-on-result-symlink)
    * [Visualize package dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
@@ -34,9 +34,24 @@ Table of Contents
 `sbomnix` requires common [nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
 `nixgraph` requires [graphviz](https://graphviz.org/download/).
 
-
 ### Running without installation
-`sbomnix` requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
+#### Running as nix flake
+`sbomnix` can be run as a nix flake from the `tiiuae/sbomnix` repository:
+```bash
+$ nix run github:tiiuae/sbomnix#sbomnix
+```
+
+or from a locally cloned repository:
+```bash
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix
+$ nix run .#sbomnix
+```
+Similarly, you can run `nixgraph` with `nix run github:tiiuae/sbomnix#nixgraph`.
+See the list of other supported flake targets with: `nix flake show`.
+
+#### Running as python script
+Running `sbomnix` as python script requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
@@ -49,33 +64,26 @@ $ python3 sbomnix/main.py
 usage: main.py [-h] [--version] [--verbose VERBOSE] [--meta [META]] [--type {runtime,buildtime,both}] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
 ```
 
-### Running with nix flakes
-`sbomnix` can as a nix flake like so:
-```bash
-nix run github:tiiuae/sbomnix/main /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
-```
-
 ### Installation
 Examples in this README.md assume you have installed `sbomnix` on your system and that command `sbomnix` is in `$PATH`. To install `sbomnix` from source, run:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip3 install --user .
+$ make install
 ```
 
 ## Usage examples
 In the below examples, we use nix package `wget` as an example target.
-To install wget and print out its derivation path on your local system, try something like:
+To install wget and print out its out-path on your local system, try something like:
 ```bash
-$ nix-env -i wget && nix-env -q -a --drv-path wget
-installing 'wget-1.21.3'
-wget-1.21.3  /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
+$ nix-shell -p wget --run exit && nix eval -f '<nixpkgs>' 'wget.outPath'
+"/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 
-#### Generate SBOM based on derivation file
-By default `sbomnix` scans the given derivation and generates an SBOM including the runtime dependencies:
+#### Generate SBOM based on derivation file or out-path
+By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies:
 ```bash
-$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv
+$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
 INFO     Wrote: sbom.cdx.json
 INFO     Wrote: sbom.csv
@@ -89,16 +97,16 @@ $ nix-env -qa --meta --json '.*' >meta.json
 ```
 Then, run `sbomnix` with `--meta` argument to tell sbomnix to read meta information from the given json file:
 ```bash
-$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json
+$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json
 ```
 
 #### Generate SBOM including buildtime dependencies
 By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to include buildtime dependencies using the `--type` argument. 
 Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime-only dependencies:
 ```bash
-$ sbomnix /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --meta meta.json --type=buildtime
+$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --type=buildtime
 ```
-#### Generate SBOM based on output path
+#### Generate SBOM based on result symlink
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):
 ```bash
 $ sbomnix /path/to/result 
@@ -108,7 +116,7 @@ $ sbomnix /path/to/result
 Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
 Below, we show an example of visualizing package `wget` runtime dependencies:
 ```bash
-$ nixgraph /nix/store/1kd6cas7lxhccf7bv1v37wvwmknahfrj-wget-1.21.3.drv --depth=2
+$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2
 ```
 
 Which outputs the dependency graph as an image (with maxdepth 2):
@@ -119,19 +127,17 @@ For more examples on querying and visualizing the package dependencies, see: [ni
 
 ## Contribute
 Any pull requests, suggestions, and error reports are welcome.
-To start development, we recommend using lightweight [virtual environments](https://docs.python.org/3/library/venv.html) by running the following commands:
+To start development, we recommend using nix flakes devShell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
-$ python3 -mvenv venv
-$ source venv/bin/activate
-$ source scripts/env.sh
-$ make install-dev
+$ nix develop
 ```
 Run `make help` to see the list of other make targets.
 Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.
 
-To deactivate the virtualenv, run `deactivate` in your shell.
+To deactivate the nix devshell, run `exit` in your shell.
+To see other nix flake targets, run `nix flake show`.
 
 
 ## License

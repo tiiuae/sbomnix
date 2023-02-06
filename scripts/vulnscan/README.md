@@ -22,13 +22,7 @@ To get started, follow the [Getting Started](../../README.md#getting-started) se
 In the below examples, we use nix package `git` as an example target.
 To install nix `git` package and print out its out-path on your local system, try something like:
 ```bash
-PTRGT="git";\
-OUTP=$(\
-nix-shell \
-  --packages $PTRGT \
-  --run "nix-env -q -a --out-path ${PTRGT} | sed -r 's|.*[ ;](/nix/store.*)|\1|'"\
-);\
-echo -e "\n==> out-path: $OUTP"
+nix-shell -p git --run exit && nix eval -f '<nixpkgs>' 'git.outPath'
 ```
 Which outputs the example target out-path on your local system:
 ```
