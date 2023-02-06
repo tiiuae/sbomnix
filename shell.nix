@@ -23,6 +23,7 @@ pkgs.mkShell {
     pythonPackages.black
     pythonPackages.pytest
     pythonPackages.jsonschema
+    pythonPackages.requests
     pythonPackages.venvShellHook
   ];
   venvDir = "venv";

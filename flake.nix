@@ -19,13 +19,13 @@
         default = sbomnix;
       };
       
-      # nix run flake.nix#sbomnix
+      # nix run .#sbomnix
       apps.x86_64-linux.sbomnix = {
         type = "app";
         program = "${self.packages.x86_64-linux.sbomnix}/bin/sbomnix";
       };
 
-      # nix run flake.nix#nixgraph
+      # nix run .#nixgraph
       apps.x86_64-linux.nixgraph = {
         type = "app";
         program = "${self.packages.x86_64-linux.sbomnix}/bin/nixgraph";

@@ -15,6 +15,9 @@ packageurl-python
 # nixgraph
 graphviz
 
+# osv.py (demo)
+requests
+
 # dev requirements
 pycodestyle
 pylint
