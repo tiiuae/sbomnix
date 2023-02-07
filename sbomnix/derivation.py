@@ -14,6 +14,7 @@ import functools
 import json
 import logging
 import itertools
+import bisect
 from packageurl import PackageURL
 from sbomnix.cpe import CPE
 
@@ -193,8 +194,9 @@ class Derive:
 
     def add_outpath(self, path):
         """Add an outpath to derivation"""
-        _LOG.debug("adding outpath to %s:%s", self, path)
-        self.out.append(path)
+        if path not in self.out:
+            _LOG.debug("adding outpath to %s:%s", self, path)
+            bisect.insort(self.out, path)
 
     def to_dict(self):
         """Return derivation as dictionary"""
