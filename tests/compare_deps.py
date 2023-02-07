@@ -72,14 +72,16 @@ def _parse_sbom(path):
         setcol = comp_parsed_dict.setdefault
         for cmp in components:
             # setcol("bom_ref", []).append(cmp["bom-ref"])
+            outpaths = []
             for prop_dict in cmp["properties"]:
                 if "out_path" in prop_dict["name"]:
-                    setcol("out_path", []).append(prop_dict["value"])
+                    outpaths.append(prop_dict["value"])
                 elif "drv_path" in prop_dict["name"]:
                     setcol("drv_path", []).append(prop_dict["value"])
                 else:
                     _LOG.fatal("Unexpected property: %s", prop_dict)
                     sys.exit(1)
+            setcol("out_path", []).append(outpaths)
         df_components = pd.DataFrame(comp_parsed_dict)
 
         # Parse dependencies
@@ -104,7 +106,6 @@ def _parse_sbom(path):
             right_on=["ref"],
         )
         df_parsed.fillna("", inplace=True)
-        df_parsed = df_parsed.astype(str)
         if _LOG.level <= logging.DEBUG:
             df_to_csv_file(df_parsed, "df_sbom_parsed.csv")
         return df_parsed, sbom_type
@@ -159,6 +160,8 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     _LOG.debug("graph_type=%s", graph_type)
     deps_only_in_sbom = set()
     deps_only_in_graph = set()
+    df_sbom = df_sbom.explode("out_path")
+    df_sbom = df_sbom.astype(str)
 
     if (graph_type == "runtime" and sbom_type != "runtime_only") or (
         graph_type == "buildtime" and sbom_type != "buildtime_only"

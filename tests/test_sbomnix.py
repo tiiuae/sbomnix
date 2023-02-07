@@ -301,7 +301,7 @@ def test_compare_sboms():
         "--cdx",
         out_path_cdx_1.as_posix(),
         "--type",
-        "buildtime",
+        "both",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx_1.exists()
@@ -313,7 +313,7 @@ def test_compare_sboms():
         "--cdx",
         out_path_cdx_2.as_posix(),
         "--type",
-        "buildtime",
+        "both",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx_2.exists()

@@ -7,7 +7,6 @@
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
 import os
-import sys
 import logging
 import json
 import pandas as pd
@@ -38,42 +37,46 @@ class Store:
         self.derivations = {}
 
     def _add_cached(self, path, drv):
-        assert path is not None, f"invalid path: {drv}"
-        if path:
-            _LOG.log(LOG_SPAM, "caching path - %s:%s", path, drv)
-            self.derivations[path] = drv
+        _LOG.log(LOG_SPAM, "caching path - %s:%s", path, drv)
+        self.derivations[path] = drv
 
     def _is_cached(self, path):
         cached = path in self.derivations
         _LOG.log(LOG_SPAM, "is cached %s:%s", path, cached)
         return path in self.derivations
 
+    def _get_cached(self, path):
+        _LOG.log(LOG_SPAM, "get cached: %s", path)
+        return self.derivations[path] if path in self.derivations else None
+
     def _update(self, drv_path, nixpath=None):
-        _LOG.debug("drv_path=%s", drv_path)
-        if self._is_cached(drv_path):
-            _LOG.debug("Skipping redundant path '%s'", drv_path)
-            return
+        _LOG.debug("drv_path=%s, nixpath=%s", drv_path, nixpath)
         if not drv_path.endswith(".drv"):
             _LOG.debug("Not a derivation, skipping: '%s'", drv_path)
             self._add_cached(drv_path, drv=None)
             return
-        try:
-            drv_obj = load(drv_path)
-        except SkipDrv:
-            _LOG.debug("Skipping derivation: '%s'", drv_path)
-            self._add_cached(drv_path, drv=None)
+        if nixpath and self._is_cached(nixpath):
+            _LOG.debug("Skipping redundant nixpath '%s'", nixpath)
             return
-        if drv_obj.store_path != drv_path:
-            _LOG.fatal("store_path:'%s' != drv_path:'%s'", drv_obj.store_path, drv_path)
-            sys.exit(1)
-        if nixpath and nixpath != drv_obj.store_path and nixpath not in drv_obj.out:
+        if not nixpath and self._is_cached(drv_path):
+            _LOG.debug("Skipping redundant drvpath '%s'", drv_path)
+            return
+        drv_obj = self._get_cached(drv_path)
+        if not drv_obj:
+            try:
+                drv_obj = load(drv_path)
+                self._add_cached(drv_path, drv=drv_obj)
+            except SkipDrv:
+                _LOG.debug("Skipping derivation: '%s'", drv_path)
+                self._add_cached(drv_path, drv=None)
+                return
+        assert drv_obj.store_path == drv_path, f"unexpected drv_path: {drv_path}"
+        if nixpath:
             # We end up here if the nix artifact read from out path 'nixpath'
             # does not have it's own deriver, but it's produced by another
             # deriver. This happens because 'drv_obj' is associated to more
             # than one 'out' path:
             drv_obj.add_outpath(nixpath)
-        self._add_cached(drv_path, drv=drv_obj)
-        if nixpath:
             self._add_cached(nixpath, drv=drv_obj)
 
     def add_path(self, nixpath):

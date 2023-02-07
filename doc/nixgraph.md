@@ -90,7 +90,7 @@ As an example, consider the following graph for `git`:
 
 To find out what are all the runtime dependency paths from `git` to the highlighted nodes `openssl` or `sqlite` in the above graph, run the following command:
 ```bash
-# --depth=100: make sure the output graph includes "long enough" dependency chanins
+# --depth=100: make sure the output graph includes "long enough" dependency chains
 # --inverse="openssl-3|sqlite-3": draw the graph backwards starting from nodes that
 #                                 match the specified reqular expression
 # --colorize="openssl-3|sqlite-3": colorize the matching nodes
