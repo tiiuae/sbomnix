@@ -15,15 +15,17 @@ import sys
 import pathlib
 import json
 import re
+from tempfile import NamedTemporaryFile
 import pandas as pd
 import numpy as np
 from tabulate import tabulate
+from scripts.vulnxscan.osv import OSV
+from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
     setup_logging,
     exec_cmd,
     LOGGER_NAME,
     LOG_SPAM,
-    df_from_csv_file,
     df_to_csv_file,
 )
 
@@ -36,8 +38,11 @@ _LOG = logging.getLogger(LOGGER_NAME)
 
 def getargs():
     """Parse command line arguments"""
-    desc = "Scan nix artifact for vulnerabilities with vulnix, grype, and osv.py"
-    epil = f"Example: ./{os.path.basename(__file__)} /path/to/sbom.json"
+    desc = (
+        "Scan nix artifact or CycloneDX SBOM for vulnerabilities with grype, "
+        "osv.py, and vulnix."
+    )
+    epil = f"Example: ./{os.path.basename(__file__)} /path/to/nix/out/or/drv"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
     helps = "Target derivation path or nix out path"
     parser.add_argument("TARGET", help=helps, type=pathlib.Path)
@@ -46,10 +51,24 @@ def getargs():
     helps = "Path to output file (default: ./vulns.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="vulns.csv")
     helps = (
-        "Include target's buildtime dependencies to the scan."
+        "Include target's buildtime dependencies to the scan. "
         "By default, only runtime dependencies are scanned."
     )
     parser.add_argument("--buildtime", help=helps, action="store_true")
+    helps = (
+        "Indicate that TARGET is a cdx SBOM instead of path to nix artifact. "
+        "This allows running vulnxscan using input SBOMs from any tool "
+        "capable of generating cdx SBOM. This option makes it possible to run "
+        "vulnxscan postmortem against any (potentially earlier) release of "
+        "the TARGET. "
+        "Moreover, this option allows using vulnxscan against non-nix targets "
+        "as long as SBOM includes valid CPE identifiers and purls. "
+        "If this option is specified, vulnix scan will not run, since vulnix "
+        "is nix-only and requires components' nix store paths. "
+        "Also, if this option is specified, option '--buildtime' will be "
+        "ignored since target pacakges will be read from the given SBOM."
+    )
+    parser.add_argument("--sbom", help=helps, action="store_true")
     return parser.parse_args()
 
 
@@ -86,6 +105,7 @@ class VulnScan:
     def scan_vulnix(self, target_path, buildtime=False):
         """Run vulnix scan for nix artifact at target_path"""
         _LOG.info("Running vulnix scan")
+        self.df_vulnix = pd.DataFrame()
         # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
         # vulnix support for runtime-only scan ('-C' command-line option)
         # which is currently not available in released version of vulnix.
@@ -149,8 +169,8 @@ class VulnScan:
         if ret:
             self._parse_grype(ret)
 
-    def _parse_osv(self, osv_out_path):
-        self.df_osv = df_from_csv_file(osv_out_path)
+    def _parse_osv(self, df_osv):
+        self.df_osv = df_osv
         if not self.df_osv.empty:
             self.df_osv["scanner"] = "osv"
             self.df_osv.replace(np.nan, "", regex=True, inplace=True)
@@ -164,12 +184,10 @@ class VulnScan:
     def scan_osv(self, sbom_path):
         """Run osv scan using the SBOM at sbom_path as input"""
         _LOG.info("Running OSV scan")
-        osv_scanner = pathlib.Path(__file__).parents[0] / "osv.py"
-        osv_out = pathlib.Path("osv_vulns.csv")
-        cmd = f"{osv_scanner.as_posix()} " f"--out {osv_out.as_posix()} " f"{sbom_path}"
-        exec_cmd(cmd.split(), raise_on_error=True)
-        if _valid_csv(osv_out):
-            self._parse_osv(osv_out.as_posix())
+        osv = OSV()
+        osv.query_vulns(sbom_path)
+        df_osv = osv.to_dataframe()
+        self._parse_osv(df_osv)
 
     def _generate_report(self):
         # Concatenate vulnerability data from different scanners
@@ -191,7 +209,9 @@ class VulnScan:
         df = df.pivot_table(index=group_cols, columns="scanner", values="count")
         # Pivot creates a multilevel index, we'll get rid of it:
         df.reset_index(drop=False, inplace=True)
-        scanners = ["grype", "osv", "vulnix"]
+        scanners = ["grype", "osv"]
+        if self.df_vulnix is not None:
+            scanners.append("vulnix")
         df.reindex(group_cols + scanners, axis=1)
         for scanner_col in scanners:
             if scanner_col not in df:
@@ -201,7 +221,8 @@ class VulnScan:
         # Reformat values in 'scanner' columns
         df["grype"] = df.apply(lambda row: _reformat_scanner(row.grype), axis=1)
         df["osv"] = df.apply(lambda row: _reformat_scanner(row.osv), axis=1)
-        df["vulnix"] = df.apply(lambda row: _reformat_scanner(row.vulnix), axis=1)
+        if "vulnix" in scanners:
+            df["vulnix"] = df.apply(lambda row: _reformat_scanner(row.vulnix), axis=1)
         # Add column 'url'
         df["url"] = df.apply(_vuln_url, axis=1)
         # Sort the data based on the following columns
@@ -213,13 +234,13 @@ class VulnScan:
         )
         self.df_report = df[report_cols]
 
-    def report(self, name, target, buildtime):
+    def report(self, name, target, buildtime, is_sbom=False):
         """Generate the vulnerability report: csv file and a table to console"""
         self._generate_report()
         if self.df_report is None or self.df_report.empty:
             _LOG.info("No vulnerabilities found")
             return
-        _LOG.info("Writing report")
+        _LOG.debug("Writing report")
 
         # Console report
         # Copy the df to only make changes to the console report
@@ -231,12 +252,14 @@ class VulnScan:
         table = tabulate(
             df, headers="keys", tablefmt="orgtbl", numalign="center", showindex=False
         )
-        dtype = "runtime or buildtime" if buildtime else "runtime"
-        header = (
-            f"Potential vulnerabilities impacting '{target}' or some of its "
-            f"{dtype} dependencies:"
-        )
-        _LOG.info("Console report:\n\n%s\n\n%s\n", header, table)
+        if is_sbom:
+            end = f"components in '{target}'"
+        elif buildtime:
+            end = f"'{target}' or some of its runtime or buildtime dependencies"
+        else:
+            end = f"'{target}' or some of its runtime dependencies"
+        header = f"Potential vulnerabilities impacting {end}:"
+        _LOG.info("Console report\n\n%s\n\n%s\n", header, table)
 
         # File report
         df_to_csv_file(self.df_report, name)
@@ -275,38 +298,26 @@ def _vuln_url(row):
     return ""
 
 
-def _valid_csv(path):
-    try:
-        pd.read_csv(path, nrows=1)
-        _LOG.debug("True")
-        return True
-    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError):
-        _LOG.debug("False")
-        return False
-
-
-def _check_nix():
-    _LOG.info("Checking nix installation")
-    # Try running nix-info to check that nix tools are available
-    cmd = "nix-shell -p nix-info --run 'nix-info'"
-    ret = exec_cmd(cmd.split(), raise_on_error=True)
-    _LOG.debug(ret.strip())
-
-
 def _generate_sbom(target_path, buildtime=False):
     _LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomnix = pathlib.Path(__file__).parents[2] / "sbomnix" / "main.py"
-    sbomtype = "runtime"
-    cdx = pathlib.Path("sbom_cdx.json")
-    if buildtime:
-        sbomtype = "both"
-    cmd = f"{sbomnix.as_posix()} --type {sbomtype} {target_path} --cdx={cdx.as_posix()}"
-    ret = exec_cmd(cmd.split(), raise_on_error=True)
-    _LOG.debug(ret.strip())
-    if not cdx.exists():
-        _LOG.fatal("Failed generating SBOM")
-        sys.exit(1)
-    return cdx.as_posix()
+    runtime = True
+    sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
+    prefix = "vulnxscan_"
+    suffix = ".json"
+    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
+        sbomdb.to_cdx(f.name, printinfo=False)
+        return f.name
+
+
+def _is_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            json_obj = json.load(f)
+            if json_obj:
+                return True
+            return False
+    except (json.JSONDecodeError, OSError):
+        return False
 
 
 ################################################################################
@@ -319,15 +330,26 @@ def main():
     if not args.TARGET.exists():
         _LOG.fatal("Invalid path: '%s'", args.TARGET)
         sys.exit(1)
-    _check_nix()
     target_path = args.TARGET.as_posix()
-    sbom_path = _generate_sbom(target_path, args.buildtime)
+    target_path_abs = args.TARGET.resolve().as_posix()
 
     scanner = VulnScan()
-    scanner.scan_vulnix(target_path, args.buildtime)
+    if args.sbom:
+        if not _is_json(target_path_abs):
+            _LOG.fatal("Specified sbom target is not json file: '%s'", target_path)
+            sys.exit(0)
+        sbom_path = target_path_abs
+    else:
+        if _is_json(target_path_abs):
+            _LOG.fatal("Specified target is not a nix artifact: '%s'", target_path)
+            sys.exit(0)
+        sbom_path = _generate_sbom(target_path_abs, args.buildtime)
+        _LOG.info("Using SBOM '%s'", sbom_path)
+        scanner.scan_vulnix(target_path_abs, args.buildtime)
+
     scanner.scan_grype(sbom_path)
     scanner.scan_osv(sbom_path)
-    scanner.report(args.out, target_path, args.buildtime)
+    scanner.report(args.out, target_path, args.buildtime, args.sbom)
 
 
 ################################################################################

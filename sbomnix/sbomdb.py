@@ -138,7 +138,7 @@ class SbomDb:
             return [uid for uid in dep_uids if uid != self_uid]
         return None
 
-    def to_cdx(self, cdx_path):
+    def to_cdx(self, cdx_path, printinfo=True):
         """Export sbomdb to cyclonedx json file"""
         cdx = {}
         cdx["bomFormat"] = "CycloneDX"
@@ -179,7 +179,8 @@ class SbomDb:
         with open(cdx_path, "w", encoding="utf-8") as outfile:
             json_string = json.dumps(cdx, indent=2)
             outfile.write(json_string)
-            _LOG.info("Wrote: %s", outfile.name)
+            if printinfo:
+                _LOG.info("Wrote: %s", outfile.name)
 
     def to_csv(self, csv_path):
         """Export sbomdb to csv file"""

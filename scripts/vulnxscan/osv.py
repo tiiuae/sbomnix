@@ -47,27 +47,6 @@ def getargs():
 ################################################################################
 
 
-def _parse_sbom(path):
-    _LOG.info("Parsing sbom: %s", path)
-    with path.open(encoding="utf-8") as inf:
-        json_dict = json.loads(inf.read())
-        components = json_dict["components"] + [json_dict["metadata"]["component"]]
-        components_dict = {}
-        setcol = components_dict.setdefault
-        for cmp in components:
-            setcol("name", []).append(cmp["name"])
-            setcol("version", []).append(cmp["version"])
-        df_components = pd.DataFrame(components_dict)
-        df_components.fillna("", inplace=True)
-        df_components = df_components.astype(str)
-        df_components.sort_values("name", inplace=True, key=lambda col: col.str.lower())
-        df_components.reset_index(drop=True, inplace=True)
-        return df_components
-
-
-################################################################################
-
-
 class OSV:
     """Query and parse OSV vulnerability data"""
 
@@ -100,9 +79,29 @@ class OSV:
         resp.raise_for_status()
         self._parse_batch_response(query, resp.json())
 
-    def query_vulns(self, df_sbom):
-        """Query each package in df_sbom for OSV vulnerabilities"""
+    def _parse_sbom(self, path):
+        _LOG.debug("Parsing sbom: %s", path)
+        with open(path, encoding="utf-8") as inf:
+            json_dict = json.loads(inf.read())
+            components = json_dict["components"] + [json_dict["metadata"]["component"]]
+            components_dict = {}
+            setcol = components_dict.setdefault
+            for cmp in components:
+                setcol("name", []).append(cmp["name"])
+                setcol("version", []).append(cmp["version"])
+            df_components = pd.DataFrame(components_dict)
+            df_components.fillna("", inplace=True)
+            df_components = df_components.astype(str)
+            df_components.sort_values(
+                "name", inplace=True, key=lambda col: col.str.lower()
+            )
+            df_components.reset_index(drop=True, inplace=True)
+            return df_components
+
+    def query_vulns(self, sbom_path):
+        """Query each package in sbom for OSV vulnerabilities"""
         _LOG.info("Querying vulnerabilities")
+        df_sbom = self._parse_sbom(sbom_path)
         # See the API description at: https://osv.dev/docs/#tag/api.
         # The limit of max 1000 packages per single query is stated in the
         # api documentation at the time of writing.
@@ -136,9 +135,8 @@ def main():
     if not args.SBOM.exists():
         _LOG.fatal("Invalid path: '%s'", args.SBOM)
         sys.exit(1)
-    df_sbom = _parse_sbom(args.SBOM)
     osv = OSV()
-    osv.query_vulns(df_sbom)
+    osv.query_vulns(args.SBOM.as_posix())
     df_vulns = osv.to_dataframe()
     df_to_csv_file(df_vulns, args.out)
 

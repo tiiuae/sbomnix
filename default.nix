@@ -27,6 +27,7 @@ pythonPackages.buildPythonPackage rec {
     pythonPackages.tabulate
     pythonPackages.wheel
     pythonPackages.packageurl-python
+    pythonPackages.requests
     pythonPackages.graphviz
   ];
 
