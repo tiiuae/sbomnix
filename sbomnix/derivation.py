@@ -194,7 +194,7 @@ class Derive:
 
     def add_outpath(self, path):
         """Add an outpath to derivation"""
-        if path not in self.out:
+        if path not in self.out and path != self.store_path:
             _LOG.debug("adding outpath to %s:%s", self, path)
             bisect.insort(self.out, path)
 
