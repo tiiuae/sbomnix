@@ -4,9 +4,9 @@ SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# vulnscan
+# vulnxscan
 
-`vulnscan` is a command line utility that demonstrates automating vulnerability scanning for nix targets.
+`vulnxscan` is a command line utility that demonstrates automating vulnerability scanning for nix targets.
 
 Table of Contents
 =================
@@ -43,7 +43,7 @@ Since we specified `--type=both`, `sbomnix` created SBOM that includes both buil
 
 To scan the components listed in `sbom.cdx.json` for [OSV](https://osv.dev/list?ecosystem=) vulnerabilities, run `osv.py` specifying the `sbom.cdx.json` as its input:
 ```bash
-$ scripts/vulnscan/osv.py sbom.cdx.json 
+$ scripts/vulnxscan/osv.py sbom.cdx.json 
 INFO     Parsing sbom: sbom.cdx.json
 INFO     Querying vulnerabilities
 INFO     Wrote: osv.csv
@@ -71,11 +71,11 @@ $ cat osv.csv | csvlook
 *Note (2)*: `osv.py`: demonstrates querying OSV data given CycloneDX SBOM as input. [OSV](https://osv.dev/list?ecosystem=) database [currently does not support nix ecosystem](https://ossf.github.io/osv-schema/#affectedpackage-field), so queries that specify nix as ecosystem would not return any matches. Therefore, for demonstration, `osv.py` sends queries to [OSV API](https://osv.dev/docs/) without specifying the ecosystem, only the package name and version. At the time of writing, such queries return vulnerabilities that match the given package and version across all ecosystems, although, this feature seems to be undocumented in the [API specification](https://osv.dev/docs/#tag/api/operation/OSV_QueryAffected). As a result, the returned vulnerabilities are inaccurate and might not be valid for the nix ecosystem.
 
 #### Example: automating nix vulnerability scans
-This example shows how to use `vulnscan.py` to summarize vulnerabilities for the given target with different scanners.
+This example shows how to use `vulnxscan.py` to summarize vulnerabilities for the given target with different scanners.
 
-To find vulnerabilities that potentially impact 'git-2.39.0' or some of its runtime or buildtime dependencies, run `vulnscan.py` as follows:
+To find vulnerabilities that potentially impact 'git-2.39.0' or some of its runtime or buildtime dependencies, run `vulnxscan.py` as follows:
 ```bash
-$ scripts/vulnscan/vulnscan.py /nix/store/5207hz4f779nz4z62zaa5gdjqzqz1l4g-git-2.39.0 --buildtime
+$ scripts/vulnxscan/vulnxscan.py /nix/store/5207hz4f779nz4z62zaa5gdjqzqz1l4g-git-2.39.0 --buildtime
 INFO     Checking nix installation
 INFO     Generating SBOM for target '/nix/store/5207hz4f779nz4z62zaa5gdjqzqz1l4g-git-2.39.0'
 INFO     Running vulnix scan
@@ -146,11 +146,11 @@ Potential vulnerabilities impacting '/nix/store/5207hz4f779nz4z62zaa5gdjqzqz1l4g
 INFO     Wrote: vulns.csv
 ```
 
-As printed in the console output, `vulnscan.py` first creates an SBOM, then feeds the SBOM or target path as input to different vulnerability scanners: [vulnix](https://github.com/flyingcircusio/vulnix) (for reference), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnscan.py` writes the report to csv-file to allow easier post-processing of the output.
+As printed in the console output, `vulnxscan.py` first creates an SBOM, then feeds the SBOM or target path as input to different vulnerability scanners: [vulnix](https://github.com/flyingcircusio/vulnix) (for reference), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan.py` writes the report to csv-file to allow easier post-processing of the output.
 
 *Note (1)*: the above example specified '`--buildtime`' argument, so the output includes vulnerabilities that impact any of the buildtime or runtime dependencies. To get a list of vulnerabilities that impact only runtime dependencies, simply leave out the '`--buildtime`' argument.
 
-*Note (2)*: for now, consider `vulnscan.py` as a demonstration. The list of reported vulnerabilities is inaccurate for various reasons:
+*Note (2)*: for now, consider `vulnxscan.py` as a demonstration. The list of reported vulnerabilities is inaccurate for various reasons:
  - `sbomnix` currently does not include the information about applied patches to the CycloneDX SBOM. `sbomnix` collects the list of patches applied on top of each package and outputs the collected data in its csv output, but it does not add the information to the cdx SBOM. CycloneDX apparently would support such information via the [pedigree](https://cyclonedx.org/use-cases/#pedigree) attribute.
  - Vulnerability scanners lack support for parsing the patch data: even if `sbomnix` added the patch data to the output SBOM, we suspect not many vulnerability scanners would read the information. As an example, the following discussion touches this topic on DependencyTrack: https://github.com/DependencyTrack/dependency-track/issues/919.
  - Identifying packages is hard as pointed out in https://discourse.nixos.org/t/the-future-of-the-vulnerability-roundups/22424/5. As an example, CPEs are inaccurate which causes issues in matching vulnerabilities: https://github.com/DependencyTrack/dependency-track/discussions/2290.

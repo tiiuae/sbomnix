@@ -39,12 +39,13 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="SBOM",
-    packages=setuptools.find_packages(include=["sbomnix", "nixgraph"]),
-    scripts=["scripts/update-cpedict.sh"],
+    packages=["sbomnix", "nixgraph", "scripts.vulnxscan"],
+    scripts=["scripts/update-cpedict.sh", "scripts/vulnxscan/osv.py"],
     entry_points={
         "console_scripts": [
-            "sbomnix = sbomnix.main:main",
-            "nixgraph= nixgraph.main:main",
+            "sbomnix  = sbomnix.main:main",
+            "nixgraph = nixgraph.main:main",
+            "vulnxscan= scripts.vulnxscan.vulnxscan:main",
         ]
     },
 )

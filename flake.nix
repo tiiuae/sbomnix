@@ -18,7 +18,7 @@
         inherit sbomnix;
         default = sbomnix;
       };
-      
+
       # nix run .#sbomnix
       apps.x86_64-linux.sbomnix = {
         type = "app";
@@ -30,7 +30,13 @@
         type = "app";
         program = "${self.packages.x86_64-linux.sbomnix}/bin/nixgraph";
       };
-      
+
+      # nix run .#vulnxscan
+      apps.x86_64-linux.vulnxscan = {
+        type = "app";
+        program = "${self.packages.x86_64-linux.sbomnix}/bin/vulnxscan";
+      };
+
       # nix develop
       devShells.x86_64-linux.default = sbomnix-shell;
     };
