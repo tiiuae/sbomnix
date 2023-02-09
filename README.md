@@ -6,52 +6,57 @@ SPDX-License-Identifier: Apache-2.0
 
 # sbomnix
 
-`sbomnix` is a utility that generates SBOMs given [nix](https://nixos.org/) derivations or out paths.
+`sbomnix` is a utility that generates SBOMs given [Nix](https://nixos.org/) derivations or out paths.
 
-In addition to `sbomnix` this repository is a home to [nixgraph](./doc/nixgraph.md), a python library and command line utility for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
+In addition to `sbomnix` this repository is home to [nixgraph](./doc/nixgraph.md) - a Python library and command line utility for querying and visualizing dependency graphs for [Nix](https://nixos.org/) Packages.
 
-For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans see: [vulnxscan](scripts/vulnxscan/README.md#example-automating-nix-vulnerability-scans).
+For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans, see: [vulnxscan](scripts/vulnxscan/README.md).
 
-`sbomnix` and other tools in this repository originate from the [Ghaf](https://github.com/tiiuae/ghaf) project.
+`sbomnix` and other tools in this repository originate from [Ghaf Framework](https://github.com/tiiuae/ghaf).
 
 Table of Contents
 =================
 
 * [Getting Started](#getting-started)
-   * [Running without installation](#running-without-installation)
+   * [Running Without Installation](#running-without-installation)
+      * [Running as Nix Flake](#running-as-nix-flake)
+      * [Running as Python Script](#running-as-python-script)
    * [Installation](#installation)
-* [Usage examples](#usage-examples)
-   * [Generate SBOM based on derivation file or out-path](#generate-sbom-based-on-derivation-file-or-out-path)
-   * [Generate SBOM including meta information](#generate-sbom-including-meta-information)
-   * [Generate SBOM including buildtime dependencies](#generate-sbom-including-buildtime-dependencies)
-   * [Generate SBOM based on result symlink](#generate-sbom-based-on-result-symlink)
-   * [Visualize package dependencies](#visualize-package-dependencies)
+* [Usage Examples](#usage-examples)
+   * [Generate SBOM Based on Derivation File or Out-path](#generate-sbom-based-on-derivation-file-or-out-path)
+   * [Generate SBOM Including Meta Information](#generate-sbom-including-meta-information)
+   * [Generate SBOM Including Buildtime Dependencies](#generate-sbom-including-buildtime-dependencies)
+   * [Generate SBOM Based on Result Symlink](#generate-sbom-based-on-result-symlink)
+   * [Visualize Package Dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
 * [Acknowledgements](#acknowledgements)
 
 ## Getting Started
-`sbomnix` requires common [nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
+`sbomnix` requires common [Nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
 `nixgraph` requires [graphviz](https://graphviz.org/download/).
 
-### Running without installation
-#### Running as nix flake
-`sbomnix` can be run as a nix flake from the `tiiuae/sbomnix` repository:
+### Running Without Installation
+#### Running as Nix Flake
+`sbomnix` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
 ```bash
-$ nix run github:tiiuae/sbomnix#sbomnix
+# '--' signifies the end of argument list for `nix`.
+# '--help' is the first argument to `sbomnix`
+$ nix run github:tiiuae/sbomnix#sbomnix -- --help
 ```
 
-or from a locally cloned repository:
+or from a local repository:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ nix run .#sbomnix
+$ nix run .#sbomnix -- --help
 ```
-Similarly, you can run `nixgraph` with `nix run github:tiiuae/sbomnix#nixgraph`.
-See the list of other supported flake targets with: `nix flake show`.
+Similarly, you can run `nixgraph` with something like `nix run github:tiiuae/sbomnix#nixgraph --  --help`
 
-#### Running as python script
-Running `sbomnix` as python script requires python3 and packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
+See the full list of supported flake targets with: `nix flake show`
+
+#### Running as Python Script
+Running `sbomnix` as Python script requires Python packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
@@ -72,15 +77,15 @@ $ cd sbomnix
 $ make install
 ```
 
-## Usage examples
-In the below examples, we use nix package `wget` as an example target.
+## Usage Examples
+In the below examples, we use Nix package `wget` as an example target.
 To install wget and print out its out-path on your local system, try something like:
 ```bash
 $ nix-shell -p wget --run exit && nix eval -f '<nixpkgs>' 'wget.outPath'
 "/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 
-#### Generate SBOM based on derivation file or out-path
+#### Generate SBOM Based on Derivation File or Out-path
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies:
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
@@ -90,7 +95,7 @@ INFO     Wrote: sbom.csv
 ```
 Main output is the SBOM json file (sbom.cdx.json) in [CycloneDX](https://cyclonedx.org/) format.
 
-#### Generate SBOM including meta information
+#### Generate SBOM Including Meta Information
 To include license information to the SBOM, first generate package meta information with `nix-env`:
 ```bash
 $ nix-env -qa --meta --json '.*' >meta.json
@@ -100,18 +105,18 @@ Then, run `sbomnix` with `--meta` argument to tell sbomnix to read meta informat
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json
 ```
 
-#### Generate SBOM including buildtime dependencies
+#### Generate SBOM Including Buildtime Dependencies
 By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to include buildtime dependencies using the `--type` argument. 
 Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime-only dependencies:
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --type=buildtime
 ```
-#### Generate SBOM based on result symlink
+#### Generate SBOM Based on Result Symlink
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):
 ```bash
 $ sbomnix /path/to/result 
 ```
-#### Visualize package dependencies
+#### Visualize Package Dependencies
 `sbomnix` finds the package dependencies using `nixgraph`. 
 Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
 Below, we show an example of visualizing package `wget` runtime dependencies:
@@ -127,7 +132,7 @@ For more examples on querying and visualizing the package dependencies, see: [ni
 
 ## Contribute
 Any pull requests, suggestions, and error reports are welcome.
-To start development, we recommend using nix flakes devShell:
+To start development, we recommend using Nix flakes development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
@@ -136,8 +141,8 @@ $ nix develop
 Run `make help` to see the list of other make targets.
 Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.
 
-To deactivate the nix devshell, run `exit` in your shell.
-To see other nix flake targets, run `nix flake show`.
+To deactivate the Nix devshell, run `exit` in your shell.
+To see other Nix flake targets, run `nix flake show`.
 
 
 ## License
@@ -145,4 +150,4 @@ This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt]
 
 
 ## Acknowledgements
-`sbomnix` uses nix store derivation scanner ([nix.py](sbomnix/nix.py) and [derivation.py](sbomnix/derivation.py)) originally from [vulnix](https://github.com/flyingcircusio/vulnix).
+`sbomnix` uses Nix store derivation scanner ([nix.py](sbomnix/nix.py) and [derivation.py](sbomnix/derivation.py)) originally from [vulnix](https://github.com/flyingcircusio/vulnix).
