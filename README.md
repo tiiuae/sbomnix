@@ -12,6 +12,8 @@ In addition to `sbomnix` this repository is home to [nixgraph](./doc/nixgraph.md
 
 For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans, see: [vulnxscan](scripts/vulnxscan/README.md).
 
+The CycloneDX SBOM for each release of `sbomnix` itself is available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
+
 `sbomnix` and other tools in this repository originate from [Ghaf Framework](https://github.com/tiiuae/ghaf).
 
 Table of Contents
