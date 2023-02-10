@@ -21,6 +21,7 @@ pythonPackages.buildPythonPackage rec {
 
   propagatedBuildInputs = [ 
     pkgs.reuse
+    pkgs.grype
     pythonPackages.numpy
     pythonPackages.pandas
     pythonPackages.colorlog
