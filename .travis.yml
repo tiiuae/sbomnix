@@ -19,5 +19,5 @@ install:
   # Install python requirements:
   - pip3 install -r requirements.txt
 script:
-  # Ensure 'pre-push' targets pass:
-  - make pre-push
+  # Ensure 'test-ci' targets pass:
+  - make test-ci

@@ -24,4 +24,4 @@ jobs:
       - name: Test nix-build
         run: nix-build '<nixpkgs>' -A hello
       - name: Run tests
-        run: make pre-push
+        run: make test-ci

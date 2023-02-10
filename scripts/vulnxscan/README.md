@@ -20,7 +20,7 @@ Table of Contents
    * [Running Vulnxscan as Flake](#running-vulnxscan-as-flake)
    * [Find Vulnerabilities Impacting Runtime Dependencies](#find-vulnerabilities-impacting-runtime-dependencies)
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
-   * [Find Vulnerabilities Impacting Vuildtime and Runtime Dependencies](#find-vulnerabilities-impacting-vuildtime-and-runtime-dependencies)
+   * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
 * [Footnotes and Future Work](#footnotes-and-future-work)
 
 ## Getting Started
@@ -213,7 +213,7 @@ INFO     Wrote: vulns.csv
 Notice that `vulnxscan` drops the Vulnix scan when the input is SBOM. This is due to the Vulnix not supporting SBOM input at the time of writing.
 
 
-### Find Vulnerabilities Impacting Vuildtime and Runtime Dependencies
+### Find Vulnerabilities Impacting Buildtime and Runtime Dependencies
 By default, `vulnxscan` scans the given target for vulnerabilities that impact its runtime-only dependencies. This example shows how to use `vulnxscan` to include also buildtime dependencies to the scan.
 
 ```bash

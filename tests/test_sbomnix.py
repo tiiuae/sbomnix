@@ -20,6 +20,7 @@ import pytest
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 TEST_WORK_DIR = MYDIR / "sbomnix_test_data"
 TEST_NIX_RESULT = TEST_WORK_DIR / "result"
+REPOROOT = MYDIR / ".."
 SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
 NIXGRAPH = MYDIR / ".." / "nixgraph" / "main.py"
 COMPARE_DEPS = MYDIR / "compare_deps.py"
@@ -51,6 +52,15 @@ def test_sbomnix_help():
     Test sbomnix command line argument: '-h'
     """
     cmd = [SBOMNIX, "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_sbomnix_help_flake():
+    """
+    Test sbomnix command line argument: '-h' running sbomnix as flake
+    """
+
+    cmd = ["nix", "run", f"{REPOROOT}#sbomnix", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -125,6 +135,15 @@ def test_nixgraph_help():
     Test nixgraph command line argument: '-h'
     """
     cmd = [NIXGRAPH, "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_nixgraph_help_flake():
+    """
+    Test nixgraph command line argument: '-h' running nixgraph as flake
+    """
+
+    cmd = ["nix", "run", f"{REPOROOT}#nixgraph", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -322,6 +341,64 @@ def test_compare_sboms():
         COMPARE_SBOMS,
         out_path_cdx_1,
         out_path_cdx_2,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+################################################################################
+
+
+def test_vulnxscan_help_flake():
+    """
+    Test vulnxscan command line argument: '-h' running vulnxscan as flake
+    """
+
+    cmd = ["nix", "run", f"{REPOROOT}#vulnxscan", "--", "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+@pytest.mark.skip_in_ci
+def test_vulnxscan_scan_nix_result():
+    """
+    Test vulnxscan scan with TEST_NIX_RESULT as input
+    """
+
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#vulnxscan",
+        "--",
+        TEST_NIX_RESULT.as_posix(),
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+@pytest.mark.skip_in_ci
+def test_vulnxscan_scan_sbom():
+    """
+    Test vulnxscan scan with SBOM as input
+    """
+
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#sbomnix",
+        "--",
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#vulnxscan",
+        "--",
+        "--sbom",
+        out_path_cdx.as_posix(),
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
 

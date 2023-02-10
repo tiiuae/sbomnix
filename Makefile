@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 SHELL := bash
+PYTHON_TARGETS := $(shell find . -path ./venv -prune -false -o -name "*.py")
 
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
@@ -45,12 +46,16 @@ install-dev-requirements: ## Install all requirements
 pre-push: test black style pylint reuse-lint  ## Run tests, pycodestyle, pylint, reuse-lint
 	$(call target_success,$@)
 
+test-ci: install-dev-requirements style pylint reuse-lint  ## Run CI tests
+	source scripts/env.sh && pytest -vx -k "not skip_in_ci" tests/
+	$(call target_success,$@)
+
 test: install-dev-requirements ## Run tests
 	source scripts/env.sh && pytest -vx tests/
 	$(call target_success,$@)
 
 black: clean ## Reformat with black
-	@for py in $(shell find . -path ./venv -prune -false -o -name "*.py"); \
+	@for py in $(PYTHON_TARGETS); \
 		do echo "$$py:"; \
 		black -q $$py; \
 	done
@@ -61,10 +66,7 @@ style: clean ## Check with pycodestyle (pep8)
 	$(call target_success,$@)
 
 pylint: clean ## Check with pylint
-	@for py in $(shell find . -path ./venv -prune -false -o -name "*.py"); do \
-		echo "$$py:"; \
-		pylint -rn $$py || exit 1 ; \
-	done
+	pylint --disable duplicate-code -rn $(PYTHON_TARGETS) || exit 1
 	$(call target_success,$@)
 
 reuse-lint: clean ## Check with reuse lint
