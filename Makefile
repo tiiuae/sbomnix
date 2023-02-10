@@ -39,7 +39,7 @@ uninstall: ## Uninstall sbomnix
 	pip3 uninstall -y sbomnix 
 	$(call target_success,$@)
 
-install-dev-requirements: ## Install all requirements
+install-dev-requirements: clean ## Install all requirements
 	pip3 install -q -r requirements.txt --no-cache-dir
 	$(call target_success,$@)
 
@@ -71,6 +71,20 @@ pylint: clean ## Check with pylint
 
 reuse-lint: clean ## Check with reuse lint
 	reuse lint
+	$(call target_success,$@)
+
+release-asset: clean install-dev-requirements ## Build release asset
+	nix build
+	mkdir -p build/
+	nix run .#sbomnix -- result --type=runtime \
+        --cdx=./build/sbom.runtime.cdx.json \
+        --csv=./build/sbom.runtime.csv
+	nix run .#sbomnix -- result --type=buildtime \
+        --cdx=./build/sbom.buildtime.cdx.json \
+        --csv=./build/sbom.buildtime.csv
+	@echo ""
+	@echo "Build release asset:"
+	ls -la build
 	$(call target_success,$@)
 
 clean: ## Remove build artifacts
