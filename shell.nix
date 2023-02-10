@@ -11,6 +11,7 @@ pkgs.mkShell {
 
   buildInputs = [ 
     pkgs.reuse
+    pkgs.grype
     pythonPackages.numpy
     pythonPackages.pandas
     pythonPackages.colorlog
