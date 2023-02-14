@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 {
   pkgs ? import <nixpkgs> {},
-  pythonPackages ? pkgs.python3Packages
+  pythonPackages ? pkgs.python3Packages,
+  vulnix ? import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
 }:
 
 pkgs.mkShell {
@@ -12,6 +13,8 @@ pkgs.mkShell {
   buildInputs = [ 
     pkgs.reuse
     pkgs.grype
+    vulnix
+    pythonPackages.pip
     pythonPackages.numpy
     pythonPackages.pandas
     pythonPackages.colorlog
@@ -28,6 +31,10 @@ pkgs.mkShell {
     pythonPackages.venvShellHook
   ];
   venvDir = "venv";
+  # https://github.com/NixOS/nix/issues/1009:
+  shellHook = ''
+    export TMPDIR="/tmp"
+  '';
   postShellHook = ''
     make install-dev
   '';

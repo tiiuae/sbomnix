@@ -62,7 +62,7 @@ Running `sbomnix` as Python script requires Python packages specified in [requir
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip3 install --user -r requirements.txt
+$ pip install --user -r requirements.txt
 ```
 After requirements have been installed, you can run sbomnix without installation as follows:
 ```bash
