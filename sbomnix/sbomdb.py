@@ -11,6 +11,7 @@
 import uuid
 import logging
 import json
+import re
 from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
@@ -48,6 +49,12 @@ class SbomDb:
         self.df_sbomdb = None
         self.df_sbomdb_out_exploded = None
         self._init_sbomdb()
+        self.uuid = uuid.uuid4()
+        self.sbom_type = "runtime_and_buildtime"
+        if self.runtime and not self.buildtime:
+            self.sbom_type = "runtime_only"
+        elif not self.runtime and self.buildtime:
+            self.sbom_type = "buildtime_only"
 
     def _init_dependencies(self, nix_path):
         """Initialize runtime and buildtime dependencies (df_rdeps, df_bdeps)"""
@@ -138,26 +145,28 @@ class SbomDb:
             return [uid for uid in dep_uids if uid != self_uid]
         return None
 
+    def _write_json(self, pathname, data, printinfo=False):
+        with open(pathname, "w", encoding="utf-8") as outfile:
+            json_string = json.dumps(data, indent=2)
+            outfile.write(json_string)
+            if printinfo:
+                _LOG.info("Wrote: %s", outfile.name)
+
     def to_cdx(self, cdx_path, printinfo=True):
         """Export sbomdb to cyclonedx json file"""
         cdx = {}
         cdx["bomFormat"] = "CycloneDX"
         cdx["specVersion"] = "1.3"
         cdx["version"] = 1
-        cdx["serialNumber"] = f"urn:uuid:{uuid.uuid4()}"
+        cdx["serialNumber"] = f"urn:uuid:{self.uuid}"
         cdx["metadata"] = {}
         cdx["metadata"]["timestamp"] = (
             datetime.now(timezone.utc).astimezone().isoformat()
         )
-        sbom_type = "runtime_and_buildtime"
-        if self.runtime and not self.buildtime:
-            sbom_type = "runtime_only"
-        elif not self.runtime and self.buildtime:
-            sbom_type = "buildtime_only"
         cdx["metadata"]["properties"] = []
         prop = {}
         prop["name"] = "sbom_type"
-        prop["value"] = sbom_type
+        prop["value"] = self.sbom_type
         cdx["metadata"]["properties"].append(prop)
         tool = {}
         tool["vendor"] = "TII"
@@ -174,13 +183,36 @@ class SbomDb:
             else:
                 cdx["components"].append(component)
             deps = self._lookup_dependencies(drv, uid=self.uid)
-            dependency = _drv_to_dependency(drv, deps, uid=self.uid)
+            dependency = _drv_to_cdx_dependency(drv, deps, uid=self.uid)
             cdx["dependencies"].append(dependency)
-        with open(cdx_path, "w", encoding="utf-8") as outfile:
-            json_string = json.dumps(cdx, indent=2)
-            outfile.write(json_string)
-            if printinfo:
-                _LOG.info("Wrote: %s", outfile.name)
+        self._write_json(cdx_path, cdx, printinfo)
+
+    def to_spdx(self, spdx_path, printinfo=True):
+        """Export sbomdb to spdx json file"""
+        spdx = {}
+        spdx["spdxVersion"] = "SPDX-2.3"
+        spdx["dataLicense"] = "CC0-1.0"
+        spdx["SPDXID"] = "SPDXRef-DOCUMENT"
+        spdx["name"] = ""
+        spdx["documentNamespace"] = f"sbomnix://{self.uuid}"
+        creation_info = {}
+        creation_info["created"] = datetime.now(timezone.utc).astimezone().isoformat()
+        creation_info["creators"] = []
+        creation_info["creators"].append(f"Tool: sbomnix-{get_version()}")
+        spdx["creationInfo"] = creation_info
+        spdx["comment"] = f"included dependencies: '{self.sbom_type}'"
+        spdx["packages"] = []
+        spdx["relationships"] = []
+        for drv in self.df_sbomdb.itertuples():
+            package = _drv_to_spdx_package(drv, uid=self.uid)
+            spdx["packages"].append(package)
+            if drv.store_path == self.target_deriver:
+                spdx["name"] = _str_to_spdxid(getattr(drv, self.uid))
+            deps = self._lookup_dependencies(drv, uid=self.uid)
+            relationships = _drv_to_spdx_relationships(drv, deps, uid=self.uid)
+            for relation in relationships:
+                spdx["relationships"].append(relation)
+        self._write_json(spdx_path, spdx, printinfo)
 
     def to_csv(self, csv_path):
         """Export sbomdb to csv file"""
@@ -189,10 +221,92 @@ class SbomDb:
 
 ################################################################################
 
+# SPDX
+
+
+def _str_to_spdxid(strval):
+    # Only letters, numbers, '.', and '-' are allowed in spdx idstring,
+    # replace all other characters with '-'
+    idstring = re.sub(r"[^\-.a-zA-Z0-9]", "-", strval)
+    # Return idstring with prefix "SPDXRef-"
+    if idstring.startswith("-"):
+        return f"SPDXRef{idstring}"
+    return f"SPDXRef-{idstring}"
+
+
+def _drv_to_spdx_license_list(drv):
+    license_attr_name = "meta_license_spdxid"
+    if license_attr_name not in drv._asdict():
+        return []
+    license_str = getattr(drv, license_attr_name)
+    if not license_str:
+        return []
+    license_strings = license_str.split(";")
+    licenses = []
+    for license_string in license_strings:
+        if license_string not in SPDX_LICENSES:
+            continue
+        licenses.append(license_string)
+    return licenses
+
+
+def _drv_to_spdx_extrefs(drv):
+    extrefs = []
+    cpe_ref = {}
+    cpe_ref["referenceCategory"] = "SECURITY"
+    cpe_ref["referenceType"] = "cpe23Type"
+    cpe_ref["referenceLocator"] = drv.cpe
+    extrefs.append(cpe_ref)
+    purl_ref = {}
+    purl_ref["referenceCategory"] = "PACKAGE-MANAGER"
+    purl_ref["referenceType"] = "purl"
+    purl_ref["referenceLocator"] = drv.purl
+    extrefs.append(purl_ref)
+    return extrefs
+
+
+def _drv_to_spdx_package(drv, uid="store_path"):
+    """Convert one entry from sbomdb (drv) to spdx package"""
+    pkg = {}
+    pkg["name"] = drv.pname
+    pkg["SPDXID"] = _str_to_spdxid(getattr(drv, uid))
+    pkg["versionInfo"] = drv.version
+    pkg["downloadLocation"] = "NOASSERTION"
+    if "meta_homepage" in drv._asdict() and drv.meta_homepage:
+        pkg["homepage"] = drv.meta_homepage
+    licenses = _drv_to_spdx_license_list(drv)
+    if licenses:
+        pkg["licenseInfoFromFiles"] = licenses
+    licence_entry = licenses[0] if len(licenses) == 1 else "NOASSERTION"
+    pkg["licenseConcluded"] = licence_entry
+    pkg["licenseDeclared"] = licence_entry
+    pkg["copyrightText"] = "NOASSERTION"
+    pkg["externalRefs"] = _drv_to_spdx_extrefs(drv)
+    return pkg
+
+
+def _drv_to_spdx_relationships(drv, deps_list, uid="store_path"):
+    """Return list of spdx relationship structures for sbomdb drv"""
+    relationships = []
+    if not deps_list:
+        return relationships
+    drv_spdxid = _str_to_spdxid(getattr(drv, uid))
+    relationship_type = "DEPENDS_ON"
+    for dep in deps_list:
+        relationship = {}
+        relationship["spdxElementId"] = drv_spdxid
+        relationship["relationshipType"] = relationship_type
+        relationship["relatedSpdxElement"] = _str_to_spdxid(dep)
+        relationships.append(relationship)
+    return relationships
+
+
+################################################################################
+
 # CycloneDX
 
 
-def _drv_to_licenses_entry(drv, column_name, cdx_license_type):
+def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
     """Parse license entries of type cdx_license_type from column_name"""
     licenses = []
     if column_name not in drv._asdict():
@@ -219,10 +333,10 @@ def _cdx_component_add_licenses(component, drv):
     """Add licenses array to cdx component (if any)"""
     licenses = []
     # First, try reading the license in spdxid-format
-    licenses = _drv_to_licenses_entry(drv, "meta_license_spdxid", "id")
+    licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_spdxid", "id")
     # If it fails, try reading the license short name
     if not licenses:
-        licenses = _drv_to_licenses_entry(drv, "meta_license_short", "name")
+        licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_short", "name")
     # Give up if pacakge does not have license information associated
     if not licenses:
         _LOG.debug("No license info found for '%s'", drv.name)
@@ -257,7 +371,7 @@ def _drv_to_cdx_component(drv, uid="store_path"):
     return component
 
 
-def _drv_to_dependency(drv, deps_list, uid="store_path"):
+def _drv_to_cdx_dependency(drv, deps_list, uid="store_path"):
     """Return cdx dependency structure for sbomdb drv"""
     dependency = {}
     dependency["ref"] = getattr(drv, uid)

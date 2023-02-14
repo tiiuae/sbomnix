@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 SHELL := bash
-PYTHON_TARGETS := $(shell find . -path ./venv -prune -false -o -name "*.py")
+PYTHON_TARGETS := $(shell find . -path ./venv -prune -o -path "*.eggs" -prune -o -name "*.py")
 
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
@@ -78,12 +78,14 @@ release-asset: clean install-dev-requirements ## Build release asset
 	mkdir -p build/
 	nix run .#sbomnix -- result --type=runtime \
         --cdx=./build/sbom.runtime.cdx.json \
+        --spdx=./build/sbom.runtime.spdx.json \
         --csv=./build/sbom.runtime.csv
 	nix run .#sbomnix -- result --type=buildtime \
         --cdx=./build/sbom.buildtime.cdx.json \
+        --spdx=./build/sbom.buildtime.spdx.json \
         --csv=./build/sbom.buildtime.csv
 	@echo ""
-	@echo "Build release asset:"
+	@echo "Built release asset:"
 	ls -la build
 	$(call target_success,$@)
 
