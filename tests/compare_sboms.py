@@ -30,10 +30,10 @@ _LOG = logging.getLogger(LOGGER_NAME)
 
 def getargs():
     """Parse command line arguments"""
-    desc = "Compare two CycloneDX sbom json files"
+    desc = "Compare CycloneDX or SPDX sbom json files"
     epil = (
         f"Example: ./{os.path.basename(__file__)} "
-        "/path/to/sbom1.json /path/to/sbom2.json"
+        "/path/to/sbom.cdx.json /path/to/sbom.cdx.json"
     )
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
@@ -53,24 +53,49 @@ def getargs():
 ################################################################################
 
 
+def _sbom_df_from_dict(dict_obj):
+    df_ret = pd.DataFrame(dict_obj)
+    df_ret.fillna("", inplace=True)
+    df_ret = df_ret.astype(str)
+    df_ret.sort_values("name", inplace=True, key=lambda col: col.str.lower())
+    df_ret.reset_index(drop=True, inplace=True)
+    return df_ret
+
+
+def _parse_sbom_cdx(json_dict):
+    components = json_dict["components"] + [json_dict["metadata"]["component"]]
+    components_dict = {}
+    setcol = components_dict.setdefault
+    for cmp in components:
+        setcol("uid", []).append(cmp["bom-ref"])
+        setcol("name", []).append(cmp["name"])
+        setcol("version", []).append(cmp["version"])
+    return _sbom_df_from_dict(components_dict)
+
+
+def _parse_sbom_spdx(json_dict):
+    packages = json_dict["packages"]
+    packages_dict = {}
+    setcol = packages_dict.setdefault
+    for cmp in packages:
+        setcol("uid", []).append(cmp["SPDXID"])
+        setcol("name", []).append(cmp["name"])
+        setcol("version", []).append(cmp["versionInfo"])
+    return _sbom_df_from_dict(packages_dict)
+
+
 def _parse_sbom(path):
     with path.open(encoding="utf-8") as inf:
         json_dict = json.loads(inf.read())
-
-        components = json_dict["components"] + [json_dict["metadata"]["component"]]
-        components_dict = {}
-        setcol = components_dict.setdefault
-        for cmp in components:
-            setcol("bom_ref", []).append(cmp["bom-ref"])
-            setcol("name", []).append(cmp["name"])
-            setcol("version", []).append(cmp["version"])
-
-        df_components = pd.DataFrame(components_dict)
-        df_components.fillna("", inplace=True)
-        df_components = df_components.astype(str)
-        df_components.sort_values("name", inplace=True, key=lambda col: col.str.lower())
-        df_components.reset_index(drop=True, inplace=True)
-        return df_components
+        sbom_format = ""
+        if "SPDXID" in json_dict:
+            sbom_format = "SPDX"
+            return _parse_sbom_spdx(json_dict)
+        if "bomFormat" in json_dict:
+            sbom_format = json_dict["bomFormat"]
+            return _parse_sbom_cdx(json_dict)
+        _LOG.fatal("Unsupported SBOM format: '%s'", sbom_format)
+        sys.exit(1)
 
 
 def _log_rows(df, name):
@@ -95,41 +120,41 @@ def _compare_sboms(args, df1, df2):
     df_common.drop_duplicates(subset=uid_list, inplace=True)
 
     df1_only = pd.merge(left=df1, right=df2, how="left", on=uid_list)
-    df1_only = df1_only[df1_only["bom_ref_y"].isna()]
+    df1_only = df1_only[df1_only["uid_y"].isna()]
     df1_only.drop_duplicates(subset=uid_list, inplace=True)
 
     df2_only = pd.merge(left=df2, right=df1, how="left", on=uid_list)
-    df2_only = df2_only[df2_only["bom_ref_y"].isna()]
+    df2_only = df2_only[df2_only["uid_y"].isna()]
     df2_only.drop_duplicates(subset=uid_list, inplace=True)
 
     _LOG.info("Using uid: '%s'", uid_list)
     _LOG.info("")
 
     _LOG.info("FILE1 path '%s'", args.FILE1)
-    _LOG.info("FILE1 number of unique components: %s", len(df1_uidg.index))
+    _LOG.info("FILE1 number of unique entries: %s", len(df1_uidg.index))
     if not df1_non_uniq.empty:
-        _LOG.info("FILE1 number of non-unique components: %s", len(df1_non_uniq))
+        _LOG.info("FILE1 number of non-unique entries: %s", len(df1_non_uniq))
         _log_rows(df1_non_uniq, "non_unique")
     _LOG.info("")
 
     _LOG.info("FILE2 path '%s'", args.FILE2)
     _LOG.info("FILE2 number of unique components: %s", len(df2_uidg.index))
     if not df2_non_uniq.empty:
-        _LOG.info("FILE2 number of non-unique components: %s", len(df2_non_uniq))
+        _LOG.info("FILE2 number of non-unique entries: %s", len(df2_non_uniq))
         _log_rows(df2_non_uniq, "non_unique")
     _LOG.info("")
 
-    _LOG.info("FILE1 and FILE2 common components: %s", len(df_common))
+    _LOG.info("FILE1 and FILE2 common entries: %s", len(df_common))
     if not df_common.empty:
         _log_rows(df_common[uid_list], "common")
     _LOG.info("")
 
-    _LOG.info("FILE1 only components: %s", len(df1_only))
+    _LOG.info("FILE1 only entries: %s", len(df1_only))
     if not df1_only.empty:
         _log_rows(df1_only[uid_list], "file1_only")
     _LOG.info("")
 
-    _LOG.info("FILE2 only components: %s", len(df2_only))
+    _LOG.info("FILE2 only entries: %s", len(df2_only))
     if not df2_only.empty:
         _log_rows(df2_only[uid_list], "file2_only")
     _LOG.info("")

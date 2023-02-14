@@ -48,109 +48,109 @@ def set_up_test_data():
 
 
 def test_sbomnix_help():
-    """
-    Test sbomnix command line argument: '-h'
-    """
+    """Test sbomnix command line argument: '-h'"""
     cmd = [SBOMNIX, "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 def test_sbomnix_help_flake():
-    """
-    Test sbomnix command line argument: '-h' running sbomnix as flake
-    """
-
+    """Test sbomnix command line argument: '-h' running sbomnix as flake"""
     cmd = ["nix", "run", f"{REPOROOT}#sbomnix", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
-def test_sbomnix_cdx_type_runtime():
-    """
-    Test sbomnix '--type=runtime' generates valid CycloneDX json
-    """
-
+def test_sbomnix_type_runtime():
+    """Test sbomnix '--type=runtime' generates valid CycloneDX json"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
     cmd = [
         SBOMNIX,
         TEST_NIX_RESULT,
         "--cdx",
         out_path_cdx.as_posix(),
+        "--spdx",
+        out_path_spdx.as_posix(),
         "--type",
         "runtime",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
-    schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
-    assert schema_path.exists()
-    validate_json(out_path_cdx.as_posix(), schema_path)
+    assert out_path_spdx.exists()
+    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    assert cdx_schema_path.exists()
+    validate_json(out_path_cdx.as_posix(), cdx_schema_path)
+    spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
+    assert spdx_schema_path.exists()
+    validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
-def test_sbomnix_cdx_type_buildtime():
-    """
-    Test sbomnix '--type=runtime' generates valid CycloneDX json
-    """
-
+def test_sbomnix_type_buildtime():
+    """Test sbomnix '--type=runtime' generates valid CycloneDX json"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
     cmd = [
         SBOMNIX,
         TEST_NIX_RESULT,
         "--cdx",
         out_path_cdx.as_posix(),
+        "--spdx",
+        out_path_spdx.as_posix(),
         "--type",
         "buildtime",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
-    schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
-    assert schema_path.exists()
-    validate_json(out_path_cdx.as_posix(), schema_path)
+    assert out_path_spdx.exists()
+    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    assert cdx_schema_path.exists()
+    validate_json(out_path_cdx.as_posix(), cdx_schema_path)
+    spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
+    assert spdx_schema_path.exists()
+    validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
 def test_sbomnix_cdx_type_both():
-    """
-    Test sbomnix '--type=both' generates valid CycloneDX json
-    """
-
+    """Test sbomnix '--type=both' generates valid CycloneDX json"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
     cmd = [
         SBOMNIX,
         TEST_NIX_RESULT,
         "--cdx",
         out_path_cdx.as_posix(),
+        "--spdx",
+        out_path_spdx.as_posix(),
         "--type",
         "both",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
-    schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
-    assert schema_path.exists()
-    validate_json(out_path_cdx.as_posix(), schema_path)
+    assert out_path_spdx.exists()
+    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    assert cdx_schema_path.exists()
+    validate_json(out_path_cdx.as_posix(), cdx_schema_path)
+    spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
+    assert spdx_schema_path.exists()
+    validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
 ################################################################################
 
 
 def test_nixgraph_help():
-    """
-    Test nixgraph command line argument: '-h'
-    """
+    """Test nixgraph command line argument: '-h'"""
     cmd = [NIXGRAPH, "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 def test_nixgraph_help_flake():
-    """
-    Test nixgraph command line argument: '-h' running nixgraph as flake
-    """
-
+    """Test nixgraph command line argument: '-h' running nixgraph as flake"""
     cmd = ["nix", "run", f"{REPOROOT}#nixgraph", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 def test_nixgraph_png():
-    """
-    Test nixgraph with png output generates valid png image
-    """
+    """Test nixgraph with png output generates valid png image"""
     png_out = TEST_WORK_DIR / "graph.png"
     cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", png_out, "--depth", "3"]
     assert subprocess.run(cmd, check=True).returncode == 0
@@ -160,9 +160,7 @@ def test_nixgraph_png():
 
 
 def test_nixgraph_csv():
-    """
-    Test nixgraph with csv output generates valid csv
-    """
+    """Test nixgraph with csv output generates valid csv"""
     csv_out = TEST_WORK_DIR / "graph.csv"
     cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--depth", "3"]
     assert subprocess.run(cmd, check=True).returncode == 0
@@ -173,9 +171,7 @@ def test_nixgraph_csv():
 
 
 def test_nixgraph_csv_buildtime():
-    """
-    Test nixgraph with buildtime csv output generates valid csv
-    """
+    """Test nixgraph with buildtime csv output generates valid csv"""
     csv_out = TEST_WORK_DIR / "graph_buildtime.csv"
     cmd = [NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--buildtime"]
     assert subprocess.run(cmd, check=True).returncode == 0
@@ -186,9 +182,7 @@ def test_nixgraph_csv_buildtime():
 
 
 def test_nixgraph_csv_graph_inverse():
-    """
-    Test nixgraph with '--inverse' argument
-    """
+    """Test nixgraph with '--inverse' argument"""
     csv_out = TEST_WORK_DIR / "graph.csv"
     cmd = [
         NIXGRAPH,
@@ -235,9 +229,7 @@ def test_nixgraph_csv_graph_inverse():
 
 
 def test_compare_deps_runtime():
-    """
-    Compare nixgraph vs sbom runtime dependencies
-    """
+    """Compare nixgraph vs sbom runtime dependencies"""
     graph_csv_out = TEST_WORK_DIR / "graph.csv"
     cmd = [
         NIXGRAPH,
@@ -272,9 +264,7 @@ def test_compare_deps_runtime():
 
 
 def test_compare_deps_buildtime():
-    """
-    Compare nixgraph vs sbom buildtime dependencies
-    """
+    """Compare nixgraph vs sbom buildtime dependencies"""
     graph_csv_out = TEST_WORK_DIR / "graph.csv"
     cmd = [
         NIXGRAPH,
@@ -309,10 +299,8 @@ def test_compare_deps_buildtime():
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
-def test_compare_sboms():
-    """
-    Compare two sbomnix runs with same target produce the same sbom
-    """
+def test_compare_subsequent_cdx_sboms():
+    """Compare two sbomnix runs with same target produce the same cdx sbom"""
     out_path_cdx_1 = TEST_WORK_DIR / "sbom_cdx_test_1.json"
     cmd = [
         SBOMNIX,
@@ -345,24 +333,78 @@ def test_compare_sboms():
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
+def test_compare_subsequent_spdx_sboms():
+    """Compare two sbomnix runs with same target produce the same spdx sbom"""
+    out_path_spdx_1 = TEST_WORK_DIR / "sbom_spdx_test_1.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--spdx",
+        out_path_spdx_1.as_posix(),
+        "--type",
+        "both",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_spdx_1.exists()
+
+    out_path_spdx_2 = TEST_WORK_DIR / "sbom_spdx_test_2.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--spdx",
+        out_path_spdx_2.as_posix(),
+        "--type",
+        "both",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_spdx_2.exists()
+
+    cmd = [
+        COMPARE_SBOMS,
+        out_path_spdx_1,
+        out_path_spdx_2,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_compare_spdx_and_cdx_sboms():
+    """Compare spdx and cdx sboms from the same sbomnix invocation"""
+    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx.as_posix(),
+        "--spdx",
+        out_path_spdx.as_posix(),
+        "--type",
+        "both",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+    assert out_path_spdx.exists()
+
+    cmd = [
+        COMPARE_SBOMS,
+        out_path_cdx,
+        out_path_spdx,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
 ################################################################################
 
 
 def test_vulnxscan_help_flake():
-    """
-    Test vulnxscan command line argument: '-h' running vulnxscan as flake
-    """
-
+    """Test vulnxscan command line argument: '-h' running vulnxscan as flake"""
     cmd = ["nix", "run", f"{REPOROOT}#vulnxscan", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 @pytest.mark.skip_in_ci
 def test_vulnxscan_scan_nix_result():
-    """
-    Test vulnxscan scan with TEST_NIX_RESULT as input
-    """
-
+    """Test vulnxscan scan with TEST_NIX_RESULT as input"""
     cmd = [
         "nix",
         "run",
@@ -375,10 +417,7 @@ def test_vulnxscan_scan_nix_result():
 
 @pytest.mark.skip_in_ci
 def test_vulnxscan_scan_sbom():
-    """
-    Test vulnxscan scan with SBOM as input
-    """
-
+    """Test vulnxscan scan with SBOM as input"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
     cmd = [
         "nix",

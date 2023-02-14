@@ -59,8 +59,10 @@ def getargs():
     group = parser.add_argument_group("output arguments")
     helps = "Path to csv output file (default: ./sbom.csv)"
     group.add_argument("--csv", nargs="?", help=helps, default="sbom.csv")
-    helps = "Path to cyclonedx output file (default: ./sbom.cdx.json)"
+    helps = "Path to cyclonedx json output file (default: ./sbom.cdx.json)"
     group.add_argument("--cdx", nargs="?", help=helps, default="sbom.cdx.json")
+    helps = "Path to spdx json output file (default: ./sbom.spdx.json)"
+    group.add_argument("--spdx", nargs="?", help=helps, default="sbom.spdx.json")
 
     return parser.parse_args()
 
@@ -87,6 +89,8 @@ def main():
     sbomdb = SbomDb(target_path, runtime, buildtime, args.meta)
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
+    if args.spdx:
+        sbomdb.to_spdx(args.spdx)
     if args.csv:
         sbomdb.to_csv(args.csv)
 

@@ -12,7 +12,7 @@ In addition to `sbomnix` this repository is home to [nixgraph](./doc/nixgraph.md
 
 For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans, see: [vulnxscan](scripts/vulnxscan/README.md).
 
-The CycloneDX SBOM for each release of `sbomnix` itself is available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
+The [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) SBOMs for each release of `sbomnix` itself are available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
 
 `sbomnix` and other tools in this repository originate from [Ghaf Framework](https://github.com/tiiuae/ghaf).
 
@@ -93,9 +93,10 @@ By default `sbomnix` scans the given target and generates an SBOM including the 
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
 INFO     Wrote: sbom.cdx.json
+INFO     Wrote: sbom.spdx.json
 INFO     Wrote: sbom.csv
 ```
-Main output is the SBOM json file (sbom.cdx.json) in [CycloneDX](https://cyclonedx.org/) format.
+Main output are the SBOM json files sbom.cdx.json and sbom.spdx.json in [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) formats.
 
 #### Generate SBOM Including Meta Information
 To include license information to the SBOM, first generate package meta information with `nix-env`:

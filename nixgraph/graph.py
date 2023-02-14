@@ -254,7 +254,7 @@ class NixDependencies:
         else:
             self._parse_runtime_dependencies(nix_path)
         if len(self.dependencies) <= 0:
-            _LOG.info("No %s dependices", self.dtype)
+            _LOG.info("No %s dependencies", self.dtype)
 
     def _parse_runtime_dependencies(self, nix_path):
         # map nix_path to output path by calling nix path-info
