@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 {
   pkgs ? import <nixpkgs> {},
-  pythonPackages ? pkgs.python3Packages
+  pythonPackages ? pkgs.python3Packages,
+  vulnix ? import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
 }:
 
 pythonPackages.buildPythonPackage rec {
   pname = "sbomnix";
-  version = "1.3.0";
+  version = "1.4.1";
   format = "setuptools";
 
   src = ./.;
@@ -22,6 +23,7 @@ pythonPackages.buildPythonPackage rec {
   propagatedBuildInputs = [ 
     pkgs.reuse
     pkgs.grype
+    vulnix
     pythonPackages.numpy
     pythonPackages.pandas
     pythonPackages.colorlog

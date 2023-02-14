@@ -16,6 +16,7 @@ import pathlib
 import json
 import re
 from tempfile import NamedTemporaryFile
+from shutil import which
 import pandas as pd
 import numpy as np
 from tabulate import tabulate
@@ -106,21 +107,10 @@ class VulnScan:
         """Run vulnix scan for nix artifact at target_path"""
         _LOG.info("Running vulnix scan")
         self.df_vulnix = pd.DataFrame()
-        # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
-        # vulnix support for runtime-only scan ('-C' command-line option)
-        # which is currently not available in released version of vulnix.
-        # To manually test this on command-line, try something like:
-        # nix-shell \
-        #   --packages 'callPackage (fetchGit { url = URL; ref = "master"; } ) {}' \
-        #   --run "vulnix PATH_TO_TARGET -C --json"
-        url = "https://github.com/henrirosten/vulnix"
-        ref = '"master"'
-        packages = f"callPackage (fetchGit {{ url = {url}; ref = {ref}; }} ) {{}}"
         extra_opts = "-C --json"
         if buildtime:
             extra_opts = "--json"
-        run_vulnix = f"vulnix {target_path} {extra_opts}"
-        cmd = ["nix-shell", "--packages", packages, "--run", run_vulnix]
+        cmd = ["vulnix", target_path] + extra_opts.split()
         # vulnix exit status is non-zero if it found vulnerabilities,
         # therefore, we need to set the raise_on_error=False and
         # return_error=True to be able to read the command's stdout on
@@ -157,14 +147,7 @@ class VulnScan:
     def scan_grype(self, sbom_path):
         """Run grype scan using the SBOM at sbom_path as input"""
         _LOG.info("Running grype scan")
-        # To manually test this on command-line, try something like:
-        # nix-shell \
-        #   --packages grype \
-        #   --run "grype sbom:PATH_TO_SBOM --add-cpes-if-none --output json"
-        packages = "grype"
-        extra_opts = "--add-cpes-if-none --output json"
-        run_grype = f"grype sbom:{sbom_path} {extra_opts}"
-        cmd = ["nix-shell", "--packages", packages, "--run", run_grype]
+        cmd = ["grype", f"sbom:{sbom_path}", "--add-cpes-if-none", "--output", "json"]
         ret = exec_cmd(cmd)
         if ret:
             self._parse_grype(ret)
@@ -320,6 +303,14 @@ def _is_json(path):
         return False
 
 
+def exit_unless_command_exists(name):
+    """Check if `name` is an executable in PATH"""
+    name_is_in_path = which(name) is not None
+    if not name_is_in_path:
+        _LOG.fatal("command '%s' is not in PATH", name)
+        sys.exit(1)
+
+
 ################################################################################
 
 
@@ -330,9 +321,13 @@ def main():
     if not args.TARGET.exists():
         _LOG.fatal("Invalid path: '%s'", args.TARGET)
         sys.exit(1)
+
+    # Fail early if following commands are not in path
+    exit_unless_command_exists("grype")
+    exit_unless_command_exists("vulnix")
+
     target_path = args.TARGET.as_posix()
     target_path_abs = args.TARGET.resolve().as_posix()
-
     scanner = VulnScan()
     if args.sbom:
         if not _is_json(target_path_abs):
@@ -346,7 +341,6 @@ def main():
         sbom_path = _generate_sbom(target_path_abs, args.buildtime)
         _LOG.info("Using SBOM '%s'", sbom_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
-
     scanner.scan_grype(sbom_path)
     scanner.scan_osv(sbom_path)
     scanner.report(args.out, target_path, args.buildtime, args.sbom)
