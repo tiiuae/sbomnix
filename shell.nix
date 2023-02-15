@@ -31,11 +31,11 @@ pkgs.mkShell {
     pythonPackages.venvShellHook
   ];
   venvDir = "venv";
-  # https://github.com/NixOS/nix/issues/1009:
-  shellHook = ''
-    export TMPDIR="/tmp"
-  '';
   postShellHook = ''
+    # https://github.com/NixOS/nix/issues/1009:
+    export TMPDIR="/tmp"
+    
+    # Enter python development environment
     make install-dev
   '';
 }
