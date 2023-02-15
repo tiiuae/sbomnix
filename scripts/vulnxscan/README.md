@@ -18,6 +18,7 @@ Table of Contents
    * [Vulnix](#vulnix)
 * [Vulnxscan Usage Examples](#vulnxscan-usage-examples)
    * [Running Vulnxscan as Flake](#running-vulnxscan-as-flake)
+   * [Vulnxscan Installation](#vulnxscan-installation)
    * [Find Vulnerabilities Impacting Runtime Dependencies](#find-vulnerabilities-impacting-runtime-dependencies)
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
@@ -74,6 +75,9 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
 $ nix run .#vulnxscan -- --help
 ```
+
+### Vulnxscan Installation
+To install `vulnxscan`, follow the [Installation](../../README.md#installation) instructions from the main [README](../../README.md).
 
 ### Find Vulnerabilities Impacting Runtime Dependencies
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
@@ -231,7 +235,5 @@ For now, consider `vulnxscan` as a demonstration. The list of reported vulnerabi
  - Nix ecosystem is not supported in OSV: the way `osv.py` makes use of OSV data for Nix targets -- as explained in section [Nix and OSV vulnerability database](#nix-and-osv-vulnerability-database) -- makes the reported OSV vulnerabilities include false positives.
 
 ##### Other Future Work
-- [vulnxscan](./vulnxscan.py) still lives under [scripts](../../scripts/) directory since the way it invokes grype and vulnix is not very Nix-like, and should be done properly. 
 - [vulnxscan](./vulnxscan.py) uses vulnix from a [forked repository](https://github.com/henrirosten/vulnix), to include Vulnix [support for scanning runtime-only dependencies](https://github.com/flyingcircusio/vulnix/compare/master...henrirosten:vulnix:master).
-- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX SBOM are welcome.
-
+- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX or SPDX SBOMs are welcome.

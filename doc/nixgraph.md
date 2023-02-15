@@ -23,7 +23,7 @@ Table of Contents
 
 
 ## Getting Started
-To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md). Also, make sure [graphviz](https://graphviz.org/download/) is installed on your system.
+To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md).
 
 ## Usage examples
 In the below examples, we use nix package `wget` as an example target.

@@ -53,9 +53,9 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
 $ nix run .#sbomnix -- --help
 ```
-Similarly, you can run `nixgraph` with something like `nix run github:tiiuae/sbomnix#nixgraph --  --help`
+Similarly, you can run `nixgraph` with `nix run github:tiiuae/sbomnix#nixgraph --  --help`
 
-See the full list of supported flake targets with: `nix flake show`
+See the full list of supported flake targets by running `nix flake show`.
 
 #### Running as Python Script
 Running `sbomnix` as Python script requires Python packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
@@ -76,7 +76,8 @@ Examples in this README.md assume you have installed `sbomnix` on your system an
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ make install
+$ nix-env -f default.nix --install
+# To uninstall:  nix-env --uninstall '*sbomnix*'
 ```
 
 ## Usage Examples
@@ -141,7 +142,7 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
 $ nix develop
 ```
-Run `make help` to see the list of other make targets.
+Run `make help` to see the list of supported make targets.
 Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.
 
 To deactivate the Nix devshell, run `exit` in your shell.
