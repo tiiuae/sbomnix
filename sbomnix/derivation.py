@@ -159,13 +159,28 @@ class Derive:
         if not self.name:
             self.name = destructure(envVars)["name"]
 
-        self.pname = envVars.get("pname", self.name)
+        pname = envVars.get("pname", self.name)
+        # pname read from envVars might not match the pname in nixpkgs.
+        # As an example 'Authen-SASL' full pname is 'perl5.36.0-Authen-SASL'
+        # Below, we reconstruct the full pname based on self.name which
+        # contains the full pname:
+        self.pname = self.name.partition(pname)[0] + pname
         self.version = envVars.get("version", "")
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
         self.out = [envVars.get("out", "")]
-        self.cpe = CPE().generate(self.pname, self.version)
-        self.purl = str(PackageURL(type="nix", name=self.pname, version=self.version))
+        # pname 'source' in Nix has special meaning - it is the default name
+        # for all fetchFromGitHub derivations. As such, it should not be used
+        # to construct cpe or purl, rather, cpe and purl should be empty
+        # for such packages.
+        self.cpe = ""
+        self.purl = ""
+        if self.pname != "source":
+            self.cpe = CPE().generate(self.pname, self.version)
+            self.purl = str(
+                PackageURL(type="nix", name=self.pname, version=self.version)
+            )
+        self.urls = envVars.get("urls", "")
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
