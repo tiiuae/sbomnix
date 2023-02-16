@@ -252,16 +252,18 @@ def _drv_to_spdx_license_list(drv):
 
 def _drv_to_spdx_extrefs(drv):
     extrefs = []
-    cpe_ref = {}
-    cpe_ref["referenceCategory"] = "SECURITY"
-    cpe_ref["referenceType"] = "cpe23Type"
-    cpe_ref["referenceLocator"] = drv.cpe
-    extrefs.append(cpe_ref)
-    purl_ref = {}
-    purl_ref["referenceCategory"] = "PACKAGE-MANAGER"
-    purl_ref["referenceType"] = "purl"
-    purl_ref["referenceLocator"] = drv.purl
-    extrefs.append(purl_ref)
+    if drv.cpe:
+        cpe_ref = {}
+        cpe_ref["referenceCategory"] = "SECURITY"
+        cpe_ref["referenceType"] = "cpe23Type"
+        cpe_ref["referenceLocator"] = drv.cpe
+        extrefs.append(cpe_ref)
+    if drv.purl:
+        purl_ref = {}
+        purl_ref["referenceCategory"] = "PACKAGE-MANAGER"
+        purl_ref["referenceType"] = "purl"
+        purl_ref["referenceLocator"] = drv.purl
+        extrefs.append(purl_ref)
     return extrefs
 
 
@@ -272,8 +274,12 @@ def _drv_to_spdx_package(drv, uid="store_path"):
     pkg["SPDXID"] = _str_to_spdxid(getattr(drv, uid))
     pkg["versionInfo"] = drv.version
     pkg["downloadLocation"] = "NOASSERTION"
+    if drv.urls:
+        pkg["downloadLocation"] = drv.urls
     if "meta_homepage" in drv._asdict() and drv.meta_homepage:
         pkg["homepage"] = drv.meta_homepage
+    if "meta_description" in drv._asdict() and drv.meta_description:
+        pkg["summary"] = drv.meta_description
     licenses = _drv_to_spdx_license_list(drv)
     if licenses:
         pkg["licenseInfoFromFiles"] = licenses
@@ -281,7 +287,9 @@ def _drv_to_spdx_package(drv, uid="store_path"):
     pkg["licenseConcluded"] = licence_entry
     pkg["licenseDeclared"] = licence_entry
     pkg["copyrightText"] = "NOASSERTION"
-    pkg["externalRefs"] = _drv_to_spdx_extrefs(drv)
+    extrefs = _drv_to_spdx_extrefs(drv)
+    if extrefs:
+        pkg["externalRefs"] = extrefs
     return pkg
 
 
@@ -352,8 +360,12 @@ def _drv_to_cdx_component(drv, uid="store_path"):
     component["bom-ref"] = getattr(drv, uid)
     component["name"] = drv.pname
     component["version"] = drv.version
-    component["purl"] = drv.purl
-    component["cpe"] = drv.cpe
+    if drv.purl:
+        component["purl"] = drv.purl
+    if drv.cpe:
+        component["cpe"] = drv.cpe
+    if "meta_description" in drv._asdict() and drv.meta_description:
+        component["description"] = drv.meta_description
     _cdx_component_add_licenses(component, drv)
     properties = []
     for out_path in drv.out:
@@ -365,6 +377,17 @@ def _drv_to_cdx_component(drv, uid="store_path"):
         prop = {}
         prop["name"] = "nix:drv_path"
         prop["value"] = drv.store_path
+        properties.append(prop)
+    # To externalReferences?
+    if drv.urls:
+        prop = {}
+        prop["name"] = "nix:fetch_url"
+        prop["value"] = drv.urls
+        properties.append(prop)
+    if "meta_homepage" in drv._asdict() and drv.meta_homepage:
+        prop = {}
+        prop["name"] = "homepage"
+        prop["value"] = drv.meta_homepage
         properties.append(prop)
     if properties:
         component["properties"] = properties
@@ -413,6 +436,8 @@ def _parse_json_metadata(json_filename):
             meta = pkg.get("meta", {})
             setcol("meta_homepage", []).append(meta.get("homepage", ""))
             setcol("meta_position", []).append(meta.get("position", ""))
+            setcol("meta_unfree", []).append(meta.get("unfree", ""))
+            setcol("meta_description", []).append(meta.get("description", ""))
             # meta.license
             meta_license = meta.get("license", {})
             license_short = _parse_meta_entry(meta_license, key="shortName")

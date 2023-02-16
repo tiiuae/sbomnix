@@ -78,9 +78,6 @@ def _parse_sbom(path):
                     outpaths.append(prop_dict["value"])
                 elif "drv_path" in prop_dict["name"]:
                     setcol("drv_path", []).append(prop_dict["value"])
-                else:
-                    _LOG.fatal("Unexpected property: %s", prop_dict)
-                    sys.exit(1)
             setcol("out_path", []).append(outpaths)
         df_components = pd.DataFrame(comp_parsed_dict)
 
