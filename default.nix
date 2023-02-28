@@ -9,7 +9,7 @@
 
 pythonPackages.buildPythonPackage rec {
   pname = "sbomnix";
-  version = "1.4.2";
+  version = "1.4.3";
   format = "setuptools";
 
   src = ./.;
@@ -23,6 +23,7 @@ pythonPackages.buildPythonPackage rec {
   propagatedBuildInputs = [ 
     pkgs.reuse
     pkgs.grype
+    pkgs.curl
     vulnix
     pythonPackages.numpy
     pythonPackages.pandas
