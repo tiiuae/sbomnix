@@ -13,6 +13,7 @@ pkgs.mkShell {
   buildInputs = [ 
     pkgs.reuse
     pkgs.grype
+    pkgs.curl
     vulnix
     pythonPackages.pip
     pythonPackages.numpy

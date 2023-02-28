@@ -77,7 +77,7 @@ Examples in this README.md assume you have installed `sbomnix` on your system an
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
 $ nix-env -f default.nix --install
-# To uninstall:  nix-env --uninstall '*sbomnix*'
+# To uninstall:  nix-env --uninstall '.*sbomnix.*'
 ```
 
 ## Usage Examples
