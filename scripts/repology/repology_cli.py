@@ -13,6 +13,9 @@
 import logging
 import os
 import sys
+import pathlib
+import json
+import re
 from argparse import ArgumentParser, ArgumentTypeError, SUPPRESS
 from requests import Session
 from requests_cache import CacheMixin
@@ -52,8 +55,8 @@ def getargs():
     epil = f"Example: ./{os.path.basename(__file__)} --pkg 'firefox' -r 'nix'"
     parser = ArgumentParser(description=desc, epilog=epil, add_help=False)
     requiredq = parser.add_argument_group(
-        "Required query arguments",
-        "Following arguments mutually exclusive:",
+        "Required arguments",
+        "Following arguments are mutually exclusive:",
     )
     exclusiveq = requiredq.add_mutually_exclusive_group(required=True)
     optionalq = parser.add_argument_group("Optional query arguments")
@@ -64,10 +67,12 @@ def getargs():
     helps = "Show this help message and exit"
     optional.add_argument("-h", "--help", action="help", default=SUPPRESS, help=helps)
     # Arguments that impact repology.org queries:
-    helps = "Package name search term (see: https://repology.org/projects/?search=)"
-    exclusiveq.add_argument("--pkg_search", help=helps, type=_pkg_str)
     helps = "Package name exact match"
     exclusiveq.add_argument("--pkg", help=helps, type=_pkg_str)
+    helps = "Package name search term (see: https://repology.org/projects/?search=)"
+    exclusiveq.add_argument("--pkg_search", help=helps, type=_pkg_str)
+    helps = "Read the package names and versions from the given cdx SBOM"
+    exclusiveq.add_argument("--sbom", help=helps, type=pathlib.Path)
     helps = "Repository name exact match (see: https://repology.org/repositories)"
     optionalq.add_argument("--repository", help=helps, type=str, default="")
     helps = "Add 'potentially_vulnerable' column to the report"
@@ -127,16 +132,19 @@ class Repology:
         resp.raise_for_status()
         return resp
 
-    def _parse_api_response(self, resp_json):
+    def _parse_api_response(self, resp_json, match_version=None):
         pkg_names = list(resp_json.keys())
         pkg_names.sort()
         setcol = self.packages_dict.setdefault
         for pname in resp_json:
             _LOG.log(LOG_SPAM, "pname: %s", pname)
             for package in resp_json[pname]:
+                pkg_version = package.get("version", "")
+                if match_version and pkg_version != match_version:
+                    continue
                 setcol("repo", []).append(package.get("repo", ""))
                 setcol("package", []).append(pname)
-                setcol("version", []).append(package.get("version", ""))
+                setcol("version", []).append(pkg_version)
                 setcol("status", []).append(package.get("status", ""))
         return pkg_names
 
@@ -247,7 +255,7 @@ class Repology:
                 _LOG.debug("stopping ('%s'=='%s')", query_last, query)
                 break
 
-    def _query_pkg_exact(self, args):
+    def _query_pkg_exact(self, args, match_version=None):
         """Query using repology api/v1/project/"""
         search_term = f"{args.pkg}"
         query = f"{self.url_api_project}{search_term}"
@@ -255,15 +263,58 @@ class Repology:
         resp_json = self._get_resp(query).json()
         # Wrap the response in a dictionary so we can re-use the parser
         resp_json = {args.pkg: resp_json}
-        self._parse_api_response(resp_json)
+        self._parse_api_response(resp_json, match_version=match_version)
+
+    def _parse_sbom(self, path):
+        _LOG.debug("Parsing sbom: %s", path)
+        re_python = re.compile(r"python[^-]*-(?P<pname>.+)")
+        re_perl = re.compile(r"perl[^-]*-(?P<pname>.+)")
+        with open(path, encoding="utf-8") as inf:
+            json_dict = json.loads(inf.read())
+            components = json_dict["components"] + [json_dict["metadata"]["component"]]
+            components_dict = {}
+            setcol = components_dict.setdefault
+            for cmp in components:
+                name = cmp["name"]
+                match = re_python.match(name)
+                if match:
+                    name = f"python:{match.group('pname')}"
+                elif not match:
+                    match = re_perl.match(name)
+                    if match:
+                        name = f"perl:{match.group('pname')}"
+                if name == "python3":
+                    name = "python"
+                setcol("name", []).append(name)
+                setcol("version", []).append(cmp["version"])
+            df_components = pd.DataFrame(components_dict)
+            df_components.fillna("", inplace=True)
+            df_components = df_components.astype(str)
+            df_components["name"] = df_components["name"].str.lower()
+            df_components.sort_values("name", inplace=True)
+            df_components.reset_index(drop=True, inplace=True)
+            return df_components
+
+    def _query_sbom(self, args):
+        df = self._parse_sbom(args.sbom.as_posix())
+        df_to_csv_file(df, "parsed_sbom.csv")
+        for cmp in df.itertuples():
+            _LOG.debug("package: %s", cmp)
+            if not cmp.version:
+                _LOG.warning("Missing version information: %s", cmp)
+            if not cmp.name:
+                _LOG.warning("Missing package name: %s", cmp)
+            args.pkg = cmp.name
+            self._query_pkg_exact(args, cmp.version)
 
     def query(self, args):
         """Query package information from repology.org"""
         if args.pkg_search:
             self._query_pkg_search(args)
-        else:
+        elif args.pkg:
             self._query_pkg_exact(args)
-
+        elif args.sbom:
+            self._query_sbom(args)
         self._report(args)
 
 
