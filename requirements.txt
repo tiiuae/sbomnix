@@ -15,8 +15,13 @@ packageurl-python
 # nixgraph
 graphviz
 
-# osv.py (demo)
+# vulnxscan 
 requests
+
+# repology
+requests-ratelimiter
+requests-cache
+bs4
 
 # dev requirements
 pycodestyle

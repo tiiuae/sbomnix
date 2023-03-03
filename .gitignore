@@ -12,6 +12,7 @@ __pycache__/
 sbomnix_test_data/
 result
 *.py[cod]
+*.sqlite
 /*.csv
 /*.log
 /*.json
