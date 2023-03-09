@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, import-error, unexpected-keyword-arg,
-# pylint: disable=abstract-method, too-few-public-methods
+# pylint: disable=abstract-method, too-few-public-methods, too-many-statements
 # pylint: disable=too-many-instance-attributes, too-many-locals,
 
 """ Command-line interface to repology.org """
@@ -18,6 +18,7 @@ import json
 import re
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError, SUPPRESS
+from packaging import version
 from requests import Session
 from requests_cache import CacheMixin
 from requests_ratelimiter import LimiterMixin
@@ -87,6 +88,8 @@ def getargs():
     helps = "Filter reported results based on vulnerability status"
     filtergr.add_argument("-c", "--re_vuln", help=helps, type=str, default=None)
     # Other arguments:
+    helps = "Summarize output result statistics"
+    optional.add_argument("--stats", help=helps, action="store_true")
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     optional.add_argument("--verbose", help=helps, type=int, default=1)
     helps = "Path to output report file (default: ./repology_report.csv)"
@@ -188,10 +191,15 @@ class Repology:
             sys.exit(1)
         if self.df_sbom is not None:
             self._sbom_fields()
+            self.df["sbom_version_classify"] = self.df.apply(_sbom_row_classify, axis=1)
+        self.df["repo_version_classify"] = self.df.apply(_repo_row_classify, axis=1)
         # Copy the df to only make changes to the console report
         df = self.df.copy(deep=True)
+        # Truncate
+        col = "newest_upstream_release"
+        df[col] = df[col].str.slice(0, 26)
         # Remove rows we don't want to print to the console report
-        df = df[~df.status.isin(["IGNORED", "NO_VERSION"])]
+        df = df[~df.status.isin(["IGNORED", "NO_VERSION", "NOT_FOUND"])]
         df = df.drop_duplicates(keep="first")
         # Write the console report
         table = tabulate(
@@ -208,8 +216,112 @@ class Repology:
             table,
             self.urlq,
         )
+        if args.stats:
+            self._stats_repology()
+            if self.df_sbom is not None:
+                self._stats_sbom()
         # Write the full report to csv file
         df_to_csv_file(self.df, args.out)
+
+    def _stats_sbom(self):
+        df = self.df.copy()
+        df_sbom = self.df_sbom.copy()
+        sbom_rows_n = df_sbom.shape[0]
+        sbom_ignored_cols = ["NO_VERSION", "IGNORED", "NOT_FOUND"]
+        df_skipped = df[df.status.isin(sbom_ignored_cols)]
+        sbom_skipped_n = df_skipped.shape[0]
+        sbom_skipped_pct = f"{sbom_skipped_n/sbom_rows_n:.0%}"
+
+        df_ignored = df[df.status.isin(["IGNORED"])]
+        ignored_n = df_ignored.shape[0]
+        df_no_version = df[df.status.isin(["NO_VERSION"])]
+        no_version_n = df_no_version.shape[0]
+        df_not_found = df[df.status.isin(["NOT_FOUND"])]
+        not_found_n = df_not_found.shape[0]
+
+        base_cols = ["newest", "devel", "unique", "outdated"]
+        df_base = df[df.status.isin(base_cols)]
+        base_rows_n = df_base.shape[0]
+        sbom_in_repo = f"{base_rows_n/sbom_rows_n:.0%}"
+        df_sbom_outdated = df[df.sbom_version_classify.isin(["sbom_pkg_needs_update"])]
+        sbom_outdated_rows_n = df_sbom_outdated.shape[0]
+        sbom_outdated_pct = f"{sbom_outdated_rows_n/base_rows_n:.0%}"
+
+        sbom_rows = f"SBOM packages: {sbom_rows_n} ({1:.0%})"
+        sbom_skipped = f"skipped repology check: {sbom_skipped_n} ({sbom_skipped_pct})"
+        ignored = f"IGNORED (sbom component is not a package in repology): {ignored_n}"
+        no_version = (
+            f"NO_VERSION (sbom component is missing the version number): {no_version_n}"
+        )
+        not_found = (
+            f"NOT_FOUND (sbom component was not found in repology): {not_found_n}"
+        )
+        sbom_pkgs_in_repo = f"sbom packages in repology: {base_rows_n} ({sbom_in_repo})"
+        sbom_pkgs_outdated = (
+            "outdated out of those that were not skipped: "
+            f"{sbom_outdated_rows_n} ({sbom_outdated_pct})"
+        )
+
+        _LOG.info(
+            "SBOM package statistics:\n"
+            "\t  %s\n"
+            "\t   ==> %s\n"
+            "\t        - %s\n"
+            "\t        - %s\n"
+            "\t        - %s\n"
+            "\t   ==> %s\n"
+            "\t   ==> %s\n",
+            sbom_rows,
+            sbom_skipped,
+            ignored,
+            no_version,
+            not_found,
+            sbom_pkgs_in_repo,
+            sbom_pkgs_outdated,
+        )
+
+    def _stats_repology(self):
+        df = self.df.copy(deep=True)
+        base_cols = ["newest", "devel", "unique", "outdated"]
+        df_base = df[df.status.isin(base_cols)]
+        base_rows_n = df_base.shape[0]
+        if base_rows_n <= 0:
+            _LOG.debug("No base packages, skipping stats")
+            return
+        df_newest = df[df.status.isin(["newest"])]
+        newest_rows_n = df_newest.shape[0]
+        newest_pct = f"{newest_rows_n/base_rows_n:.0%}"
+        df_outdated = df[df.status.isin(["outdated"])]
+        outdated_rows_n = df_outdated.shape[0]
+        outdated_pct = f"{outdated_rows_n/base_rows_n:.0%}"
+        df_dev_uniq = df[df.status.isin(["devel", "unique"])]
+        dev_uniq_rows_n = df_dev_uniq.shape[0]
+        dev_uniq_pct = f"{dev_uniq_rows_n/base_rows_n:.0%}"
+        df_vuln = df_base[df_base.potentially_vulnerable.isin(["1"])]
+        vuln_rows_n = df_vuln.shape[0]
+        vuln_pct = f"{vuln_rows_n/base_rows_n:.0%}"
+
+        base_rows = f"Packages: {base_rows_n} ({1:.0%})\t(status in: {base_cols})"
+        new_rows = f"newest: {newest_rows_n} ({newest_pct})"
+        outdated_rows = f"outdated: {outdated_rows_n} ({outdated_pct})"
+        dev_uniq_rows = f"devel or unique: {dev_uniq_rows_n} ({dev_uniq_pct})"
+        vuln_rows = f"potentially vulnerable: {vuln_rows_n} ({vuln_pct})"
+        about = "https://repology.org/docs/about"
+        _LOG.info(
+            "Repology package statistics:\n"
+            "\t (see the status descriptions in: %s)\n"
+            "\t   %s\n"
+            "\t    ==> %s\n"
+            "\t    ==> %s\n"
+            "\t    ==> %s\n"
+            "\t    ==> %s\n",
+            about,
+            base_rows,
+            new_rows,
+            outdated_rows,
+            dev_uniq_rows,
+            vuln_rows,
+        )
 
     def _parse_pkg_search_resp(self, resp, repo, pkg_stop=None):
         next_query_project = ""
@@ -227,17 +339,21 @@ class Repology:
             sys.exit(1)
         _LOG.log(LOG_SPAM, headers)
         projects_table_rows = projects_table.tbody.find_all("tr")
+        rows = 0
         stop_query = False
         for row in projects_table_rows:
             cols = row.find_all("td")
             if not cols:
                 _LOG.log(LOG_SPAM, "No columns on row: %s", row)
                 continue
+            rows += 1
             _LOG.log(LOG_SPAM, "cols: %s", cols)
             pkg = cols[headers["Project"]]
             pkg_name = pkg.find_all("a")[0].string
             # Stop further queries if any package name matches pkg_stop
-            stop_query = bool(not stop_query and pkg_stop and pkg_name == pkg_stop)
+            if not stop_query and pkg_stop and pkg_name == pkg_stop:
+                stop_query = True
+                _LOG.debug("Stopping queries after parsing the current response")
             pkg_id = f"{repo}:{pkg_name}"
             if pkg_id in self.processed:
                 _LOG.debug("Package '%s' in search resp already processed", pkg_name)
@@ -259,7 +375,7 @@ class Repology:
             vspans = sel.find_all("span", {"class": "version"})
             for idx, vspan in enumerate(vspans):
                 # Extract version number removing non-ascii characters
-                version = re.sub(r"[^\x00-\x7f]+", "", vspan.text)
+                ver = re.sub(r"[^\x00-\x7f]+", "", vspan.text)
                 # Package version vulnerability status
                 vulnerable = bool(vspan.find_all("span", {"class": "vulnerable"}))
                 # Package version status information
@@ -267,7 +383,7 @@ class Repology:
                 # Collect results
                 self.pkgs_dict.setdefault("repo", []).append(repo)
                 self.pkgs_dict.setdefault("package", []).append(pkg_name)
-                self.pkgs_dict.setdefault("version", []).append(version)
+                self.pkgs_dict.setdefault("version", []).append(ver)
                 self.pkgs_dict.setdefault("status", []).append(status)
                 self.pkgs_dict.setdefault("potentially_vulnerable", []).append(
                     str(int(vulnerable))
@@ -279,8 +395,14 @@ class Repology:
             # or returned projects is 200, we know we need to make another
             # query starting from the last returned project, for more details,
             # see: https://repology.org/api
-            if len(projects_table_rows) == 200 and not stop_query:
+            if rows == 200 and not stop_query:
                 next_query_project = pkg_name
+        if rows > 200:
+            _LOG.warning(
+                "Unexpected response: raising this warning to notify the "
+                "posibility the repology API has changed and might no longer "
+                "match what this client expects"
+            )
         return next_query_project
 
     def _parse_sbom_cdx(self, path):
@@ -368,7 +490,6 @@ class Repology:
                 _LOG.fatal("Missing package name: %s", cmp)
                 sys.exit(1)
             if re.match(ignore_regexes, cmp.name):
-                # Remove the below comments to output ignored packages:
                 self.pkgs_dict.setdefault("repo", []).append(args.repository)
                 self.pkgs_dict.setdefault("package", []).append(cmp.name)
                 self.pkgs_dict.setdefault("version", []).append("")
@@ -382,7 +503,6 @@ class Repology:
                 _LOG.debug("Package '%s' in sbom already processed", cmp.name)
                 continue
             if not cmp.version:
-                # Remove the below comments to output packages with no version:
                 self.pkgs_dict.setdefault("repo", []).append(args.repository)
                 self.pkgs_dict.setdefault("package", []).append(cmp.name)
                 self.pkgs_dict.setdefault("version", []).append("")
@@ -413,6 +533,25 @@ class Repology:
             self._query_sbom_cdx(args)
         self._packages_to_df(args, re_pkg_internal=args.pkg_exact)
         self._report(args)
+
+
+################################################################################
+
+
+def _repo_row_classify(row):
+    if row.status == "outdated":
+        return "repo_pkg_needs_update"
+    return ""
+
+
+def _sbom_row_classify(row):
+    if row.status in ["outdated", "devel", "unique"]:
+        if version.parse(row.version_sbom) <= version.parse(row.version):
+            return "sbom_pkg_needs_update"
+    if row.status in ["newest"]:
+        if version.parse(row.version_sbom) < version.parse(row.version):
+            return "sbom_pkg_needs_update"
+    return ""
 
 
 ################################################################################
