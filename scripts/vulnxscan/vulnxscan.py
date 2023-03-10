@@ -299,7 +299,7 @@ def _is_json(path):
             if json_obj:
                 return True
             return False
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, UnicodeError):
         return False
 
 
