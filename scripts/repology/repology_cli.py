@@ -132,7 +132,7 @@ class Repology:
         # - Cache all responses locally for 3600 seconds
         self.session = CachedLimiterSession(per_second=1, expire_after=3600)
         ua_product = "repology_cli/0"
-        ua_comment = "(https://github.com/tiiuae/sbomnix)"
+        ua_comment = "(https://github.com/tiiuae/sbomnix/scripts/repology)"
         self.headers = {"User-Agent": f"{ua_product} {ua_comment}"}
 
     def _packages_to_df(self, args, re_pkg_internal=None):
@@ -225,30 +225,30 @@ class Repology:
 
     def _stats_sbom(self):
         df = self.df.copy()
-        df_sbom = self.df_sbom.copy()
-        sbom_rows_n = df_sbom.shape[0]
-        sbom_ignored_cols = ["NO_VERSION", "IGNORED", "NOT_FOUND"]
-        df_skipped = df[df.status.isin(sbom_ignored_cols)]
-        sbom_skipped_n = df_skipped.shape[0]
-        sbom_skipped_pct = f"{sbom_skipped_n/sbom_rows_n:.0%}"
-
+        df = df.drop_duplicates(keep="first", subset=["package", "version"])
+        repo_rows_n = df.shape[0]
+        repo_skipped_cols = ["NO_VERSION", "IGNORED", "NOT_FOUND"]
+        df_skipped = df[df.status.isin(repo_skipped_cols)]
+        repo_skipped_n = df_skipped.shape[0]
+        repo_skipped_pct = f"{repo_skipped_n/repo_rows_n:.0%}"
         df_ignored = df[df.status.isin(["IGNORED"])]
         ignored_n = df_ignored.shape[0]
         df_no_version = df[df.status.isin(["NO_VERSION"])]
         no_version_n = df_no_version.shape[0]
         df_not_found = df[df.status.isin(["NOT_FOUND"])]
         not_found_n = df_not_found.shape[0]
+        df_repology = df[~df.status.isin(repo_skipped_cols)]
+        repology_rows_n = df_repology.shape[0]
+        sbom_in_repo = f"{repology_rows_n/repo_rows_n:.0%}"
 
-        base_cols = ["newest", "devel", "unique", "outdated"]
-        df_base = df[df.status.isin(base_cols)]
-        base_rows_n = df_base.shape[0]
-        sbom_in_repo = f"{base_rows_n/sbom_rows_n:.0%}"
-        df_sbom_outdated = df[df.sbom_version_classify.isin(["sbom_pkg_needs_update"])]
-        sbom_outdated_rows_n = df_sbom_outdated.shape[0]
-        sbom_outdated_pct = f"{sbom_outdated_rows_n/base_rows_n:.0%}"
-
-        sbom_rows = f"SBOM packages: {sbom_rows_n} ({1:.0%})"
-        sbom_skipped = f"skipped repology check: {sbom_skipped_n} ({sbom_skipped_pct})"
+        # We don't use self.df_sbom in calculating these numbers.
+        # The reason is that repology might include information from package
+        # versions that were not in the original SBOM, so using self.df_sbom
+        # as baseline number would be confusing.
+        sbom_rows = f"Unique packages: {repo_rows_n} ({1:.0%})"
+        sbom_skipped = (
+            f"sbom packages not in repology: {repo_skipped_n} ({repo_skipped_pct})"
+        )
         ignored = f"IGNORED (sbom component is not a package in repology): {ignored_n}"
         no_version = (
             f"NO_VERSION (sbom component is missing the version number): {no_version_n}"
@@ -256,35 +256,31 @@ class Repology:
         not_found = (
             f"NOT_FOUND (sbom component was not found in repology): {not_found_n}"
         )
-        sbom_pkgs_in_repo = f"sbom packages in repology: {base_rows_n} ({sbom_in_repo})"
-        sbom_pkgs_outdated = (
-            "outdated out of those that were not skipped: "
-            f"{sbom_outdated_rows_n} ({sbom_outdated_pct})"
+        sbom_pkgs_in_repo = (
+            f"sbom packages in repology: {repology_rows_n} ({sbom_in_repo})"
         )
-
         _LOG.info(
-            "SBOM package statistics:\n"
+            "\n\tRepology SBOM package statistics:\n"
             "\t  %s\n"
             "\t   ==> %s\n"
-            "\t        - %s\n"
-            "\t        - %s\n"
-            "\t        - %s\n"
             "\t   ==> %s\n"
-            "\t   ==> %s\n",
+            "\t        - %s\n"
+            "\t        - %s\n"
+            "\t        - %s\n",
             sbom_rows,
+            sbom_pkgs_in_repo,
             sbom_skipped,
             ignored,
             no_version,
             not_found,
-            sbom_pkgs_in_repo,
-            sbom_pkgs_outdated,
         )
 
     def _stats_repology(self):
         df = self.df.copy(deep=True)
         base_cols = ["newest", "devel", "unique", "outdated"]
-        df_base = df[df.status.isin(base_cols)]
-        base_rows_n = df_base.shape[0]
+        df = df[df.status.isin(base_cols)]
+        df = df.drop_duplicates(keep="first", subset=["package", "version"])
+        base_rows_n = df.shape[0]
         if base_rows_n <= 0:
             _LOG.debug("No base packages, skipping stats")
             return
@@ -297,18 +293,20 @@ class Repology:
         df_dev_uniq = df[df.status.isin(["devel", "unique"])]
         dev_uniq_rows_n = df_dev_uniq.shape[0]
         dev_uniq_pct = f"{dev_uniq_rows_n/base_rows_n:.0%}"
-        df_vuln = df_base[df_base.potentially_vulnerable.isin(["1"])]
+        df_vuln = df[df.potentially_vulnerable.isin(["1"])]
         vuln_rows_n = df_vuln.shape[0]
         vuln_pct = f"{vuln_rows_n/base_rows_n:.0%}"
-
-        base_rows = f"Packages: {base_rows_n} ({1:.0%})\t(status in: {base_cols})"
+        base_rows = (
+            f"Unique compared packages: {base_rows_n} ({1:.0%})"
+            f"\t(status in: {base_cols})"
+        )
         new_rows = f"newest: {newest_rows_n} ({newest_pct})"
         outdated_rows = f"outdated: {outdated_rows_n} ({outdated_pct})"
         dev_uniq_rows = f"devel or unique: {dev_uniq_rows_n} ({dev_uniq_pct})"
         vuln_rows = f"potentially vulnerable: {vuln_rows_n} ({vuln_pct})"
         about = "https://repology.org/docs/about"
         _LOG.info(
-            "Repology package statistics:\n"
+            "\n\tRepology package statistics:\n"
             "\t (see the status descriptions in: %s)\n"
             "\t   %s\n"
             "\t    ==> %s\n"
@@ -489,15 +487,6 @@ class Repology:
             if not cmp.name:
                 _LOG.fatal("Missing package name: %s", cmp)
                 sys.exit(1)
-            if re.match(ignore_regexes, cmp.name):
-                self.pkgs_dict.setdefault("repo", []).append(args.repository)
-                self.pkgs_dict.setdefault("package", []).append(cmp.name)
-                self.pkgs_dict.setdefault("version", []).append("")
-                self.pkgs_dict.setdefault("status", []).append("IGNORED")
-                self.pkgs_dict.setdefault("potentially_vulnerable", []).append("")
-                self.pkgs_dict.setdefault("newest_upstream_release", []).append("")
-                self._packages_to_df(args, re_pkg_internal=cmp.name)
-                continue
             pkg_id = f"{args.repository}:{cmp.name}"
             if pkg_id in self.processed:
                 _LOG.debug("Package '%s' in sbom already processed", cmp.name)
@@ -511,12 +500,23 @@ class Repology:
                 self.pkgs_dict.setdefault("newest_upstream_release", []).append("")
                 self._packages_to_df(args, re_pkg_internal=cmp.name)
                 continue
+            if re.match(ignore_regexes, cmp.name):
+                self.pkgs_dict.setdefault("repo", []).append(args.repository)
+                self.pkgs_dict.setdefault("package", []).append(cmp.name)
+                self.pkgs_dict.setdefault("version", []).append(cmp.version)
+                self.pkgs_dict.setdefault("status", []).append("IGNORED")
+                self.pkgs_dict.setdefault("potentially_vulnerable", []).append("")
+                self.pkgs_dict.setdefault("newest_upstream_release", []).append("")
+                self._packages_to_df(args, re_pkg_internal=cmp.name)
+                continue
+            # Query repology for exact match
             args.pkg_exact = cmp.name
             self._query_pkg_exact(args)
+            # Label the package as NOT_FOUND if it isn't in self.processed by now
             if pkg_id not in self.processed:
                 self.pkgs_dict.setdefault("repo", []).append(args.repository)
                 self.pkgs_dict.setdefault("package", []).append(cmp.name)
-                self.pkgs_dict.setdefault("version", []).append("")
+                self.pkgs_dict.setdefault("version", []).append(cmp.version)
                 self.pkgs_dict.setdefault("status", []).append("NOT_FOUND")
                 self.pkgs_dict.setdefault("potentially_vulnerable", []).append("")
                 self.pkgs_dict.setdefault("newest_upstream_release", []).append("")
