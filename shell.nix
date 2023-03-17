@@ -5,6 +5,7 @@
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
   vulnix ? import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
+  nix-visualize ? import ./scripts/nixupdate/nix-visualize.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
 }:
 
 pkgs.mkShell {
@@ -15,6 +16,7 @@ pkgs.mkShell {
     pkgs.grype
     pkgs.curl
     vulnix
+    nix-visualize
     pythonPackages.pip
     pythonPackages.numpy
     pythonPackages.pandas
