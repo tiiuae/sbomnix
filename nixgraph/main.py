@@ -45,8 +45,8 @@ def getargs():
     parser.add_argument("--depth", help=helps, type=check_positive, default=1)
 
     helps = (
-        "Draw inverse graph starting from nodes that match the specified "
-        "regular expression"
+        "Draw inverse graph starting from node (path) names that match the "
+        "specified regular expression"
     )
     parser.add_argument("--inverse", help=helps)
 
