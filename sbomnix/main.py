@@ -31,9 +31,7 @@ def getargs():
         "in NIX_PATH and "
         "writes SBOM file(s) as specified in output arguments."
     )
-    epil = (
-        "Example: sbomnix /path/to/derivation.drv --meta /path/to/meta.json --runtime"
-    )
+    epil = "Example: sbomnix /path/to/nix/out --meta /path/to/meta.json"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"

@@ -91,8 +91,8 @@ class NixDependencyGraph:
 
         if self.inverse_regex:
             # If inverse_regex is specified, draw the graph backwards starting
-            # from nodes where src_pname matches the specified regex
-            df = df_regex_filter(self.df, "src_pname", self.inverse_regex)
+            # from nodes where src_path matches the specified regex
+            df = df_regex_filter(self.df, "src_path", self.inverse_regex)
             for row in df.itertuples():
                 inverse_path = row.src_path
                 _LOG.debug("Start path inverse: %s", inverse_path)

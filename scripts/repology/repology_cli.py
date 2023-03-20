@@ -132,7 +132,7 @@ class Repology:
         # - Cache all responses locally for 3600 seconds
         self.session = CachedLimiterSession(per_second=1, expire_after=3600)
         ua_product = "repology_cli/0"
-        ua_comment = "(https://github.com/tiiuae/sbomnix/scripts/repology)"
+        ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
         self.headers = {"User-Agent": f"{ua_product} {ua_comment}"}
 
     def _packages_to_df(self, args, re_pkg_internal=None):
@@ -389,6 +389,7 @@ class Repology:
                 self.pkgs_dict.setdefault("newest_upstream_release", []).append(
                     ";".join(newest_releases)
                 )
+                _LOG.log(LOG_SPAM, "Added: %s:%s:%s", pkg_name, ver, status)
             # API returns at most 200 projects per one request. If the number
             # or returned projects is 200, we know we need to make another
             # query starting from the last returned project, for more details,
@@ -490,6 +491,7 @@ class Repology:
             pkg_id = f"{args.repository}:{cmp.name}"
             if pkg_id in self.processed:
                 _LOG.debug("Package '%s' in sbom already processed", cmp.name)
+                self._packages_to_df(args, re_pkg_internal=cmp.name)
                 continue
             if not cmp.version:
                 self.pkgs_dict.setdefault("repo", []).append(args.repository)
@@ -545,11 +547,19 @@ def _repo_row_classify(row):
 
 
 def _sbom_row_classify(row):
-    if row.status in ["outdated", "devel", "unique"]:
-        if version.parse(row.version_sbom) <= version.parse(row.version):
-            return "sbom_pkg_needs_update"
-    if row.status in ["newest"]:
-        if version.parse(row.version_sbom) < version.parse(row.version):
+    if row.status == "outdated":
+        # If repo version is outdated, assume the local version must also
+        # be outdated
+        return "sbom_pkg_needs_update"
+    if row.status in ["devel", "unique", "newest"]:
+        # For devel, unique, and newest package versions, remove all execpt
+        # numbers and dots from the version strings to make the two version
+        # strings of the same package comparable with version.parse
+        re_ver = re.compile("[^0-9.]+")
+        ver_sbom = re_ver.sub(r"", row.version_sbom)
+        ver_repo = re_ver.sub(r"", row.version)
+        # If local version is smaller than repo version, classify accordingly
+        if version.parse(ver_sbom) < version.parse(ver_repo):
             return "sbom_pkg_needs_update"
     return ""
 

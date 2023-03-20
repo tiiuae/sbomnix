@@ -9,7 +9,7 @@
 
 pythonPackages.buildPythonPackage rec {
   pname = "sbomnix";
-  version = "1.4.3";
+  version = "1.4.4";
   format = "setuptools";
 
   src = ./.;
