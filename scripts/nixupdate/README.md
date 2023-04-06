@@ -4,9 +4,24 @@ SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# nix_outdated.py
+# nix_outdated
 
-`nix_outdated.py` is a command line tool to list outdated nix dependencies for given target nix out path. By default, the script outputs runtime dependencies for the given nix out path that appear outdated in nixpkgs 'nix_unstable' channel - the list of output packages would potentially need a PR to update the package in nixpkgs to the latest upstream release version specified in the output table column 'version_upstream'. The list of output packages is in priority order based on how many other packages depend on the potentially outdated package.
+`nix_outdated` is a command line tool to list outdated nix dependencies for given target nix out path. By default, the script outputs runtime dependencies for the given nix out path that appear outdated in nixpkgs 'nix_unstable' channel - the list of output packages would potentially need a PR to update the package in nixpkgs to the latest upstream release version specified in the output table column 'version_upstream'. The list of output packages is in priority order based on how many other packages depend on the potentially outdated package.
+
+## Running as Nix Flake
+`nix_outdated` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
+```bash
+# '--' signifies the end of argument list for `nix`.
+# '--help' is the first argument to `nix_outdated`
+$ nix run github:tiiuae/sbomnix#nix_outdated -- --help
+```
+
+or from a local repository:
+```bash
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix
+$ nix run .#nix_outdated -- --help
+```
 
 ## Running from Nix Development Shell
 

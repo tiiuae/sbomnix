@@ -23,6 +23,21 @@ Table of Contents
 
 ## Getting Started
 
+### Running as Nix Flake
+`repology_cli` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
+```bash
+# '--' signifies the end of argument list for `nix`.
+# '--help' is the first argument to `repology_cli`
+$ nix run github:tiiuae/sbomnix#repology_cli -- --help
+```
+
+or from a local repository:
+```bash
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix
+$ nix run .#repology_cli -- --help
+```
+
 ### Running from Nix Development Shell
 
 If you have nix flakes enabled, run:

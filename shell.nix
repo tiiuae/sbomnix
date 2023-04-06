@@ -4,33 +4,22 @@
 {
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
-  vulnix ? import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
-  nix-visualize ? import ./scripts/nixupdate/nix-visualize.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
 }:
 
-pkgs.mkShell {
+pkgs.mkShell rec {
   name = "sbomnix-dev-shell";
 
+  sbomnix = import ./default.nix { pkgs=pkgs; };
+  vulnxscan = import ./scripts/vulnxscan/vulnxscan.nix { pkgs=pkgs; };
+  repology_cli = import ./scripts/repology/repology_cli.nix { pkgs=pkgs; };
+  nix_outdated = import ./scripts/nixupdate/nix_outdated.nix { pkgs=pkgs; };
+
   buildInputs = [ 
-    pkgs.reuse
-    pkgs.grype
-    pkgs.curl
-    vulnix
-    nix-visualize
-    pythonPackages.pip
-    pythonPackages.numpy
-    pythonPackages.pandas
-    pythonPackages.colorlog
-    pythonPackages.tabulate
+    sbomnix
+    vulnxscan
+    repology_cli
+    nix_outdated
     pythonPackages.wheel
-    pythonPackages.packageurl-python
-    pythonPackages.graphviz
-    pythonPackages.pycodestyle
-    pythonPackages.pylint
-    pythonPackages.black
-    pythonPackages.pytest
-    pythonPackages.jsonschema
-    pythonPackages.requests
     pythonPackages.venvShellHook
   ];
   venvDir = "venv";
