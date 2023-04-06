@@ -3,11 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # common
-pandas
 colorlog
-tabulate
-wheel
+pandas
 reuse
+tabulate
 
 # sbomnix
 packageurl-python
@@ -19,14 +18,14 @@ graphviz
 requests
 
 # repology
-requests-ratelimiter
-requests-cache
 bs4
 packaging
+requests-ratelimiter
+requests-cache
 
 # dev requirements
+black
+jsonschema
 pycodestyle
 pylint
-black
 pytest
-jsonschema

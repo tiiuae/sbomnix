@@ -31,7 +31,6 @@ from sbomnix.utils import (
 ###############################################################################
 
 _LOG = logging.getLogger(LOGGER_NAME)
-_MYDIR = pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
 
 ###############################################################################
 
@@ -95,7 +94,7 @@ def _run_repology_cli(sbompath):
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
         cmd = (
-            "scripts/repology/repology_cli.py "
+            "repology_cli.py "
             f"--sbom_cdx={sbompath} --repository=nix_unstable --out={f.name}"
         )
         exec_cmd(cmd.split())

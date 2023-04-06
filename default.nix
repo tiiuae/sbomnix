@@ -4,36 +4,28 @@
 {
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
-  vulnix ? import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
 }:
 
 pythonPackages.buildPythonPackage rec {
   pname = "sbomnix";
-  version = "1.4.4";
+  version = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
   format = "setuptools";
 
   src = ./.;
-
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "use_scm_version=True," "version='${version}'," \
-      --replace "setup_requires=['setuptools_scm']," "setup_requires=[],"
-  '';
+  updateCpedict = import ./scripts/cpedict/update-cpedict.nix { pkgs=pkgs; };
+  makeWrapperArgs = [
+    "--prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nix pkgs.graphviz updateCpedict ]}"
+  ];
 
   propagatedBuildInputs = [ 
     pkgs.reuse
-    pkgs.grype
-    pkgs.curl
-    vulnix
-    pythonPackages.numpy
-    pythonPackages.pandas
     pythonPackages.colorlog
-    pythonPackages.tabulate
-    pythonPackages.wheel
-    pythonPackages.packageurl-python
-    pythonPackages.requests
     pythonPackages.graphviz
+    pythonPackages.numpy
+    pythonPackages.packageurl-python
+    pythonPackages.pandas
+    pythonPackages.requests
+    pythonPackages.tabulate
   ];
-
   pythonImportsCheck = [ "sbomnix" ];
 }

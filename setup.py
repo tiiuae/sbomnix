@@ -2,27 +2,38 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=invalid-name, import-error, missing-function-docstring
+
 """ setup.py for setuptools """
 
+import os.path
 import setuptools
+
 
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
 
+
+def project_path(*names):
+    return os.path.join(os.path.dirname(__file__), *names)
+
+
+with open(project_path("VERSION"), encoding="utf-8") as f:
+    version = f.read().strip()
+
+
 requires = [
-    "pandas",
     "colorlog",
-    "packageurl-python",
-    "tabulate",
     "graphviz",
+    "packageurl-python",
+    "pandas",
     "reuse",
-    "wheel",
+    "tabulate",
 ]
 
 setuptools.setup(
     name="sbomnix",
-    use_scm_version=True,
-    setup_requires=["setuptools_scm"],
+    version=version,
     description="Utility that generates SBOMs from nix packages",
     url="https://github.com/tiiuae/sbomnix",
     author="TII",
@@ -40,12 +51,11 @@ setuptools.setup(
     ],
     keywords="SBOM",
     packages=["sbomnix", "nixgraph", "scripts.vulnxscan"],
-    scripts=["scripts/update-cpedict.sh", "scripts/vulnxscan/osv.py"],
+    scripts=["scripts/cpedict/update-cpedict.sh"],
     entry_points={
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",
             "nixgraph = nixgraph.main:main",
-            "vulnxscan= scripts.vulnxscan.vulnxscan:main",
         ]
     },
 )

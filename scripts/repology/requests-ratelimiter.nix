@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# TODO: this should be in nixpkgs
+
 { nixpkgs ? <nixpkgs>
 , pkgs ? import nixpkgs {}
 , pythonPackages ? pkgs.python3Packages
@@ -9,19 +11,22 @@
 }:
 
 pythonPackages.buildPythonPackage rec {
-  version = "1.0.5";
-  pname = "nix-visualize";
+  version = "0.4.0";
+  pname = "requests-ratelimiter";
+  format = "pyproject";
 
   src = pkgs.fetchFromGitHub {
-    owner = "henrirosten";
+    owner = "JWCook";
     repo = pname;
-    rev = "7fedf92eacffd5c42c50f7fec72f61a377c9ccf3";
-    hash = "sha256-Z1r8XHszoUnQinl63yXvQG6Czp5HnYNG37AY+EEiT4w=";
+    rev = "v${version}";
+    hash = "sha256-F9bfcwijyyKzlFKBJAC/5ETc4/hZpPhm2Flckku2z6M=";
   };
+
+  pyrate-limiter = import ./pyrate-limiter.nix { pkgs=pkgs; };
+
   propagatedBuildInputs = with pythonPackages; [
-    matplotlib
-    networkx
-    pygraphviz
-    pandas
+    poetry-core
+    pyrate-limiter
+    requests
   ];
 }

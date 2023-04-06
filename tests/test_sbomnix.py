@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, global-statement, redefined-outer-name
 
 """ Tests for sbomnix """
 
@@ -18,24 +18,34 @@ import jsonschema
 import pytest
 
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
-TEST_WORK_DIR = MYDIR / "sbomnix_test_data"
-TEST_NIX_RESULT = TEST_WORK_DIR / "result"
 REPOROOT = MYDIR / ".."
 SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
 NIXGRAPH = MYDIR / ".." / "nixgraph" / "main.py"
 COMPARE_DEPS = MYDIR / "compare_deps.py"
 COMPARE_SBOMS = MYDIR / "compare_sboms.py"
 
+TEST_WORK_DIR = None
+TEST_NIX_RESULT = None
 
 ################################################################################
 
 
+@pytest.fixture(scope="session")
+def test_work_dir(tmp_path_factory):
+    """Fixture for session-scope tempdir"""
+    tempdir = tmp_path_factory.mktemp("testdata")
+    return Path(tempdir)
+
+
 @pytest.fixture(autouse=True)
-def set_up_test_data():
+def set_up_test_data(test_work_dir):
     """Fixture to set up the test data"""
     print("setup")
-    shutil.rmtree(TEST_WORK_DIR, ignore_errors=True)
-    TEST_WORK_DIR.mkdir(parents=True, exist_ok=True)
+    global TEST_WORK_DIR
+    TEST_WORK_DIR = test_work_dir
+    print(f"using TEST_WORK_DIR: {TEST_WORK_DIR}")
+    global TEST_NIX_RESULT
+    TEST_NIX_RESULT = TEST_WORK_DIR / "result"
     # Build nixpkgs.hello, output symlink to TEST_NIX_RESULT
     # (assumes nix-build is available in $PATH)
     cmd = ["nix-build", "<nixpkgs>", "-A", "hello", "-o", TEST_NIX_RESULT]
@@ -457,6 +467,76 @@ def test_vulnxscan_scan_sbom():
         out_path_cdx.as_posix(),
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
+
+
+################################################################################
+
+
+def test_repology_cli_help_flake():
+    """
+    Test repology_cli command line argument: '-h' running repology_cli as flake
+    """
+    cmd = ["nix", "run", f"{REPOROOT}#repology_cli", "--", "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_repology_cli_sbom():
+    """Test repology_cli with SBOM as input"""
+    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#sbomnix",
+        "--",
+        TEST_NIX_RESULT,
+        "--cdx",
+        out_path_cdx,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_cdx.exists()
+
+    out_path_repology = TEST_WORK_DIR / "repology.csv"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#repology_cli",
+        "--",
+        "--sbom_cdx",
+        out_path_cdx.as_posix(),
+        "--repository",
+        "nix_unstable",
+        "--out",
+        out_path_repology.as_posix(),
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_repology.exists()
+
+
+################################################################################
+
+
+def test_nix_outdated_help_flake():
+    """
+    Test nix_outdated command line argument: '-h' running nix_outdated as flake
+    """
+    cmd = ["nix", "run", f"{REPOROOT}#nix_outdated", "--", "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+def test_nix_outdated_result():
+    """Test nix_outdated with TEST_NIX_RESULT as input"""
+    out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#nix_outdated",
+        "--",
+        "--out",
+        out_path_nix_outdated.as_posix(),
+        TEST_NIX_RESULT,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_nix_outdated.exists()
 
 
 ################################################################################
