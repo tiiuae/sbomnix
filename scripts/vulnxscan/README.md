@@ -11,14 +11,14 @@ SPDX-License-Identifier: Apache-2.0
 Table of Contents
 =================
 * [Getting Started](#getting-started)
-* [Usage Examples](#usage-examples)
+* [Example Target](#example-target)
 * [Supported Scanners](#supported-scanners)
    * [Nix and OSV Vulnerability Database](#nix-and-osv-vulnerability-database)
    * [Nix and Grype](#nix-and-grype)
    * [Vulnix](#vulnix)
 * [Vulnxscan Usage Examples](#vulnxscan-usage-examples)
    * [Running Vulnxscan as Flake](#running-vulnxscan-as-flake)
-   * [Vulnxscan Installation](#vulnxscan-installation)
+   * [Running from Nix Development Shell](#running-from-nix-development-shell)
    * [Find Vulnerabilities Impacting Runtime Dependencies](#find-vulnerabilities-impacting-runtime-dependencies)
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
@@ -27,7 +27,7 @@ Table of Contents
 ## Getting Started
 To get started, follow the [Getting Started](../../README.md#getting-started) section from the main [README](../../README.md).
 
-## Usage Examples
+## Example Target
 In the below examples, we use `sbomnix` itself as an example target for `vulnxscan`.
 To get the target out-path, build `sbomnix` with `nix-build`:
 ```bash
@@ -76,15 +76,32 @@ $ cd sbomnix
 $ nix run .#vulnxscan -- --help
 ```
 
-### Vulnxscan Installation
-To install `vulnxscan`, follow the [Installation](../../README.md#installation) instructions from the main [README](../../README.md).
+### Running from Nix Development Shell
+
+If you have nix flakes enabled, run:
+```bash
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix
+$ nix develop
+```
+
+You can also use `nix-shell` to enter the development shell:
+```bash
+$ git clone https://github.com/tiiuae/sbomnix
+$ cd sbomnix
+$ nix-shell
+```
+
+From the development shell, run `vulnxscan` as follows:
+```bash
+$ scripts/vulnxscan/vulnxscan.py --help
+```
 
 ### Find Vulnerabilities Impacting Runtime Dependencies
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
 
 ```bash
-# Alternatively, run with flakes: 'nix run .#vulnxscan -- ./result'
-$ vulnxscan ./result
+$ nix run .#vulnxscan -- ./result
 
 INFO     Generating SBOM for target '/nix/store/8pvrr84a3aw12bvi45hl7wx01a8iqgni-python3.10-sbomnix-1.2.0'
 INFO     Loading runtime dependencies referenced by '/nix/store/8pvrr84a3aw12bvi45hl7wx01a8iqgni-python3.10-sbomnix-1.2.0'
@@ -159,8 +176,8 @@ INFO     Wrote: sbom.cdx.json
 
 Then, give the generated SBOM as input to `vulnxscan`:
 ```bash
-# Alternatively, run with flakes: 'nix run .#vulnxscan -- --sbom sbom.cdx.json'
-$ vulnxscan --sbom sbom.cdx.json
+$ nix run .#vulnxscan -- --sbom sbom.cdx.json
+
 INFO     Running grype scan
 INFO     Running OSV scan
 INFO     Querying vulnerabilities
@@ -221,8 +238,8 @@ Notice that `vulnxscan` drops the Vulnix scan when the input is SBOM. This is du
 By default, `vulnxscan` scans the given target for vulnerabilities that impact its runtime-only dependencies. This example shows how to use `vulnxscan` to include also buildtime dependencies to the scan.
 
 ```bash
-# Alternatively, run with flakes: 'nix run .#vulnxscan -- ./result --buildtime'
-$ vulnxscan ./result --buildtime
+$ nix run .#vulnxscan -- ./result --buildtime
+
 # ... output not included in this snippet ... 
 ```
 
