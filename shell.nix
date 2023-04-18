@@ -12,12 +12,14 @@ pkgs.mkShell rec {
   nix_outdated = import ./scripts/nixupdate/nix_outdated.nix { pkgs=pkgs; };
   nix_visualize = import ./scripts/nixupdate/nix-visualize.nix { pkgs=pkgs; };
   requests-ratelimiter = import ./scripts/repology/requests-ratelimiter.nix { pkgs=pkgs; };
+  repology_cli = import ./scripts/repology/repology_cli.nix { pkgs=pkgs; };
   vulnix = import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; };
 
   buildInputs = [ 
     nix_outdated
     nix_visualize
     requests-ratelimiter
+    repology_cli
     vulnix
     pkgs.coreutils
     pkgs.curl
