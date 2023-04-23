@@ -15,6 +15,7 @@ import sys
 import pathlib
 import json
 import re
+import subprocess
 from tempfile import NamedTemporaryFile
 from shutil import which
 import pandas as pd
@@ -303,6 +304,15 @@ def _is_json(path):
         return False
 
 
+def _is_nix_artifact(path):
+    cmd = ["nix-store", "-q", path]
+    try:
+        exec_cmd(cmd)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def exit_unless_command_exists(name):
     """Check if `name` is an executable in PATH"""
     name_is_in_path = which(name) is not None
@@ -331,11 +341,11 @@ def main():
     scanner = VulnScan()
     if args.sbom:
         if not _is_json(target_path_abs):
-            _LOG.fatal("Specified sbom target is not json file: '%s'", target_path)
+            _LOG.fatal("Specified sbom target is not a json file: '%s'", target_path)
             sys.exit(0)
         sbom_path = target_path_abs
     else:
-        if _is_json(target_path_abs):
+        if not _is_nix_artifact(target_path_abs):
             _LOG.fatal("Specified target is not a nix artifact: '%s'", target_path)
             sys.exit(0)
         sbom_path = _generate_sbom(target_path_abs, args.buildtime)
