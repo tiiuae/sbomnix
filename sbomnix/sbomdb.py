@@ -21,7 +21,7 @@ from sbomnix.nix import Store, find_deriver
 from sbomnix.utils import (
     LOGGER_NAME,
     df_to_csv_file,
-    get_version,
+    get_py_pkg_version,
 )
 
 ###############################################################################
@@ -171,7 +171,7 @@ class SbomDb:
         tool = {}
         tool["vendor"] = "TII"
         tool["name"] = "sbomnix"
-        tool["version"] = get_version()
+        tool["version"] = get_py_pkg_version()
         cdx["metadata"]["tools"] = []
         cdx["metadata"]["tools"].append(tool)
         cdx["components"] = []
@@ -198,7 +198,7 @@ class SbomDb:
         creation_info = {}
         creation_info["created"] = datetime.now(timezone.utc).astimezone().isoformat()
         creation_info["creators"] = []
-        creation_info["creators"].append(f"Tool: sbomnix-{get_version()}")
+        creation_info["creators"].append(f"Tool: sbomnix-{get_py_pkg_version()}")
         spdx["creationInfo"] = creation_info
         spdx["comment"] = f"included dependencies: '{self.sbom_type}'"
         spdx["packages"] = []

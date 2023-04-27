@@ -11,7 +11,7 @@ import logging
 import pathlib
 import sys
 from nixgraph.graph import NixDependencies
-from sbomnix.utils import setup_logging, get_version, LOGGER_NAME
+from sbomnix.utils import setup_logging, get_py_pkg_version, LOGGER_NAME
 
 ###############################################################################
 
@@ -36,7 +36,7 @@ def getargs():
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
     parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
-    parser.add_argument("--version", action="version", version=get_version())
+    parser.add_argument("--version", action="version", version=get_py_pkg_version())
 
     helps = "Scan buildtime dependencies instead of runtime dependencies"
     parser.add_argument("--buildtime", help=helps, action="store_true")

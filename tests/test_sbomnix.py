@@ -528,6 +528,33 @@ def test_nix_outdated_result():
 ################################################################################
 
 
+def test_nix_secupdate_help_flake():
+    """
+    Test nix_secupdates command line argument: '-h' running nix_secupdates as flake
+    """
+    cmd = ["nix", "run", f"{REPOROOT}#nix_secupdates", "--", "-h"]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+@pytest.mark.skip_in_ci
+def test_nix_secupdate_result():
+    """Test nix_secupdate with TEST_NIX_RESULT as input"""
+    out_path_nix_outdated = TEST_WORK_DIR / "nix_secupdates.csv"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#nix_secupdates",
+        "--",
+        "--out",
+        out_path_nix_outdated.as_posix(),
+        TEST_NIX_RESULT,
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+################################################################################
+
+
 def validate_json(file_path, schema_path):
     """Validate json file matches schema"""
     with open(file_path, encoding="utf-8") as json_file, open(

@@ -18,7 +18,6 @@ import json
 import re
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError, SUPPRESS
-from packaging import version
 from requests import Session
 from requests_cache import CacheMixin
 from requests_ratelimiter import LimiterMixin
@@ -32,6 +31,8 @@ from sbomnix.utils import (
     LOG_SPAM,
     df_to_csv_file,
     df_regex_filter,
+    nix_to_repology_pkg_name,
+    parse_version,
 )
 
 ###############################################################################
@@ -146,7 +147,7 @@ class Repology:
         if args.repository and "repo" in df_cols:
             df = df_regex_filter(df, "repo", re.escape(args.repository))
         if re_pkg_internal and "package" in df_cols:
-            re_pkg_internal = f"^{re.escape(re_pkg_internal)}$"
+            re_pkg_internal = f"^(?:[a-z0-9]+:)?{re.escape(re_pkg_internal)}$"
             df = df_regex_filter(df, "package", re_pkg_internal)
         # Filter by the regex filters from command line args
         if args.re_package and "package" in df_cols:
@@ -164,13 +165,16 @@ class Repology:
 
     def _sbom_fields(self):
         # Merge self.df with self.df_sbom to get the version_sbom column
-        self.df = self.df.merge(
-            self.df_sbom,
+        self.df = pd.merge(
+            left=self.df_sbom,
+            right=self.df,
             how="left",
-            left_on=["package"],
-            right_on=["name"],
-            suffixes=["", "_sbom"],
+            left_on=["name"],
+            right_on=["package"],
+            suffixes=["_sbom", ""],
         )
+        # Move version_sbom to last column
+        self.df["version_sbom"] = self.df.pop("version_sbom")
         # Drop the "name" column which is a duplicate to "package"
         self.df.drop("name", axis=1, inplace=True)
 
@@ -199,7 +203,7 @@ class Repology:
         col = "newest_upstream_release"
         df[col] = df[col].str.slice(0, 26)
         # Remove rows we don't want to print to the console report
-        df = df[~df.status.isin(["IGNORED", "NO_VERSION", "NOT_FOUND"])]
+        df = df[~df.status.isin(["IGNORED", "NO_VERSION"])]
         df = df.drop_duplicates(keep="first")
         # Write the console report
         table = tabulate(
@@ -414,23 +418,12 @@ class Repology:
             components = json_dict["components"] + components
             components_dict = {}
             for cmp in components:
-                name = cmp["name"]
-                # Fix sbom package name so it matches repology package name
-                match = re.match(r"python[^-]*-(?P<pname>.+)", name)
-                if match:
-                    name = f"python:{match.group('pname')}"
-                elif not match:
-                    match = re.match(r"perl[^-]*-(?P<pname>.+)", name)
-                    if match:
-                        name = f"perl:{match.group('pname')}"
-                if name == "python3":
-                    name = "python"
+                name = nix_to_repology_pkg_name(cmp["name"])
                 components_dict.setdefault("name", []).append(name)
                 components_dict.setdefault("version", []).append(cmp["version"])
             df_components = pd.DataFrame(components_dict)
             df_components.fillna("", inplace=True)
             df_components = df_components.astype(str)
-            df_components["name"] = df_components["name"].str.lower()
             df_components.sort_values("name", inplace=True)
             df_components.reset_index(drop=True, inplace=True)
             return df_components
@@ -552,14 +545,10 @@ def _sbom_row_classify(row):
         # be outdated
         return "sbom_pkg_needs_update"
     if row.status in ["devel", "unique", "newest"]:
-        # For devel, unique, and newest package versions, remove all execpt
-        # numbers and dots from the version strings to make the two version
-        # strings of the same package comparable with version.parse
-        re_ver = re.compile("[^0-9.]+")
-        ver_sbom = re_ver.sub(r"", row.version_sbom)
-        ver_repo = re_ver.sub(r"", row.version)
+        ver_sbom = parse_version(row.version_sbom)
+        ver_repo = parse_version(row.version)
         # If local version is smaller than repo version, classify accordingly
-        if version.parse(ver_sbom) < version.parse(ver_repo):
+        if not ver_sbom or not ver_repo or ver_sbom < ver_repo:
             return "sbom_pkg_needs_update"
     return ""
 
