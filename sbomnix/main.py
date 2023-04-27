@@ -13,7 +13,7 @@ import sys
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
     setup_logging,
-    get_version,
+    get_py_pkg_version,
     LOGGER_NAME,
 )
 
@@ -36,7 +36,7 @@ def getargs():
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
     parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
-    parser.add_argument("--version", action="version", version=get_version())
+    parser.add_argument("--version", action="version", version=get_py_pkg_version())
 
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     parser.add_argument("--verbose", help=helps, type=int, default=1)

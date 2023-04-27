@@ -11,11 +11,9 @@
 import logging
 import os
 import sys
-import re
 import pathlib
 from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
-import pandas as pd
 from tabulate import tabulate
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
@@ -26,6 +24,7 @@ from sbomnix.utils import (
     df_from_csv_file,
     df_log,
     df_to_csv_file,
+    nix_to_repology_pkg_name,
 )
 
 ###############################################################################
@@ -67,6 +66,11 @@ def getargs():
         "that would have an update in the package's upstream repository."
     )
     parser.add_argument("--local", help=helps, action="store_true")
+    helps = (
+        "Include target's buildtime dependencies to the scan. "
+        "By default, only runtime dependencies are considered."
+    )
+    parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = "Path to output file (default: ./nix_outdated.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="nix_outdated.csv")
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
@@ -130,27 +134,15 @@ def _nix_visualize_csv_to_df(csvpath):
     )
     df[["package", "version"]] = df["raw_name"].str.extract(re_split, expand=True)
     # Fix package name so it matches repology package name
-    df["package"] = df.apply(lambda row: _reformat_pkg(row.package), axis=1)
+    df["package"] = df.apply(lambda row: nix_to_repology_pkg_name(row.package), axis=1)
     return df
 
 
-def _reformat_pkg(name):
-    if not name or pd.isnull(name):
-        return name
-    # Fix sbom package name so it matches repology package name
-    match = re.match(r"python[^-]*-(?P<pname>.+)", name)
-    if match:
-        name = f"python:{match.group('pname')}"
-    elif not match:
-        match = re.match(r"perl[^-]*-(?P<pname>.+)", name)
-        if match:
-            name = f"perl:{match.group('pname')}"
-    if name == "python3":
-        name = "python"
-    return name.lower()
-
-
 def _generate_report_df(df_nv, df_repo):
+    if df_nv is None:
+        df_repo["level"] = "0"
+        df_repo.rename(columns={"version": "version_repology"}, inplace=True)
+        return df_repo
     df = df_nv.merge(
         df_repo,
         how="left",
@@ -201,6 +193,8 @@ def _report(df, args):
         df_console.drop_duplicates(
             df_console.columns.difference(["priority"]), keep="first", inplace=True
         )
+        if args.buildtime:
+            df_console = df_console.drop(["priority"], axis=1)
         table = tabulate(
             df_console,
             headers="keys",
@@ -208,7 +202,7 @@ def _report(df, args):
             numalign="center",
             showindex=False,
         )
-        _console_out_table(table, args.local)
+        _console_out_table(table, args.local, args.buildtime)
     else:
         # Select pkgs that need update in nixpkgs
         col = "repo_version_classify"
@@ -219,6 +213,8 @@ def _report(df, args):
             df_console.columns.difference(["priority"]), keep="first", inplace=True
         )
         df_console = _drop_newest_dups(df_console, df)
+        if args.buildtime:
+            df_console = df_console.drop(["priority"], axis=1)
         table = tabulate(
             df_console,
             headers="keys",
@@ -226,7 +222,7 @@ def _report(df, args):
             numalign="center",
             showindex=False,
         )
-        _console_out_table(table, args.local)
+        _console_out_table(table, args.local, args.buildtime)
 
     if _LOG.level <= logging.DEBUG:
         # Write the full merged df for debugging
@@ -236,16 +232,20 @@ def _report(df, args):
     df_to_csv_file(df_console, args.out)
 
 
-def _console_out_table(table, local=False):
+def _console_out_table(table, local=False, buildtime=False):
     update_target = "in nixpkgs"
     if local:
         update_target = "locally"
+    priority = ":"
+    if not buildtime:
+        priority = (
+            " (in priority order based on how many other "
+            "packages depend on the potentially outdated package):"
+        )
     _LOG.info(
-        "Dependencies that need update %s "
-        "(in priority order based on how many other "
-        "packages depend on the potentially outdated package):"
-        "\n\n%s\n\n",
+        "Dependencies that need update %s%s\n\n%s\n\n",
         update_target,
+        priority,
         table,
     )
 
@@ -262,7 +262,7 @@ def main():
         sys.exit(1)
     target_path_abs = args.NIXPATH.resolve().as_posix()
 
-    sbom_path = _generate_sbom(target_path_abs)
+    sbom_path = _generate_sbom(target_path_abs, args.buildtime)
     _LOG.info("Using SBOM '%s'", sbom_path)
 
     repology_out_path = _run_repology_cli(sbom_path)
@@ -270,10 +270,14 @@ def main():
     df_repology = df_from_csv_file(repology_out_path)
     df_log(df_repology, LOG_SPAM)
 
-    nix_visualize_out = _run_nix_visualize(target_path_abs)
-    _LOG.info("Using nix-visualize out: '%s'", nix_visualize_out)
-    df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
-    df_log(df_nix_visualize, LOG_SPAM)
+    if not args.buildtime:
+        nix_visualize_out = _run_nix_visualize(target_path_abs)
+        _LOG.info("Using nix-visualize out: '%s'", nix_visualize_out)
+        df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
+        df_log(df_nix_visualize, LOG_SPAM)
+    else:
+        _LOG.info("Not running nix-visualize due to '--buildtime' argument")
+        df_nix_visualize = None
 
     df_report = _generate_report_df(df_nix_visualize, df_repology)
     _report(df_report, args)

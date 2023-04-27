@@ -30,6 +30,7 @@ pythonPackages.buildPythonPackage rec {
 
   postInstall = ''
     install -vD scripts/repology/repology_cli.py $out/bin/repology_cli.py
+    install -vD scripts/repology/repology_cve.py $out/bin/repology_cve.py
   '';
 
   pythonImportsCheck = [ "sbomnix" ];
