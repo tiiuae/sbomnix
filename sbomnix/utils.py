@@ -25,12 +25,12 @@ LOG_SPAM = logging.DEBUG - 1
 ###############################################################################
 
 
-def df_to_csv_file(df, name):
+def df_to_csv_file(df, name, loglevel=logging.INFO):
     """Write dataframe to csv file"""
     df.to_csv(
         path_or_buf=name, quoting=csv.QUOTE_ALL, sep=",", index=False, encoding="utf-8"
     )
-    logging.getLogger(LOGGER_NAME).info("Wrote: %s", name)
+    logging.getLogger(LOGGER_NAME).log(loglevel, "Wrote: %s", name)
 
 
 def df_from_csv_file(name):
