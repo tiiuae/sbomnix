@@ -214,9 +214,9 @@ class SbomDb:
                 spdx["relationships"].append(relation)
         self._write_json(spdx_path, spdx, printinfo)
 
-    def to_csv(self, csv_path):
+    def to_csv(self, csv_path, loglevel=logging.INFO):
         """Export sbomdb to csv file"""
-        df_to_csv_file(self.df_sbomdb, csv_path)
+        df_to_csv_file(self.df_sbomdb, csv_path, loglevel)
 
 
 ################################################################################

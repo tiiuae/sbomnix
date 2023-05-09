@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, import-error
+# pylint: disable=invalid-name, import-error, too-many-arguments
 
 """ Demonstrate vulnerability scan with vulnix, grype, and osv.py"""
 
@@ -29,6 +29,7 @@ from sbomnix.utils import (
     LOGGER_NAME,
     LOG_SPAM,
     df_to_csv_file,
+    df_from_csv_file,
 )
 
 ###############################################################################
@@ -218,12 +219,30 @@ class VulnScan:
         )
         self.df_report = df[report_cols]
 
-    def report(self, name, target, buildtime, is_sbom=False):
+    def _filter_patched(self, sbom_csv):
+        _LOG.info("Filtering patched vulnerabilities")
+        df_sbom_csv = df_from_csv_file(sbom_csv)
+        df = pd.merge(
+            left=self.df_report,
+            right=df_sbom_csv,
+            how="left",
+            left_on=["package", "version"],
+            right_on=["pname", "version"],
+            suffixes=["", "_sbom_csv"],
+        )
+        df["patched"] = df.apply(_is_patched, axis=1)
+        # Only keep the rows where 'patched' is False
+        df = df[~df["patched"]]
+        self.df_report = df[self.df_report.columns.values]
+
+    def report(self, name, target, sbom_csv, buildtime, is_sbom=False):
         """Generate the vulnerability report: csv file and a table to console"""
         self._generate_report()
         if self.df_report is None or self.df_report.empty:
             _LOG.info("No vulnerabilities found")
             return
+        if sbom_csv:
+            self._filter_patched(sbom_csv)
         _LOG.debug("Writing report")
 
         # Console report
@@ -282,15 +301,30 @@ def _vuln_url(row):
     return ""
 
 
+def _is_patched(row):
+    if row.vuln_id and str(row.vuln_id).lower() in str(row.patches).lower():
+        patches = row.patches.split()
+        patch = [p for p in patches if str(row.vuln_id).lower() in str(p).lower()]
+        _LOG.info("%s for '%s' is patched with: %s", row.vuln_id, row.package, patch)
+        return True
+    return False
+
+
 def _generate_sbom(target_path, buildtime=False):
     _LOG.info("Generating SBOM for target '%s'", target_path)
     runtime = True
     sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
     prefix = "vulnxscan_"
-    suffix = ".json"
-    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        sbomdb.to_cdx(f.name, printinfo=False)
-        return f.name
+    cdx_suffix = ".json"
+    csv_suffix = ".csv"
+    with NamedTemporaryFile(
+        delete=False, prefix=prefix, suffix=cdx_suffix
+    ) as fcdx, NamedTemporaryFile(
+        delete=False, prefix=prefix, suffix=csv_suffix
+    ) as fcsv:
+        sbomdb.to_cdx(fcdx.name, printinfo=False)
+        sbomdb.to_csv(fcsv.name, loglevel=logging.DEBUG)
+        return fcdx.name, fcsv.name
 
 
 def _is_json(path):
@@ -343,17 +377,19 @@ def main():
         if not _is_json(target_path_abs):
             _LOG.fatal("Specified sbom target is not a json file: '%s'", target_path)
             sys.exit(0)
-        sbom_path = target_path_abs
+        sbom_cdx_path = target_path_abs
+        sbom_csv_path = None
     else:
         if not _is_nix_artifact(target_path_abs):
             _LOG.fatal("Specified target is not a nix artifact: '%s'", target_path)
             sys.exit(0)
-        sbom_path = _generate_sbom(target_path_abs, args.buildtime)
-        _LOG.info("Using SBOM '%s'", sbom_path)
+        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
+        _LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
+        _LOG.info("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
-    scanner.scan_grype(sbom_path)
-    scanner.scan_osv(sbom_path)
-    scanner.report(args.out, target_path, args.buildtime, args.sbom)
+    scanner.scan_grype(sbom_cdx_path)
+    scanner.scan_osv(sbom_cdx_path)
+    scanner.report(args.out, target_path, sbom_csv_path, args.buildtime, args.sbom)
 
 
 ################################################################################
