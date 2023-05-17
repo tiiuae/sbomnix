@@ -20,8 +20,13 @@ pythonPackages.buildPythonPackage rec {
     "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli nix_visualize vulnxscan ]}"
   ];
 
+  requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
+
   propagatedBuildInputs = [ 
+    requests-ratelimiter
     sbomnix
+    pythonPackages.requests
+    pythonPackages.requests-cache
   ];
 
   postInstall = ''
