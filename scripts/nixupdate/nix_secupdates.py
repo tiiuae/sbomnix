@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name too-many-return-statements fixme
+# pylint: disable=invalid-name too-many-return-statements fixme abstract-method
 
 """
 Command line tool to demonstrate finding and classifying potential security
@@ -15,8 +15,13 @@ import logging
 import os
 import sys
 import pathlib
+import json
+import urllib.parse
 from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
+from requests import Session
+from requests_cache import CacheMixin
+from requests_ratelimiter import LimiterMixin
 import pandas as pd
 from tabulate import tabulate
 from sbomnix.utils import (
@@ -52,6 +57,15 @@ def getargs():
     parser.add_argument("NIXPATH", help=helps, type=pathlib.Path)
     # Other arguments:
     helps = (
+        "Search nixpkgs github for PRs that might include more information "
+        "concerning the fix for the vulnerability. "
+        "This option adds a URL to best matching PR (if any) "
+        "to the output table. The PR search takes significant "
+        "time due to github API rate limits, which is why this feature is "
+        "not enabled by default."
+    )
+    parser.add_argument("--pr", help=helps, action="store_true")
+    helps = (
         "Include target's buildtime dependencies to the scan. "
         "By default, only runtime dependencies are considered."
     )
@@ -63,11 +77,16 @@ def getargs():
     return parser.parse_args()
 
 
-################################################################################
+class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
+    """Session class with caching and rate-limiting"""
+
 
 _repology_cve_dfs = {}
 _repology_cli_dfs = {}
 _repology_nix_repo = "nix_unstable"
+# Rate-limited and cached session. For github api rate limits, see:
+# https://docs.github.com/en/rest/search?apiVersion=latest#rate-limit
+_session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=3600)
 
 
 def _run_vulnxscan(target_path, buildtime=False):
@@ -142,7 +161,11 @@ def _add_vuln_item(out_dict, vuln, df_repo=None):
         out_dict.setdefault("package", []).append(vuln.package)
         out_dict.setdefault("version_local", []).append(vuln.version)
         out_dict.setdefault("version_nixpkgs", []).append(item.version)
-        out_dict.setdefault("version_upstream", []).append(item.newest_upstream_release)
+        if item.newest_upstream_release and ";" in item.newest_upstream_release:
+            version_upstream_str = item.newest_upstream_release.split(";")[0]
+        else:
+            version_upstream_str = item.newest_upstream_release
+        out_dict.setdefault("version_upstream", []).append(version_upstream_str)
         out_dict.setdefault("package_repology", []).append(item.package)
         out_dict.setdefault("sortcol", []).append(vuln.sortcol)
 
@@ -186,6 +209,9 @@ def _query_repology_versions(df_vuln_pkgs):
             df = df_repology_cli[df_repology_cli["similarity"] >= 0.7]
             if not df.empty:
                 _LOG.log(LOG_SPAM, "Version similarity match:\n%s", df)
+                best_match = df["similarity"].max()
+                df = df[df["similarity"] == best_match]
+                _LOG.log(LOG_SPAM, "Selecting best match based on version:\n%s", df)
                 _add_vuln_item(result_dict, vuln, df)
                 continue
             # Otherwise, we need to conclude that we don't know which repology
@@ -217,6 +243,10 @@ def _find_secupdates(args):
     df_log(df_vuln_pkgs, LOG_SPAM)
     # Classify each vulnerable package
     df_vuln_pkgs["classify"] = df_vuln_pkgs.apply(_vuln_update_classify, axis=1)
+    # Find potentially relevant PR
+    if args.pr:
+        _LOG.info("Querying github PRs")
+        df_vuln_pkgs["nixpkgs_pr"] = df_vuln_pkgs.apply(_vuln_nixpkgs_pr, axis=1)
     # Sort the data based on the following columns
     sort_cols = ["sortcol", "package", "version_local"]
     df_vuln_pkgs.sort_values(by=sort_cols, ascending=False, inplace=True)
@@ -255,13 +285,11 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
 def _vuln_update_classify(row):
     if not row.version_nixpkgs and not row.version_upstream:
         return "err_missing_repology_version"
-
     # Check that the package is also vulnerable based on repology
     if row.version_local and not _pkg_is_vulnerable(
         row.package_repology, row.version_local, row.vuln_id
     ):
         return "err_not_vulnerable_based_on_repology"
-
     # Check if there's an update available in nixpkgs
     version_local = parse_version(row.version_local)
     version_nixpkgs = parse_version(row.version_nixpkgs)
@@ -275,27 +303,59 @@ def _vuln_update_classify(row):
             row.package_repology, row.version_nixpkgs, row.vuln_id
         ):
             return "fix_update_to_version_nixpkgs"
-
     # Check if there's an update available in upstream
-    if row.version_upstream and ";" in row.version_upstream:
-        version_upstream_str = row.version_upstream.split(";")[0]
-    else:
-        version_upstream_str = row.version_upstream
-    version_upstream = parse_version(version_upstream_str)
+    version_upstream = parse_version(row.version_upstream)
     if not version_upstream:
         return "err_invalid_version"
-    if version_upstream_str and version_local < version_upstream:
+    if row.version_upstream and version_local < version_upstream:
         # Classify accordingly if the upstream update is not vulnerable
-        if not _pkg_is_vulnerable(
-            row.package_repology, version_upstream_str, row.vuln_id
-        ):
+        if not _pkg_is_vulnerable(row.package_repology, version_upstream, row.vuln_id):
             return "fix_update_to_version_upstream"
-
-    # Issue appears valid, but there's no known fix.
-    # Note: a fix might still be in progress. We should check the current PRs
-    # in github to find out if update is in progress but not yet available in
-    # nix_unstable.
+    # Issue appears valid, but there's no known fix
     return "fix_not_available"
+
+
+def _search_result_append(prs, result):
+    maxres = 5
+    for item in prs["items"]:
+        if len(result) >= maxres:
+            # Log all the found PR urls, even though we include only the first
+            # maxres to the main output
+            _LOG.log(
+                LOG_SPAM, "More than %s PRs, skipping: %s", maxres, item["html_url"]
+            )
+            continue
+        result.add(item["html_url"])
+    return result
+
+
+def _vuln_nixpkgs_pr(row):
+    # See: https://docs.github.com/en/search-github
+    nixpr = "repo:NixOS/nixpkgs is:pr"
+    unmerged = "is:unmerged is:open"
+    merged = "is:merged"
+    ver = None
+    result = set()
+    # Query unmerged PRs based on vuln_id
+    prs = _github_query(f"{nixpr} {unmerged} {row.vuln_id}")
+    _search_result_append(prs, result)
+    # Query merged PRs based vuln_id
+    prs = _github_query(f"{nixpr} {merged} {row.vuln_id}")
+    _search_result_append(prs, result)
+    # Attempt version-based match for the following classifications:
+    if row.classify == "fix_update_to_version_nixpkgs":
+        ver = row.version_nixpkgs
+    elif row.classify == "fix_update_to_version_upstream":
+        ver = row.version_upstream
+    if ver:
+        pkg = row.package
+        # Query unmerged PRs based on pkg name and version in title
+        prs = _github_query(f"{nixpr} {unmerged} {pkg} in:title {ver} in:title")
+        _search_result_append(prs, result)
+        # Query merged PRs based on pkg name and version in title
+        prs = _github_query(f"{nixpr} {merged} {pkg} in:title {ver} in:title")
+        _search_result_append(prs, result)
+    return " \n".join(list(result))
 
 
 def _report(df_vulns):
@@ -324,6 +384,17 @@ def _report(df_vulns):
         "update actions:\n\n%s\n\n",
         table,
     )
+
+
+def _github_query(query_str):
+    query_str = urllib.parse.quote(query_str, safe=":/")
+    query = f"https://api.github.com/search/issues?q={query_str}"
+    _LOG.debug("GET: %s", query)
+    resp = _session.get(query)
+    resp.raise_for_status()
+    resp_json = json.loads(resp.text)
+    _LOG.log(LOG_SPAM, "total_count=%s", resp_json["total_count"])
+    return resp_json
 
 
 ################################################################################

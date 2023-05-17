@@ -231,6 +231,8 @@ def nix_to_repology_pkg_name(nix_pkg_name):
         nix_pkg_name = f"{matches[0]}:{matches[1]}"
     if nix_pkg_name == "python3":
         nix_pkg_name = "python"
+    if nix_pkg_name == "libtiff":
+        nix_pkg_name = "tiff"
     return nix_pkg_name
 
 
