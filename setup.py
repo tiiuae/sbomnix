@@ -51,7 +51,6 @@ setuptools.setup(
     ],
     keywords="SBOM",
     packages=["sbomnix", "nixgraph", "scripts.vulnxscan"],
-    scripts=["scripts/cpedict/update-cpedict.sh"],
     entry_points={
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",

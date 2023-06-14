@@ -6,18 +6,19 @@
 
 """ Generate CPE (Common Platform Enumeration) identifiers"""
 
-import shutil
 import logging
+import sys
 import pathlib
 import string
 import datetime
+import shutil
+import requests
 
 from sbomnix.utils import (
     LOGGER_NAME,
     LOG_SPAM,
     df_from_csv_file,
     df_log,
-    exec_cmd,
 )
 
 ###############################################################################
@@ -44,11 +45,22 @@ class _CPE:
     def __init__(self):
         _LOG.debug("")
         self.cpedict = pathlib.PosixPath(CACHE_DIR).expanduser() / "cpes.csv"
+        self.cpedict.parent.mkdir(parents=True, exist_ok=True)
         self.df_cpedict = self._load_cpedict()
+        if self.df_cpedict is not None:
+            # Verify the loaded cpedict contains at least the following columns
+            required_cols = {"vendor", "product"}
+            if not required_cols.issubset(self.df_cpedict):
+                _LOG.fatal(
+                    "Missing required columns %s from cpedict, manually check: '%s'",
+                    required_cols,
+                    self.cpedict,
+                )
+                sys.exit(1)
 
     def _load_cpedict(self):
         _LOG.debug("")
-        if not self.cpedict.exists():
+        if not self.cpedict.exists() or self.cpedict.stat().st_size <= 0:
             # Try updating cpe dictionary if it's not cached
             if not self._update_cpedict():
                 _LOG.warning(
@@ -67,26 +79,25 @@ class _CPE:
         return df_from_csv_file(self.cpedict)
 
     def _update_cpedict(self):
-        """Updates cpe dictionary from NVD"""
+        """Updates local cpe dictionary"""
         _LOG.debug("")
-        # Try using update script from 'scripts/update-cpedict.sh'
-        update_script = (
-            pathlib.Path(__file__).parents[1] / "scripts" / "update-cpedict.sh"
-        )
-        if update_script.exists():
-            self._run_update_script(update_script.as_posix())
-            return True
-        # Otherwise, if update-cpedict.sh is in PATH, use the installed script
-        if shutil.which("update-cpedict.sh"):
-            self._run_update_script("update-cpedict.sh")
-            return True
-        _LOG.debug("update-cpedict.sh not found")
-        return False
-
-    def _run_update_script(self, path):
-        _LOG.info("Updating CPE dictionary, this might take a moment")
-        out = exec_cmd([path, "-f", self.cpedict.as_posix()])
-        _LOG.debug("stdout from running '%s':\n%s", path, out)
+        cpedict_bak = None
+        if self.cpedict.exists() and self.cpedict.stat().st_size > 0:
+            # Backup the original cpedict to be able to rollback in case the update
+            # fails
+            cpedict_bak = pathlib.PosixPath(CACHE_DIR).expanduser() / "cpes.csv.bak"
+            shutil.copy(self.cpedict, cpedict_bak)
+        with open(self.cpedict.as_posix(), "wb") as f:
+            url = "https://github.com/tiiuae/cpedict/raw/main/data/cpes.csv"
+            try:
+                f.write(requests.get(url, stream=True, timeout=10).content)
+                return True
+            except requests.exceptions.RequestException as e:
+                _LOG.warning("CPE data update failed: %s", e)
+                if cpedict_bak:
+                    _LOG.debug("Rollback earlier cpedict after failed update")
+                    shutil.copy(cpedict_bak, self.cpedict)
+                return False
 
     def _cpedict_vendor(self, product):
         if not product or len(product) == 1:
