@@ -80,7 +80,7 @@ class Store:
             self._add_cached(nixpath, drv=drv_obj)
 
     def add_path(self, nixpath):
-        """Add the the derivation referenced by a store path (nixpath)"""
+        """Add the derivation referenced by a store path (nixpath)"""
         _LOG.debug(nixpath)
         if self._is_cached(nixpath):
             _LOG.debug("Skipping redundant path '%s'", nixpath)

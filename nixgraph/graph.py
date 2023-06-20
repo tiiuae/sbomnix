@@ -9,6 +9,7 @@
 
 """ Python script to query and visualize nix package dependencies """
 
+import sys
 import os
 import re
 import logging
@@ -25,6 +26,8 @@ from sbomnix.utils import (
     regex_match,
     df_regex_filter,
 )
+
+from sbomnix.nix import find_deriver
 
 ###############################################################################
 
@@ -245,55 +248,31 @@ class NixDependencies:
     def __init__(self, nix_path, buildtime=False):
         _LOG.debug("nix_path: %s", nix_path)
         self.dependencies = set()
-        self.start_path = ""
-        self.nix_store_path = ""
         self.dtype = "buildtime" if buildtime else "runtime"
         _LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
+        drv_path = _find_deriver(nix_path)
+        self.nix_store_path = _get_nix_store_path(drv_path)
         if buildtime:
-            self._parse_buildtime_dependencies(nix_path)
+            self.start_path = drv_path
+            self._parse_buildtime_dependencies(drv_path)
         else:
-            self._parse_runtime_dependencies(nix_path)
+            self.start_path = _find_outpath(drv_path)
+            self._parse_runtime_dependencies(drv_path)
         if len(self.dependencies) <= 0:
             _LOG.info("No %s dependencies", self.dtype)
 
-    def _parse_runtime_dependencies(self, nix_path):
-        # map nix_path to output path by calling nix path-info
-        nix_out = exec_cmd(
-            [
-                "nix",
-                "--extra-experimental-features",
-                "nix-command",
-                "path-info",
-                nix_path,
-            ]
-        ).strip()
-        _LOG.debug("nix_out: %s", nix_out)
-        self.start_path = nix_out
-        self.nix_store_path = _get_nix_store_path(self.start_path)
-        # nix-store -q --graph outputs runtime dependencies when applied
-        # to output path
-        nix_query_out = exec_cmd(["nix-store", "-q", "--graph", nix_out])
+    def _parse_runtime_dependencies(self, drv_path):
+        # nix-store -u -q --graph outputs runtime dependencies.
+        # We need to use -f (--force-realise) since runtime-only dependencies
+        # can not be determined unless the output paths are realised.
+        nix_query_out = exec_cmd(["nix-store", "-u", "-f", "-q", "--graph", drv_path])
         _LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
-    def _parse_buildtime_dependencies(self, nix_path):
-        # map nix_path to derivation path by calling nix path-info
-        nix_drv = exec_cmd(
-            [
-                "nix",
-                "--extra-experimental-features",
-                "nix-command",
-                "path-info",
-                "--derivation",
-                nix_path,
-            ]
-        ).strip()
-        _LOG.debug("nix_drv: %s", nix_drv)
-        self.start_path = nix_drv
-        self.nix_store_path = _get_nix_store_path(self.start_path)
+    def _parse_buildtime_dependencies(self, drv_path):
         # nix-store -q --graph outputs buildtime dependencies when applied
         # to derivation path
-        nix_query_out = exec_cmd(["nix-store", "-q", "--graph", nix_drv])
+        nix_query_out = exec_cmd(["nix-store", "-q", "--graph", drv_path])
         _LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
@@ -354,6 +333,32 @@ def _get_nix_store_path(nix_path):
         store_path = store_path_match.group("store_path")
     _LOG.debug("Using nix store path: '%s'", store_path)
     return store_path
+
+
+def _find_deriver(nix_path):
+    drv_path = find_deriver(nix_path)
+    if not drv_path:
+        _LOG.fatal("No deriver found for: '%s", nix_path)
+        sys.exit(1)
+    _LOG.debug("nix_drv: %s", drv_path)
+    return drv_path
+
+
+def _find_outpath(nix_path):
+    out_path = exec_cmd(
+        [
+            "nix-store",
+            "--query",
+            "--binding",
+            "out",
+            nix_path,
+        ]
+    ).strip()
+    if not out_path:
+        _LOG.fatal("No outpath found for: '%s'", nix_path)
+        sys.exit(1)
+    _LOG.debug("out_path: %s", out_path)
+    return out_path
 
 
 ################################################################################
