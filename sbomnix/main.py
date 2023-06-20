@@ -50,7 +50,13 @@ def getargs():
     )
     parser.add_argument("--meta", nargs="?", help=helps, default=None)
 
-    helps = "Set the type of dependencies included to the SBOM (default: runtime)"
+    helps = (
+        "Set the type of dependencies included to the SBOM (default: runtime). "
+        "Note: generating 'runtime' SBOM requires realising (building) the "
+        "output paths of the target derivation. When 'runtime' SBOM is "
+        "requested, sbomnix will realise the derivation unless its already "
+        "realised. See `nix-store --realise --help` for more info."
+    )
     types = ["runtime", "buildtime", "both"]
     parser.add_argument("--type", choices=types, help=helps, default="runtime")
 
