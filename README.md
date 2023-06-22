@@ -140,6 +140,8 @@ To start development, we recommend using Nix flakes development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
+# Optionally, install git hooks to check the git commit message
+$ ./githooks/install-git-hooks.sh
 $ nix develop
 ```
 Run `make help` to see the list of supported make targets.
