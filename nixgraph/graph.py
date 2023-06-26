@@ -78,13 +78,13 @@ class NixDependencyGraph:
 
     def draw(self, start_path, args):
         """Draw dependency graph"""
-        self._is_csv_out(args.out)
-        self.maxdepth = args.depth
-        self.inverse_regex = args.inverse
-        self.until_regex = args.until
-        self.colorize_regex = args.colorize
-        self.pathnames = args.pathnames
-        self.digraph = gv.Digraph(filename=args.out)
+        self._init_df_out(args)
+        self.maxdepth = args.depth if hasattr(args, "depth") else 1
+        self.inverse_regex = args.inverse if hasattr(args, "inverse") else None
+        self.until_regex = args.until if hasattr(args, "until") else None
+        self.colorize_regex = args.colorize if hasattr(args, "colorize") else None
+        self.pathnames = args.pathnames if hasattr(args, "pathnames") else False
+        self.digraph = gv.Digraph()
         self.digraph.attr("graph", rankdir="LR")
         self.digraph.attr("node", shape="box")
         self.digraph.attr("node", style="rounded")
@@ -111,15 +111,22 @@ class NixDependencyGraph:
             # Render the graph if any nodes were added
             self._render(args.out)
         elif self.df_out_csv is not None and not self.df_out_csv.empty:
+            if hasattr(args, "return_df") and args.return_df:
+                _LOG.debug("Returning graph as dataframe")
+                return self.df_out_csv
             # Output csv if csv format was specified
             df_to_csv_file(self.df_out_csv, args.out)
         else:
             _LOG.warning("Nothing to draw")
+        return None
 
-    def _is_csv_out(self, filename):
-        _fname, extension = os.path.splitext(filename)
-        fileformat = extension[1:]
-        if fileformat == "csv":
+    def _init_df_out(self, args):
+        if hasattr(args, "out"):
+            _fname, extension = os.path.splitext(args.out)
+            fileformat = extension[1:]
+            if fileformat == "csv":
+                self.df_out_csv = pd.DataFrame()
+        elif hasattr(args, "return_df") and args.return_df:
             self.df_out_csv = pd.DataFrame()
         else:
             self.df_out_csv = None
@@ -315,7 +322,7 @@ class NixDependencies:
     def graph(self, args):
         """Draw the dependencies as directed graph"""
         digraph = NixDependencyGraph(self.to_dataframe())
-        digraph.draw(self.start_path, args)
+        return digraph.draw(self.start_path, args)
 
 
 ################################################################################

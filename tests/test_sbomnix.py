@@ -161,6 +161,43 @@ def test_sbomnix_cdx_type_both():
     validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
+def test_sbomnix_depth():
+    """Test sbomnix '--depth' option"""
+    out_path_csv_1 = TEST_WORK_DIR / "sbom_csv_test_1.csv"
+    out_path_csv_2 = TEST_WORK_DIR / "sbom_csv_test_2.csv"
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--csv",
+        out_path_csv_1.as_posix(),
+        "--type",
+        "runtime",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_csv_1.exists()
+    df_out_1 = pd.read_csv(out_path_csv_1)
+    assert not df_out_1.empty
+    cmd = [
+        SBOMNIX,
+        TEST_NIX_RESULT,
+        "--csv",
+        out_path_csv_2.as_posix(),
+        "--type",
+        "runtime",
+        "--depth=1",
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+    assert out_path_csv_2.exists()
+    df_out_2 = pd.read_csv(out_path_csv_2)
+    assert not df_out_2.empty
+    # Check the dataframes are not equal
+    df_diff = df_difference(df_out_1, df_out_2)
+    assert not df_diff.empty, df_to_string(df_diff)
+    df_right_only = df_diff[df_diff["_merge"] == "right_only"]
+    # Check df_out_1 contains rows that are not in df_out_2
+    assert df_right_only.empty, df_to_string(df_diff)
+
+
 ################################################################################
 
 
@@ -584,15 +621,10 @@ def df_difference(df_left, df_right):
     )
     # Keep only the rows that differ (that are not in both)
     df = df[df["_merge"] != "both"]
-    # Rename 'left_only' and 'right_only' values in '_merge' column
-    df["_merge"] = df["_merge"].replace(["left_only"], "EXPECTED ==>  ")
-    df["_merge"] = df["_merge"].replace(["right_only"], "RESULT ==>  ")
     # Re-order columns: last column ('_merge') becomes first
     cols = df.columns.tolist()
     cols = cols[-1:] + cols[:-1]
     df = df[cols]
-    # Rename '_merge' column to empty string
-    df = df.rename(columns={"_merge": ""})
     return df
 
 

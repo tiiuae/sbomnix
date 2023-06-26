@@ -62,7 +62,7 @@ black: clean ## Reformat with black
 	$(call target_success,$@)
 
 style: clean ## Check with pycodestyle (pep8)
-	pycodestyle --max-line-length 90 --exclude='venv/' .
+	pycodestyle --max-line-length 90 $(PYTHON_TARGETS)
 	$(call target_success,$@)
 
 pylint: clean ## Check with pylint

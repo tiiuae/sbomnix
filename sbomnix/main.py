@@ -12,6 +12,7 @@ import pathlib
 import sys
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
+    check_positive,
     setup_logging,
     get_py_pkg_version,
     LOGGER_NAME,
@@ -36,11 +37,6 @@ def getargs():
 
     helps = "Path to nix artifact, e.g.: derivation file or nix output path"
     parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
-    parser.add_argument("--version", action="version", version=get_py_pkg_version())
-
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
-
     helps = (
         "Path to json file that details meta information. "
         "Generate this file with: `nix-env -qa --meta --json '.*' >meta.json` "
@@ -49,16 +45,27 @@ def getargs():
         "to the output of this script (default: None)"
     )
     parser.add_argument("--meta", nargs="?", help=helps, default=None)
-
     helps = (
         "Set the type of dependencies included to the SBOM (default: runtime). "
         "Note: generating 'runtime' SBOM requires realising (building) the "
         "output paths of the target derivation. When 'runtime' SBOM is "
-        "requested, sbomnix will realise the derivation unless its already "
+        "requested, sbomnix will realise the target derivation unless its already "
         "realised. See `nix-store --realise --help` for more info."
     )
     types = ["runtime", "buildtime", "both"]
     parser.add_argument("--type", choices=types, help=helps, default="runtime")
+    helps = (
+        "Set the depth of the included dependencies. As an example, --depth=1 "
+        "indicates the SBOM should include only the NIX_PATH direct dependencies. "
+        "With --depth=2, the output SBOM includes the direct dependencies and the "
+        "first level of transitive dependencies. "
+        "By default, when --depth is not specified, the output SBOM includes "
+        "all dependencies all the way to the root of the dependency tree."
+    )
+    parser.add_argument("--depth", help=helps, type=check_positive)
+    parser.add_argument("--version", action="version", version=get_py_pkg_version())
+    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
+    parser.add_argument("--verbose", help=helps, type=int, default=1)
 
     group = parser.add_argument_group("output arguments")
     helps = "Path to csv output file (default: ./sbom.csv)"
@@ -90,7 +97,7 @@ def main():
     runtime = args.type in ("runtime", "both")
     buildtime = args.type in ("buildtime", "both")
 
-    sbomdb = SbomDb(target_path, runtime, buildtime, args.meta)
+    sbomdb = SbomDb(target_path, runtime, buildtime, args.meta, args.depth)
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
     if args.spdx:

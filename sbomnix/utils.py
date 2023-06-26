@@ -6,6 +6,7 @@
 
 """ sbomnix utils """
 
+import argparse
 import re
 import sys
 import csv
@@ -234,6 +235,14 @@ def nix_to_repology_pkg_name(nix_pkg_name):
     if nix_pkg_name == "libtiff":
         nix_pkg_name = "tiff"
     return nix_pkg_name
+
+
+def check_positive(val):
+    """Raise ArgumentTypeError if val is not a positive integer"""
+    intval = int(val)
+    if intval <= 0:
+        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+    return intval
 
 
 ################################################################################
