@@ -11,21 +11,13 @@ import logging
 import pathlib
 import sys
 from nixgraph.graph import NixDependencies
-from sbomnix.utils import setup_logging, get_py_pkg_version, LOGGER_NAME
+from sbomnix.utils import setup_logging, get_py_pkg_version, check_positive, LOGGER_NAME
 
 ###############################################################################
 
 _LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
-
-
-def check_positive(val):
-    """Raise ArgumentTypeError if val is not a positive integer"""
-    intval = int(val)
-    if intval <= 0:
-        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
-    return intval
 
 
 def getargs():

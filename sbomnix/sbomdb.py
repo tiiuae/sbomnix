@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, too-many-instance-attributes
+# pylint: disable=invalid-name, too-many-instance-attributes, too-many-arguments
 
 """ Module for generating SBOMs in various formats """
 
@@ -12,6 +12,7 @@ import uuid
 import logging
 import json
 import re
+import argparse
 from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
@@ -34,7 +35,9 @@ _LOG = logging.getLogger(LOGGER_NAME)
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(self, nix_path, runtime=True, buildtime=False, meta_path=None):
+    def __init__(
+        self, nix_path, runtime=True, buildtime=False, meta_path=None, depth=None
+    ):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
@@ -45,6 +48,7 @@ class SbomDb:
         self.target_deriver = find_deriver(nix_path)
         self.df_rdeps = None
         self.df_bdeps = None
+        self.depth = depth
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
         self.df_sbomdb_out_exploded = None
@@ -60,10 +64,22 @@ class SbomDb:
         """Initialize runtime and buildtime dependencies (df_rdeps, df_bdeps)"""
         if self.runtime:
             runtime_dependencies = NixDependencies(nix_path, buildtime=False)
-            self.df_rdeps = runtime_dependencies.to_dataframe()
+            self.df_rdeps = self._get_dependencies_df(runtime_dependencies)
         if self.buildtime:
             buildtime_dependencies = NixDependencies(nix_path, buildtime=True)
-            self.df_bdeps = buildtime_dependencies.to_dataframe()
+            self.df_bdeps = self._get_dependencies_df(buildtime_dependencies)
+
+    def _get_dependencies_df(self, nix_dependencies):
+        if self.depth:
+            # Return dependencies until the given depth
+            _LOG.debug("Reading dependencies until depth=%s", self.depth)
+            args = argparse.Namespace()
+            args.depth = self.depth
+            args.return_df = True
+            return nix_dependencies.graph(args)
+        # Otherwise, return all dependencies
+        _LOG.debug("Reading all dependencies")
+        return nix_dependencies.to_dataframe()
 
     def _init_sbomdb(self):
         """Initialize self.df_sbomdb"""
@@ -168,6 +184,11 @@ class SbomDb:
         prop["name"] = "sbom_type"
         prop["value"] = self.sbom_type
         cdx["metadata"]["properties"].append(prop)
+        if self.depth:
+            prop = {}
+            prop["name"] = "sbom_dependencies_depth"
+            prop["value"] = self.depth
+            cdx["metadata"]["properties"].append(prop)
         tool = {}
         tool["vendor"] = "TII"
         tool["name"] = "sbomnix"
@@ -345,7 +366,7 @@ def _cdx_component_add_licenses(component, drv):
     # If it fails, try reading the license short name
     if not licenses:
         licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_short", "name")
-    # Give up if pacakge does not have license information associated
+    # Give up if package does not have license information associated
     if not licenses:
         _LOG.debug("No license info found for '%s'", drv.name)
         return
