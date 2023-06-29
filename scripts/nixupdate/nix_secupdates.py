@@ -355,7 +355,7 @@ def _vuln_nixpkgs_pr(row):
         # Query merged PRs based on pkg name and version in title
         prs = _github_query(f"{nixpr} {merged} {pkg} in:title {ver} in:title")
         _search_result_append(prs, result)
-    return " \n".join(list(result))
+    return " \n".join(sorted(list(result)))
 
 
 def _report(df_vulns):

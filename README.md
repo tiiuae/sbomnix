@@ -82,9 +82,9 @@ $ nix-env -f default.nix --install
 
 ## Usage Examples
 In the below examples, we use Nix package `wget` as an example target.
-To install wget and print out its out-path on your local system, try something like:
+To print `wget` out-path on your local system, try something like:
 ```bash
-$ nix-shell -p wget --run exit && nix eval -f '<nixpkgs>' 'wget.outPath'
+$ nix eval -f '<nixpkgs>' 'wget.outPath'
 "/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 
@@ -97,7 +97,7 @@ INFO     Wrote: sbom.cdx.json
 INFO     Wrote: sbom.spdx.json
 INFO     Wrote: sbom.csv
 ```
-Main output are the SBOM json files sbom.cdx.json and sbom.spdx.json in [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) formats.
+Main outputs are the SBOM json files sbom.cdx.json and sbom.spdx.json in [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) formats.
 
 #### Generate SBOM Including Meta Information
 To include license information to the SBOM, first generate package meta information with `nix-env`:

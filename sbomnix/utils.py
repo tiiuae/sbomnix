@@ -139,7 +139,7 @@ def number_distance(n1, n2):
     """
     Return float value between [0.0,1.0] indicating the closeness
     of the given two numbers.
-    Returns 1.0 if the two integers are equal.
+    Returns 1.0 if the two numbers are equal.
     Returns 0.0 if either argument is not a number.
     """
     if not isinstance(n1, (float, int)) or not isinstance(n2, (float, int)):
@@ -161,10 +161,9 @@ def version_distance(v1, v2):
     """
     v1 = str(v1)
     v2 = str(v2)
-    re_vclean = re.compile(r"[^0-9.]+")
-    v1_clean = re_vclean.sub(r"", v1)
-    v2_clean = re_vclean.sub(r"", v2)
-    re_vsplit = re.compile(r"(?P<ver_beg>[0-9][0-9]*)(?P<ver_end>.*)$")
+    v1_clean = re.sub(r"[^0-9.]+", "", v1)
+    v2_clean = re.sub(r"[^0-9.]+", "", v2)
+    re_vsplit = re.compile(r".*?(?P<ver_beg>[0-9][0-9]*)(?P<ver_end>.*)$")
     match = re.match(re_vsplit, v1_clean)
     if not match:
         logging.getLogger(LOGGER_NAME).warning("Unexpected v1 version '%s'", v1)
@@ -188,21 +187,21 @@ def parse_version(ver_str):
     Returns None if the version string can not be converted to version object.
     """
     ver_str = str(ver_str)
-    re_ver = re.compile(r"(?P<ver_beg>[0-9][0-9.]*)(?P<ver_end>.*)$")
+    re_ver = re.compile(r".*?(?P<ver_beg>[0-9][0-9.]*)(?P<ver_end>.*)$")
     match = re_ver.match(ver_str)
     if not match:
         logging.getLogger(LOGGER_NAME).warning("Unable to parse version '%s'", ver_str)
         return None
     ver_beg = match.group("ver_beg").rstrip(".")
     ver_end = match.group("ver_end")
-    re_vclean = re.compile("[^0-9.]+")
-    ver_end = re_vclean.sub(r"", ver_end)
+    ver_end = re.sub(r"[^0-9.]+", "", ver_end)
     if ver_end:
         ver_end = f"+{ver_end}"
     else:
         ver_end = ""
     ver_end = ver_end.rstrip(".")
     ver = f"{ver_beg}{ver_end}"
+    ver = re.sub(r"\.+", ".", ver)
     logging.getLogger(LOGGER_NAME).log(LOG_SPAM, "%s --> %s", ver_str, ver)
     if not ver:
         logging.getLogger(LOGGER_NAME).warning("Invalid version '%s'", ver_str)
