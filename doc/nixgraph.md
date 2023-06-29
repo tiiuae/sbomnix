@@ -27,9 +27,9 @@ To get started, follow the [Getting Started](../README.md#getting-started) secti
 
 ## Usage examples
 In the below examples, we use nix package `wget` as an example target.
-To install nix `wget` package and print out its out-path on your local system, try something like:
+To print `wget` out-path on your local system, try something like:
 ```bash
-$ nix-shell -p wget --run exit && nix eval -f '<nixpkgs>' 'wget.outPath'
+$ nix eval -f '<nixpkgs>' 'wget.outPath'
 "/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 

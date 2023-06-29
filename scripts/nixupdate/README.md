@@ -58,9 +58,9 @@ $ scripts/nixupdate/nix_secupdates.py --help
 
 ## Example Target
 We use Nix package `git` as an example target.
-To install git and print out its out-path on your local system, try something like:
+To print `git` out-path on your local system, try something like:
 ```bash
-$ nix-shell -p git --run exit && nix eval -f '<nixpkgs>' 'git.outPath'
+$ nix eval -f '<nixpkgs>' 'git.outPath'
 "/nix/store/2853v0cidl7jww2hs1mlkg0i372mk368-git-2.39.2"
 ```
 
