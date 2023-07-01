@@ -431,13 +431,14 @@ def _drv_to_cdx_dependency(drv, deps_list, uid="store_path"):
 
 def _parse_meta_entry(meta, key):
     """Parse the given key from the metadata entry"""
+    items = []
     if isinstance(meta, dict):
-        ret = [meta.get(key, "")]
+        items.extend([_parse_meta_entry(meta.get(key, ""), key)])
     elif isinstance(meta, list):
-        ret = [x.get(key, "") if isinstance(x, dict) else x for x in meta]
+        items.extend([_parse_meta_entry(x, key) for x in meta])
     else:
-        ret = [meta]
-    return list(filter(None, ret))
+        return str(meta)
+    return ";".join(list(filter(None, items)))
 
 
 def _parse_json_metadata(json_filename):
@@ -462,13 +463,13 @@ def _parse_json_metadata(json_filename):
             # meta.license
             meta_license = meta.get("license", {})
             license_short = _parse_meta_entry(meta_license, key="shortName")
-            setcol("meta_license_short", []).append(";".join(license_short))
+            setcol("meta_license_short", []).append(license_short)
             license_spdx = _parse_meta_entry(meta_license, key="spdxId")
-            setcol("meta_license_spdxid", []).append(";".join(license_spdx))
+            setcol("meta_license_spdxid", []).append(license_spdx)
             # meta.maintainers
             meta_maintainers = meta.get("maintainers", {})
             emails = _parse_meta_entry(meta_maintainers, key="email")
-            setcol("meta_maintainers_email", []).append(";".join(emails))
+            setcol("meta_maintainers_email", []).append(emails)
         return pd.DataFrame(dict_selected)
 
 
