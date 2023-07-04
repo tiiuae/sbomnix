@@ -8,7 +8,7 @@
 
   outputs = { self, nixpkgs }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # forEachSystem [ "x86_64-linux" ] { example = true; } -> { x86_64-linux.example = true }
       forEachSystem = nixpkgs.lib.genAttrs systems;
       # Imports a module expecting a system to be passed in
