@@ -8,6 +8,7 @@ pandas
 reuse
 tabulate
 requests
+packaging
 
 # sbomnix
 packageurl-python
@@ -19,7 +20,6 @@ graphviz
 
 # repology
 bs4
-packaging
 requests-ratelimiter
 requests-cache
 
