@@ -186,7 +186,7 @@ class Derive:
         return f"<Derive({repr(self.name)})>"
 
     def __eq__(self, other):
-        if type(self) != type(other):
+        if not isinstance(other, Derive):
             return NotImplementedError()
         return self.store_path == other.store_path
 
