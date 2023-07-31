@@ -26,6 +26,7 @@ requires = [
     "colorlog",
     "graphviz",
     "packageurl-python",
+    "packaging",
     "pandas",
     "reuse",
     "tabulate",
