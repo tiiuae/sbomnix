@@ -267,12 +267,23 @@ def test_nixgraph_csv_graph_inverse():
         "--out",
         csv_out_inv,
         "--depth=100",
-        "--inverse=libunistring",
+        "--inverse=.*",
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert Path(csv_out_inv).exists()
     df_out_inv = pd.read_csv(csv_out_inv)
     assert not df_out_inv.empty
+
+    # When 'depth' covers the entire graph, the output from
+    # the two above commands should be the same, except for column
+    # 'graph_depth': below, we remove that column from both outputs and
+    # compare the two dataframes
+    df_out = df_out.drop("graph_depth", axis=1)
+    df_out = df_out.sort_values(by=["src_path"])
+    df_out_inv = df_out_inv.drop("graph_depth", axis=1)
+    df_out_inv = df_out_inv.sort_values(by=["src_path"])
+    df_diff = df_difference(df_out, df_out_inv)
+    assert df_diff.empty, df_to_string(df_diff)
 
 
 ################################################################################
