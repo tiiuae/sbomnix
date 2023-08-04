@@ -183,7 +183,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
             deps_only_in_graph.update(set(graph_deps) - set(sbom_deps))
 
     if graph_type == "buildtime":
-        _LOG.info("Comparing builtime dependencies")
+        _LOG.info("Comparing buildtime dependencies")
         for drv_path in df_sbom["drv_path"].unique().tolist():
             _LOG.log(LOG_SPAM, "target: %s", drv_path)
             df_sbom_deps = df_sbom[df_sbom["drv_path"] == drv_path]
@@ -212,6 +212,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         r".*\.pl$",
         r".*\.xsl$",
         r".*\.lock$",
+        r".*\.cnf$",
         r".*\.conf$",
         r".*\.crt$",
         r".*\.nix$",
@@ -219,6 +220,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         r".*\.tmac$",
         r".*\.ds$",
         r".*\.key$",
+        r".*\-source$",
         r".*\-builder$",
         r".*\-prefetch-git$",
         r".*\-inputrc$",
