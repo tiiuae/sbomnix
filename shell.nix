@@ -9,6 +9,7 @@
 pkgs.mkShell rec {
   name = "sbomnix-dev-shell";
 
+  cve-bin-tool = import ./scripts/vulnxscan/cve-bin-tool.nix { pkgs=pkgs; };
   nixupdate = import ./scripts/nixupdate/nixupdate.nix { pkgs=pkgs; };
   nix_visualize = import ./scripts/nixupdate/nix-visualize.nix { pkgs=pkgs; };
   requests-ratelimiter = import ./scripts/repology/requests-ratelimiter.nix { pkgs=pkgs; };
@@ -17,6 +18,7 @@ pkgs.mkShell rec {
   vulnxscan = import ./scripts/vulnxscan/vulnxscan.nix { pkgs=pkgs; };
 
   buildInputs = [ 
+    cve-bin-tool
     nixupdate
     nix_visualize
     requests-ratelimiter
