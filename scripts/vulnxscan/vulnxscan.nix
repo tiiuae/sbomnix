@@ -14,8 +14,9 @@ pythonPackages.buildPythonPackage rec {
 
   src = ../../.;
   sbomnix = import ../../default.nix { pkgs=pkgs; };
+  cve-bin-tool = import ./cve-bin-tool.nix { pkgs=pkgs; };
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix pkgs.grype pkgs.nix vulnix ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix pkgs.grype pkgs.nix vulnix cve-bin-tool ]}"
   ];
 
   propagatedBuildInputs = [ 

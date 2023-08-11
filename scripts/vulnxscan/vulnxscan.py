@@ -16,6 +16,7 @@ import pathlib
 import json
 import re
 import subprocess
+import datetime
 from tempfile import NamedTemporaryFile
 from shutil import which
 import pandas as pd
@@ -30,6 +31,7 @@ from sbomnix.utils import (
     LOG_SPAM,
     df_to_csv_file,
     df_from_csv_file,
+    df_log,
 )
 
 ###############################################################################
@@ -85,6 +87,7 @@ class VulnScan:
         self.df_vulnix = None
         self.df_grype = None
         self.df_osv = None
+        self.df_cvebin = None
         self.df_report = None
 
     def _parse_vulnix(self, json_str):
@@ -155,8 +158,8 @@ class VulnScan:
             self._parse_grype(ret)
 
     def _parse_osv(self, df_osv):
-        self.df_osv = df_osv
-        if not self.df_osv.empty:
+        if not df_osv.empty:
+            self.df_osv = df_osv
             self.df_osv["scanner"] = "osv"
             self.df_osv.replace(np.nan, "", regex=True, inplace=True)
             self.df_osv.drop_duplicates(keep="first", inplace=True)
@@ -174,9 +177,61 @@ class VulnScan:
         df_osv = osv.to_dataframe()
         self._parse_osv(df_osv)
 
+    def _parse_cvebin(self, df_cvebin):
+        if not df_cvebin.empty:
+            df_log(df_cvebin, LOG_SPAM)
+            df_cvebin["scanner"] = "cvebin"
+            select_cols = {
+                "product": "package",
+                "version": "version",
+                "cve_number": "vuln_id",
+                "scanner": "scanner",
+            }
+            df_cvebin = df_cvebin.rename(columns=select_cols)[select_cols.values()]
+            df_cvebin["year_maybe"] = df_cvebin.apply(_guess_vuln_year, axis=1)
+            df_log(df_cvebin, LOG_SPAM)
+            # Drop old vulnerabilities. Below, we drop vulnerabilities that have not
+            # been fixed during the past ~3 years assuming they are false positives.
+            df_cvebin = df_cvebin[
+                df_cvebin["year_maybe"] > (datetime.date.today().year) - 3
+            ]
+            df_cvebin.replace(np.nan, "", regex=True, inplace=True)
+            df_cvebin.drop_duplicates(keep="first", inplace=True)
+            self.df_cvebin = df_cvebin
+            if _LOG.level <= logging.DEBUG:
+                df_to_csv_file(self.df_cvebin, "df_cvebin.csv")
+
+    def scan_cvebin(self, sbom_path):
+        """Run cve-bin-tool scan using the SBOM at sbom_path as input"""
+        _LOG.info("Running cve-bin-tool scan")
+        prefix = "cve_bin_tool_"
+        csv_suffix = ".csv"
+        with NamedTemporaryFile(delete=False, prefix=prefix, suffix=csv_suffix) as fcsv:
+            cmd = [
+                "cve-bin-tool",
+                "--update=daily",
+                # cve-bin-tool reports many false positive vulnerabilities.
+                # We disable OSV datasource for two reasons: (1) vulnxscan
+                # already includes OSV vulnerabilities via the osv.py and
+                # (2) many OSV vulnerabilities reported by cve-bin-tool are
+                # not valid.
+                "--disable-data-source=OSV",
+                f"--sbom-file={sbom_path}",
+                "--sbom=cyclonedx",
+                f"--output-file={fcsv.name}",
+                "--format=csv",
+            ]
+            exec_cmd(cmd, raise_on_error=False)
+            if pathlib.Path(fcsv.name).stat().st_size > 0:
+                df_cvebin = df_from_csv_file(fcsv.name)
+                self._parse_cvebin(df_cvebin)
+
     def _generate_report(self):
         # Concatenate vulnerability data from different scanners
-        df = pd.concat([self.df_vulnix, self.df_grype, self.df_osv], ignore_index=True)
+        df = pd.concat(
+            [self.df_vulnix, self.df_grype, self.df_osv, self.df_cvebin],
+            ignore_index=True,
+        )
         if df.empty:
             _LOG.debug("No scanners reported any findings")
             return
@@ -194,7 +249,7 @@ class VulnScan:
         df = df.pivot_table(index=group_cols, columns="scanner", values="count")
         # Pivot creates a multilevel index, we'll get rid of it:
         df.reset_index(drop=False, inplace=True)
-        scanners = ["grype", "osv"]
+        scanners = ["grype", "osv", "cvebin"]
         if self.df_vulnix is not None:
             scanners.append("vulnix")
         df.reindex(group_cols + scanners, axis=1)
@@ -206,6 +261,7 @@ class VulnScan:
         # Reformat values in 'scanner' columns
         df["grype"] = df.apply(lambda row: _reformat_scanner(row.grype), axis=1)
         df["osv"] = df.apply(lambda row: _reformat_scanner(row.osv), axis=1)
+        df["cvebin"] = df.apply(lambda row: _reformat_scanner(row.cvebin), axis=1)
         if "vulnix" in scanners:
             df["vulnix"] = df.apply(lambda row: _reformat_scanner(row.vulnix), axis=1)
         # Add column 'url'
@@ -291,6 +347,14 @@ def _vuln_sortcol(row):
     return str(row.vuln_id)
 
 
+def _guess_vuln_year(row):
+    match = re.match(r".*[A-Za-z][-_]([1-2][0-9]{3})[-_][0-9]+.*", row.vuln_id)
+    if match:
+        year = match.group(1)
+        return int(year)
+    return int(datetime.date.today().year)
+
+
 def _vuln_url(row):
     osv_url = "https://osv.dev/"
     nvd_url = "https://nvd.nist.gov/vuln/detail/"
@@ -369,6 +433,7 @@ def main():
     # Fail early if following commands are not in path
     exit_unless_command_exists("grype")
     exit_unless_command_exists("vulnix")
+    exit_unless_command_exists("cve-bin-tool")
 
     target_path = args.TARGET.as_posix()
     target_path_abs = args.TARGET.resolve().as_posix()
@@ -387,6 +452,7 @@ def main():
         _LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
         _LOG.info("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
+    scanner.scan_cvebin(sbom_cdx_path)
     scanner.scan_grype(sbom_cdx_path)
     scanner.scan_osv(sbom_cdx_path)
     scanner.report(args.out, target_path, sbom_csv_path, args.buildtime, args.sbom)
