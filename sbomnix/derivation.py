@@ -4,16 +4,13 @@
 
 # SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
-# pylint: disable=unnecessary-pass, too-many-return-statements
-# pylint: disable=invalid-name, eval-used, unidiomatic-typecheck
+# pylint: disable=unnecessary-pass, invalid-name, eval-used
 # pylint: disable=too-many-instance-attributes
 
 """ Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
 
-import functools
 import json
 import logging
-import itertools
 import bisect
 from packageurl import PackageURL
 from sbomnix.cpe import CPE
@@ -30,86 +27,6 @@ _LOG = logging.getLogger(LOGGER_NAME)
 ###############################################################################
 
 
-class SkipDrv(RuntimeError):
-    """This derivation cannot be treated as package."""
-
-    pass
-
-
-def components_lt(left, right):
-    """Port from nix/src/libexpr/names.cc"""
-    try:
-        lnum = int(left)
-    except ValueError:
-        lnum = None
-    try:
-        rnum = int(right)
-    except ValueError:
-        rnum = None
-    if lnum is not None and rnum is not None:
-        return lnum < rnum
-    if left == "" and rnum is not None:
-        return True
-    if left == "pre" and right != "pre":
-        return True
-    if right == "pre":
-        return False
-    if rnum is not None:
-        return True
-    if lnum is not None:
-        return False
-    return left < right
-
-
-def category(char):
-    """Classify `char` into: punctuation, digit, non-digit."""
-    if char in (".", "-"):
-        return 0
-    if char in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"):
-        return 1
-    return 2
-
-
-def split_components(v):
-    """Yield cohesive groups of digits or non-digits. Skip punctuation."""
-    start = 0
-    stop = len(v)
-    while start < stop:
-        cat0 = category(v[start])
-        i = start + 1
-        while i < stop and category(v[i]) == cat0:
-            i += 1
-        if cat0 != 0:
-            yield v[start:i]
-        start = i
-
-
-def compare_versions(left, right):
-    """Compare two versions with the same logic as `nix-env -u`.
-
-    Returns -1 if `left` is older than `right`, 1 if `left` is newer
-    than `right`, and 0 if both versions are considered equal.
-
-    See https://nixos.org/nix/manual/#ssec-version-comparisons for rules
-    and examples.
-    """
-    if left == right:
-        return 0
-    for lc, rc in itertools.zip_longest(
-        split_components(left), split_components(right), fillvalue=""
-    ):
-        if lc == rc:
-            continue
-        if components_lt(lc, rc):
-            return -1
-        if components_lt(rc, lc):
-            return 1
-    return 0
-
-
-################################################################################
-
-
 def load(path):
     """Load derivation from path"""
     _LOG.debug("")
@@ -117,8 +34,7 @@ def load(path):
         d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
     d_obj.store_path = path
     _LOG.debug("load derivation: %s", d_obj)
-    if _LOG.level <= LOG_SPAM:
-        _LOG.log(LOG_SPAM, "deivation attrs: %s", d_obj.to_dict())
+    _LOG.log(LOG_SPAM, "deivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
@@ -127,7 +43,6 @@ def destructure(env):
     return json.loads(env["__json"])
 
 
-@functools.total_ordering
 class Derive:
     """Nix derivation as found as .drv files in the Nix store."""
 
@@ -185,28 +100,6 @@ class Derive:
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
 
-    def __eq__(self, other):
-        if not isinstance(other, Derive):
-            return NotImplementedError()
-        return self.store_path == other.store_path
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __lt__(self, other):
-        if self.pname < other.pname:
-            return True
-        if self.pname > other.pname:
-            return False
-        return compare_versions(self.version, other.version) == -1
-
-    def __gt__(self, other):
-        if self.pname > other.pname:
-            return True
-        if self.pname < other.pname:
-            return False
-        return compare_versions(self.version, other.version) == 1
-
     def add_output_path(self, path):
         """Add an output path to derivation"""
         if path not in self.outputs and path != self.store_path:
@@ -215,7 +108,6 @@ class Derive:
 
     def to_dict(self):
         """Return derivation as dictionary"""
-
         ret = {}
         for attr in vars(self):
             ret[attr] = getattr(self, attr)
