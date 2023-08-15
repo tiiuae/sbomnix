@@ -155,7 +155,7 @@ class SbomDb:
         # dependencies as specified by the requested values (uid)
         if dfr is not None or dfb is not None:
             df = pd.concat([dfr, dfb], ignore_index=True)
-            dep_uids = df[uid].unique().tolist()
+            dep_uids = sorted(df[uid].unique().tolist())
             # Filter out dependencies to drv itself
             self_uid = getattr(drv, uid)
             return [uid for uid in dep_uids if uid != self_uid]
