@@ -17,10 +17,7 @@ from sbomnix.utils import (
     exec_cmd,
 )
 
-from sbomnix.derivation import (
-    load,
-    SkipDrv,
-)
+from sbomnix.derivation import load
 
 ###############################################################################
 
@@ -63,13 +60,8 @@ class Store:
             return
         drv_obj = self._get_cached(drv_path)
         if not drv_obj:
-            try:
-                drv_obj = load(drv_path)
-                self._add_cached(drv_path, drv=drv_obj)
-            except SkipDrv:
-                _LOG.debug("Skipping derivation: '%s'", drv_path)
-                self._add_cached(drv_path, drv=None)
-                return
+            drv_obj = load(drv_path)
+            self._add_cached(drv_path, drv=drv_obj)
         assert drv_obj.store_path == drv_path, f"unexpected drv_path: {drv_path}"
         if nixpath:
             # We end up here if the nix artifact read from output path 'nixpath'
