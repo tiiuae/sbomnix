@@ -11,7 +11,13 @@ import logging
 import pathlib
 import sys
 from nixgraph.graph import NixDependencies
-from sbomnix.utils import setup_logging, get_py_pkg_version, check_positive, LOGGER_NAME
+from sbomnix.utils import (
+    setup_logging,
+    get_py_pkg_version,
+    check_positive,
+    LOGGER_NAME,
+    exit_unless_nix_artifact,
+)
 
 ###############################################################################
 
@@ -86,6 +92,7 @@ def main():
         _LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
         sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
+    exit_unless_nix_artifact(target_path)
     deps = NixDependencies(target_path, args.buildtime)
     deps.graph(args)
 

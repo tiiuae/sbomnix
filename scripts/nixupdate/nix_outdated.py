@@ -10,7 +10,6 @@
 
 import logging
 import os
-import sys
 import pathlib
 from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
@@ -25,6 +24,7 @@ from sbomnix.utils import (
     df_log,
     df_to_csv_file,
     nix_to_repology_pkg_name,
+    exit_unless_nix_artifact,
 )
 
 ###############################################################################
@@ -257,10 +257,8 @@ def main():
     """main entry point"""
     args = getargs()
     setup_logging(args.verbose)
-    if not args.NIXPATH.exists():
-        _LOG.fatal("Invalid path: '%s", args.NIXPATH)
-        sys.exit(1)
     target_path_abs = args.NIXPATH.resolve().as_posix()
+    exit_unless_nix_artifact(target_path_abs)
 
     sbom_path = _generate_sbom(target_path_abs, args.buildtime)
     _LOG.info("Using SBOM '%s'", sbom_path)

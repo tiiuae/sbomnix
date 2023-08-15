@@ -35,6 +35,7 @@ from sbomnix.utils import (
     nix_to_repology_pkg_name,
     parse_version,
     version_distance,
+    exit_unless_nix_artifact,
 )
 
 ###############################################################################
@@ -404,9 +405,7 @@ def main():
     """main entry point"""
     args = getargs()
     setup_logging(args.verbose)
-    if not args.NIXPATH.exists():
-        _LOG.fatal("Invalid path: '%s", args.NIXPATH)
-        sys.exit(1)
+    exit_unless_nix_artifact(args.NIXPATH.resolve().as_posix())
     df = _find_secupdates(args)
     _report(df)
     df_to_csv_file(df, args.out)

@@ -15,7 +15,6 @@ import sys
 import pathlib
 import json
 import re
-import subprocess
 from tempfile import NamedTemporaryFile
 from shutil import which
 import pandas as pd
@@ -30,6 +29,7 @@ from sbomnix.utils import (
     LOG_SPAM,
     df_to_csv_file,
     df_from_csv_file,
+    exit_unless_nix_artifact,
 )
 
 ###############################################################################
@@ -338,15 +338,6 @@ def _is_json(path):
         return False
 
 
-def _is_nix_artifact(path):
-    cmd = ["nix-store", "-q", path]
-    try:
-        exec_cmd(cmd)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
 def exit_unless_command_exists(name):
     """Check if `name` is an executable in PATH"""
     name_is_in_path = which(name) is not None
@@ -380,9 +371,7 @@ def main():
         sbom_cdx_path = target_path_abs
         sbom_csv_path = None
     else:
-        if not _is_nix_artifact(target_path_abs):
-            _LOG.fatal("Specified target is not a nix artifact: '%s'", target_path)
-            sys.exit(0)
+        exit_unless_nix_artifact(target_path_abs)
         sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
         _LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
         _LOG.info("Using csv SBOM '%s'", sbom_csv_path)
