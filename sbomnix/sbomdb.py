@@ -51,7 +51,7 @@ class SbomDb:
         self.depth = depth
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
-        self.df_sbomdb_out_exploded = None
+        self.df_sbomdb_outputs_exploded = None
         self._init_sbomdb()
         self.uuid = uuid.uuid4()
         self.sbom_type = "runtime_and_buildtime"
@@ -107,7 +107,7 @@ class SbomDb:
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
         self.df_sbomdb.sort_values(by=["name", self.uid], inplace=True)
-        self.df_sbomdb_out_exploded = self.df_sbomdb.explode("out")
+        self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode("outputs")
 
     def _sbomdb_join_meta(self, meta_path):
         """Join self.df_sbomdb with meta information"""
@@ -134,13 +134,13 @@ class SbomDb:
         which includes the build and runtime dependencies of `drv`.
         """
         # Find runtime dependencies
-        # Runtime dependencies: drv.out matches with target_path
+        # Runtime dependencies: drv.outputs matches with target_path
         dfr = None
         if self.df_rdeps is not None and not self.df_rdeps.empty:
-            df = self.df_rdeps[self.df_rdeps["target_path"].isin(drv.out)]
+            df = self.df_rdeps[self.df_rdeps["target_path"].isin(drv.outputs)]
             # Find the requested 'uid' values for the dependencies (df.src_path)
-            dfr = self.df_sbomdb_out_exploded.merge(
-                df, how="inner", left_on=["out"], right_on=["src_path"]
+            dfr = self.df_sbomdb_outputs_exploded.merge(
+                df, how="inner", left_on=["outputs"], right_on=["src_path"]
             ).loc[:, [uid]]
         # Find buildtime dependencies
         dfb = None
@@ -389,10 +389,10 @@ def _drv_to_cdx_component(drv, uid="store_path"):
         component["description"] = drv.meta_description
     _cdx_component_add_licenses(component, drv)
     properties = []
-    for out_path in drv.out:
+    for output_path in drv.outputs:
         prop = {}
-        prop["name"] = "nix:out_path"
-        prop["value"] = out_path
+        prop["name"] = "nix:output_path"
+        prop["value"] = output_path
         properties.append(prop)
     if drv.store_path:
         prop = {}

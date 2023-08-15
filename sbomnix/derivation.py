@@ -168,7 +168,7 @@ class Derive:
         self.version = envVars.get("version", "")
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
-        self.out = [envVars.get("out", "")]
+        self.outputs = [envVars.get("out", "")]
         # pname 'source' in Nix has special meaning - it is the default name
         # for all fetchFromGitHub derivations. As such, it should not be used
         # to construct cpe or purl, rather, cpe and purl should be empty
@@ -207,11 +207,11 @@ class Derive:
             return False
         return compare_versions(self.version, other.version) == 1
 
-    def add_outpath(self, path):
-        """Add an outpath to derivation"""
-        if path not in self.out and path != self.store_path:
+    def add_output_path(self, path):
+        """Add an output path to derivation"""
+        if path not in self.outputs and path != self.store_path:
             _LOG.debug("adding outpath to %s:%s", self, path)
-            bisect.insort(self.out, path)
+            bisect.insort(self.outputs, path)
 
     def to_dict(self):
         """Return derivation as dictionary"""

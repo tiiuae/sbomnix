@@ -74,11 +74,11 @@ def _parse_sbom(path):
             # setcol("bom_ref", []).append(cmp["bom-ref"])
             outpaths = []
             for prop_dict in cmp["properties"]:
-                if "out_path" in prop_dict["name"]:
+                if "output_path" in prop_dict["name"]:
                     outpaths.append(prop_dict["value"])
                 elif "drv_path" in prop_dict["name"]:
                     setcol("drv_path", []).append(prop_dict["value"])
-            setcol("out_path", []).append(outpaths)
+            setcol("output_path", []).append(outpaths)
         df_components = pd.DataFrame(comp_parsed_dict)
 
         # Parse dependencies
@@ -134,9 +134,9 @@ def _filter_set(re_filter_out_list, target_set):
 def sbom_internal_checks(df_sbom):
     """Cross-check sbom components vs dependencies"""
     passed = True
-    # Empty "out_path" indicates component is referenced in the
+    # Empty "output_path" indicates component is referenced in the
     # sbom "dependency" section, but missing from the "components" section
-    df = df_sbom[df_sbom["out_path"].isna()]
+    df = df_sbom[df_sbom["output_path"].isna()]
     if not df.empty:
         missing = df["ref"].to_list()
         _LOG.fatal("sbom component missing: %s", missing)
@@ -157,7 +157,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     _LOG.debug("graph_type=%s", graph_type)
     deps_only_in_sbom = set()
     deps_only_in_graph = set()
-    df_sbom = df_sbom.explode("out_path")
+    df_sbom = df_sbom.explode("output_path")
     df_sbom = df_sbom.astype(str)
 
     if (graph_type == "runtime" and sbom_type != "runtime_only") or (
@@ -167,15 +167,15 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         return False
     if graph_type == "runtime":
         _LOG.info("Comparing runtime dependencies")
-        for out_path in df_sbom["out_path"].unique().tolist():
+        for out_path in df_sbom["output_path"].unique().tolist():
             _LOG.log(LOG_SPAM, "target: %s", out_path)
-            df_sbom_deps = df_sbom[df_sbom["out_path"] == out_path]
+            df_sbom_deps = df_sbom[df_sbom["output_path"] == out_path]
             sbom_deps = list(filter(None, df_sbom_deps["depends_on"].unique().tolist()))
             _LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
             df_graph_deps = df_graph[df_graph["target_path"] == out_path]
             # Map graph src_path to sbom paths
             dfr = df_sbom.merge(
-                df_graph_deps, how="inner", left_on="out_path", right_on="src_path"
+                df_graph_deps, how="inner", left_on="output_path", right_on="src_path"
             ).loc[:, ["drv_path"]]
             graph_deps = list(filter(None, dfr["drv_path"].unique().tolist()))
             _LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
