@@ -16,6 +16,7 @@ from sbomnix.utils import (
     setup_logging,
     get_py_pkg_version,
     LOGGER_NAME,
+    exit_unless_nix_artifact,
 )
 
 ###############################################################################
@@ -89,6 +90,7 @@ def main():
         _LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
         sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
+    exit_unless_nix_artifact(target_path)
     if not args.meta:
         _LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "

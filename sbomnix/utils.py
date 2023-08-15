@@ -118,6 +118,19 @@ def exec_cmd(cmd, raise_on_error=True, return_error=False):
         return None
 
 
+def exit_unless_nix_artifact(path):
+    """Exit with error if `path` is not a nix artifact"""
+    cmd = ["nix-store", "-q", path]
+    try:
+        exec_cmd(cmd)
+        return
+    except subprocess.CalledProcessError:
+        logging.getLogger(LOGGER_NAME).fatal(
+            "Specified target is not a nix artifact: '%s'", path
+        )
+        sys.exit(1)
+
+
 def regex_match(regex, string):
     """Return True if regex matches string"""
     if not regex or not string:
