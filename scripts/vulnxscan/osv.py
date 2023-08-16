@@ -9,23 +9,13 @@
 """ Demonstrate querying OSV db for vulnerabilities based on cdx SBOM """
 
 import argparse
-import logging
 import os
 import sys
 import pathlib
 import json
 import requests
 import pandas as pd
-from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
-    LOG_SPAM,
-    df_to_csv_file,
-)
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
+from sbomnix.utils import LOG, LOG_SPAM, df_to_csv_file, set_log_verbosity
 
 ###############################################################################
 
@@ -65,22 +55,22 @@ class OSV:
         for package, vulns in zip(query["queries"], resp["results"]):
             if not package or not vulns:
                 continue
-            _LOG.debug("package: %s", package)
-            _LOG.debug("vulns: %s", vulns)
+            LOG.debug("package: %s", package)
+            LOG.debug("vulns: %s", vulns)
             self._parse_vulns(package, vulns)
 
     def _post_batch_query(self, query):
-        _LOG.log(LOG_SPAM, "query: %s", query)
+        LOG.log(LOG_SPAM, "query: %s", query)
         url = "https://api.osv.dev/v1/querybatch"
-        _LOG.log(LOG_SPAM, "sending request to '%s'", url)
+        LOG.log(LOG_SPAM, "sending request to '%s'", url)
         resp = requests.post(url, json=query, timeout=30)
-        _LOG.debug("resp.status_code: %s", resp.status_code)
-        _LOG.log(LOG_SPAM, "resp.json: %s", resp.json())
+        LOG.debug("resp.status_code: %s", resp.status_code)
+        LOG.log(LOG_SPAM, "resp.json: %s", resp.json())
         resp.raise_for_status()
         self._parse_batch_response(query, resp.json())
 
     def _parse_sbom(self, path):
-        _LOG.debug("Parsing sbom: %s", path)
+        LOG.debug("Parsing sbom: %s", path)
         with open(path, encoding="utf-8") as inf:
             json_dict = json.loads(inf.read())
             components = json_dict["components"] + [json_dict["metadata"]["component"]]
@@ -100,7 +90,7 @@ class OSV:
 
     def query_vulns(self, sbom_path):
         """Query each package in sbom for OSV vulnerabilities"""
-        _LOG.info("Querying vulnerabilities")
+        LOG.info("Querying vulnerabilities")
         df_sbom = self._parse_sbom(sbom_path)
         # See the API description at: https://osv.dev/docs/#tag/api.
         # The limit of max 1000 packages per single query is stated in the
@@ -131,9 +121,9 @@ class OSV:
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.SBOM.exists():
-        _LOG.fatal("Invalid path: '%s'", args.SBOM)
+        LOG.fatal("Invalid path: '%s'", args.SBOM)
         sys.exit(1)
     osv = OSV()
     osv.query_vulns(args.SBOM.as_posix())

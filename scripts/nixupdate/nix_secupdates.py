@@ -11,7 +11,6 @@ Command line tool to demonstrate finding and classifying potential security
 updates for dependencies of given nix target
 """
 
-import logging
 import os
 import sys
 import pathlib
@@ -25,9 +24,9 @@ from requests_ratelimiter import LimiterMixin
 import pandas as pd
 from tabulate import tabulate
 from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
+    set_log_verbosity,
     exec_cmd,
     df_from_csv_file,
     df_log,
@@ -37,10 +36,6 @@ from sbomnix.utils import (
     version_distance,
     exit_unless_nix_artifact,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -91,7 +86,7 @@ _session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=3600)
 
 
 def _run_vulnxscan(target_path, buildtime=False):
-    _LOG.info("Running vulnxscan for target '%s'", target_path)
+    LOG.info("Running vulnxscan for target '%s'", target_path)
     prefix = "secupdates_vulnxscan_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
@@ -100,9 +95,9 @@ def _run_vulnxscan(target_path, buildtime=False):
         exec_cmd(cmd.split())
         try:
             df = df_from_csv_file(f.name)
-            _LOG.info("Using vulnxscan result: '%s'", f.name)
+            LOG.info("Using vulnxscan result: '%s'", f.name)
         except pd.errors.EmptyDataError:
-            _LOG.info("No vulnerabilities found")
+            LOG.info("No vulnerabilities found")
             sys.exit(0)
         return df
 
@@ -121,10 +116,10 @@ def _select_newest(df):
 
 
 def _run_repology_cli(pname, match_type="--pkg_exact"):
-    _LOG.log(LOG_SPAM, "Running repology_cli for '%s'", pname)
+    LOG.log(LOG_SPAM, "Running repology_cli for '%s'", pname)
     df_repology_cli = None
     if pname in _repology_cli_dfs:
-        _LOG.log(LOG_SPAM, "Using cached repology_cli results")
+        LOG.log(LOG_SPAM, "Using cached repology_cli results")
         df_repology_cli = _repology_cli_dfs[pname]
     else:
         prefix = "repology_cli_"
@@ -173,7 +168,7 @@ def _add_vuln_item(out_dict, vuln, df_repo=None):
 
 def _version_similarity(row):
     ratio = version_distance(row.version, row.version_cmp)
-    _LOG.log(
+    LOG.log(
         LOG_SPAM,
         "Version similarity ('%s' vs '%s' ==> %s)",
         row.version,
@@ -184,22 +179,22 @@ def _version_similarity(row):
 
 
 def _query_repology_versions(df_vuln_pkgs):
-    _LOG.info("Querying repology")
+    LOG.info("Querying repology")
     result_dict = {}
     for vuln in df_vuln_pkgs.itertuples():
         repo_pkg = nix_to_repology_pkg_name(vuln.package)
-        _LOG.log(LOG_SPAM, "Package '%s' ==> '%s'", vuln.package, repo_pkg)
+        LOG.log(LOG_SPAM, "Package '%s' ==> '%s'", vuln.package, repo_pkg)
         df_repology_cli = _run_repology_cli(repo_pkg)
         if df_repology_cli is not None and not df_repology_cli.empty:
             # If there's one match, there's no need to check other details
             if df_repology_cli.shape[0] == 1:
-                _LOG.log(LOG_SPAM, "One repology package matches")
+                LOG.log(LOG_SPAM, "One repology package matches")
                 _add_vuln_item(result_dict, vuln, df_repology_cli)
                 continue
             # Match based on version: exact match
             df = df_repology_cli[df_repology_cli["version"] == vuln.version]
             if not df.empty:
-                _LOG.log(LOG_SPAM, "Exact version match '%s'", vuln.version)
+                LOG.log(LOG_SPAM, "Exact version match '%s'", vuln.version)
                 _add_vuln_item(result_dict, vuln, df)
                 continue
             # Match based on version: similarity
@@ -209,10 +204,10 @@ def _query_repology_versions(df_vuln_pkgs):
             )
             df = df_repology_cli[df_repology_cli["similarity"] >= 0.7]
             if not df.empty:
-                _LOG.log(LOG_SPAM, "Version similarity match:\n%s", df)
+                LOG.log(LOG_SPAM, "Version similarity match:\n%s", df)
                 best_match = df["similarity"].max()
                 df = df[df["similarity"] == best_match]
-                _LOG.log(LOG_SPAM, "Selecting best match based on version:\n%s", df)
+                LOG.log(LOG_SPAM, "Selecting best match based on version:\n%s", df)
                 _add_vuln_item(result_dict, vuln, df)
                 continue
             # Otherwise, we need to conclude that we don't know which repology
@@ -220,7 +215,7 @@ def _query_repology_versions(df_vuln_pkgs):
             # 'vuln.package' maps to.
             # TODO: if we end up here, we could do another search with:
             # _run_repology_cli(repo_pkg, match_type='--pkg_search')
-            _LOG.log(LOG_SPAM, "Vague match in repology pkg, adding vuln only")
+            LOG.log(LOG_SPAM, "Vague match in repology pkg, adding vuln only")
             _add_vuln_item(result_dict, vuln)
         else:
             _add_vuln_item(result_dict, vuln)
@@ -236,17 +231,17 @@ def _find_secupdates(args):
     df_vulnx = _run_vulnxscan(target_path_abs, args.buildtime)
     uids = ["vuln_id", "package", "version", "url", "sortcol"]
     df_vuln_pkgs = df_vulnx.groupby(by=uids).size().reset_index(name="count")
-    _LOG.debug("Number of vulnerable packages: %s", df_vuln_pkgs.shape[0])
+    LOG.debug("Number of vulnerable packages: %s", df_vuln_pkgs.shape[0])
     df_log(df_vuln_pkgs, LOG_SPAM)
     # Find the repology version info for the vulnerable packages
     df_vuln_pkgs = _query_repology_versions(df_vuln_pkgs)
-    _LOG.debug("Vulnerable pkgs with repology version info: %s", df_vuln_pkgs.shape[0])
+    LOG.debug("Vulnerable pkgs with repology version info: %s", df_vuln_pkgs.shape[0])
     df_log(df_vuln_pkgs, LOG_SPAM)
     # Classify each vulnerable package
     df_vuln_pkgs["classify"] = df_vuln_pkgs.apply(_vuln_update_classify, axis=1)
     # Find potentially relevant PR
     if args.pr:
-        _LOG.info("Querying github PRs")
+        LOG.info("Querying github PRs")
         df_vuln_pkgs["nixpkgs_pr"] = df_vuln_pkgs.apply(_vuln_nixpkgs_pr, axis=1)
     # Sort the data based on the following columns
     sort_cols = ["sortcol", "package", "version_local"]
@@ -260,10 +255,10 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
     return true only if pkg is affected by the given cve id.
     """
     # For now, we rely on repology for the vulnerability info.
-    _LOG.debug("Finding vulnerability status for %s:%s", repo_pkg_name, pkg_version)
+    LOG.debug("Finding vulnerability status for %s:%s", repo_pkg_name, pkg_version)
     key = f"{repo_pkg_name}:{pkg_version}"
     if key in _repology_cve_dfs:
-        _LOG.log(LOG_SPAM, "Using cached repology_cve results")
+        LOG.log(LOG_SPAM, "Using cached repology_cve results")
         df = _repology_cve_dfs[key]
     else:
         prefix = "repology_cve_"
@@ -322,7 +317,7 @@ def _search_result_append(prs, result):
         if len(result) >= maxres:
             # Log all the found PR urls, even though we include only the first
             # maxres to the main output
-            _LOG.log(
+            LOG.log(
                 LOG_SPAM, "More than %s PRs, skipping: %s", maxres, item["html_url"]
             )
             continue
@@ -362,7 +357,7 @@ def _vuln_nixpkgs_pr(row):
 def _report(df_vulns):
     df = df_vulns.copy()
     if df.empty:
-        _LOG.warning("No vulnerabilities found")
+        LOG.warning("No vulnerabilities found")
         sys.exit(0)
     # Truncate version strings
     df["version_local"] = df["version_local"].str.slice(0, 16)
@@ -379,7 +374,7 @@ def _report(df_vulns):
         numalign="center",
         showindex=False,
     )
-    _LOG.info(
+    LOG.info(
         "Console report\n\n"
         "Potential vulnerabilities impacting version_local, with suggested "
         "update actions:\n\n%s\n\n",
@@ -390,11 +385,11 @@ def _report(df_vulns):
 def _github_query(query_str):
     query_str = urllib.parse.quote(query_str, safe=":/")
     query = f"https://api.github.com/search/issues?q={query_str}"
-    _LOG.debug("GET: %s", query)
+    LOG.debug("GET: %s", query)
     resp = _session.get(query)
     resp.raise_for_status()
     resp_json = json.loads(resp.text)
-    _LOG.log(LOG_SPAM, "total_count=%s", resp_json["total_count"])
+    LOG.log(LOG_SPAM, "total_count=%s", resp_json["total_count"])
     return resp_json
 
 
@@ -404,7 +399,7 @@ def _github_query(query_str):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     exit_unless_nix_artifact(args.NIXPATH.resolve().as_posix())
     df = _find_secupdates(args)
     _report(df)

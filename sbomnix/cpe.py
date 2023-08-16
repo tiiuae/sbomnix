@@ -6,7 +6,6 @@
 
 """ Generate CPE (Common Platform Enumeration) identifiers"""
 
-import logging
 import sys
 import pathlib
 import string
@@ -15,15 +14,13 @@ import shutil
 import requests
 
 from sbomnix.utils import (
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
     df_from_csv_file,
     df_log,
 )
 
 ###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 CACHE_DIR = "~/.cache/sbomnix"
 
@@ -43,7 +40,7 @@ class _CPE:
     _instance = None
 
     def __init__(self):
-        _LOG.debug("")
+        LOG.debug("")
         self.cpedict = pathlib.PosixPath(CACHE_DIR).expanduser() / "cpes.csv"
         self.cpedict.parent.mkdir(parents=True, exist_ok=True)
         self.df_cpedict = self._load_cpedict()
@@ -51,7 +48,7 @@ class _CPE:
             # Verify the loaded cpedict contains at least the following columns
             required_cols = {"vendor", "product"}
             if not required_cols.issubset(self.df_cpedict):
-                _LOG.fatal(
+                LOG.fatal(
                     "Missing required columns %s from cpedict, manually check: '%s'",
                     required_cols,
                     self.cpedict,
@@ -59,11 +56,11 @@ class _CPE:
                 sys.exit(1)
 
     def _load_cpedict(self):
-        _LOG.debug("")
+        LOG.debug("")
         if not self.cpedict.exists() or self.cpedict.stat().st_size <= 0:
             # Try updating cpe dictionary if it's not cached
             if not self._update_cpedict():
-                _LOG.warning(
+                LOG.warning(
                     "Missing '%s': CPE identifiers will be inaccurate", self.cpedict
                 )
                 return None
@@ -71,16 +68,16 @@ class _CPE:
         week_ago = datetime.datetime.now() - datetime.timedelta(days=7)
         if cpe_updated < week_ago:
             # Try updating cpe dictionary if it wasn't recently updated
-            _LOG.debug("Attempting periodic update of cpe dictionary")
+            LOG.debug("Attempting periodic update of cpe dictionary")
             if not self._update_cpedict():
-                _LOG.warning(
+                LOG.warning(
                     "CPE data is not up-to-date: CPE identifiers will be inaccurate"
                 )
         return df_from_csv_file(self.cpedict)
 
     def _update_cpedict(self):
         """Updates local cpe dictionary"""
-        _LOG.debug("")
+        LOG.debug("")
         cpedict_bak = None
         if self.cpedict.exists() and self.cpedict.stat().st_size > 0:
             # Backup the original cpedict to be able to rollback in case the update
@@ -93,34 +90,34 @@ class _CPE:
                 f.write(requests.get(url, stream=True, timeout=10).content)
                 return True
             except requests.exceptions.RequestException as e:
-                _LOG.warning("CPE data update failed: %s", e)
+                LOG.warning("CPE data update failed: %s", e)
                 if cpedict_bak:
-                    _LOG.debug("Rollback earlier cpedict after failed update")
+                    LOG.debug("Rollback earlier cpedict after failed update")
                     shutil.copy(cpedict_bak, self.cpedict)
                 return False
 
     def _cpedict_vendor(self, product):
         if not product or len(product) == 1:
-            _LOG.debug("invalid product name '%s'", product)
+            LOG.debug("invalid product name '%s'", product)
             return None
         if self.df_cpedict is None:
-            _LOG.log(LOG_SPAM, "missing cpedict")
+            LOG.log(LOG_SPAM, "missing cpedict")
             return None
         df = self.df_cpedict[self.df_cpedict["product"] == product]
         if len(df) == 0:
-            _LOG.log(LOG_SPAM, "no matches for product '%s'", product)
+            LOG.log(LOG_SPAM, "no matches for product '%s'", product)
             return None
         if len(df) != 1:
             # If there is more than one product with the same name,
             # we cannot determine which vendor name should be used for the CPE.
             # Therefore, if more than one product names match, treat it the
             # same way as if there were no matches (returning None).
-            _LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
+            LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
             df_log(df, LOG_SPAM)
             return None
 
         vendor = df["vendor"].values[0]
-        _LOG.log(LOG_SPAM, "found vendor for product '%s': '%s'", product, vendor)
+        LOG.log(LOG_SPAM, "found vendor for product '%s': '%s'", product, vendor)
         return vendor
 
     def _candidate_vendor(self, product):
@@ -137,12 +134,12 @@ class _CPE:
             # possible trailing digits from the original product name
             product_mod = product.rstrip(string.digits)
             if product != product_mod:
-                _LOG.log(LOG_SPAM, "re-trying with product name '%s'", product_mod)
+                LOG.log(LOG_SPAM, "re-trying with product name '%s'", product_mod)
                 vendor = self._cpedict_vendor(product_mod)
         if not vendor:
             # Fallback: use the product name as vendor name
             vendor = product
-            _LOG.log(LOG_SPAM, "fallback: use product name as vendor '%s'", vendor)
+            LOG.log(LOG_SPAM, "fallback: use product name as vendor '%s'", vendor)
         return vendor
 
     def generate(self, name, version):
@@ -152,7 +149,7 @@ class _CPE:
         cpe_version = version.strip()
         cpe_end = "*:*:*:*:*:*:*"
         ret = f"cpe:2.3:a:{cpe_vendor}:{cpe_product}:{cpe_version}:{cpe_end}"
-        _LOG.log(LOG_SPAM, "CPE: '%s'", ret)
+        LOG.log(LOG_SPAM, "CPE: '%s'", ret)
         return ret
 
 

@@ -6,6 +6,7 @@
 
 """ sbomnix utils """
 
+import os
 import argparse
 import re
 import sys
@@ -20,54 +21,21 @@ import pandas as pd
 
 ###############################################################################
 
-LOGGER_NAME = "sbomnix-logger"
 LOG_SPAM = logging.DEBUG - 1
+LOG = logging.getLogger(os.path.abspath(__file__))
 
 ###############################################################################
 
 
-def df_to_csv_file(df, name, loglevel=logging.INFO):
-    """Write dataframe to csv file"""
-    df.to_csv(
-        path_or_buf=name, quoting=csv.QUOTE_ALL, sep=",", index=False, encoding="utf-8"
-    )
-    logging.getLogger(LOGGER_NAME).log(loglevel, "Wrote: %s", name)
+def set_log_verbosity(verbosity=1):
+    """Set logging verbosity"""
+    log_levels = [logging.NOTSET, logging.INFO, logging.DEBUG, LOG_SPAM]
+    verbosity = min(len(log_levels) - 1, max(verbosity, 0))
+    _init_logging(verbosity)
 
 
-def df_from_csv_file(name):
-    """Read csv file into dataframe"""
-    logging.getLogger(LOGGER_NAME).debug("Reading: %s", name)
-    try:
-        df = pd.read_csv(name, keep_default_na=False, dtype=str)
-        df.reset_index(drop=True, inplace=True)
-        return df
-    except pd.errors.ParserError:
-        logging.getLogger(LOGGER_NAME).fatal("Not a csv file: '%s'", name)
-        sys.exit(1)
-
-
-def df_regex_filter(df, column, regex):
-    """Return rows where column 'column' values match the given regex"""
-    logging.getLogger(LOGGER_NAME).debug("column:'%s', regex:'%s'", column, regex)
-    return df[df[column].str.contains(regex, regex=True, na=False)]
-
-
-def df_log(df, loglevel, tablefmt="presto"):
-    """Log dataframe with given loglevel and tablefmt"""
-    if logging.getLogger(LOGGER_NAME).level <= loglevel:
-        if df.empty:
-            return
-        df = df.fillna("")
-        table = tabulate(
-            df, headers="keys", tablefmt=tablefmt, stralign="left", showindex=False
-        )
-        logging.getLogger(LOGGER_NAME).log(loglevel, "\n%s\n", table)
-
-
-def setup_logging(verbosity=1):
-    """Setup logging with specified verbosity"""
-    project_logger = logging.getLogger(LOGGER_NAME)
-
+def _init_logging(verbosity=1):
+    """Initialize logging"""
     if verbosity == 0:
         level = logging.NOTSET
     elif verbosity == 1:
@@ -76,7 +44,6 @@ def setup_logging(verbosity=1):
         level = logging.DEBUG
     else:
         level = LOG_SPAM
-
     if level <= logging.DEBUG:
         logformat = (
             "%(log_color)s%(levelname)-8s%(reset)s "
@@ -85,27 +52,68 @@ def setup_logging(verbosity=1):
         )
     else:
         logformat = "%(log_color)s%(levelname)-8s%(reset)s %(message)s"
-
+    logging.addLevelName(LOG_SPAM, "SPAM")
     default_log_colors["INFO"] = "fg_bold_white"
     default_log_colors["DEBUG"] = "fg_bold_white"
     default_log_colors["SPAM"] = "fg_bold_white"
     formatter = ColoredFormatter(logformat, log_colors=default_log_colors)
-    stream = logging.StreamHandler()
+    if LOG.hasHandlers() and len(LOG.handlers) > 0:
+        stream = LOG.handlers[0]
+    else:
+        stream = logging.StreamHandler()
     stream.setFormatter(formatter)
-    logging.addLevelName(LOG_SPAM, "SPAM")
-    project_logger.addHandler(stream)
-    project_logger.setLevel(level)
+    if not LOG.hasHandlers():
+        LOG.addHandler(stream)
+    LOG.setLevel(level)
+
+
+def df_to_csv_file(df, name, loglevel=logging.INFO):
+    """Write dataframe to csv file"""
+    df.to_csv(
+        path_or_buf=name, quoting=csv.QUOTE_ALL, sep=",", index=False, encoding="utf-8"
+    )
+    LOG.log(loglevel, "Wrote: %s", name)
+
+
+def df_from_csv_file(name):
+    """Read csv file into dataframe"""
+    LOG.debug("Reading: %s", name)
+    try:
+        df = pd.read_csv(name, keep_default_na=False, dtype=str)
+        df.reset_index(drop=True, inplace=True)
+        return df
+    except pd.errors.ParserError:
+        LOG.fatal("Not a csv file: '%s'", name)
+        sys.exit(1)
+
+
+def df_regex_filter(df, column, regex):
+    """Return rows where column 'column' values match the given regex"""
+    LOG.debug("column:'%s', regex:'%s'", column, regex)
+    return df[df[column].str.contains(regex, regex=True, na=False)]
+
+
+def df_log(df, loglevel, tablefmt="presto"):
+    """Log dataframe with given loglevel and tablefmt"""
+    if LOG.level <= loglevel:
+        if df.empty:
+            return
+        df = df.fillna("")
+        table = tabulate(
+            df, headers="keys", tablefmt=tablefmt, stralign="left", showindex=False
+        )
+        LOG.log(loglevel, "\n%s\n", table)
 
 
 def exec_cmd(cmd, raise_on_error=True, return_error=False):
     """Run shell command cmd"""
     command_str = " ".join(cmd)
-    logging.getLogger(LOGGER_NAME).debug("Running: %s", command_str)
+    LOG.debug("Running: %s", command_str)
     try:
         ret = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
         return ret.stdout
     except subprocess.CalledProcessError as error:
-        logging.getLogger(LOGGER_NAME).debug(
+        LOG.debug(
             "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",
             command_str,
             error.stdout,
@@ -125,9 +133,7 @@ def exit_unless_nix_artifact(path):
         exec_cmd(cmd)
         return
     except subprocess.CalledProcessError:
-        logging.getLogger(LOGGER_NAME).fatal(
-            "Specified target is not a nix artifact: '%s'", path
-        )
+        LOG.fatal("Specified target is not a nix artifact: '%s'", path)
         sys.exit(1)
 
 
@@ -184,14 +190,14 @@ def version_distance(v1, v2):
     re_vsplit = re.compile(r".*?(?P<ver_beg>[0-9][0-9]*)(?P<ver_end>.*)$")
     match = re.match(re_vsplit, v1_clean)
     if not match:
-        logging.getLogger(LOGGER_NAME).warning("Unexpected v1 version '%s'", v1)
+        LOG.warning("Unexpected v1 version '%s'", v1)
         return 0.0
     v1_major = match.group("ver_beg")
     v1_minor = match.group("ver_end").replace(".", "")
     v1_float = float(v1_major + "." + v1_minor)
     match = re.match(re_vsplit, v2_clean)
     if not match:
-        logging.getLogger(LOGGER_NAME).warning("Unexpected v2 version '%s'", v2)
+        LOG.warning("Unexpected v2 version '%s'", v2)
         return 0.0
     v2_major = match.group("ver_beg")
     v2_minor = match.group("ver_end").replace(".", "")
@@ -208,7 +214,7 @@ def parse_version(ver_str):
     re_ver = re.compile(r".*?(?P<ver_beg>[0-9][0-9.]*)(?P<ver_end>.*)$")
     match = re_ver.match(ver_str)
     if not match:
-        logging.getLogger(LOGGER_NAME).warning("Unable to parse version '%s'", ver_str)
+        LOG.warning("Unable to parse version '%s'", ver_str)
         return None
     ver_beg = match.group("ver_beg").rstrip(".")
     ver_end = match.group("ver_end")
@@ -220,9 +226,9 @@ def parse_version(ver_str):
     ver_end = ver_end.rstrip(".")
     ver = f"{ver_beg}{ver_end}"
     ver = re.sub(r"\.+", ".", ver)
-    logging.getLogger(LOGGER_NAME).log(LOG_SPAM, "%s --> %s", ver_str, ver)
+    LOG.log(LOG_SPAM, "%s --> %s", ver_str, ver)
     if not ver:
-        logging.getLogger(LOGGER_NAME).warning("Invalid version '%s'", ver_str)
+        LOG.warning("Invalid version '%s'", ver_str)
         return None
     return packaging.version.parse(ver)
 
@@ -261,5 +267,9 @@ def check_positive(val):
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
     return intval
 
+
+################################################################################
+
+set_log_verbosity(1)
 
 ################################################################################

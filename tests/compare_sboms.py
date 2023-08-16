@@ -15,15 +15,7 @@ import sys
 import pathlib
 import json
 import pandas as pd
-from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
-    df_to_csv_file,
-)
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
+from sbomnix.utils import LOG, df_to_csv_file, set_log_verbosity
 
 ###############################################################################
 
@@ -94,18 +86,18 @@ def _parse_sbom(path):
         if "bomFormat" in json_dict:
             sbom_format = json_dict["bomFormat"]
             return _parse_sbom_cdx(json_dict)
-        _LOG.fatal("Unsupported SBOM format: '%s'", sbom_format)
+        LOG.fatal("Unsupported SBOM format: '%s'", sbom_format)
         sys.exit(1)
 
 
 def _log_rows(df, name):
     for row in df.itertuples(index=False, name=name):
-        _LOG.info(row)
+        LOG.info(row)
 
 
 def _compare_sboms(args, df1, df2):
     """Describe diff of sboms df1 and df2, return True if they are equal"""
-    if _LOG.level <= logging.DEBUG:
+    if LOG.level <= logging.DEBUG:
         df_to_csv_file(df1, "df_sbom_file1.csv")
         df_to_csv_file(df2, "df_sbom_file2.csv")
 
@@ -127,37 +119,37 @@ def _compare_sboms(args, df1, df2):
     df2_only = df2_only[df2_only["uid_y"].isna()]
     df2_only.drop_duplicates(subset=uid_list, inplace=True)
 
-    _LOG.info("Using uid: '%s'", uid_list)
-    _LOG.info("")
+    LOG.info("Using uid: '%s'", uid_list)
+    LOG.info("")
 
-    _LOG.info("FILE1 path '%s'", args.FILE1)
-    _LOG.info("FILE1 number of unique entries: %s", len(df1_uidg.index))
+    LOG.info("FILE1 path '%s'", args.FILE1)
+    LOG.info("FILE1 number of unique entries: %s", len(df1_uidg.index))
     if not df1_non_uniq.empty:
-        _LOG.info("FILE1 number of non-unique entries: %s", len(df1_non_uniq))
+        LOG.info("FILE1 number of non-unique entries: %s", len(df1_non_uniq))
         _log_rows(df1_non_uniq, "non_unique")
-    _LOG.info("")
+    LOG.info("")
 
-    _LOG.info("FILE2 path '%s'", args.FILE2)
-    _LOG.info("FILE2 number of unique components: %s", len(df2_uidg.index))
+    LOG.info("FILE2 path '%s'", args.FILE2)
+    LOG.info("FILE2 number of unique components: %s", len(df2_uidg.index))
     if not df2_non_uniq.empty:
-        _LOG.info("FILE2 number of non-unique entries: %s", len(df2_non_uniq))
+        LOG.info("FILE2 number of non-unique entries: %s", len(df2_non_uniq))
         _log_rows(df2_non_uniq, "non_unique")
-    _LOG.info("")
+    LOG.info("")
 
-    _LOG.info("FILE1 and FILE2 common entries: %s", len(df_common))
+    LOG.info("FILE1 and FILE2 common entries: %s", len(df_common))
     if not df_common.empty:
         _log_rows(df_common[uid_list], "common")
-    _LOG.info("")
+    LOG.info("")
 
-    _LOG.info("FILE1 only entries: %s", len(df1_only))
+    LOG.info("FILE1 only entries: %s", len(df1_only))
     if not df1_only.empty:
         _log_rows(df1_only[uid_list], "file1_only")
-    _LOG.info("")
+    LOG.info("")
 
-    _LOG.info("FILE2 only entries: %s", len(df2_only))
+    LOG.info("FILE2 only entries: %s", len(df2_only))
     if not df2_only.empty:
         _log_rows(df2_only[uid_list], "file2_only")
-    _LOG.info("")
+    LOG.info("")
 
     return len(df1_only) == 0 and len(df2_only) == 0
 
@@ -168,12 +160,12 @@ def _compare_sboms(args, df1, df2):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.FILE1.exists():
-        _LOG.fatal("Invalid path: '%s'", args.sbom)
+        LOG.fatal("Invalid path: '%s'", args.sbom)
         sys.exit(1)
     if not args.FILE2.exists():
-        _LOG.fatal("Invalid path: '%s'", args.graph)
+        LOG.fatal("Invalid path: '%s'", args.graph)
         sys.exit(1)
 
     df_sbom_f1 = _parse_sbom(args.FILE1)

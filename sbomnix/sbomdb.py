@@ -19,15 +19,7 @@ import numpy as np
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store, find_deriver
-from sbomnix.utils import (
-    LOGGER_NAME,
-    df_to_csv_file,
-    get_py_pkg_version,
-)
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
+from sbomnix.utils import LOG, df_to_csv_file, get_py_pkg_version
 
 ###############################################################################
 
@@ -72,13 +64,13 @@ class SbomDb:
     def _get_dependencies_df(self, nix_dependencies):
         if self.depth:
             # Return dependencies until the given depth
-            _LOG.debug("Reading dependencies until depth=%s", self.depth)
+            LOG.debug("Reading dependencies until depth=%s", self.depth)
             args = argparse.Namespace()
             args.depth = self.depth
             args.return_df = True
             return nix_dependencies.graph(args)
         # Otherwise, return all dependencies
-        _LOG.debug("Reading all dependencies")
+        LOG.debug("Reading all dependencies")
         return nix_dependencies.to_dataframe()
 
     def _init_sbomdb(self):
@@ -114,7 +106,7 @@ class SbomDb:
         if meta_path is None:
             return
         df_meta = _parse_json_metadata(meta_path)
-        if _LOG.level <= logging.DEBUG:
+        if LOG.level <= logging.DEBUG:
             df_to_csv_file(df_meta, "meta.csv")
         # Join based on package name including the version number
         self.df_sbomdb = self.df_sbomdb.merge(
@@ -166,7 +158,7 @@ class SbomDb:
             json_string = json.dumps(data, indent=2)
             outfile.write(json_string)
             if printinfo:
-                _LOG.info("Wrote: %s", outfile.name)
+                LOG.info("Wrote: %s", outfile.name)
 
     def to_cdx(self, cdx_path, printinfo=True):
         """Export sbomdb to cyclonedx json file"""
@@ -351,7 +343,7 @@ def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
         # Give up generating the 'licenses' entry if license id should be
         # spdx but it's not:
         if "spdxid" in column_name and license_string not in SPDX_LICENSES:
-            _LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
+            LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
             return []
         license_dict = {"license": {cdx_license_type: license_string}}
         licenses.append(license_dict)
@@ -368,7 +360,7 @@ def _cdx_component_add_licenses(component, drv):
         licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_short", "name")
     # Give up if package does not have license information associated
     if not licenses:
-        _LOG.debug("No license info found for '%s'", drv.name)
+        LOG.debug("No license info found for '%s'", drv.name)
         return
     # Otherwise, add the licenses entry
     component["licenses"] = licenses
@@ -444,7 +436,7 @@ def _parse_meta_entry(meta, key):
 def _parse_json_metadata(json_filename):
     """Parse package metadata from the specified json file"""
     with open(json_filename, "r", encoding="utf-8") as inf:
-        _LOG.info('Loading meta info from "%s"', json_filename)
+        LOG.info('Loading meta info from "%s"', json_filename)
         json_dict = json.loads(inf.read())
         dict_selected = {}
         setcol = dict_selected.setdefault

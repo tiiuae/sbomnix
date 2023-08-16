@@ -19,7 +19,7 @@ import pandas as pd
 import graphviz as gv
 
 from sbomnix.utils import (
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
     exec_cmd,
     df_to_csv_file,
@@ -29,9 +29,6 @@ from sbomnix.utils import (
 
 from sbomnix.nix import find_deriver
 
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -98,12 +95,12 @@ class NixDependencyGraph:
             df = df_regex_filter(self.df, "src_path", self.inverse_regex)
             for row in df.itertuples():
                 inverse_path = row.src_path
-                _LOG.debug("Start path inverse: %s", inverse_path)
+                LOG.debug("Start path inverse: %s", inverse_path)
                 nixfilter = NixGraphFilter(src_path=inverse_path)
                 self._graph(nixfilter)
         else:
             # Otherwise, draw the graph starting from the given start_path
-            _LOG.debug("Start path: %s", start_path)
+            LOG.debug("Start path: %s", start_path)
             nixfilter = NixGraphFilter(target_path=start_path)
             self._graph(nixfilter)
 
@@ -112,12 +109,12 @@ class NixDependencyGraph:
             self._render(args.out)
         elif self.df_out_csv is not None and not self.df_out_csv.empty:
             if hasattr(args, "return_df") and args.return_df:
-                _LOG.debug("Returning graph as dataframe")
+                LOG.debug("Returning graph as dataframe")
                 return self.df_out_csv
             # Output csv if csv format was specified
             df_to_csv_file(self.df_out_csv, args.out)
         else:
-            _LOG.warning("Nothing to draw")
+            LOG.warning("Nothing to draw")
         return None
 
     def _init_df_out(self, args):
@@ -137,21 +134,21 @@ class NixDependencyGraph:
         fname, extension = os.path.splitext(filename)
         gformat = extension[1:]
         self.digraph.render(filename=fname, format=gformat, cleanup=True)
-        _LOG.info("Wrote: %s", filename)
+        LOG.info("Wrote: %s", filename)
 
     def _graph(self, nixfilter, curr_depth=0):
         curr_depth += 1
         if curr_depth > self.maxdepth:
-            _LOG.log(LOG_SPAM, "Reached maxdepth: %s", self.maxdepth)
+            LOG.log(LOG_SPAM, "Reached maxdepth: %s", self.maxdepth)
             return
         df = self._query(nixfilter, curr_depth)
         if df.empty and curr_depth == 1:
             # First match failed: print debug message and stop
-            _LOG.debug("No matching packages found")
+            LOG.debug("No matching packages found")
             return
         if df.empty:
             # Reached leaf: no more matches
-            _LOG.debug("%sFound nothing", (DBG_INDENT * (curr_depth - 1)))
+            LOG.debug("%sFound nothing", (DBG_INDENT * (curr_depth - 1)))
             return
         if self.df_out_csv is not None:
             df.insert(0, "graph_depth", curr_depth)
@@ -160,10 +157,10 @@ class NixDependencyGraph:
             self._dbg_print_row(row, curr_depth)
             # Stop drawing if 'until_regex' matches
             if regex_match(self.until_regex, row.target_pname):
-                _LOG.debug("%sReached until_function", (DBG_INDENT * (curr_depth - 1)))
+                LOG.debug("%sReached until_function", (DBG_INDENT * (curr_depth - 1)))
                 continue
             if self._path_drawn(row):
-                _LOG.debug("%sSkipping duplicate path", (DBG_INDENT * (curr_depth - 1)))
+                LOG.debug("%sSkipping duplicate path", (DBG_INDENT * (curr_depth - 1)))
                 continue
             # Add source node
             self._add_node(row.src_path, row.src_pname)
@@ -192,7 +189,7 @@ class NixDependencyGraph:
 
     def _query(self, nixfilter, depth):
         query_str = nixfilter.get_query_str()
-        _LOG.debug("%sFiltering by: %s", (DBG_INDENT * (depth - 1)), query_str)
+        LOG.debug("%sFiltering by: %s", (DBG_INDENT * (depth - 1)), query_str)
         if self.df.empty:
             return pd.DataFrame()
         return self.df.query(query_str)
@@ -220,7 +217,7 @@ class NixDependencyGraph:
         self.digraph.node(node_id, label, style="rounded,filled", fillcolor=fillcolor)
 
     def _dbg_print_row(self, row, depth):
-        _LOG.log(
+        LOG.log(
             LOG_SPAM,
             "%sFound: %s ==> %s",
             (DBG_INDENT * (depth - 1)),
@@ -253,10 +250,10 @@ class NixDependencies:
     """Parse nix package dependencies"""
 
     def __init__(self, nix_path, buildtime=False):
-        _LOG.debug("nix_path: %s", nix_path)
+        LOG.debug("nix_path: %s", nix_path)
         self.dependencies = set()
         self.dtype = "buildtime" if buildtime else "runtime"
-        _LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
+        LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
         drv_path = _find_deriver(nix_path)
         self.nix_store_path = _get_nix_store_path(drv_path)
         if buildtime:
@@ -266,21 +263,21 @@ class NixDependencies:
             self.start_path = _find_outpath(drv_path)
             self._parse_runtime_dependencies(drv_path)
         if len(self.dependencies) <= 0:
-            _LOG.info("No %s dependencies", self.dtype)
+            LOG.info("No %s dependencies", self.dtype)
 
     def _parse_runtime_dependencies(self, drv_path):
         # nix-store -u -q --graph outputs runtime dependencies.
         # We need to use -f (--force-realise) since runtime-only dependencies
         # can not be determined unless the output paths are realised.
         nix_query_out = exec_cmd(["nix-store", "-u", "-f", "-q", "--graph", drv_path])
-        _LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
+        LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
     def _parse_buildtime_dependencies(self, drv_path):
         # nix-store -q --graph outputs buildtime dependencies when applied
         # to derivation path
         nix_query_out = exec_cmd(["nix-store", "-q", "--graph", drv_path])
-        _LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
+        LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
     def _parse_nix_query_out(self, nix_query_out):
@@ -315,7 +312,7 @@ class NixDependencies:
                 by=["src_pname", "src_path", "target_pname", "target_path"],
                 inplace=True,
             )
-        if _LOG.level <= logging.DEBUG:
+        if LOG.level <= logging.DEBUG:
             df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
         return df
 
@@ -338,16 +335,16 @@ def _get_nix_store_path(nix_path):
     store_path_match = re_nix_store_path.match(nix_path)
     if store_path_match:
         store_path = store_path_match.group("store_path")
-    _LOG.debug("Using nix store path: '%s'", store_path)
+    LOG.debug("Using nix store path: '%s'", store_path)
     return store_path
 
 
 def _find_deriver(nix_path):
     drv_path = find_deriver(nix_path)
     if not drv_path:
-        _LOG.fatal("No deriver found for: '%s", nix_path)
+        LOG.fatal("No deriver found for: '%s", nix_path)
         sys.exit(1)
-    _LOG.debug("nix_drv: %s", drv_path)
+    LOG.debug("nix_drv: %s", drv_path)
     return drv_path
 
 
@@ -362,9 +359,9 @@ def _find_outpath(nix_path):
         ]
     ).strip()
     if not out_path:
-        _LOG.fatal("No outpath found for: '%s'", nix_path)
+        LOG.fatal("No outpath found for: '%s'", nix_path)
         sys.exit(1)
-    _LOG.debug("out_path: %s", out_path)
+    LOG.debug("out_path: %s", out_path)
     return out_path
 
 

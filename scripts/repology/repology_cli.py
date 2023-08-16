@@ -10,7 +10,6 @@
 
 """ Command-line interface to repology.org """
 
-import logging
 import os
 import sys
 import pathlib
@@ -26,18 +25,14 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
+    set_log_verbosity,
     df_to_csv_file,
     df_regex_filter,
     nix_to_repology_pkg_name,
     parse_version,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -139,7 +134,7 @@ class Repology:
     def _packages_to_df(self, args, re_pkg_internal=None):
         if not self.pkgs_dict:
             return
-        _LOG.debug("packages in pkgs_dict: %s", len(self.pkgs_dict["package"]))
+        LOG.debug("packages in pkgs_dict: %s", len(self.pkgs_dict["package"]))
         # Get DataFrame, drop duplicates, sort
         df = pd.DataFrame.from_dict(self.pkgs_dict)
         df_cols = df.columns.values.tolist()
@@ -179,11 +174,11 @@ class Repology:
         self.df.drop("name", axis=1, inplace=True)
 
     def _get_resp(self, query):
-        _LOG.info("GET: %s", query)
+        LOG.info("GET: %s", query)
         resp = self.session.get(query, headers=self.headers)
-        _LOG.debug("resp.status_code: %s", resp.status_code)
+        LOG.debug("resp.status_code: %s", resp.status_code)
         if resp.status_code == 404:
-            _LOG.fatal("No matching packages found")
+            LOG.fatal("No matching packages found")
             sys.exit(1)
         resp.raise_for_status()
         return resp
@@ -191,7 +186,7 @@ class Repology:
     def _report(self, args):
         """Generate result report to console and to csv file"""
         if self.df.empty:
-            _LOG.warning("No matching packages found")
+            LOG.warning("No matching packages found")
             sys.exit(1)
         if self.df_sbom is not None:
             self._sbom_fields()
@@ -213,7 +208,7 @@ class Repology:
             numalign="center",
             showindex=False,
         )
-        _LOG.info(
+        LOG.info(
             "Repology package info, packages:%s\n\n%s\n\n"
             "For more details, see: %s\n",
             df.shape[0],
@@ -263,7 +258,7 @@ class Repology:
         sbom_pkgs_in_repo = (
             f"sbom packages in repology: {repology_rows_n} ({sbom_in_repo})"
         )
-        _LOG.info(
+        LOG.info(
             "\n\tRepology SBOM package statistics:\n"
             "\t  %s\n"
             "\t   ==> %s\n"
@@ -286,7 +281,7 @@ class Repology:
         df = df.drop_duplicates(keep="first", subset=["package", "version"])
         base_rows_n = df.shape[0]
         if base_rows_n <= 0:
-            _LOG.debug("No base packages, skipping stats")
+            LOG.debug("No base packages, skipping stats")
             return
         df_newest = df[df.status.isin(["newest"])]
         newest_rows_n = df_newest.shape[0]
@@ -309,7 +304,7 @@ class Repology:
         dev_uniq_rows = f"devel or unique: {dev_uniq_rows_n} ({dev_uniq_pct})"
         vuln_rows = f"potentially vulnerable: {vuln_rows_n} ({vuln_pct})"
         about = "https://repology.org/docs/about"
-        _LOG.info(
+        LOG.info(
             "\n\tRepology package statistics:\n"
             "\t (see the status descriptions in: %s)\n"
             "\t   %s\n"
@@ -330,37 +325,37 @@ class Repology:
         soup = BeautifulSoup(resp.text, "html.parser")
         tables = soup.find_all("table")
         if not tables:
-            _LOG.debug("Projects table missing: no matching packages")
+            LOG.debug("Projects table missing: no matching packages")
             return next_query_project
         projects_table = tables[0]
         headers = {}
         for idx, header in enumerate(projects_table.thead.find_all("th")):
             headers[header.text] = idx
         if not headers:
-            _LOG.fatal("Unexpected response")
+            LOG.fatal("Unexpected response")
             sys.exit(1)
-        _LOG.log(LOG_SPAM, headers)
+        LOG.log(LOG_SPAM, headers)
         projects_table_rows = projects_table.tbody.find_all("tr")
         rows = 0
         stop_query = False
         for row in projects_table_rows:
             cols = row.find_all("td")
             if not cols:
-                _LOG.log(LOG_SPAM, "No columns on row: %s", row)
+                LOG.log(LOG_SPAM, "No columns on row: %s", row)
                 continue
             rows += 1
-            _LOG.log(LOG_SPAM, "cols: %s", cols)
+            LOG.log(LOG_SPAM, "cols: %s", cols)
             pkg = cols[headers["Project"]]
             pkg_name = pkg.find_all("a")[0].string
             # Stop further queries if any package name matches pkg_stop
             if not stop_query and pkg_stop and pkg_name == pkg_stop:
                 stop_query = True
-                _LOG.debug("Stopping queries after parsing the current response")
+                LOG.debug("Stopping queries after parsing the current response")
             pkg_id = f"{repo}:{pkg_name}"
             if pkg_id in self.processed:
-                _LOG.debug("Package '%s' in search resp already processed", pkg_name)
+                LOG.debug("Package '%s' in search resp already processed", pkg_name)
                 continue
-            _LOG.debug("Adding package '%s' to self.processed", pkg_name)
+            LOG.debug("Adding package '%s' to self.processed", pkg_name)
             self.processed.add(pkg_id)
             # Extract newest release versions
             newest = cols[headers["Newest"]]
@@ -393,7 +388,7 @@ class Repology:
                 self.pkgs_dict.setdefault("newest_upstream_release", []).append(
                     ";".join(newest_releases)
                 )
-                _LOG.log(LOG_SPAM, "Added: %s:%s:%s", pkg_name, ver, status)
+                LOG.log(LOG_SPAM, "Added: %s:%s:%s", pkg_name, ver, status)
             # API returns at most 200 projects per one request. If the number
             # or returned projects is 200, we know we need to make another
             # query starting from the last returned project, for more details,
@@ -401,7 +396,7 @@ class Repology:
             if rows == 200 and not stop_query:
                 next_query_project = pkg_name
         if rows > 200:
-            _LOG.warning(
+            LOG.warning(
                 "Unexpected response: raising this warning to notify the "
                 "posibility the repology API has changed and might no longer "
                 "match what this client expects"
@@ -409,7 +404,7 @@ class Repology:
         return next_query_project
 
     def _parse_sbom_cdx(self, path):
-        _LOG.debug("Parsing cdx sbom: %s", path)
+        LOG.debug("Parsing cdx sbom: %s", path)
         with open(path, encoding="utf-8") as inf:
             json_dict = json.loads(inf.read())
             components = []
@@ -442,12 +437,12 @@ class Repology:
                 resp, args.repository, stop_pkg
             )
             if not next_query_project:
-                _LOG.debug("stopping (no next_query_project)")
+                LOG.debug("stopping (no next_query_project)")
                 break
             next_query_project = urllib.parse.quote(next_query_project)
             query = f"{self.url_projects}{next_query_project}/{search_term}"
             if query == query_last:
-                _LOG.debug("stopping ('%s'=='%s')", query_last, query)
+                LOG.debug("stopping ('%s'=='%s')", query_last, query)
                 break
 
     def _query_pkg_exact(self, args):
@@ -474,16 +469,16 @@ class Repology:
             r".*\&.*",
         ]
         ignore_regexes = f"(?:{'|'.join(ignore_sbom_pkg_names)})"
-        _LOG.debug("ignore_regexes: %s", ignore_regexes)
+        LOG.debug("ignore_regexes: %s", ignore_regexes)
         self.df_sbom = self._parse_sbom_cdx(args.sbom_cdx.as_posix())
         for cmp in self.df_sbom.itertuples():
-            _LOG.debug("Package: %s", cmp)
+            LOG.debug("Package: %s", cmp)
             if not cmp.name:
-                _LOG.fatal("Missing package name: %s", cmp)
+                LOG.fatal("Missing package name: %s", cmp)
                 sys.exit(1)
             pkg_id = f"{args.repository}:{cmp.name}"
             if pkg_id in self.processed:
-                _LOG.debug("Package '%s' in sbom already processed", cmp.name)
+                LOG.debug("Package '%s' in sbom already processed", cmp.name)
                 self._packages_to_df(args, re_pkg_internal=cmp.name)
                 continue
             if not cmp.version:
@@ -559,7 +554,7 @@ def _sbom_row_classify(row):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     repology = Repology()
     repology.query(args)
 
