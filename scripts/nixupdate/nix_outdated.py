@@ -16,9 +16,9 @@ from argparse import ArgumentParser
 from tabulate import tabulate
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
+    set_log_verbosity,
     exec_cmd,
     df_from_csv_file,
     df_log,
@@ -26,10 +26,6 @@ from sbomnix.utils import (
     nix_to_repology_pkg_name,
     exit_unless_nix_artifact,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -82,7 +78,7 @@ def getargs():
 
 
 def _generate_sbom(target_path, buildtime=False):
-    _LOG.info("Generating SBOM for target '%s'", target_path)
+    LOG.info("Generating SBOM for target '%s'", target_path)
     runtime = True
     sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
     prefix = "nixdeps_"
@@ -93,7 +89,7 @@ def _generate_sbom(target_path, buildtime=False):
 
 
 def _run_repology_cli(sbompath):
-    _LOG.info("Running repology_cli")
+    LOG.info("Running repology_cli")
     prefix = "repology_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
@@ -106,7 +102,7 @@ def _run_repology_cli(sbompath):
 
 
 def _run_nix_visualize(targt_path):
-    _LOG.info("Running nix-visualize")
+    LOG.info("Running nix-visualize")
     prefix = "nix-visualize_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
@@ -116,7 +112,7 @@ def _run_nix_visualize(targt_path):
 
 
 def _nix_visualize_csv_to_df(csvpath):
-    _LOG.debug("Transforming nix-visualize csv to dataframe")
+    LOG.debug("Transforming nix-visualize csv to dataframe")
     df = df_from_csv_file(csvpath)
     # Split column 'raw_name' to columns 'package' and 'version'
     re_split = (
@@ -150,7 +146,7 @@ def _generate_report_df(df_nv, df_repo):
         right_on=["package", "version_sbom"],
         suffixes=["", "_repology"],
     )
-    _LOG.log(LOG_SPAM, "Merged nix-visualize and repology data:")
+    LOG.log(LOG_SPAM, "Merged nix-visualize and repology data:")
     df_log(df, LOG_SPAM)
     return df
 
@@ -163,7 +159,7 @@ def _drop_newest_dups(df_con, df_cmp):
         df_pkgs = df_cmp[df_cmp["package"] == row.nix_package]
         df_newest = df_pkgs[df_pkgs["status"] == "newest"]
         if not df_newest.empty:
-            _LOG.debug(
+            LOG.debug(
                 "Ignoring outdated package '%s' since newest version is also available",
                 row.nix_package,
             )
@@ -173,9 +169,9 @@ def _drop_newest_dups(df_con, df_cmp):
 
 def _report(df, args):
     if df is None or df.empty:
-        _LOG.info("No outdated dependencies found")
+        LOG.info("No outdated dependencies found")
         return
-    _LOG.info("Writing console report")
+    LOG.info("Writing console report")
     # Rename and select the following columns to the output report
     select_cols = {
         "level": "priority",
@@ -224,7 +220,7 @@ def _report(df, args):
         )
         _console_out_table(table, args.local, args.buildtime)
 
-    if _LOG.level <= logging.DEBUG:
+    if LOG.level <= logging.DEBUG:
         # Write the full merged df for debugging
         df_to_csv_file(df, "df_nixoutdated_merged.csv")
 
@@ -242,7 +238,7 @@ def _console_out_table(table, local=False, buildtime=False):
             " (in priority order based on how many other "
             "packages depend on the potentially outdated package):"
         )
-    _LOG.info(
+    LOG.info(
         "Dependencies that need update %s%s\n\n%s\n\n",
         update_target,
         priority,
@@ -256,25 +252,25 @@ def _console_out_table(table, local=False, buildtime=False):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     target_path_abs = args.NIXPATH.resolve().as_posix()
     exit_unless_nix_artifact(target_path_abs)
 
     sbom_path = _generate_sbom(target_path_abs, args.buildtime)
-    _LOG.info("Using SBOM '%s'", sbom_path)
+    LOG.info("Using SBOM '%s'", sbom_path)
 
     repology_out_path = _run_repology_cli(sbom_path)
-    _LOG.info("Using repology out: '%s'", repology_out_path)
+    LOG.info("Using repology out: '%s'", repology_out_path)
     df_repology = df_from_csv_file(repology_out_path)
     df_log(df_repology, LOG_SPAM)
 
     if not args.buildtime:
         nix_visualize_out = _run_nix_visualize(target_path_abs)
-        _LOG.info("Using nix-visualize out: '%s'", nix_visualize_out)
+        LOG.info("Using nix-visualize out: '%s'", nix_visualize_out)
         df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
         df_log(df_nix_visualize, LOG_SPAM)
     else:
-        _LOG.info("Not running nix-visualize due to '--buildtime' argument")
+        LOG.info("Not running nix-visualize due to '--buildtime' argument")
         df_nix_visualize = None
 
     df_report = _generate_report_df(df_nix_visualize, df_repology)

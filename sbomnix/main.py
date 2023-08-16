@@ -7,21 +7,16 @@
 """ Python script that generates SBOMs from nix packages """
 
 import argparse
-import logging
 import pathlib
 import sys
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
+    LOG,
+    set_log_verbosity,
     check_positive,
-    setup_logging,
     get_py_pkg_version,
-    LOGGER_NAME,
     exit_unless_nix_artifact,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -85,14 +80,14 @@ def getargs():
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.NIX_PATH.exists():
-        _LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
+        LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
         sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
     exit_unless_nix_artifact(target_path)
     if not args.meta:
-        _LOG.warning(
+        LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "
             "license information (see '--help' for more details)"
         )

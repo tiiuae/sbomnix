@@ -23,18 +23,14 @@ from tabulate import tabulate
 from scripts.vulnxscan.osv import OSV
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
-    setup_logging,
-    exec_cmd,
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
+    set_log_verbosity,
+    exec_cmd,
     df_to_csv_file,
     df_from_csv_file,
     exit_unless_nix_artifact,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -99,15 +95,15 @@ class VulnScan:
                 setcol("scanner", []).append("vulnix")
         self.df_vulnix = pd.DataFrame.from_dict(vulnix_vulns_dict)
         if not self.df_vulnix.empty:
-            _LOG.debug("Vulnix found vulnerabilities")
+            LOG.debug("Vulnix found vulnerabilities")
             self.df_vulnix.replace(np.nan, "", regex=True, inplace=True)
             self.df_vulnix.drop_duplicates(keep="first", inplace=True)
-            if _LOG.level <= logging.DEBUG:
+            if LOG.level <= logging.DEBUG:
                 df_to_csv_file(self.df_vulnix, "df_vulnix.csv")
 
     def scan_vulnix(self, target_path, buildtime=False):
         """Run vulnix scan for nix artifact at target_path"""
-        _LOG.info("Running vulnix scan")
+        LOG.info("Running vulnix scan")
         self.df_vulnix = pd.DataFrame()
         extra_opts = "-C --json"
         if buildtime:
@@ -123,12 +119,12 @@ class VulnScan:
 
     def _parse_grype(self, json_str):
         vulnerabilities = json.loads(json_str)
-        _LOG.log(LOG_SPAM, json.dumps(vulnerabilities, indent=2))
+        LOG.log(LOG_SPAM, json.dumps(vulnerabilities, indent=2))
         grype_vulns_dict = {}
         setcol = grype_vulns_dict.setdefault
         for vuln in vulnerabilities["matches"]:
             if not vuln["artifact"]["version"]:
-                _LOG.log(
+                LOG.log(
                     LOG_SPAM,
                     "'%s' missing version information: skipping",
                     vuln["artifact"]["name"],
@@ -140,15 +136,15 @@ class VulnScan:
             setcol("scanner", []).append("grype")
         self.df_grype = pd.DataFrame.from_dict(grype_vulns_dict)
         if not self.df_grype.empty:
-            _LOG.debug("Grype found vulnerabilities")
+            LOG.debug("Grype found vulnerabilities")
             self.df_grype.replace(np.nan, "", regex=True, inplace=True)
             self.df_grype.drop_duplicates(keep="first", inplace=True)
-            if _LOG.level <= logging.DEBUG:
+            if LOG.level <= logging.DEBUG:
                 df_to_csv_file(self.df_grype, "df_grype.csv")
 
     def scan_grype(self, sbom_path):
         """Run grype scan using the SBOM at sbom_path as input"""
-        _LOG.info("Running grype scan")
+        LOG.info("Running grype scan")
         cmd = ["grype", f"sbom:{sbom_path}", "--add-cpes-if-none", "--output", "json"]
         ret = exec_cmd(cmd)
         if ret:
@@ -161,14 +157,14 @@ class VulnScan:
             self.df_osv.replace(np.nan, "", regex=True, inplace=True)
             self.df_osv.drop_duplicates(keep="first", inplace=True)
             self.df_osv["modified"] = pd.to_datetime(self.df_osv["modified"])
-            _LOG.log(LOG_SPAM, "osv data:\n%s", self.df_osv.to_markdown())
-            _LOG.debug("OSV scan found vulnerabilities")
-            if _LOG.level <= logging.DEBUG:
+            LOG.log(LOG_SPAM, "osv data:\n%s", self.df_osv.to_markdown())
+            LOG.debug("OSV scan found vulnerabilities")
+            if LOG.level <= logging.DEBUG:
                 df_to_csv_file(self.df_osv, "df_osv.csv")
 
     def scan_osv(self, sbom_path):
         """Run osv scan using the SBOM at sbom_path as input"""
-        _LOG.info("Running OSV scan")
+        LOG.info("Running OSV scan")
         osv = OSV()
         osv.query_vulns(sbom_path)
         df_osv = osv.to_dataframe()
@@ -178,11 +174,11 @@ class VulnScan:
         # Concatenate vulnerability data from different scanners
         df = pd.concat([self.df_vulnix, self.df_grype, self.df_osv], ignore_index=True)
         if df.empty:
-            _LOG.debug("No scanners reported any findings")
+            LOG.debug("No scanners reported any findings")
             return
         # Add column 'sortcol'
         df["sortcol"] = df.apply(_vuln_sortcol, axis=1)
-        if _LOG.level <= logging.DEBUG:
+        if LOG.level <= logging.DEBUG:
             df_to_csv_file(df, "df_report_raw.csv")
 
         # Following steps summarize the raw data to produce df_report
@@ -220,7 +216,7 @@ class VulnScan:
         self.df_report = df[report_cols]
 
     def _filter_patched(self, sbom_csv):
-        _LOG.info("Filtering patched vulnerabilities")
+        LOG.info("Filtering patched vulnerabilities")
         df_sbom_csv = df_from_csv_file(sbom_csv)
         df = pd.merge(
             left=self.df_report,
@@ -239,11 +235,11 @@ class VulnScan:
         """Generate the vulnerability report: csv file and a table to console"""
         self._generate_report()
         if self.df_report is None or self.df_report.empty:
-            _LOG.info("No vulnerabilities found")
+            LOG.info("No vulnerabilities found")
             return
         if sbom_csv:
             self._filter_patched(sbom_csv)
-        _LOG.debug("Writing report")
+        LOG.debug("Writing report")
 
         # Console report
         # Copy the df to only make changes to the console report
@@ -262,7 +258,7 @@ class VulnScan:
         else:
             end = f"'{target}' or some of its runtime dependencies"
         header = f"Potential vulnerabilities impacting {end}:"
-        _LOG.info("Console report\n\n%s\n\n%s\n", header, table)
+        LOG.info("Console report\n\n%s\n\n%s\n", header, table)
 
         # File report
         df_to_csv_file(self.df_report, name)
@@ -305,13 +301,13 @@ def _is_patched(row):
     if row.vuln_id and str(row.vuln_id).lower() in str(row.patches).lower():
         patches = row.patches.split()
         patch = [p for p in patches if str(row.vuln_id).lower() in str(p).lower()]
-        _LOG.info("%s for '%s' is patched with: %s", row.vuln_id, row.package, patch)
+        LOG.info("%s for '%s' is patched with: %s", row.vuln_id, row.package, patch)
         return True
     return False
 
 
 def _generate_sbom(target_path, buildtime=False):
-    _LOG.info("Generating SBOM for target '%s'", target_path)
+    LOG.info("Generating SBOM for target '%s'", target_path)
     runtime = True
     sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
     prefix = "vulnxscan_"
@@ -342,7 +338,7 @@ def exit_unless_command_exists(name):
     """Check if `name` is an executable in PATH"""
     name_is_in_path = which(name) is not None
     if not name_is_in_path:
-        _LOG.fatal("command '%s' is not in PATH", name)
+        LOG.fatal("command '%s' is not in PATH", name)
         sys.exit(1)
 
 
@@ -352,9 +348,9 @@ def exit_unless_command_exists(name):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.TARGET.exists():
-        _LOG.fatal("Invalid path: '%s'", args.TARGET)
+        LOG.fatal("Invalid path: '%s'", args.TARGET)
         sys.exit(1)
 
     # Fail early if following commands are not in path
@@ -366,15 +362,15 @@ def main():
     scanner = VulnScan()
     if args.sbom:
         if not _is_json(target_path_abs):
-            _LOG.fatal("Specified sbom target is not a json file: '%s'", target_path)
+            LOG.fatal("Specified sbom target is not a json file: '%s'", target_path)
             sys.exit(0)
         sbom_cdx_path = target_path_abs
         sbom_csv_path = None
     else:
         exit_unless_nix_artifact(target_path_abs)
         sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
-        _LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
-        _LOG.info("Using csv SBOM '%s'", sbom_csv_path)
+        LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
+        LOG.info("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
     scanner.scan_grype(sbom_cdx_path)
     scanner.scan_osv(sbom_cdx_path)

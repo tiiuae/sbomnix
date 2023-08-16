@@ -16,17 +16,13 @@ import pathlib
 import json
 import pandas as pd
 from sbomnix.utils import (
-    setup_logging,
-    LOGGER_NAME,
+    LOG,
     LOG_SPAM,
+    set_log_verbosity,
     df_to_csv_file,
     df_from_csv_file,
     regex_match,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -52,7 +48,7 @@ def getargs():
 
 
 def _parse_sbom(path):
-    _LOG.info("Loading sbom data from '%s'", path)
+    LOG.info("Loading sbom data from '%s'", path)
     with path.open(encoding="utf-8") as inf:
         json_dict = json.loads(inf.read())
 
@@ -62,9 +58,9 @@ def _parse_sbom(path):
             if "sbom_type" in prop_dict["name"]:
                 sbom_type = prop_dict["value"]
         if not sbom_type:
-            _LOG.fatal("Failed to find sbom_type")
+            LOG.fatal("Failed to find sbom_type")
             sys.exit(1)
-        _LOG.debug(sbom_type)
+        LOG.debug(sbom_type)
 
         # Parse components
         components = json_dict["components"] + [json_dict["metadata"]["component"]]
@@ -103,13 +99,13 @@ def _parse_sbom(path):
             right_on=["ref"],
         )
         df_parsed.fillna("", inplace=True)
-        if _LOG.level <= logging.DEBUG:
+        if LOG.level <= logging.DEBUG:
             df_to_csv_file(df_parsed, "df_sbom_parsed.csv")
         return df_parsed, sbom_type
 
 
 def _parse_graph(path):
-    _LOG.info("Loading graph data from '%s'", path)
+    LOG.info("Loading graph data from '%s'", path)
     df_graph = df_from_csv_file(path)
     df_graph.fillna("", inplace=True)
     df_graph = df_graph.astype(str)
@@ -139,22 +135,22 @@ def sbom_internal_checks(df_sbom):
     df = df_sbom[df_sbom["output_path"].isna()]
     if not df.empty:
         missing = df["ref"].to_list()
-        _LOG.fatal("sbom component missing: %s", missing)
+        LOG.fatal("sbom component missing: %s", missing)
         passed = False
     # Empty "ref" indicates component is listed in the sbom
     # "components" section, but missing from the "dependencies"
     df = df_sbom[df_sbom["ref"].isna()]
     if not df.empty:
         missing = df["drv_path"].to_list()
-        _LOG.fatal("sbom dependency missing for component: %s", missing)
+        LOG.fatal("sbom dependency missing for component: %s", missing)
         passed = False
     return passed
 
 
 def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     """Compare dependencies in df_sbom and df_braph"""
-    _LOG.debug("sbom_type=%s", sbom_type)
-    _LOG.debug("graph_type=%s", graph_type)
+    LOG.debug("sbom_type=%s", sbom_type)
+    LOG.debug("graph_type=%s", graph_type)
     deps_only_in_sbom = set()
     deps_only_in_graph = set()
     df_sbom = df_sbom.explode("output_path")
@@ -163,35 +159,35 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     if (graph_type == "runtime" and sbom_type != "runtime_only") or (
         graph_type == "buildtime" and sbom_type != "buildtime_only"
     ):
-        _LOG.fatal("Unable to compare: graph='%s' vs sbom='%s'", graph_type, sbom_type)
+        LOG.fatal("Unable to compare: graph='%s' vs sbom='%s'", graph_type, sbom_type)
         return False
     if graph_type == "runtime":
-        _LOG.info("Comparing runtime dependencies")
+        LOG.info("Comparing runtime dependencies")
         for out_path in df_sbom["output_path"].unique().tolist():
-            _LOG.log(LOG_SPAM, "target: %s", out_path)
+            LOG.log(LOG_SPAM, "target: %s", out_path)
             df_sbom_deps = df_sbom[df_sbom["output_path"] == out_path]
             sbom_deps = list(filter(None, df_sbom_deps["depends_on"].unique().tolist()))
-            _LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
+            LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
             df_graph_deps = df_graph[df_graph["target_path"] == out_path]
             # Map graph src_path to sbom paths
             dfr = df_sbom.merge(
                 df_graph_deps, how="inner", left_on="output_path", right_on="src_path"
             ).loc[:, ["drv_path"]]
             graph_deps = list(filter(None, dfr["drv_path"].unique().tolist()))
-            _LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
+            LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
             deps_only_in_sbom.update(set(sbom_deps) - set(graph_deps))
             deps_only_in_graph.update(set(graph_deps) - set(sbom_deps))
 
     if graph_type == "buildtime":
-        _LOG.info("Comparing buildtime dependencies")
+        LOG.info("Comparing buildtime dependencies")
         for drv_path in df_sbom["drv_path"].unique().tolist():
-            _LOG.log(LOG_SPAM, "target: %s", drv_path)
+            LOG.log(LOG_SPAM, "target: %s", drv_path)
             df_sbom_deps = df_sbom[df_sbom["drv_path"] == drv_path]
             sbom_deps = list(filter(None, df_sbom_deps["depends_on"].unique().tolist()))
-            _LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
+            LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
             dfr = df_graph[df_graph["target_path"] == drv_path]
             graph_deps = list(filter(None, dfr["src_path"].unique().tolist()))
-            _LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
+            LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
             deps_only_in_sbom.update(set(sbom_deps) - set(graph_deps))
             deps_only_in_graph.update(set(graph_deps) - set(sbom_deps))
 
@@ -232,13 +228,13 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     passed = True
     if deps_only_in_sbom:
         passed = False
-        _LOG.fatal("Dependencies only in sbom:")
+        LOG.fatal("Dependencies only in sbom:")
         for dep in sorted(deps_only_in_sbom):
             print(f"  {dep}")
 
     if deps_only_in_graph:
         passed = False
-        _LOG.fatal("Dependencies only in graph:")
+        LOG.fatal("Dependencies only in graph:")
         for dep in sorted(deps_only_in_graph):
             print(f"  {dep}")
 
@@ -251,12 +247,12 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.sbom.exists():
-        _LOG.fatal("Invalid path: '%s'", args.sbom)
+        LOG.fatal("Invalid path: '%s'", args.sbom)
         sys.exit(1)
     if not args.graph.exists():
-        _LOG.fatal("Invalid path: '%s'", args.graph)
+        LOG.fatal("Invalid path: '%s'", args.graph)
         sys.exit(1)
     df_sbom, sbom_type = _parse_sbom(args.sbom)
     df_graph, graph_type = _parse_graph(args.graph)

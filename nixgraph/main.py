@@ -7,21 +7,16 @@
 """ Python script to query and visualize nix package dependencies """
 
 import argparse
-import logging
 import pathlib
 import sys
 from nixgraph.graph import NixDependencies
 from sbomnix.utils import (
-    setup_logging,
+    LOG,
+    set_log_verbosity,
     get_py_pkg_version,
     check_positive,
-    LOGGER_NAME,
     exit_unless_nix_artifact,
 )
-
-###############################################################################
-
-_LOG = logging.getLogger(LOGGER_NAME)
 
 ###############################################################################
 
@@ -87,9 +82,9 @@ def getargs():
 def main():
     """main entry point"""
     args = getargs()
-    setup_logging(args.verbose)
+    set_log_verbosity(args.verbose)
     if not args.NIX_PATH.exists():
-        _LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
+        LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
         sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
     exit_unless_nix_artifact(target_path)
