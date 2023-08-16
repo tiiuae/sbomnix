@@ -150,12 +150,17 @@ def get_py_pkg_version(package="sbomnix"):
 
 def number_distance(n1, n2):
     """
-    Return float value between [0.0,1.0] indicating the closeness
-    of the given two numbers.
+    Return float value between [0.0,1.0] indicating the distance
+    between two non-negative numbers.
     Returns 1.0 if the two numbers are equal.
-    Returns 0.0 if either argument is not a number.
+    Returns 0.0 if either argument is not a non-negative number.
     """
-    if not isinstance(n1, (float, int)) or not isinstance(n2, (float, int)):
+    if (
+        not isinstance(n1, (float, int))
+        or not isinstance(n2, (float, int))
+        or n1 < 0
+        or n2 < 0
+    ):
         return 0.0
     min_n = min(n1, n2)
     max_n = max(n1, n2)
