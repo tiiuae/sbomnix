@@ -42,11 +42,13 @@ pkgs.mkShell rec {
     pythonPackages.requests
     pythonPackages.requests-cache
     pythonPackages.tabulate
-    pythonPackages.wheel
     pythonPackages.venvShellHook
+    pythonPackages.wheel
   ];
   venvDir = "venv";
   postShellHook = ''
+    source $PWD/scripts/env.sh
+
     # https://github.com/NixOS/nix/issues/1009:
     export TMPDIR="/tmp"
     
