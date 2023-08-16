@@ -29,7 +29,7 @@ fi
 
 REPOROOTDIR=$(cd "$MYDIR/.." 2>/dev/null && pwd || echo "$MYDIR")
 if [ -n "$PYTHONPATH" ]; then
-    PYTHONPATH=$PYTHONPATH:$REPOROOTDIR
+    PYTHONPATH=$REPOROOTDIR:$PYTHONPATH
 else
     PYTHONPATH=$REPOROOTDIR
 fi
