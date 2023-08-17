@@ -126,9 +126,17 @@ def exec_cmd(cmd, raise_on_error=True, return_error=False):
         return None
 
 
-def exit_unless_nix_artifact(path):
-    """Exit with error if `path` is not a nix artifact"""
-    cmd = ["nix-store", "-q", path]
+def exit_unless_nix_artifact(path, force_realise=False):
+    """
+    Exit with error if `path` is not a nix artifact. If `force_realize` is True,
+    run the nix-store-query command with `--force-realize` realising the `path`
+    argument before running query.
+    """
+    LOG.debug("force_realize: %s", force_realise)
+    if force_realise:
+        cmd = ["nix-store", "-qf", path]
+    else:
+        cmd = ["nix-store", "-q", path]
     try:
         exec_cmd(cmd)
         return

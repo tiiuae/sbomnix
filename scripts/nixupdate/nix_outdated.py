@@ -62,10 +62,7 @@ def getargs():
         "that would have an update in the package's upstream repository."
     )
     parser.add_argument("--local", help=helps, action="store_true")
-    helps = (
-        "Include target's buildtime dependencies to the scan. "
-        "By default, only runtime dependencies are considered."
-    )
+    helps = "Scan target buildtime instead of runtime dependencies."
     parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = "Path to output file (default: ./nix_outdated.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="nix_outdated.csv")
@@ -77,9 +74,8 @@ def getargs():
 ################################################################################
 
 
-def _generate_sbom(target_path, buildtime=False):
+def _generate_sbom(target_path, runtime=True, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    runtime = True
     sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
     prefix = "nixdeps_"
     suffix = ".cdx.json"
@@ -254,9 +250,12 @@ def main():
     args = getargs()
     set_log_verbosity(args.verbose)
     target_path_abs = args.NIXPATH.resolve().as_posix()
-    exit_unless_nix_artifact(target_path_abs)
+    runtime = args.buildtime is False
+    dtype = "runtime" if runtime else "buildtime"
+    LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path_abs)
+    exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
 
-    sbom_path = _generate_sbom(target_path_abs, args.buildtime)
+    sbom_path = _generate_sbom(target_path_abs, runtime, args.buildtime)
     LOG.info("Using SBOM '%s'", sbom_path)
 
     repology_out_path = _run_repology_cli(sbom_path)

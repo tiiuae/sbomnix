@@ -61,10 +61,7 @@ def getargs():
         "not enabled by default."
     )
     parser.add_argument("--pr", help=helps, action="store_true")
-    helps = (
-        "Include target's buildtime dependencies to the scan. "
-        "By default, only runtime dependencies are considered."
-    )
+    helps = "Scan target buildtime instead of runtime dependencies."
     parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = "Path to output file (default: ./nix_secupdates.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="nix_secupdates.csv")
@@ -400,7 +397,11 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    exit_unless_nix_artifact(args.NIXPATH.resolve().as_posix())
+    runtime = args.buildtime is False
+    nix_path = args.NIXPATH.resolve().as_posix()
+    dtype = "runtime" if runtime else "buildtime"
+    LOG.info("Checking %s dependencies referenced by '%s'", dtype, nix_path)
+    exit_unless_nix_artifact(nix_path, runtime)
     df = _find_secupdates(args)
     _report(df)
     df_to_csv_file(df, args.out)

@@ -8,7 +8,6 @@
 
 import argparse
 import pathlib
-import sys
 from sbomnix.sbomdb import SbomDb
 from sbomnix.utils import (
     LOG,
@@ -81,19 +80,15 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    if not args.NIX_PATH.exists():
-        LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
-        sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
-    exit_unless_nix_artifact(target_path)
+    runtime = args.type in ("runtime", "both")
+    buildtime = args.type in ("buildtime", "both")
+    exit_unless_nix_artifact(target_path, force_realise=runtime)
     if not args.meta:
         LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "
             "license information (see '--help' for more details)"
         )
-    runtime = args.type in ("runtime", "both")
-    buildtime = args.type in ("buildtime", "both")
-
     sbomdb = SbomDb(target_path, runtime, buildtime, args.meta, args.depth)
     if args.cdx:
         sbomdb.to_cdx(args.cdx)

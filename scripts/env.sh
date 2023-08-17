@@ -35,7 +35,10 @@ else
 fi
 # Remove duplicates from the PYTHONPATH, preserving order
 PYTHONPATH=$(remove_dups "$PYTHONPATH")
-echo "export PYTHONPATH=$PYTHONPATH"
 export PYTHONPATH="$PYTHONPATH"
+# Add all subdirs of REPOROOTDIR/scripts/ to PATH
+for d in "$REPOROOTDIR/scripts/"*; do if [ -d "$d" ]; then PATH="$d:$PATH"; fi; done
+PATH=$(remove_dups "$PATH")
+export PATH="$PATH"
 
 ################################################################################

@@ -50,8 +50,8 @@ def getargs():
     helps = "Path to output file (default: ./vulns.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="vulns.csv")
     helps = (
-        "Include target's buildtime dependencies to the scan. "
-        "By default, only runtime dependencies are scanned."
+        "Scan target buildtime instead of runtime dependencies. This option "
+        "has no impact if the scan target is SBOM (ref: --sbom)."
     )
     parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = (
@@ -109,12 +109,16 @@ class VulnScan:
         if buildtime:
             extra_opts = "--json"
         cmd = ["vulnix", target_path] + extra_opts.split()
-        # vulnix exit status is non-zero if it found vulnerabilities,
-        # therefore, we need to set the raise_on_error=False and
-        # return_error=True to be able to read the command's stdout on
-        # failure
+        # vulnix exit status is non-zero if it found vulnerabilities.
+        # Therefore, we need to set the raise_on_error=False and
+        # return_error=True to be able to read the vulnerabilities
+        # from vulnix stdout even if the exit status indicates failure.
         ret = exec_cmd(cmd, raise_on_error=False, return_error=True)
-        if ret and hasattr(ret, "stdout") and ret.stdout:
+        if ret and hasattr(ret, "stderr") and ret.stderr:
+            LOG.warning(ret)
+            LOG.warning(ret.stderr)
+            self.df_vulnix = None
+        elif ret and hasattr(ret, "stdout") and ret.stdout:
             self._parse_vulnix(ret.stdout)
 
     def _parse_grype(self, json_str):
@@ -156,7 +160,9 @@ class VulnScan:
             self.df_osv["scanner"] = "osv"
             self.df_osv.replace(np.nan, "", regex=True, inplace=True)
             self.df_osv.drop_duplicates(keep="first", inplace=True)
-            self.df_osv["modified"] = pd.to_datetime(self.df_osv["modified"])
+            self.df_osv["modified"] = pd.to_datetime(
+                self.df_osv["modified"], format="%Y-%m-%d", exact=False
+            )
             LOG.log(LOG_SPAM, "osv data:\n%s", self.df_osv.to_markdown())
             LOG.debug("OSV scan found vulnerabilities")
             if LOG.level <= logging.DEBUG:
@@ -306,9 +312,8 @@ def _is_patched(row):
     return False
 
 
-def _generate_sbom(target_path, buildtime=False):
+def _generate_sbom(target_path, runtime=True, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    runtime = True
     sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
     prefix = "vulnxscan_"
     cdx_suffix = ".json"
@@ -349,9 +354,6 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    if not args.TARGET.exists():
-        LOG.fatal("Invalid path: '%s'", args.TARGET)
-        sys.exit(1)
 
     # Fail early if following commands are not in path
     exit_unless_command_exists("grype")
@@ -367,8 +369,11 @@ def main():
         sbom_cdx_path = target_path_abs
         sbom_csv_path = None
     else:
-        exit_unless_nix_artifact(target_path_abs)
-        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
+        runtime = args.buildtime is False
+        exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
+        sbom_cdx_path, sbom_csv_path = _generate_sbom(
+            target_path_abs, runtime, args.buildtime
+        )
         LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
         LOG.info("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
