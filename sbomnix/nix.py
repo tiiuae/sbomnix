@@ -97,11 +97,6 @@ def find_deriver(path):
     LOG.debug(path)
     if path.endswith(".drv"):
         return path
-    # Deriver from QueryPathInfo
-    qpi_deriver = exec_cmd(["nix-store", "-qd", path]).strip()
-    LOG.debug("qpi_deriver: %s", qpi_deriver)
-    if qpi_deriver and qpi_deriver != "unknown-deriver" and os.path.exists(qpi_deriver):
-        return qpi_deriver
     # Deriver from QueryValidDerivers
     ret = exec_cmd(["nix", "show-derivation", path], raise_on_error=False)
     if not ret:
@@ -115,6 +110,11 @@ def find_deriver(path):
     LOG.debug("qvd_deriver: %s", qvd_deriver)
     if qvd_deriver and os.path.exists(qvd_deriver):
         return qvd_deriver
+    # Deriver from QueryPathInfo
+    qpi_deriver = exec_cmd(["nix-store", "-qd", path]).strip()
+    LOG.debug("qpi_deriver: %s", qpi_deriver)
+    if qpi_deriver and qpi_deriver != "unknown-deriver" and os.path.exists(qpi_deriver):
+        return qpi_deriver
 
     error = ""
     if qpi_deriver and qpi_deriver != "unknown-deriver":

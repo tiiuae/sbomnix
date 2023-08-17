@@ -8,10 +8,8 @@
 
 import argparse
 import pathlib
-import sys
 from nixgraph.graph import NixDependencies
 from sbomnix.utils import (
-    LOG,
     set_log_verbosity,
     get_py_pkg_version,
     check_positive,
@@ -83,11 +81,9 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    if not args.NIX_PATH.exists():
-        LOG.fatal("Invalid path: '%s'", args.NIX_PATH)
-        sys.exit(1)
     target_path = args.NIX_PATH.resolve().as_posix()
-    exit_unless_nix_artifact(target_path)
+    runtime = args.buildtime is False
+    exit_unless_nix_artifact(target_path, force_realise=runtime)
     deps = NixDependencies(target_path, args.buildtime)
     deps.graph(args)
 
