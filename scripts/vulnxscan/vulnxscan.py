@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, import-error, too-many-arguments
+# pylint: disable=singleton-comparison
 
 """ Demonstrate vulnerability scan with vulnix, grype, and osv.py"""
 
@@ -30,6 +31,9 @@ from sbomnix.utils import (
     df_to_csv_file,
     df_from_csv_file,
     exit_unless_nix_artifact,
+    load_vuln_whitelist,
+    df_apply_vuln_whitelist,
+    df_drop_whitelisted,
 )
 
 ###############################################################################
@@ -68,6 +72,12 @@ def getargs():
         "ignored since target pacakges will be read from the given SBOM."
     )
     parser.add_argument("--sbom", help=helps, action="store_true")
+    helps = (
+        "Path to whitelist file. Vulnerabilities that match any whitelisted "
+        "entries will not be included to the console output and are annotated "
+        "accordingly in the output csv."
+    )
+    parser.add_argument("--whitelist", help=helps, type=pathlib.Path)
     return parser.parse_args()
 
 
@@ -237,7 +247,15 @@ class VulnScan:
         df = df[~df["patched"]]
         self.df_report = df[self.df_report.columns.values]
 
-    def report(self, name, target, sbom_csv, buildtime, is_sbom=False):
+    def _apply_whitelist(self, whitelist_csv):
+        if whitelist_csv is None:
+            return
+        df_whitelist = load_vuln_whitelist(whitelist_csv)
+        if df_whitelist is None:
+            return
+        df_apply_vuln_whitelist(df_whitelist, self.df_report)
+
+    def report(self, args, sbom_csv):
         """Generate the vulnerability report: csv file and a table to console"""
         self._generate_report()
         if self.df_report is None or self.df_report.empty:
@@ -245,6 +263,9 @@ class VulnScan:
             return
         if sbom_csv:
             self._filter_patched(sbom_csv)
+        if args.whitelist:
+            LOG.info("Applying whitelist '%s'", args.whitelist)
+            self._apply_whitelist(args.whitelist)
         LOG.debug("Writing report")
 
         # Console report
@@ -252,22 +273,24 @@ class VulnScan:
         df = self.df_report.copy()
         # Don't print the "sortcol"
         df = df.drop("sortcol", axis=1)
+        # Don't print whitelisted entries to the console report
+        df = df_drop_whitelisted(df)
         # Truncate
         df["version"] = df["version"].str.slice(0, 16)
         table = tabulate(
             df, headers="keys", tablefmt="orgtbl", numalign="center", showindex=False
         )
-        if is_sbom:
-            end = f"components in '{target}'"
-        elif buildtime:
-            end = f"'{target}' or some of its runtime or buildtime dependencies"
+        if args.sbom:
+            end = f"components in '{args.TARGET}'"
+        elif args.buildtime:
+            end = f"'{args.TARGET}' or some of its runtime or buildtime dependencies"
         else:
-            end = f"'{target}' or some of its runtime dependencies"
+            end = f"'{args.TARGET}' or some of its runtime dependencies"
         header = f"Potential vulnerabilities impacting {end}:"
         LOG.info("Console report\n\n%s\n\n%s\n", header, table)
 
         # File report
-        df_to_csv_file(self.df_report, name)
+        df_to_csv_file(self.df_report, args.out)
 
 
 ################################################################################
@@ -359,12 +382,13 @@ def main():
     exit_unless_command_exists("grype")
     exit_unless_command_exists("vulnix")
 
-    target_path = args.TARGET.as_posix()
     target_path_abs = args.TARGET.resolve().as_posix()
     scanner = VulnScan()
     if args.sbom:
         if not _is_json(target_path_abs):
-            LOG.fatal("Specified sbom target is not a json file: '%s'", target_path)
+            LOG.fatal(
+                "Specified sbom target is not a json file: '%s'", str(args.TARGET)
+            )
             sys.exit(0)
         sbom_cdx_path = target_path_abs
         sbom_csv_path = None
@@ -379,7 +403,7 @@ def main():
         scanner.scan_vulnix(target_path_abs, args.buildtime)
     scanner.scan_grype(sbom_cdx_path)
     scanner.scan_osv(sbom_cdx_path)
-    scanner.report(args.out, target_path, sbom_csv_path, args.buildtime, args.sbom)
+    scanner.report(args, sbom_csv_path)
 
 
 ################################################################################

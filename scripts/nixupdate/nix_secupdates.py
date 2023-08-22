@@ -35,6 +35,7 @@ from sbomnix.utils import (
     parse_version,
     version_distance,
     exit_unless_nix_artifact,
+    df_drop_whitelisted,
 )
 
 ###############################################################################
@@ -63,6 +64,12 @@ def getargs():
     parser.add_argument("--pr", help=helps, action="store_true")
     helps = "Scan target buildtime instead of runtime dependencies."
     parser.add_argument("--buildtime", help=helps, action="store_true")
+    helps = (
+        "Path to whitelist file. Vulnerabilities that match any whitelisted "
+        "entries will not be included to the console output and are annotated "
+        "accordingly in the output csv."
+    )
+    parser.add_argument("--whitelist", help=helps, type=pathlib.Path)
     helps = "Path to output file (default: ./nix_secupdates.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="nix_secupdates.csv")
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
@@ -82,17 +89,24 @@ _repology_nix_repo = "nix_unstable"
 _session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=3600)
 
 
-def _run_vulnxscan(target_path, buildtime=False):
+def _run_vulnxscan(args):
+    target_path = args.NIXPATH.resolve().as_posix()
     LOG.info("Running vulnxscan for target '%s'", target_path)
     prefix = "secupdates_vulnxscan_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        extra_args = "--buildtime" if buildtime else ""
+        extra_args = "--buildtime" if args.buildtime else ""
+        if args.whitelist is not None:
+            whitelist_path = pathlib.Path(args.whitelist)
+            if whitelist_path.exists():
+                LOG.info("Using whitelist '%s'", args.whitelist)
+                extra_args += f" --whitelist {str(whitelist_path)}"
         cmd = f"vulnxscan.py {extra_args} --out={f.name} {target_path}"
         exec_cmd(cmd.split())
         try:
             df = df_from_csv_file(f.name)
             LOG.info("Using vulnxscan result: '%s'", f.name)
+            df = df_drop_whitelisted(df)
         except pd.errors.EmptyDataError:
             LOG.info("No vulnerabilities found")
             sys.exit(0)
@@ -223,9 +237,8 @@ def _query_repology_versions(df_vuln_pkgs):
 
 
 def _find_secupdates(args):
-    target_path_abs = args.NIXPATH.resolve().as_posix()
     # Find vulnerable packages
-    df_vulnx = _run_vulnxscan(target_path_abs, args.buildtime)
+    df_vulnx = _run_vulnxscan(args)
     uids = ["vuln_id", "package", "version", "url", "sortcol"]
     df_vuln_pkgs = df_vulnx.groupby(by=uids).size().reset_index(name="count")
     LOG.debug("Number of vulnerable packages: %s", df_vuln_pkgs.shape[0])

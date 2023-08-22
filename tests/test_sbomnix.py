@@ -17,6 +17,12 @@ import pandas as pd
 import jsonschema
 import pytest
 
+from sbomnix.utils import (
+    load_vuln_whitelist,
+    df_apply_vuln_whitelist,
+    df_from_csv_file,
+)
+
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 REPOROOT = MYDIR / ".."
 SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
@@ -598,6 +604,42 @@ def test_nix_secupdate_result():
         TEST_NIX_RESULT,
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
+
+
+################################################################################
+
+
+def test_whitelist():
+    """Test applying whitelist to vulnerability csv file"""
+    # Load test files
+    whitelist_csv = MYDIR / "resources" / "whitelist.csv"
+    assert whitelist_csv.exists()
+    vulns_csv = MYDIR / "resources" / "vulns.csv"
+    assert vulns_csv.exists()
+    df_whitelist = load_vuln_whitelist(whitelist_csv)
+    assert df_whitelist is not None
+    df_vulns = df_from_csv_file(vulns_csv)
+    assert df_vulns is not None
+    print("df_vulns:")
+    print(df_vulns.info())
+    print(df_vulns)
+    print("whitelist:")
+    print(df_whitelist)
+    # Copy df_vulns, including only the column 'vuln_id'
+    df_vuln_id_only = df_vulns.copy()[["vuln_id"]]
+    print("df_vuln_id_only:")
+    print(df_vuln_id_only)
+    # Apply whitelist, this changes df_vuln_id_only in-place
+    # by adding columns "whitelist" and "whitelist_comment"
+    df_apply_vuln_whitelist(df_whitelist, df_vuln_id_only)
+    print("df_vuln_id_only after whitelist apply")
+    print(df_vuln_id_only.info())
+    print(df_vuln_id_only)
+    # After applying whitelist, the resulting dataframe should match df_vulns
+    df_diff = df_difference(df_vulns.astype(str), df_vuln_id_only.astype(str))
+    print("diff")
+    print(df_diff)
+    assert df_diff.empty, df_to_string(df_diff)
 
 
 ################################################################################

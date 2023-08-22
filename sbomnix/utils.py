@@ -105,6 +105,66 @@ def df_log(df, loglevel, tablefmt="presto"):
         LOG.log(loglevel, "\n%s\n", table)
 
 
+def load_vuln_whitelist(whitelist_csv):
+    """
+    Load vulnerability whitelist from whitelist_csv. Returns None
+    if whitelist_csv is not a valid vulnerability whitelist. Otherwise
+    returns whitelist_csv as dataframe
+    """
+    try:
+        df = df_from_csv_file(whitelist_csv)
+        # Whitelist must have the following columns
+        if not set(["vuln_id", "comment"]).issubset(df.columns):
+            LOG.warning("Whitelist csv missing required columns")
+            return None
+        return df
+    except pd.errors.ParserError:
+        return None
+
+
+def df_apply_vuln_whitelist(df_whitelist, df_vulns):
+    """
+    Apply df_whitelist to vulnerabilities in df_vulns, changing df_vulns
+    in-place.
+    Adds columns "whitelist" and "whitelist_comment" to df_vulns based
+    on whitelisting regular expressions in df_whitelist["vuln_id"].
+    For each entry in df_vulns, df_vulns["whitelist"] is set to True
+    if any regular expression in df_whitelist["vuln_id"]
+    matches df_vulns["vuln_id"]. For each match, df_vulns["whitelist_comment"]
+    is set to df_whitelist["comment"] of the first-matched entry in
+    df_whitelist.
+    """
+    # Add default values to whitelist columns
+    df_vulns["whitelist"] = False
+    df_vulns["whitelist_comment"] = ""
+    # Iterate rows in df_whitelist in reverse order
+    df_whitelist_rev = df_whitelist[::-1]
+    for whitelist_entry in df_whitelist_rev.itertuples():
+        LOG.log(LOG_SPAM, "whitelist_entry: %s", whitelist_entry)
+        regex = str(whitelist_entry.vuln_id).strip()
+        LOG.log(LOG_SPAM, "whitelist regex: %s", regex)
+        df_matches = df_vulns["vuln_id"].str.fullmatch(regex)
+        df_vulns.loc[df_matches, "whitelist"] = True
+        df_vulns.loc[df_matches, "whitelist_comment"] = whitelist_entry.comment
+        LOG.log(LOG_SPAM, "matches %s vulns", len(df_vulns[df_matches]))
+        df_log(df_vulns[df_matches], LOG_SPAM)
+
+
+def df_drop_whitelisted(df):
+    """
+    Drop whitelisted vulnerabilities from `df` as well as
+    the related columns.
+    """
+    if "whitelist" in df.columns:
+        # Convert possible string to boolean
+        df["whitelist"] = df["whitelist"].replace({"True": True, "False": False})
+        df = df[~df["whitelist"]]
+        df = df.drop("whitelist", axis=1)
+    if "whitelist_comment" in df.columns:
+        df = df.drop("whitelist_comment", axis=1)
+    return df
+
+
 def exec_cmd(cmd, raise_on_error=True, return_error=False):
     """Run shell command cmd"""
     command_str = " ".join(cmd)
