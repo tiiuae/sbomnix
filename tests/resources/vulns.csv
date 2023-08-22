@@ -1,0 +1,12 @@
+"vuln_id","whitelist","whitelist_comment","package"
+"CVE-2023-29383","True","match CVE-2023-29383",
+"CVE-2023-3817","True","match CVE-2023.*",
+"OSV-2023-505","True","match OSV-2023-505",
+"CVE-2022-28321","False",,
+"MAL-2022-4301","False",,
+"OSV-2022-183","True","match .*2022.* && pname == binutils","binutils"
+"CVE-2021-4217","True","match .*2021.*",
+"OSV-2021-777","True","match .*2021.*",
+"CVE-2019-20633","False",,
+"CVE-2019-6293","False",,
+"CVE-2016-2781","False",,
