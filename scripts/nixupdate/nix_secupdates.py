@@ -15,6 +15,7 @@ import os
 import sys
 import pathlib
 import json
+import time
 import urllib.parse
 from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
@@ -86,7 +87,7 @@ _repology_cli_dfs = {}
 _repology_nix_repo = "nix_unstable"
 # Rate-limited and cached session. For github api rate limits, see:
 # https://docs.github.com/en/rest/search?apiVersion=latest#rate-limit
-_session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=3600)
+_session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=7200)
 
 
 def _run_vulnxscan(args):
@@ -394,11 +395,22 @@ def _report(df_vulns):
     )
 
 
-def _github_query(query_str):
-    query_str = urllib.parse.quote(query_str, safe=":/")
-    query = f"https://api.github.com/search/issues?q={query_str}"
+def _github_query(query_str, delay=60):
+    query_str_quoted = urllib.parse.quote(query_str, safe=":/")
+    query = f"https://api.github.com/search/issues?q={query_str_quoted}"
     LOG.debug("GET: %s", query)
     resp = _session.get(query)
+    if not resp.ok and "rate limit exceeded" in resp.text:
+        max_delay = 60
+        if delay > max_delay:
+            LOG.warning("Rate limit exceeded requesting %s", query)
+            ret = json.loads("{}")
+            ret["items"] = []
+            return ret
+        LOG.debug("Sleeping %s seconds before re-requesting", delay)
+        time.sleep(delay)
+        LOG.debug("Re-requesting")
+        return _github_query(query_str, delay * 2)
     resp.raise_for_status()
     resp_json = json.loads(resp.text)
     LOG.log(LOG_SPAM, "total_count=%s", resp_json["total_count"])
