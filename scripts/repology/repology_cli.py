@@ -125,8 +125,8 @@ class Repology:
         # - Limit non-cached requests to 1 request per second
         # - Identify this client with custom user-agent
         # In addition:
-        # - Cache all responses locally for 3600 seconds
-        self.session = CachedLimiterSession(per_second=1, expire_after=3600)
+        # - Cache all responses locally for 7200 seconds
+        self.session = CachedLimiterSession(per_second=1, expire_after=7200)
         ua_product = "repology_cli/0"
         ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
         self.headers = {"User-Agent": f"{ua_product} {ua_comment}"}

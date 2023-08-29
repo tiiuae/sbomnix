@@ -165,7 +165,7 @@ def _report(df):
 
 
 def _query_cve(pkg_name, pkg_version):
-    session = CachedLimiterSession(per_second=1, expire_after=3600)
+    session = CachedLimiterSession(per_second=1, expire_after=7200)
     ua_product = "repology_cli/0"
     ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
     headers = {"User-Agent": f"{ua_product} {ua_comment}"}
