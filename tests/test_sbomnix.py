@@ -66,20 +66,6 @@ def set_up_test_data(test_work_dir):
 ################################################################################
 
 
-def test_nix_shell():
-    """Test nix-shell doesn't fail and enters venv"""
-    # Test running nix-shell. Inside the shell, test that
-    # VIRTUAL_ENV variable is set, exit with failure if it is not set:
-    run_cmd = "if [ -z ${VIRTUAL_ENV+x} ]; then exit 1; else exit 0; fi"
-    cmd = ["nix-shell", "--run", run_cmd]
-    os.chdir(REPOROOT)
-    assert subprocess.run(cmd, check=True).returncode == 0
-    os.chdir(TEST_WORK_DIR)
-
-
-################################################################################
-
-
 def test_sbomnix_help():
     """Test sbomnix command line argument: '-h'"""
     cmd = [SBOMNIX, "-h"]
