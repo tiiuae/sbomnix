@@ -20,6 +20,7 @@ Table of Contents
    * [Running Vulnxscan as Flake](#running-vulnxscan-as-flake)
    * [Running from Nix Development Shell](#running-from-nix-development-shell)
    * [Find Vulnerabilities Impacting Runtime Dependencies](#find-vulnerabilities-impacting-runtime-dependencies)
+   * [Whitelisting Vulnerabilities](#whitelisting-vulnerabilities)
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
 * [Footnotes and Future Work](#footnotes-and-future-work)
@@ -28,17 +29,11 @@ Table of Contents
 To get started, follow the [Getting Started](../../README.md#getting-started) section from the main [README](../../README.md).
 
 ## Example Target
-In the below examples, we use `sbomnix` itself as an example target for `vulnxscan`.
-To get the target out-path, build `sbomnix` with `nix-build`:
+In the below examples, we use `git` as an example target for `vulnxscan`.
+To print `git` drv-path on your local system, try:
 ```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix-build
-```
-Which creates a `result` symlink that points to `sbomnix` out-path on your local system:
-```bash
-$ ls -l result
-lrwxrwxrwx   result -> /nix/store/6y93c1b4453mjqn6ar6sszcf06svr3jl-python3.10-sbomnix-1.2.0
+$ nix eval -f '<nixpkgs>' 'git.drvPath'
+"/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv"
 ```
 
 ## Supported Scanners
@@ -55,9 +50,9 @@ Also, it is worth mentioning that OSV queries without ecosystem are undocumented
 [Grype](https://github.com/anchore/grype) is a vulnerability scanner targeted for container images. It uses the vulnerability data from [variety of publicly available data sources](https://github.com/anchore/grype#grypes-database). Grype also [supports input from CycloneDX SBOM](https://github.com/anchore/grype#supported-sources) which makes it possible to use Grype with SBOM input from `sbomnix`, thus, allowing Grype scans against Nix targets.
 
 ### Vulnix
-[Vulnix](https://github.com/flyingcircusio/vulnix) is a vulnerability scanner intended for Nix targets. It uses [NIST NVD](https://nvd.nist.gov/vuln) vulnerability database.
+[Vulnix](https://github.com/nix-community/vulnix) is a vulnerability scanner intended for Nix targets. It uses [NIST NVD](https://nvd.nist.gov/vuln) vulnerability database.
 
-Vulnix matches vulnerabilities based on [heuristic](https://github.com/flyingcircusio/vulnix/blob/f56f3ac857626171b95e51d98cb6874278f789d3/src/vulnix/derivation.py#L104), which might result more false positives compared to direct match. False positives due to rough heuristic are an [intended feature](https://github.com/flyingcircusio/vulnix#whitelisting) in Vulnix. On the other hand, Vulnix accounts [CVE patches](https://github.com/flyingcircusio/vulnix#cve-patch-auto-detection) applied on Nix packages when matching vulnerabilities, something currently not supported by other scanners.
+Vulnix matches vulnerabilities based on [heuristic](https://github.com/flyingcircusio/vulnix/blob/f56f3ac857626171b95e51d98cb6874278f789d3/src/vulnix/derivation.py#L104), which might result more false positives compared to direct match. False positives due to rough heuristic are an [intended feature](https://github.com/flyingcircusio/vulnix#whitelisting) in Vulnix. On the other hand, Vulnix accounts [CVE patches](https://github.com/flyingcircusio/vulnix#cve-patch-auto-detection) applied on Nix packages when matching vulnerabilities, something currently not directly supported by other scanners.
 
 ## Vulnxscan Usage Examples
 
@@ -78,7 +73,7 @@ $ nix run .#vulnxscan -- --help
 
 ### Running from Nix Development Shell
 
-If you have nix flakes enabled, run:
+If you have nix flakes [enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes), start a development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
@@ -94,82 +89,139 @@ $ nix-shell
 
 From the development shell, run `vulnxscan` as follows:
 ```bash
-$ scripts/vulnxscan/vulnxscan.py --help
+$ vulnxscan.py --help
 ```
 
 ### Find Vulnerabilities Impacting Runtime Dependencies
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
 
 ```bash
-$ nix run .#vulnxscan -- ./result
+$ nix run .#vulnxscan -- /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
 
-INFO     Generating SBOM for target '/nix/store/8pvrr84a3aw12bvi45hl7wx01a8iqgni-python3.10-sbomnix-1.2.0'
-INFO     Loading runtime dependencies referenced by '/nix/store/8pvrr84a3aw12bvi45hl7wx01a8iqgni-python3.10-sbomnix-1.2.0'
-INFO     Using SBOM '/tmp/nix-shell.PCbbzS/vulnxscan_lu4w8hac.json'
+INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
+INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
+INFO     Using cdx SBOM '/tmp/vulnxscan_nmpi4h8_.json'
+INFO     Using csv SBOM '/tmp/vulnxscan_9vuvdabq.csv'
 INFO     Running vulnix scan
 INFO     Running grype scan
 INFO     Running OSV scan
 INFO     Querying vulnerabilities
+INFO     Filtering patched vulnerabilities
+INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
+INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
 INFO     Console report
 
-Potential vulnerabilities impacting 'result' or some of its runtime dependencies:
+Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv' or some of its runtime dependencies:
 
-| vuln_id             | url                                             | package    | version| grype | osv |vulnix| sum |
-|---------------------+-------------------------------------------------+------------+--------+-------+-----+------+-----|
-| GHSA-r9hx-vwmv-q579 | https://osv.dev/GHSA-r9hx-vwmv-q579             | setuptools | 65.3.0 |   0   |  1  |  0   |  1  |
-| GHSA-qwmp-2cf2-g9g6 | https://osv.dev/GHSA-qwmp-2cf2-g9g6             | wheel      | 0.37.1 |   0   |  1  |  0   |  1  |
-| CVE-2022-48281      | https://nvd.nist.gov/vuln/detail/CVE-2022-48281 | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-46908      | https://nvd.nist.gov/vuln/detail/CVE-2022-46908 | sqlite     | 3.39.4 |   1   |  0  |  0   |  1  |
-| CVE-2022-40897      | https://nvd.nist.gov/vuln/detail/CVE-2022-40897 | setuptools | 65.3.0 |   1   |  0  |  0   |  1  |
-| CVE-2022-34526      | https://nvd.nist.gov/vuln/detail/CVE-2022-34526 | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-34000      | https://nvd.nist.gov/vuln/detail/CVE-2022-34000 | libjxl     | 0.6.1  |   1   |  0  |  0   |  1  |
-| CVE-2022-28506      | https://nvd.nist.gov/vuln/detail/CVE-2022-28506 | giflib     | 5.2.1  |   1   |  1  |  0   |  2  |
-| CVE-2022-3996       | https://nvd.nist.gov/vuln/detail/CVE-2022-3996  | openssl    | 3.0.7  |   1   |  0  |  0   |  1  |
-| CVE-2022-3970       | https://nvd.nist.gov/vuln/detail/CVE-2022-3970  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3627       | https://nvd.nist.gov/vuln/detail/CVE-2022-3627  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3626       | https://nvd.nist.gov/vuln/detail/CVE-2022-3626  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3599       | https://nvd.nist.gov/vuln/detail/CVE-2022-3599  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3598       | https://nvd.nist.gov/vuln/detail/CVE-2022-3598  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3597       | https://nvd.nist.gov/vuln/detail/CVE-2022-3597  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-3570       | https://nvd.nist.gov/vuln/detail/CVE-2022-3570  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2953       | https://nvd.nist.gov/vuln/detail/CVE-2022-2953  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2521       | https://nvd.nist.gov/vuln/detail/CVE-2022-2521  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2520       | https://nvd.nist.gov/vuln/detail/CVE-2022-2520  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2519       | https://nvd.nist.gov/vuln/detail/CVE-2022-2519  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2058       | https://nvd.nist.gov/vuln/detail/CVE-2022-2058  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2057       | https://nvd.nist.gov/vuln/detail/CVE-2022-2057  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2022-2056       | https://nvd.nist.gov/vuln/detail/CVE-2022-2056  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| OSV-2022-674        | https://osv.dev/OSV-2022-674                    | dav1d      | 1.0.0  |   0   |  1  |  0   |  1  |
-| CVE-2021-26945      | https://nvd.nist.gov/vuln/detail/CVE-2021-26945 | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-26260      | https://nvd.nist.gov/vuln/detail/CVE-2021-26260 | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-23215      | https://nvd.nist.gov/vuln/detail/CVE-2021-23215 | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-23169      | https://nvd.nist.gov/vuln/detail/CVE-2021-23169 | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-4048       | https://nvd.nist.gov/vuln/detail/CVE-2021-4048  | lapack     | 3      |   1   |  0  |  1   |  2  |
-| CVE-2021-3933       | https://nvd.nist.gov/vuln/detail/CVE-2021-3933  | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-3605       | https://nvd.nist.gov/vuln/detail/CVE-2021-3605  | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2021-3598       | https://nvd.nist.gov/vuln/detail/CVE-2021-3598  | openexr    | 2.5.8  |   1   |  0  |  0   |  1  |
-| CVE-2020-18032      | https://nvd.nist.gov/vuln/detail/CVE-2020-18032 | graphviz   | 0.20.1 |   1   |  0  |  0   |  1  |
-| OSV-2020-1610       | https://osv.dev/OSV-2020-1610                   | openexr    | 2.5.8  |   0   |  1  |  0   |  1  |
-| CVE-2017-5436       | https://nvd.nist.gov/vuln/detail/CVE-2017-5436  | graphite2  | 1.3.14 |   1   |  0  |  0   |  1  |
-| CVE-2016-2781       | https://nvd.nist.gov/vuln/detail/CVE-2016-2781  | coreutils  | 9.1    |   1   |  0  |  0   |  1  |
-| CVE-2015-7313       | https://nvd.nist.gov/vuln/detail/CVE-2015-7313  | libtiff    | 4.4.0  |   1   |  0  |  0   |  1  |
-| CVE-2014-9157       | https://nvd.nist.gov/vuln/detail/CVE-2014-9157  | graphviz   | 7.0.0  |   1   |  0  |  0   |  1  |
-| CVE-2014-9157       | https://nvd.nist.gov/vuln/detail/CVE-2014-9157  | graphviz   | 0.20.1 |   1   |  0  |  0   |  1  |
-| CVE-2008-4555       | https://nvd.nist.gov/vuln/detail/CVE-2008-4555  | graphviz   | 0.20.1 |   1   |  0  |  0   |  1  |
-| CVE-2005-4803       | https://nvd.nist.gov/vuln/detail/CVE-2005-4803  | graphviz   | 0.20.1 |   1   |  0  |  0   |  1  |
+| vuln_id          | url                                               |package  | version|grype|osv|vulnix|sum|
+|------------------+---------------------------------------------------+---------+--------+-----+---+------+---|
+| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    |openssl  | 3.0.9  |  1  | 0 |  1   | 2 |
+| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     |libidn2  | 2.3.4  |  0  | 1 |  0   | 1 |
+| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
+| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    |coreutils| 9.3    |  1  | 0 |  0   | 1 |
 
 INFO     Wrote: vulns.csv
 ```
 
-As printed in the console output, `vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/flyingcircusio/vulnix) (for reference), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file to allow easier post-processing of the output.
+As printed in the console output, `vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/nix-community/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file `vulns.csv` to allow easier post-processing of the output.
+
+It is worth mentioning that `vulnxscan` filters out vulnerabilities that it detects are patched, as printed out in the console output on lines like '`CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']`'.
+This patch auto-detection works in the similar way as the [patch auto-detection on vulnix](https://github.com/nix-community/vulnix#cve-patch-auto-detection), that is, it is based on detecting vulnerability identifiers from the patch filenames.
+
+
+### Whitelisting Vulnerabilities
+`vulnxscan` supports whitelisting vulnerabilities to exclude e.g. false positives. Whitelist is a csv file that contains rules for the vulnerabilities to be excluded. Consider the following example whitelist:
+
+```
+$ csvlook whitelist.csv 
+
+| vuln_id        | package   | comment                                                                 |
+| -------------- | --------- | ----------------------------------------------------------------------- |
+| MAL-2022-4301  |           | Incorrect package: Issue refers npm libidn2, not libidn2.               |
+| CVE-2016-2781  | coreutils | NVD data issue: CPE entry does not correctly state the version numbers. |
+| CVE-20.*       | git       | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+```
+
+`vuln_id` and `comment` are the only required fields. `vuln_id` specifies the regular expression that will be used to match the vulnerability identification (`vuln_id`) against that of the `vulnxscan` output. Vulnerabilities that match the regular expression are excluded from the `vulnxscan` console output. If the whitelist includes the `package` column, in addition to matching `vuln_id`, a strict match is required against the `package` field in `vulnxscan` output.
+
+In case many rules match a vulnerability, rules on top of the whitelist are given higher priority over entries on the bottom.
+
+To be able to verify which vulnerabilities got whitelisted, `vulnxscan` csv output `vulns.csv` includes both whitelisted and non-whitelisted vulnerabilities implied with boolean column `whitelist`. `vulns.csv` also incluces the `comment` section from the whitelist to be able to verify the reason for whitelisting a vulnerability. Below example shows applying the above example whitelist against the `git` vulnxscan output from the earlier example.
+
+```bash
+# This is the whitelist.csv contents:
+$ cat whitelist.csv 
+
+"vuln_id","package","comment"
+"MAL-2022-4301",,"Incorrect package: Issue refers npm libidn2, not libidn2."
+"CVE-2016-2781","coreutils","NVD data issue: CPE entry does not correctly state the version numbers."
+"CVE-20.* ","git","Incorrect package: Impacts Jenkins git plugin, not git."
+
+# Apply the above whitelist to git vulnxscan output
+$ nix run .#vulnxscan -- /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv 
+
+INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
+INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
+INFO     Using cdx SBOM '/tmp/vulnxscan_8tezlf17.json'
+INFO     Using csv SBOM '/tmp/vulnxscan_lcj18a88.csv'
+INFO     Running vulnix scan
+INFO     Running grype scan
+INFO     Running OSV scan
+INFO     Querying vulnerabilities
+INFO     Filtering patched vulnerabilities
+INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
+INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
+INFO     Applying whitelist 'whitelist.csv'
+INFO     Console report
+
+Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv' or some of its runtime dependencies:
+
+| vuln_id       | url                                            | package   | version | grype | osv | vulnix | sum |
+|---------------+------------------------------------------------+-----------+---------+-------+-----+--------+-----|
+| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   |   1   |  0  |   1    |  2  |
+
+INFO     Wrote: vulns.csv
+
+# The above console output includes only non-whitelisted entries.
+# vulns.csv includes the full details of the whitelisted vulnerabilities:
+$ csvlook vulns.csv 
+
+| vuln_id          | url                                               | package   | version | grype |   osv | vulnix | sum | sortcol         | whitelist | whitelist_comment                                                       |
+| ---------------- | ------------------------------------------------- | --------- | ------- | ----- | ----- | ------ | --- | --------------- | --------- | ----------------------------------------------------------------------- |
+| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    | openssl   | 3.0.9   |  True | False |   True |   2 | 2023A0000003817 |     False |                                                                         |
+| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000038663 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036884 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036883 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036882 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030949 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030948 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030947 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     | libidn2   | 2.3.4   | False |  True |  False |   1 | 2022A0000004301 |      True | Incorrect package: Issue refers npm libidn2, not libidn2.               |
+| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   | git       | 2.41.0  | False | False |   True |   1 | 2021A0000021684 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    | git       | 2.41.0  | False | False |   True |   1 | 2020A0000002136 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 | git       | 2.41.0  | False | False |   True |   1 | 2019A0001003010 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 | git       | 2.41.0  | False | False |   True |   1 | 2018A0001000182 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 | git       | 2.41.0  | False | False |   True |   1 | 2018A0001000110 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    | coreutils | 9.3     |  True | False |  False |   1 | 2016A0000002781 |      True | NVD data issue: CPE entry does not correctly state the version numbers. |
+```
 
 ### Find Vulnerabilities Given SBOM as Input
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting components in the given CycloneDX SBOM.
 
 First, we use `sbomnix` to generate SBOM for the example target:
 ```bash
-# Alternatively, run with flakes: 'nix run .#sbomnix -- ./result'
-$ sbomnix ./result
+$ nix run .#sbomnix /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
 ..
 INFO     Wrote: sbom.cdx.json
 ```
@@ -185,53 +237,18 @@ INFO     Console report
 
 Potential vulnerabilities impacting components in 'sbom.cdx.json':
 
-| vuln_id             | url                                             |  package    |  version   | grype | osv |  sum  |
-|---------------------+-------------------------------------------------+-------------+------------+-------+-----+-------|
-| GHSA-r9hx-vwmv-q579 | https://osv.dev/GHSA-r9hx-vwmv-q579             |  setuptools |  65.3.0    |   0   |  1  |   1   |
-| GHSA-qwmp-2cf2-g9g6 | https://osv.dev/GHSA-qwmp-2cf2-g9g6             |  wheel      |  0.37.1    |   0   |  1  |   1   |
-| CVE-2022-48281      | https://nvd.nist.gov/vuln/detail/CVE-2022-48281 |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-46908      | https://nvd.nist.gov/vuln/detail/CVE-2022-46908 |  sqlite     |  3.39.4    |   1   |  0  |   1   |
-| CVE-2022-40897      | https://nvd.nist.gov/vuln/detail/CVE-2022-40897 |  setuptools |  65.3.0    |   1   |  0  |   1   |
-| CVE-2022-34526      | https://nvd.nist.gov/vuln/detail/CVE-2022-34526 |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-34000      | https://nvd.nist.gov/vuln/detail/CVE-2022-34000 |  libjxl     |  0.6.1     |   1   |  0  |   1   |
-| CVE-2022-28506      | https://nvd.nist.gov/vuln/detail/CVE-2022-28506 |  giflib     |  5.2.1     |   1   |  1  |   2   |
-| CVE-2022-3996       | https://nvd.nist.gov/vuln/detail/CVE-2022-3996  |  openssl    |  3.0.7     |   1   |  0  |   1   |
-| CVE-2022-3970       | https://nvd.nist.gov/vuln/detail/CVE-2022-3970  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3627       | https://nvd.nist.gov/vuln/detail/CVE-2022-3627  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3626       | https://nvd.nist.gov/vuln/detail/CVE-2022-3626  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3599       | https://nvd.nist.gov/vuln/detail/CVE-2022-3599  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3598       | https://nvd.nist.gov/vuln/detail/CVE-2022-3598  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3597       | https://nvd.nist.gov/vuln/detail/CVE-2022-3597  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-3570       | https://nvd.nist.gov/vuln/detail/CVE-2022-3570  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2953       | https://nvd.nist.gov/vuln/detail/CVE-2022-2953  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2521       | https://nvd.nist.gov/vuln/detail/CVE-2022-2521  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2520       | https://nvd.nist.gov/vuln/detail/CVE-2022-2520  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2519       | https://nvd.nist.gov/vuln/detail/CVE-2022-2519  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2058       | https://nvd.nist.gov/vuln/detail/CVE-2022-2058  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2057       | https://nvd.nist.gov/vuln/detail/CVE-2022-2057  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2022-2056       | https://nvd.nist.gov/vuln/detail/CVE-2022-2056  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| OSV-2022-674        | https://osv.dev/OSV-2022-674                    |  dav1d      |  1.0.0     |   0   |  1  |   1   |
-| CVE-2021-26945      | https://nvd.nist.gov/vuln/detail/CVE-2021-26945 |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-26260      | https://nvd.nist.gov/vuln/detail/CVE-2021-26260 |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-23215      | https://nvd.nist.gov/vuln/detail/CVE-2021-23215 |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-23169      | https://nvd.nist.gov/vuln/detail/CVE-2021-23169 |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-4048       | https://nvd.nist.gov/vuln/detail/CVE-2021-4048  |  lapack     |  3         |   1   |  0  |   1   |
-| CVE-2021-3933       | https://nvd.nist.gov/vuln/detail/CVE-2021-3933  |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-3605       | https://nvd.nist.gov/vuln/detail/CVE-2021-3605  |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2021-3598       | https://nvd.nist.gov/vuln/detail/CVE-2021-3598  |  openexr    |  2.5.8     |   1   |  0  |   1   |
-| CVE-2020-18032      | https://nvd.nist.gov/vuln/detail/CVE-2020-18032 |  graphviz   |  0.20.1    |   1   |  0  |   1   |
-| OSV-2020-1610       | https://osv.dev/OSV-2020-1610                   |  openexr    |  2.5.8     |   0   |  1  |   1   |
-| CVE-2017-5436       | https://nvd.nist.gov/vuln/detail/CVE-2017-5436  |  graphite2  |  1.3.14    |   1   |  0  |   1   |
-| CVE-2016-2781       | https://nvd.nist.gov/vuln/detail/CVE-2016-2781  |  coreutils  |  9.1       |   1   |  0  |   1   |
-| CVE-2015-7313       | https://nvd.nist.gov/vuln/detail/CVE-2015-7313  |  libtiff    |  4.4.0     |   1   |  0  |   1   |
-| CVE-2014-9157       | https://nvd.nist.gov/vuln/detail/CVE-2014-9157  |  graphviz   |  7.0.0     |   1   |  0  |   1   |
-| CVE-2014-9157       | https://nvd.nist.gov/vuln/detail/CVE-2014-9157  |  graphviz   |  0.20.1    |   1   |  0  |   1   |
-| CVE-2008-4555       | https://nvd.nist.gov/vuln/detail/CVE-2008-4555  |  graphviz   |  0.20.1    |   1   |  0  |   1   |
-| CVE-2005-4803       | https://nvd.nist.gov/vuln/detail/CVE-2005-4803  |  graphviz   |  0.20.1    |   1   |  0  |   1   |
+| vuln_id       | url                                            | package   | version | grype | osv | sum |
+|---------------+------------------------------------------------+-----------+---------+-------+-----+-----|
+| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   |   1   |  0  |  1  |
+| CVE-2023-2975 | https://nvd.nist.gov/vuln/detail/CVE-2023-2975 | openssl   | 3.0.9   |   1   |  0  |  1  |
+| MAL-2022-4301 | https://osv.dev/MAL-2022-4301                  | libidn2   | 2.3.4   |   0   |  1  |  1  |
+| CVE-2016-2781 | https://nvd.nist.gov/vuln/detail/CVE-2016-2781 | coreutils | 9.3     |   1   |  0  |  1  |
 
 INFO     Wrote: vulns.csv
 ```
 Notice that `vulnxscan` drops the Vulnix scan when the input is SBOM. This is due to the Vulnix not supporting SBOM input at the time of writing.
+
+Also notice that `vulnxscan` drops the patch auto-detection if the input is SBOM. Reason is that it reads the patch information from nix derivations. Therefore, the patch information is only available when the given input is Nix store path (e.g. derivation or out-path), not SBOM.
 
 
 ### Find Vulnerabilities Impacting Buildtime and Runtime Dependencies
@@ -245,12 +262,12 @@ $ nix run .#vulnxscan -- ./result --buildtime
 
 ## Footnotes and Future Work
 
-For now, consider `vulnxscan` as a demonstration. The list of reported vulnerabilities includes false positives for various reasons:
- - `sbomnix` currently does not include the information about applied patches to the CycloneDX SBOM. `sbomnix` collects the list of patches applied on top of each package and outputs the collected data in its csv output, but it does not add the information to the cdx SBOM. CycloneDX apparently would support such information via the [pedigree](https://cyclonedx.org/use-cases/#pedigree) attribute.
+For now, consider `vulnxscan` as a demonstration. Some improvement ideas are listed below:
+ - Consider adding patch information to SBOM (e.g. via the [pedigree](https://cyclonedx.org/use-cases/#pedigree) attribute) to be able to auto-detect patched vulnerabilities also when the input is SBOM.
  - Vulnerability scanners lack support for parsing the patch data: even if `sbomnix` added the patch data to the output SBOM, we suspect not many vulnerability scanners would read the information. As an example, the following discussion touches this topic on DependencyTrack: https://github.com/DependencyTrack/dependency-track/issues/919.
  - Identifying packages is hard as pointed out in https://discourse.nixos.org/t/the-future-of-the-vulnerability-roundups/22424/5. As an example, CPEs are inaccurate which causes issues in matching vulnerabilities: https://github.com/DependencyTrack/dependency-track/discussions/2290.
  - Nix ecosystem is not supported in OSV: the way `osv.py` makes use of OSV data for Nix targets -- as explained in section [Nix and OSV vulnerability database](#nix-and-osv-vulnerability-database) -- makes the reported OSV vulnerabilities include false positives.
 
 ##### Other Future Work
 - [vulnxscan](./vulnxscan.py) uses vulnix from a [forked repository](https://github.com/henrirosten/vulnix), to include Vulnix [support for scanning runtime-only dependencies](https://github.com/flyingcircusio/vulnix/compare/master...henrirosten:vulnix:master).
-- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX or SPDX SBOMs are welcome.
+- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX or SPDX SBOMs are welcome. Consider e.g. [bombon](https://github.com/nikstur/bombon) and [cve-bin-tool](https://github.com/intel/cve-bin-tool). Adding cve-bin-tool was [demonstrated](https://github.com/tiiuae/sbomnix/pull/75), but not merged due to reasons explained in the [PR](https://github.com/tiiuae/sbomnix/pull/75#issuecomment-1670958503).

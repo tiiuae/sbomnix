@@ -20,10 +20,8 @@ Table of Contents
 =================
 
 * [Getting Started](#getting-started)
-   * [Running Without Installation](#running-without-installation)
-      * [Running as Nix Flake](#running-as-nix-flake)
-      * [Running as Python Script](#running-as-python-script)
-   * [Installation](#installation)
+   * [Running as Nix Flake](#running-as-nix-flake)
+   * [Running from Nix Development Shell](#running-from-nix-development-shell)
 * [Usage Examples](#usage-examples)
    * [Generate SBOM Based on Derivation File or Out-path](#generate-sbom-based-on-derivation-file-or-out-path)
    * [Generate SBOM Including Meta Information](#generate-sbom-including-meta-information)
@@ -36,10 +34,8 @@ Table of Contents
 
 ## Getting Started
 `sbomnix` requires common [Nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
-`nixgraph` requires [graphviz](https://graphviz.org/download/).
 
-### Running Without Installation
-#### Running as Nix Flake
+### Running as Nix Flake
 `sbomnix` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
 ```bash
 # '--' signifies the end of argument list for `nix`.
@@ -57,39 +53,37 @@ Similarly, you can run `nixgraph` with `nix run github:tiiuae/sbomnix#nixgraph -
 
 See the full list of supported flake targets by running `nix flake show`.
 
-#### Running as Python Script
-Running `sbomnix` as Python script requires Python packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
+### Running from Nix Development Shell
+
+If you have nix flakes [enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes), start a development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip install --user -r requirements.txt
-```
-After requirements have been installed, you can run sbomnix without installation as follows:
-```bash
-$ source scripts/env.sh
-$ python3 sbomnix/main.py
-usage: main.py [-h] [--version] [--verbose VERBOSE] [--meta [META]] [--type {runtime,buildtime,both}] [--csv [CSV]] [--cdx [CDX]] NIX_PATH
+$ nix develop
 ```
 
-### Installation
-Examples in this README.md assume you have installed `sbomnix` on your system and that command `sbomnix` is in `$PATH`. To install `sbomnix` from source, run:
+You can also use `nix-shell` to enter the development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ nix-env -f default.nix --install
-# To uninstall:  nix-env --uninstall '.*sbomnix.*'
+$ nix-shell
+```
+
+From the development shell, run `sbomnix` as follows:
+```bash
+$ sbomnix --help
 ```
 
 ## Usage Examples
 In the below examples, we use Nix package `wget` as an example target.
-To print `wget` out-path on your local system, try something like:
+To print `wget` out-path on your local system, try:
 ```bash
 $ nix eval -f '<nixpkgs>' 'wget.outPath'
 "/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
 ```
 
 #### Generate SBOM Based on Derivation File or Out-path
-By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies:
+By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies. Notice that determining the target runtime dependencies requires realising (building) the target. This stems from the way Nix determines potential [runtime dependencies](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-why-depends.html#description):
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
@@ -110,8 +104,8 @@ $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.js
 ```
 
 #### Generate SBOM Including Buildtime Dependencies
-By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to include buildtime dependencies using the `--type` argument. 
-Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime-only dependencies:
+By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to determine the buildtime dependencies using the `--type` argument. 
+Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime dependencies. Notice that determining buildtime dependencies does not require realising (building) the target.
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --type=buildtime
 ```
