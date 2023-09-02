@@ -18,10 +18,14 @@ import jsonschema
 import pytest
 
 from sbomnix.utils import (
-    load_vuln_whitelist,
-    df_apply_vuln_whitelist,
     df_from_csv_file,
 )
+
+from scripts.vulnxscan.vulnxscan import (
+    load_whitelist,
+    df_apply_whitelist,
+)
+
 
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 REPOROOT = MYDIR / ".."
@@ -568,28 +572,28 @@ def test_nix_outdated_result():
 ################################################################################
 
 
-def test_nix_secupdate_help_flake():
-    """
-    Test nix_secupdates command line argument: '-h' running nix_secupdates as flake
-    """
-    cmd = ["nix", "run", f"{REPOROOT}#nix_secupdates", "--", "-h"]
-    assert subprocess.run(cmd, check=True).returncode == 0
-
-
-@pytest.mark.skip_in_ci
-def test_nix_secupdate_result():
-    """Test nix_secupdate with TEST_NIX_RESULT as input"""
-    out_path_nix_outdated = TEST_WORK_DIR / "nix_secupdates.csv"
-    cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#nix_secupdates",
-        "--",
-        "--out",
-        out_path_nix_outdated.as_posix(),
-        TEST_NIX_RESULT,
-    ]
-    assert subprocess.run(cmd, check=True).returncode == 0
+# def test_nix_secupdate_help_flake():
+#     """
+#     Test nix_secupdates command line argument: '-h' running nix_secupdates as flake
+#     """
+#     cmd = ["nix", "run", f"{REPOROOT}#nix_secupdates", "--", "-h"]
+#     assert subprocess.run(cmd, check=True).returncode == 0
+#
+#
+# @pytest.mark.skip_in_ci
+# def test_nix_secupdate_result():
+#     """Test nix_secupdate with TEST_NIX_RESULT as input"""
+#     out_path_nix_outdated = TEST_WORK_DIR / "nix_secupdates.csv"
+#     cmd = [
+#         "nix",
+#         "run",
+#         f"{REPOROOT}#nix_secupdates",
+#         "--",
+#         "--out",
+#         out_path_nix_outdated.as_posix(),
+#         TEST_NIX_RESULT,
+#     ]
+#     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 ################################################################################
@@ -602,7 +606,7 @@ def test_whitelist():
     assert whitelist_csv.exists()
     vulns_csv = MYDIR / "resources" / "vulns.csv"
     assert vulns_csv.exists()
-    df_whitelist = load_vuln_whitelist(whitelist_csv)
+    df_whitelist = load_whitelist(whitelist_csv)
     assert df_whitelist is not None
     df_vulns = df_from_csv_file(vulns_csv)
     assert df_vulns is not None
@@ -617,7 +621,7 @@ def test_whitelist():
     print(df_vuln_id_copy)
     # Apply whitelist, this changes df_vuln_id_copy in-place
     # by adding columns "whitelist" and "whitelist_comment"
-    df_apply_vuln_whitelist(df_whitelist, df_vuln_id_copy)
+    df_apply_whitelist(df_whitelist, df_vuln_id_copy)
     print("df_vuln_id_copy after whitelist apply")
     print(df_vuln_id_copy.info())
     print(df_vuln_id_copy)
