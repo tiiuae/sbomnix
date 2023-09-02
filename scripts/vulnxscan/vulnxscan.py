@@ -31,9 +31,7 @@ from sbomnix.utils import (
     df_to_csv_file,
     df_from_csv_file,
     exit_unless_nix_artifact,
-    load_vuln_whitelist,
-    df_apply_vuln_whitelist,
-    df_drop_whitelisted,
+    df_log,
 )
 
 ###############################################################################
@@ -253,10 +251,10 @@ class VulnScan:
     def _apply_whitelist(self, whitelist_csv):
         if whitelist_csv is None:
             return
-        df_whitelist = load_vuln_whitelist(whitelist_csv)
+        df_whitelist = load_whitelist(whitelist_csv)
         if df_whitelist is None:
             return
-        df_apply_vuln_whitelist(df_whitelist, self.df_report)
+        df_apply_whitelist(df_whitelist, self.df_report)
 
     def report(self, args, sbom_csv):
         """Generate the vulnerability report: csv file and a table to console"""
@@ -275,7 +273,7 @@ class VulnScan:
         # Copy the df to only make changes to the console report
         df = self.df_report.copy()
         # Don't print the "sortcol"
-        df = df.drop("sortcol", axis=1)
+        df.drop("sortcol", inplace=True, axis=1)
         # Don't print whitelisted entries to the console report
         df = df_drop_whitelisted(df)
         if df.empty:
@@ -374,12 +372,101 @@ def _is_json(path):
         return False
 
 
-def exit_unless_command_exists(name):
+def _exit_unless_command_exists(name):
     """Check if `name` is an executable in PATH"""
     name_is_in_path = which(name) is not None
     if not name_is_in_path:
         LOG.fatal("command '%s' is not in PATH", name)
         sys.exit(1)
+
+
+################################################################################
+
+# Whitelist
+
+
+def load_whitelist(whitelist_csv_path):
+    """
+    Load vulnerability whitelist from the given path. Returns None
+    if the whitelist not a valid vulnerability whitelist. Otherwise
+    returns whitelist_csv_path as dataframe.
+    """
+    try:
+        df = df_from_csv_file(whitelist_csv_path)
+        # Whitelist must have the following columns
+        if not set(["vuln_id", "comment"]).issubset(df.columns):
+            LOG.warning("Whitelist csv missing required columns")
+            return None
+        if "whitelist" in df.columns:
+            # Interpret possible string values in "whitelist" column
+            # to boolean as follows:
+            df["whitelist"] = df["whitelist"].replace({"": True})
+            df["whitelist"] = df["whitelist"].replace({"False": False, "0": False})
+            df["whitelist"] = df["whitelist"].astype("bool")
+        return df
+    except pd.errors.ParserError:
+        return None
+
+
+def df_apply_whitelist(df_whitelist, df_vulns):
+    """
+    Apply df_whitelist to vulnerabilities in df_vulns, changing df_vulns
+    in-place.
+    Adds columns "whitelist" and "whitelist_comment" to df_vulns based
+    on whitelisting regular expressions in column df_whitelist["vuln_id"].
+    If df_whitelist["package"] exists and is not empty, require strict
+    match in df_whitelist["package"] and df_vulns["package"].
+    If df_whitelist["whitelist"] exists and is False, do *not* whitelist
+    the entry even if the rule matches, but only apply the column
+    "whitelist_comment" to matching entries.
+    """
+    # Add default values to whitelist columns
+    df_vulns["whitelist"] = False
+    df_vulns["whitelist_comment"] = ""
+    if "vuln_id" not in df_vulns:
+        LOG.fatal("Missing 'vuln_id' column from df_vulns")
+        sys.exit(1)
+    if "vuln_id" not in df_whitelist:
+        LOG.warning("Whitelist ignored: missing 'vuln_id' column from whitelist")
+        return
+    check_pkg_name = False
+    if "package" in df_whitelist.columns and "package" in df_vulns.columns:
+        check_pkg_name = True
+    check_whitelist = False
+    if "whitelist" in df_whitelist.columns:
+        check_whitelist = True
+    # Iterate rows in df_whitelist in reverse order so the whitelist rules
+    # on top of the file get higher priority
+    df_whitelist_rev = df_whitelist[::-1]
+    for whitelist_entry in df_whitelist_rev.itertuples():
+        LOG.log(LOG_SPAM, "whitelist_entry: %s", whitelist_entry)
+        regex = str(whitelist_entry.vuln_id).strip()
+        LOG.log(LOG_SPAM, "whitelist regex: %s", regex)
+        df_matches = df_vulns["vuln_id"].str.fullmatch(regex)
+        if check_pkg_name and whitelist_entry.package:
+            LOG.log(LOG_SPAM, "filtering by pacakge name: %s", whitelist_entry.package)
+            df_matches = df_matches & (df_vulns["package"] == whitelist_entry.package)
+        df_vulns.loc[df_matches, "whitelist"] = True
+        if check_whitelist:
+            LOG.log(LOG_SPAM, "entry[whitelist]=%s", bool(whitelist_entry.whitelist))
+            df_vulns.loc[df_matches, "whitelist"] = bool(whitelist_entry.whitelist)
+        df_vulns.loc[df_matches, "whitelist_comment"] = whitelist_entry.comment
+        LOG.log(LOG_SPAM, "matches %s vulns", len(df_vulns[df_matches]))
+        df_log(df_vulns[df_matches], LOG_SPAM)
+
+
+def df_drop_whitelisted(df):
+    """
+    Drop whitelisted vulnerabilities from `df` as well as
+    the related columns.
+    """
+    if "whitelist" in df.columns:
+        # Convert possible string to boolean
+        df = df[~df["whitelist"]]
+        df = df.drop("whitelist", axis=1)
+    if "whitelist_comment" in df.columns:
+        df = df.drop("whitelist_comment", axis=1)
+    return df
 
 
 ################################################################################
@@ -391,8 +478,8 @@ def main():
     set_log_verbosity(args.verbose)
 
     # Fail early if following commands are not in path
-    exit_unless_command_exists("grype")
-    exit_unless_command_exists("vulnix")
+    _exit_unless_command_exists("grype")
+    _exit_unless_command_exists("vulnix")
 
     target_path_abs = args.TARGET.resolve().as_posix()
     scanner = VulnScan()

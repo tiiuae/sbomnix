@@ -1,5 +1,5 @@
 "vuln_id","whitelist","whitelist_comment","package"
-"CVE-2023-29383","True","match CVE-2023-29383",
+"CVE-2023-29383","False","match CVE-2023-29383",
 "CVE-2023-3817","True","match CVE-2023.*",
 "OSV-2023-505","True","match OSV-2023-505",
 "CVE-2022-28321","False",,
