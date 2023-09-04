@@ -219,6 +219,8 @@ def parse_version(ver_str):
     Returns None if the version string can not be converted to version object.
     """
     ver_str = str(ver_str)
+    if not ver_str:
+        return None
     re_ver = re.compile(r".*?(?P<ver_beg>[0-9][0-9.]*)(?P<ver_end>.*)$")
     match = re_ver.match(ver_str)
     if not match:

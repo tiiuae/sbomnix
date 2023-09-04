@@ -14,13 +14,18 @@ pythonPackages.buildPythonPackage rec {
 
   src = ../../.;
   sbomnix = import ../../default.nix { pkgs=pkgs; };
+  repology_cli = import ../repology/repology_cli.nix { pkgs=pkgs; };
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix pkgs.grype pkgs.nix vulnix ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli pkgs.grype pkgs.nix vulnix ]}"
   ];
 
+  requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
+
   propagatedBuildInputs = [ 
+    requests-ratelimiter
     sbomnix
     pythonPackages.requests
+    pythonPackages.requests-cache
   ];
 
   postInstall = ''

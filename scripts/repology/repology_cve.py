@@ -115,37 +115,55 @@ def _is_affected(version, affected_ver_str):
     in order to avoid false negatives.
     """
     LOG.log(LOG_SPAM, "Affected version(s): %s", affected_ver_str)
-    re_ver = re.compile(
-        r"^(?P<beg>[(\[])(?P<begver>[^,]*), *(?P<endver>[^)\]]*)(?P<end>[\])])"
-    )
-    match = re_ver.match(affected_ver_str)
-    if not match:
-        LOG.debug("Unable to parse affected version string: '%s'", affected_ver_str)
-        return True
-    version_parsed = parse_version(version)
-    if not version_parsed:
+    version_local = parse_version(version)
+    if not version_local:
         LOG.fatal("Unexpected local version string: %s", version)
         sys.exit(1)
-    beg_ind = match.group("beg")
-    beg_ver_parsed = parse_version(match.group("begver"))
-    if not beg_ver_parsed:
-        return True
-    end_ind = match.group("end")
-    end_ver_parsed = parse_version(match.group("endver"))
-    if not end_ver_parsed:
-        return True
-    beg_affected = False
-    end_affected = False
-    if (version_parsed > beg_ver_parsed) or (
-        version_parsed == beg_ver_parsed and beg_ind == "["
-    ):
-        beg_affected = True
-    if (version_parsed < end_ver_parsed) or (
-        version_parsed == end_ver_parsed and end_ind == "]"
-    ):
-        end_affected = True
-    if beg_affected and end_affected:
-        return True
+    # Pad with spaces to simplify regexps
+    affected_ver_str = f" {affected_ver_str} "
+    # Match version group
+    ver_group = re.compile(
+        r"(?P<beg>[(\[])(?P<begver>[^,]*), *(?P<endver>[^)\]]*)(?P<end>[\])])"
+    )
+    matches = re.findall(ver_group, affected_ver_str)
+    if matches:
+        LOG.log(LOG_SPAM, "Parsed group version(s): %s", matches)
+    for impacted_group in matches:
+        if len(impacted_group) != 4:
+            LOG.fatal("Unexpected version group: %s", affected_ver_str)
+            sys.exit(1)
+        # impacted_group[0] = beg
+        beg_ind = impacted_group[0]
+        # impacted_group[1] = begver
+        beg_ver_parsed = parse_version(impacted_group[1])
+        if not beg_ver_parsed:
+            return True
+        # impacted_group[3] = end
+        end_ind = impacted_group[3]
+        # impacted_group[2] = endver
+        end_ver_parsed = parse_version(impacted_group[2])
+        if not end_ver_parsed:
+            return True
+        beg_affected = False
+        end_affected = False
+        if (version_local > beg_ver_parsed) or (
+            version_local == beg_ver_parsed and beg_ind == "["
+        ):
+            beg_affected = True
+        if (version_local < end_ver_parsed) or (
+            version_local == end_ver_parsed and end_ind == "]"
+        ):
+            end_affected = True
+        if beg_affected and end_affected:
+            return True
+    # Match single version numbers
+    ver_one = r"(?<= )(?<!\()(?P<version>\d[^ $)]+)(?= )"
+    matches = re.findall(ver_one, affected_ver_str)
+    LOG.log(LOG_SPAM, "Parsed single version(s): %s", matches)
+    for impacted_version in matches:
+        impacted_version = parse_version(impacted_version)
+        if impacted_version == version_local:
+            return True
     return False
 
 

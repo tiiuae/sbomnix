@@ -15,9 +15,8 @@ pythonPackages.buildPythonPackage rec {
   sbomnix = import ../../default.nix { pkgs=pkgs; };
   repology_cli = import ../repology/repology_cli.nix { pkgs=pkgs; };
   nix_visualize = import ./nix-visualize.nix { pkgs=pkgs; };
-  vulnxscan = import ../vulnxscan/vulnxscan.nix { pkgs=pkgs; };
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli nix_visualize vulnxscan ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli nix_visualize ]}"
   ];
 
   requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
@@ -31,7 +30,6 @@ pythonPackages.buildPythonPackage rec {
 
   postInstall = ''
     install -vD scripts/nixupdate/nix_outdated.py $out/bin/nix_outdated.py
-    install -vD scripts/nixupdate/nix_secupdates.py $out/bin/nix_secupdates.py
   '';
 
   pythonImportsCheck = [ "sbomnix" ];

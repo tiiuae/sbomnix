@@ -462,12 +462,15 @@ def test_vulnxscan_help_flake():
 @pytest.mark.skip_in_ci
 def test_vulnxscan_scan_nix_result():
     """Test vulnxscan scan with TEST_NIX_RESULT as input"""
+    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
     cmd = [
         "nix",
         "run",
         f"{REPOROOT}#vulnxscan",
         "--",
         TEST_NIX_RESULT.as_posix(),
+        "--out",
+        out_path_vulns.as_posix(),
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
 
@@ -488,6 +491,7 @@ def test_vulnxscan_scan_sbom():
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_cdx.exists()
 
+    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
     cmd = [
         "nix",
         "run",
@@ -495,8 +499,52 @@ def test_vulnxscan_scan_sbom():
         "--",
         "--sbom",
         out_path_cdx.as_posix(),
+        "--out",
+        out_path_vulns.as_posix(),
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
+
+
+@pytest.mark.skip_in_ci
+def test_vulnxscan_triage():
+    """Test vulnxscan scan with --triage"""
+    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#vulnxscan",
+        "--",
+        "--triage",
+        "--out",
+        out_path_vulns.as_posix(),
+        TEST_NIX_RESULT.as_posix(),
+    ]
+    assert subprocess.run(cmd, check=True).returncode == 0
+
+
+@pytest.mark.skip_in_ci
+def test_vulnxscan_triage_whitelist():
+    """Test vulnxscan scan with --triage and --whitelist"""
+    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    whitelist_csv = MYDIR / "resources" / "whitelist_all.csv"
+    assert whitelist_csv.exists()
+    cmd = [
+        "nix",
+        "run",
+        f"{REPOROOT}#vulnxscan",
+        "--",
+        "--triage",
+        "--whitelist",
+        whitelist_csv.as_posix(),
+        "--out",
+        out_path_vulns.as_posix(),
+        TEST_NIX_RESULT.as_posix(),
+    ]
+    ret = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    assert ret.returncode == 0
+    # Console output should not include any vulnerabilities
+    # when whitelisting all vulnerabilities
+    assert "Potential vulnerabilities impacting version_local" not in ret.stderr
 
 
 ################################################################################
@@ -567,33 +615,6 @@ def test_nix_outdated_result():
     ]
     assert subprocess.run(cmd, check=True).returncode == 0
     assert out_path_nix_outdated.exists()
-
-
-################################################################################
-
-
-# def test_nix_secupdate_help_flake():
-#     """
-#     Test nix_secupdates command line argument: '-h' running nix_secupdates as flake
-#     """
-#     cmd = ["nix", "run", f"{REPOROOT}#nix_secupdates", "--", "-h"]
-#     assert subprocess.run(cmd, check=True).returncode == 0
-#
-#
-# @pytest.mark.skip_in_ci
-# def test_nix_secupdate_result():
-#     """Test nix_secupdate with TEST_NIX_RESULT as input"""
-#     out_path_nix_outdated = TEST_WORK_DIR / "nix_secupdates.csv"
-#     cmd = [
-#         "nix",
-#         "run",
-#         f"{REPOROOT}#nix_secupdates",
-#         "--",
-#         "--out",
-#         out_path_nix_outdated.as_posix(),
-#         TEST_NIX_RESULT,
-#     ]
-#     assert subprocess.run(cmd, check=True).returncode == 0
 
 
 ################################################################################
