@@ -1,0 +1,2 @@
+"vuln_id","comment","package","whitelist"
+".*","match .*",,

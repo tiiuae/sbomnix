@@ -62,11 +62,6 @@
           program = "${self.packages.${system}.nixupdate}/bin/nix_outdated.py";
         };
 
-        # nix run .#nix_secupdates
-        nix_secupdates = {
-          type = "app";
-          program = "${self.packages.${system}.nixupdate}/bin/nix_secupdates.py";
-        };
       });
 
       # nix develop
