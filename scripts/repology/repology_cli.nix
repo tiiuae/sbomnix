@@ -12,20 +12,22 @@ pythonPackages.buildPythonPackage rec {
   format = "setuptools";
 
   src = ../../.;
-  sbomnix = import ../../default.nix { pkgs=pkgs; };
-  makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix ]}"
-  ];
-  
+
   requests-ratelimiter = import ./requests-ratelimiter.nix { pkgs=pkgs; };
 
   propagatedBuildInputs = [ 
-    sbomnix
+    pkgs.reuse
     requests-ratelimiter
     pythonPackages.beautifulsoup4
+    pythonPackages.colorlog
+    pythonPackages.graphviz
+    pythonPackages.numpy
+    pythonPackages.packageurl-python
+    pythonPackages.packaging
+    pythonPackages.pandas
+    pythonPackages.tabulate
     pythonPackages.requests
     pythonPackages.requests-cache
-    pythonPackages.packaging
   ];
 
   postInstall = ''
