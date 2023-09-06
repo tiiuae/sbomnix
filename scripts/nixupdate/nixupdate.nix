@@ -12,18 +12,25 @@ pythonPackages.buildPythonPackage rec {
   format = "setuptools";
 
   src = ../../.;
-  sbomnix = import ../../default.nix { pkgs=pkgs; };
   repology_cli = import ../repology/repology_cli.nix { pkgs=pkgs; };
   nix_visualize = import ./nix-visualize.nix { pkgs=pkgs; };
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli nix_visualize ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [ repology_cli nix_visualize ]}"
   ];
 
   requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
 
   propagatedBuildInputs = [ 
+    pkgs.reuse
     requests-ratelimiter
-    sbomnix
+    pythonPackages.beautifulsoup4
+    pythonPackages.colorlog
+    pythonPackages.graphviz
+    pythonPackages.numpy
+    pythonPackages.packageurl-python
+    pythonPackages.packaging
+    pythonPackages.pandas
+    pythonPackages.tabulate
     pythonPackages.requests
     pythonPackages.requests-cache
   ];

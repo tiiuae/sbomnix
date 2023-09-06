@@ -22,8 +22,16 @@ pythonPackages.buildPythonPackage rec {
   requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
 
   propagatedBuildInputs = [ 
+    pkgs.reuse
     requests-ratelimiter
-    sbomnix
+    pythonPackages.beautifulsoup4
+    pythonPackages.colorlog
+    pythonPackages.graphviz
+    pythonPackages.numpy
+    pythonPackages.packageurl-python
+    pythonPackages.packaging
+    pythonPackages.pandas
+    pythonPackages.tabulate
     pythonPackages.requests
     pythonPackages.requests-cache
   ];
