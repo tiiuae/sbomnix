@@ -79,7 +79,8 @@ class Store:
             return
         self._update(drv_path, nixpath)
         if self.buildtime:
-            for candidate in exec_cmd(["nix-store", "-qR", drv_path]).splitlines():
+            ret = exec_cmd(["nix-store", "-qR", drv_path])
+            for candidate in ret.stdout.splitlines():
                 self._update(candidate)
 
     def to_dataframe(self):
@@ -102,7 +103,7 @@ def find_deriver(path):
     if not ret:
         LOG.debug("Deriver not found for '%s'", path)
         return None
-    qvd_json_keys = list(json.loads(ret).keys())
+    qvd_json_keys = list(json.loads(ret.stdout).keys())
     if not qvd_json_keys or len(qvd_json_keys) < 1:
         LOG.debug("Not qvd_deriver for '%s'", path)
         return None
@@ -111,7 +112,7 @@ def find_deriver(path):
     if qvd_deriver and os.path.exists(qvd_deriver):
         return qvd_deriver
     # Deriver from QueryPathInfo
-    qpi_deriver = exec_cmd(["nix-store", "-qd", path]).strip()
+    qpi_deriver = exec_cmd(["nix-store", "-qd", path]).stdout.strip()
     LOG.debug("qpi_deriver: %s", qpi_deriver)
     if qpi_deriver and qpi_deriver != "unknown-deriver" and os.path.exists(qpi_deriver):
         return qpi_deriver

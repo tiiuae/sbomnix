@@ -197,8 +197,8 @@ class VulnScan:
         LOG.info("Running grype scan")
         cmd = ["grype", f"sbom:{sbom_path}", "--add-cpes-if-none", "--output", "json"]
         ret = exec_cmd(cmd)
-        if ret:
-            self._parse_grype(ret)
+        if ret.stdout:
+            self._parse_grype(ret.stdout)
 
     def _parse_osv(self, df_osv):
         self.df_osv = df_osv

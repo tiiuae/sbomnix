@@ -269,14 +269,15 @@ class NixDependencies:
         # nix-store -u -q --graph outputs runtime dependencies.
         # We need to use -f (--force-realise) since runtime-only dependencies
         # can not be determined unless the output paths are realised.
-        nix_query_out = exec_cmd(["nix-store", "-u", "-f", "-q", "--graph", drv_path])
+        ret = exec_cmd(["nix-store", "-u", "-f", "-q", "--graph", drv_path])
+        nix_query_out = ret.stdout
         LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
     def _parse_buildtime_dependencies(self, drv_path):
         # nix-store -q --graph outputs buildtime dependencies when applied
         # to derivation path
-        nix_query_out = exec_cmd(["nix-store", "-q", "--graph", drv_path])
+        nix_query_out = exec_cmd(["nix-store", "-q", "--graph", drv_path]).stdout
         LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
         self._parse_nix_query_out(nix_query_out)
 
@@ -357,7 +358,7 @@ def _find_outpath(nix_path):
             "out",
             nix_path,
         ]
-    ).strip()
+    ).stdout.strip()
     if not out_path:
         LOG.fatal("No outpath found for: '%s'", nix_path)
         sys.exit(1)
