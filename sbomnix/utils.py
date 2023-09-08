@@ -75,16 +75,19 @@ def df_to_csv_file(df, name, loglevel=logging.INFO):
     LOG.log(loglevel, "Wrote: %s", name)
 
 
-def df_from_csv_file(name):
+def df_from_csv_file(name, exit_on_error=True):
     """Read csv file into dataframe"""
     LOG.debug("Reading: %s", name)
     try:
         df = pd.read_csv(name, keep_default_na=False, dtype=str)
         df.reset_index(drop=True, inplace=True)
         return df
-    except pd.errors.ParserError:
-        LOG.fatal("Not a csv file: '%s'", name)
-        sys.exit(1)
+    except (pd.errors.EmptyDataError, pd.errors.ParserError) as error:
+        if exit_on_error:
+            LOG.fatal("Error reading csv file '%s':\n%s", name, error)
+            sys.exit(1)
+        LOG.debug("Error reading csv file '%s':\n%s", name, error)
+        return None
 
 
 def df_regex_filter(df, column, regex):
