@@ -73,7 +73,7 @@ class _CPE:
                 LOG.warning(
                     "CPE data is not up-to-date: CPE identifiers will be inaccurate"
                 )
-        return df_from_csv_file(self.cpedict)
+        return df_from_csv_file(self.cpedict, exit_on_error=False)
 
     def _update_cpedict(self):
         """Updates local cpe dictionary"""

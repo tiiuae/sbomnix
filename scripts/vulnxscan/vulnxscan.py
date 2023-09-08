@@ -405,7 +405,9 @@ def _run_repology_cli(pname, match_type="--pkg_exact"):
             ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
             if ret and ret.stderr and "No matching packages" in ret.stderr:
                 return None
-            df_repology_cli = df_from_csv_file(f.name)
+            df_repology_cli = df_from_csv_file(f.name, exit_on_error=False)
+            if df_repology_cli is None:
+                return None
             df_repology_cli = _select_newest(df_repology_cli)
             _repology_cli_dfs[pname] = df_repology_cli
             df_log(df_repology_cli, LOG_SPAM)
@@ -527,11 +529,10 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
             args = f"{repo_pkg_name} {pkg_version}"
             cmd = f"repology_cve.py --out={f.name} {args}"
             exec_cmd(cmd.split(), raise_on_error=False)
-            try:
-                df = df_from_csv_file(f.name)
-                df_log(df, LOG_SPAM)
-            except pd.errors.EmptyDataError:
+            df = df_from_csv_file(f.name, exit_on_error=False)
+            if df is None:
                 df = pd.DataFrame()
+            df_log(df, LOG_SPAM)
         _repology_cve_dfs[key] = df
     if cve_id and not df.empty:
         df = df[df["cve"] == cve_id]
@@ -758,21 +759,20 @@ def load_whitelist(whitelist_csv_path):
     if the whitelist is not a valid vulnerability whitelist. Otherwise
     returns whitelist_csv_path as dataframe.
     """
-    try:
-        df = df_from_csv_file(whitelist_csv_path)
-        # Whitelist must have the following columns
-        if not set(["vuln_id", "comment"]).issubset(df.columns):
-            LOG.warning("Whitelist csv missing required columns")
-            return None
-        if "whitelist" in df.columns:
-            # Interpret possible string values in "whitelist" column
-            # to boolean as follows:
-            df["whitelist"] = df["whitelist"].replace({"": True})
-            df["whitelist"] = df["whitelist"].replace({"False": False, "0": False})
-            df["whitelist"] = df["whitelist"].astype("bool")
-        return df
-    except pd.errors.ParserError:
+    df = df_from_csv_file(whitelist_csv_path, exit_on_error=False)
+    if df is None:
         return None
+    # Whitelist must have the following columns
+    if not set(["vuln_id", "comment"]).issubset(df.columns):
+        LOG.warning("Whitelist csv missing required columns")
+        return None
+    if "whitelist" in df.columns:
+        # Interpret possible string values in "whitelist" column
+        # to boolean as follows:
+        df["whitelist"] = df["whitelist"].replace({"": True})
+        df["whitelist"] = df["whitelist"].replace({"False": False, "0": False})
+        df["whitelist"] = df["whitelist"].astype("bool")
+    return df
 
 
 def df_apply_whitelist(df_whitelist, df_vulns):

@@ -63,7 +63,7 @@ class OSV:
         LOG.log(LOG_SPAM, "query: %s", query)
         url = "https://api.osv.dev/v1/querybatch"
         LOG.log(LOG_SPAM, "sending request to '%s'", url)
-        resp = requests.post(url, json=query, timeout=30)
+        resp = requests.post(url, json=query, timeout=60)
         LOG.debug("resp.status_code: %s", resp.status_code)
         LOG.log(LOG_SPAM, "resp.json: %s", resp.json())
         resp.raise_for_status()
