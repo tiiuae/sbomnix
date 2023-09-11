@@ -128,16 +128,24 @@ class VulnScan:
         self.df_osv = None
         self.df_report = None
         self.df_triaged = None
+        # Key:vuln_id, value:severity
+        self.cvss = {}
 
     def _parse_vulnix(self, json_str):
         vulnerable_packages = json.loads(json_str)
         vulnix_vulns_dict = {}
         setcol = vulnix_vulns_dict.setdefault
         for package in vulnerable_packages:
+            cvss = package["cvssv3_basescore"]
             for cve in package["affected_by"]:
+                severity = "" if cve not in self.cvss else self.cvss[cve]
+                if not severity and cve in cvss:
+                    severity = cvss[cve]
+                    self.cvss[cve] = severity
                 setcol("package", []).append(package["pname"])
                 setcol("version", []).append(package["version"])
                 setcol("vuln_id", []).append(cve)
+                setcol("severity", []).append(severity)
                 setcol("scanner", []).append("vulnix")
         self.df_vulnix = pd.DataFrame.from_dict(vulnix_vulns_dict)
         if not self.df_vulnix.empty:
@@ -180,9 +188,19 @@ class VulnScan:
                     vuln["artifact"]["name"],
                 )
                 continue
+            vid = vuln["vulnerability"]["id"]
+            severity = "" if vid not in self.cvss else self.cvss[vid]
+            if not severity and vuln["vulnerability"]["cvss"]:
+                for cvss in vuln["vulnerability"]["cvss"]:
+                    if float(cvss["version"]) >= 3:
+                        LOG.log(LOG_SPAM, "selected cvss: %s", cvss)
+                        severity = cvss["metrics"]["baseScore"]
+                        self.cvss[vid] = severity
+                        break
             setcol("package", []).append(vuln["artifact"]["name"])
             setcol("version", []).append(vuln["artifact"]["version"])
             setcol("vuln_id", []).append(vuln["vulnerability"]["id"])
+            setcol("severity", []).append(severity)
             setcol("scanner", []).append("grype")
         self.df_grype = pd.DataFrame.from_dict(grype_vulns_dict)
         if not self.df_grype.empty:
@@ -209,6 +227,7 @@ class VulnScan:
             self.df_osv["modified"] = pd.to_datetime(
                 self.df_osv["modified"], format="%Y-%m-%d", exact=False
             )
+            self.df_osv["severity"] = self.df_osv.apply(self._get_severity, axis=1)
             LOG.log(LOG_SPAM, "osv data:\n%s", self.df_osv.to_markdown())
             LOG.debug("OSV scan found vulnerabilities")
             if LOG.level <= logging.DEBUG:
@@ -221,6 +240,13 @@ class VulnScan:
         osv.query_vulns(sbom_path)
         df_osv = osv.to_dataframe()
         self._parse_osv(df_osv)
+
+    def _get_severity(self, row):
+        if "vuln_id" not in row:
+            return ""
+        vuln_id = row.vuln_id
+        severity = "" if vuln_id not in self.cvss else self.cvss[vuln_id]
+        return severity
 
     def _generate_report(self):
         # Concatenate vulnerability data from different scanners
@@ -238,7 +264,7 @@ class VulnScan:
         # We'll use the following column to aggregate values in the pivot table
         df["count"] = 1
         # Group by the following columns making "scanner" values new columns
-        group_cols = ["vuln_id", "package", "version", "sortcol"]
+        group_cols = ["vuln_id", "package", "severity", "version", "sortcol"]
         df = df.pivot_table(index=group_cols, columns="scanner", values="count")
         # Pivot creates a multilevel index, we'll get rid of it:
         df.reset_index(drop=False, inplace=True)
@@ -259,11 +285,13 @@ class VulnScan:
         # Add column 'url'
         df["url"] = df.apply(_vuln_url, axis=1)
         # Sort the data based on the following columns
-        sort_cols = ["sortcol", "package", "version"]
+        sort_cols = ["sortcol", "package", "severity", "version"]
         df.sort_values(by=sort_cols, ascending=False, inplace=True)
         # Re-order columns
         report_cols = (
-            ["vuln_id", "url", "package", "version"] + scanners + ["sum", "sortcol"]
+            ["vuln_id", "url", "package", "version", "severity"]
+            + scanners
+            + ["sum", "sortcol"]
         )
         self.df_report = df[report_cols]
 
@@ -414,11 +442,12 @@ def _run_repology_cli(pname, match_type="--pkg_exact"):
     return df_repology_cli
 
 
-def _add_vuln_item(out_dict, vuln, whitelist_cols, df_repo=None):
+def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
     if df_repo is None:
         out_dict.setdefault("vuln_id", []).append(vuln.vuln_id)
         out_dict.setdefault("url", []).append(vuln.url)
         out_dict.setdefault("package", []).append(vuln.package)
+        out_dict.setdefault("severity", []).append(vuln.severity)
         out_dict.setdefault("version_local", []).append(vuln.version)
         out_dict.setdefault("version_nixpkgs", []).append("")
         out_dict.setdefault("version_upstream", []).append("")
@@ -432,6 +461,7 @@ def _add_vuln_item(out_dict, vuln, whitelist_cols, df_repo=None):
         out_dict.setdefault("vuln_id", []).append(vuln.vuln_id)
         out_dict.setdefault("url", []).append(vuln.url)
         out_dict.setdefault("package", []).append(vuln.package)
+        out_dict.setdefault("severity", []).append(vuln.severity)
         out_dict.setdefault("version_local", []).append(vuln.version)
         out_dict.setdefault("version_nixpkgs", []).append(item.version)
         if item.newest_upstream_release and ";" in item.newest_upstream_release:
@@ -466,7 +496,7 @@ def _query_repology_versions(df_vuln_pkgs):
         if wcols and vuln.whitelist:
             # Skip repology query for whitelisted vulnerabilities
             LOG.log(LOG_SPAM, "Whitelisted, skipping repology query: %s", vuln)
-            _add_vuln_item(result_dict, vuln, wcols)
+            _add_triage_item(result_dict, vuln, wcols)
             continue
         repo_pkg = nix_to_repology_pkg_name(vuln.package)
         LOG.log(LOG_SPAM, "Package '%s' ==> '%s'", vuln.package, repo_pkg)
@@ -475,13 +505,13 @@ def _query_repology_versions(df_vuln_pkgs):
             # If there's one match, there's no need to check other details
             if df_repology_cli.shape[0] == 1:
                 LOG.log(LOG_SPAM, "One repology package matches")
-                _add_vuln_item(result_dict, vuln, wcols, df_repology_cli)
+                _add_triage_item(result_dict, vuln, wcols, df_repology_cli)
                 continue
             # Match based on version: exact match
             df = df_repology_cli[df_repology_cli["version"] == vuln.version]
             if not df.empty:
                 LOG.log(LOG_SPAM, "Exact version match '%s'", vuln.version)
-                _add_vuln_item(result_dict, vuln, wcols, df)
+                _add_triage_item(result_dict, vuln, wcols, df)
                 continue
             # Match based on version: similarity
             df_repology_cli["version_cmp"] = vuln.version
@@ -494,7 +524,7 @@ def _query_repology_versions(df_vuln_pkgs):
                 best_match = df["similarity"].max()
                 df = df[df["similarity"] == best_match]
                 LOG.log(LOG_SPAM, "Selecting best match based on version:\n%s", df)
-                _add_vuln_item(result_dict, vuln, wcols, df)
+                _add_triage_item(result_dict, vuln, wcols, df)
                 continue
             # Otherwise, we need to conclude that we don't know which repology
             # package (as returned by _run_repology_cli()), the nix package
@@ -502,9 +532,9 @@ def _query_repology_versions(df_vuln_pkgs):
             # If we end up here, we could improve by doing another search with:
             # _run_repology_cli(repo_pkg, match_type='--pkg_search')
             LOG.log(LOG_SPAM, "Vague match in repology pkg, adding vuln only")
-            _add_vuln_item(result_dict, vuln, wcols)
+            _add_triage_item(result_dict, vuln, wcols)
         else:
-            _add_vuln_item(result_dict, vuln, wcols)
+            _add_triage_item(result_dict, vuln, wcols)
     df_result = pd.DataFrame(result_dict)
     df_result.fillna("", inplace=True)
     df_result.reset_index(drop=True, inplace=True)
@@ -644,7 +674,7 @@ def _github_query(query_str, delay=60):
 def _triage(df_report, search_nix_prs):
     LOG.debug("")
     df = df_report.copy()
-    uids = ["vuln_id", "package", "version", "url", "sortcol"]
+    uids = ["vuln_id", "package", "severity", "version", "url", "sortcol"]
     if "whitelist" in df.columns:
         uids.append("whitelist")
         uids.append("whitelist_comment")
@@ -664,7 +694,7 @@ def _triage(df_report, search_nix_prs):
         LOG.info("Querying nixpkgs github PRs")
         df_vuln_pkgs["nixpkgs_pr"] = df_vuln_pkgs.apply(_vuln_nixpkgs_pr, axis=1)
     # Sort the data based on the following columns
-    sort_cols = ["sortcol", "package", "version_local"]
+    sort_cols = ["sortcol", "package", "severity", "version_local"]
     df_vuln_pkgs.sort_values(by=sort_cols, ascending=False, inplace=True)
     return df_vuln_pkgs
 
