@@ -115,23 +115,23 @@ INFO     Console report
 
 Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv' or some of its runtime dependencies:
 
-| vuln_id          | url                                               |package  | version|grype|osv|vulnix|sum|
-|------------------+---------------------------------------------------+---------+--------+-----+---+------+---|
-| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    |openssl  | 3.0.9  |  1  | 0 |  1   | 2 |
-| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     |libidn2  | 2.3.4  |  0  | 1 |  0   | 1 |
-| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 |git      | 2.41.0 |  0  | 0 |  1   | 1 |
-| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    |coreutils| 9.3    |  1  | 0 |  0   | 1 |
+| vuln_id          | url                                               | package   | version | severity | grype | osv | vulnix | sum |
+|------------------+---------------------------------------------------+-----------+---------+----------+-------+-----+--------+-----|
+| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    | openssl   | 3.0.9   | 5.3      |   1   |  0  |   1    |  2  |
+| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   | git       | 2.41.0  | 6.5      |   0   |  0  |   1    |  1  |
+| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   | git       | 2.41.0  | 5.3      |   0   |  0  |   1    |  1  |
+| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   | git       | 2.41.0  | 7.5      |   0   |  0  |   1    |  1  |
+| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   | git       | 2.41.0  | 8.8      |   0   |  0  |   1    |  1  |
+| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   | git       | 2.41.0  | 5.3      |   0   |  0  |   1    |  1  |
+| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   | git       | 2.41.0  | 7.5      |   0   |  0  |   1    |  1  |
+| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   | git       | 2.41.0  | 7.5      |   0   |  0  |   1    |  1  |
+| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     | libidn2   | 2.3.4   |          |   0   |  1  |   0    |  1  |
+| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   | git       | 2.41.0  | 6.1      |   0   |  0  |   1    |  1  |
+| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    | git       | 2.41.0  | 5.4      |   0   |  0  |   1    |  1  |
+| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 | git       | 2.41.0  | 4.3      |   0   |  0  |   1    |  1  |
+| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 | git       | 2.41.0  | 6.4      |   0   |  0  |   1    |  1  |
+| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 | git       | 2.41.0  | 5.3      |   0   |  0  |   1    |  1  |
+| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    | coreutils | 9.3     | 6.5      |   1   |  0  |   0    |  1  |
 
 INFO     Wrote: vulns.csv
 ```
@@ -190,9 +190,9 @@ Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q
 
 # Note: the console output now includes only non-whitelisted entries:
 
-| vuln_id       | url                                            | package   | version | grype | osv | vulnix | sum |
-|---------------+------------------------------------------------+-----------+---------+-------+-----+--------+-----|
-| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   |   1   |  0  |   1    |  2  |
+| vuln_id       | url                                            | package   | version | severity | grype | osv | vulnix | sum |
+|---------------+------------------------------------------------+-----------+---------+----------+-------+-----+--------+-----|
+| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   |   5.3    |   1   |  0  |   1    |  2  |
 
 INFO     Wrote: vulns.csv
 
@@ -200,24 +200,26 @@ INFO     Wrote: vulns.csv
 # by default 'vulns.csv', which includes the full details also from  the whitelisted vulnerabilities:
 $ csvlook vulns.csv 
 
-| vuln_id          | url                                               | package   | version | grype |   osv | vulnix | sum | sortcol         | whitelist | whitelist_comment                                                       |
-| ---------------- | ------------------------------------------------- | --------- | ------- | ----- | ----- | ------ | --- | --------------- | --------- | ----------------------------------------------------------------------- |
-| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    | openssl   | 3.0.9   |  True | False |   True |   2 | 2023A0000003817 |     False |                                                                         |
-| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000038663 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036884 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036883 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000036882 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030949 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030948 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   | git       | 2.41.0  | False | False |   True |   1 | 2022A0000030947 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     | libidn2   | 2.3.4   | False |  True |  False |   1 | 2022A0000004301 |      True | Incorrect package: Issue refers npm libidn2, not libidn2.               |
-| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   | git       | 2.41.0  | False | False |   True |   1 | 2021A0000021684 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    | git       | 2.41.0  | False | False |   True |   1 | 2020A0000002136 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 | git       | 2.41.0  | False | False |   True |   1 | 2019A0001003010 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 | git       | 2.41.0  | False | False |   True |   1 | 2018A0001000182 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 | git       | 2.41.0  | False | False |   True |   1 | 2018A0001000110 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
-| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    | coreutils | 9.3     |  True | False |  False |   1 | 2016A0000002781 |      True | NVD data issue: CPE entry does not correctly state the version numbers. |
+| vuln_id          | url                                               | package   | version | severity | grype |   osv | vulnix | sum | sortcol         | whitelist | whitelist_comment                                                       |
+| ---------------- | ------------------------------------------------- | --------- | ------- | -------- | ----- | ----- | ------ | --- | --------------- | --------- | ----------------------------------------------------------------------- |
+| CVE-2023-3817    | https://nvd.nist.gov/vuln/detail/CVE-2023-3817    | openssl   | 3.0.9   |      5.3 |  True | False |   True |   2 | 2023A0000003817 |     False |                                                                         |
+| CVE-2022-38663   | https://nvd.nist.gov/vuln/detail/CVE-2022-38663   | git       | 2.41.0  |      6.5 | False | False |   True |   1 | 2022A0000038663 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36884   | https://nvd.nist.gov/vuln/detail/CVE-2022-36884   | git       | 2.41.0  |      5.3 | False | False |   True |   1 | 2022A0000036884 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36883   | https://nvd.nist.gov/vuln/detail/CVE-2022-36883   | git       | 2.41.0  |      7.5 | False | False |   True |   1 | 2022A0000036883 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-36882   | https://nvd.nist.gov/vuln/detail/CVE-2022-36882   | git       | 2.41.0  |      8.8 | False | False |   True |   1 | 2022A0000036882 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30949   | https://nvd.nist.gov/vuln/detail/CVE-2022-30949   | git       | 2.41.0  |      5.3 | False | False |   True |   1 | 2022A0000030949 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30948   | https://nvd.nist.gov/vuln/detail/CVE-2022-30948   | git       | 2.41.0  |      7.5 | False | False |   True |   1 | 2022A0000030948 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2022-30947   | https://nvd.nist.gov/vuln/detail/CVE-2022-30947   | git       | 2.41.0  |      7.5 | False | False |   True |   1 | 2022A0000030947 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| MAL-2022-4301    | https://osv.dev/MAL-2022-4301                     | libidn2   | 2.3.4   |          | False |  True |  False |   1 | 2022A0000004301 |      True | Incorrect package: Issue refers npm libidn2, not libidn2.               |
+| CVE-2021-21684   | https://nvd.nist.gov/vuln/detail/CVE-2021-21684   | git       | 2.41.0  |      6.1 | False | False |   True |   1 | 2021A0000021684 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2020-2136    | https://nvd.nist.gov/vuln/detail/CVE-2020-2136    | git       | 2.41.0  |      5.4 | False | False |   True |   1 | 2020A0000002136 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2019-1003010 | https://nvd.nist.gov/vuln/detail/CVE-2019-1003010 | git       | 2.41.0  |      4.3 | False | False |   True |   1 | 2019A0001003010 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2018-1000182 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000182 | git       | 2.41.0  |      6.4 | False | False |   True |   1 | 2018A0001000182 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2018-1000110 | https://nvd.nist.gov/vuln/detail/CVE-2018-1000110 | git       | 2.41.0  |      5.3 | False | False |   True |   1 | 2018A0001000110 |      True | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    | coreutils | 9.3     |      6.5 |  True | False |  False |   1 | 2016A0000002781 |      True | NVD data issue: CPE entry does not correctly state the version numbers. |
 ```
+
+See ghafscan [manual_analysis.csv](https://github.com/tiiuae/ghafscan/blob/main/manual_analysis.csv) for a more complete example and usage of the vulnxscan whitelisting feature.
 
 ### Find Vulnerabilities Given SBOM as Input
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting components in the given CycloneDX SBOM.
@@ -240,12 +242,12 @@ INFO     Console report
 
 Potential vulnerabilities impacting components in 'sbom.cdx.json':
 
-| vuln_id       | url                                            | package   | version | grype | osv | sum |
-|---------------+------------------------------------------------+-----------+---------+-------+-----+-----|
-| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   |   1   |  0  |  1  |
-| CVE-2023-2975 | https://nvd.nist.gov/vuln/detail/CVE-2023-2975 | openssl   | 3.0.9   |   1   |  0  |  1  |
-| MAL-2022-4301 | https://osv.dev/MAL-2022-4301                  | libidn2   | 2.3.4   |   0   |  1  |  1  |
-| CVE-2016-2781 | https://nvd.nist.gov/vuln/detail/CVE-2016-2781 | coreutils | 9.3     |   1   |  0  |  1  |
+| vuln_id       | url                                            | package   | version | severity | grype | osv | sum |
+|---------------+------------------------------------------------+-----------+---------+----------+-------+-----+-----|
+| CVE-2023-3817 | https://nvd.nist.gov/vuln/detail/CVE-2023-3817 | openssl   | 3.0.9   | 5.3      |   1   |  0  |  1  |
+| CVE-2023-2975 | https://nvd.nist.gov/vuln/detail/CVE-2023-2975 | openssl   | 3.0.9   | 5.3      |   1   |  0  |  1  |
+| MAL-2022-4301 | https://osv.dev/MAL-2022-4301                  | libidn2   | 2.3.4   |          |   0   |  1  |  1  |
+| CVE-2016-2781 | https://nvd.nist.gov/vuln/detail/CVE-2016-2781 | coreutils | 9.3     | 6.5      |   1   |  0  |  1  |
 
 INFO     Wrote: vulns.csv
 ```
@@ -264,7 +266,7 @@ $ nix run .#vulnxscan -- ./result --buildtime
 ```
 
 ### Using Whitelist to Record Manual Analysis Results
-`vulnxscan` supports using whitelist csv file as a more generic record of manual analysis results, by allowing non-whitelisting rules. That is, the whitelist csv file can include a boolean `whitelist` column to indicate if the matching vulnerabilities should be whitelisted or not. The default value for `whitelist` is True, that is, if the `whitelist` column is missing or the value is empty, `vulnxscan` evaluates the rule as if the `whitelist` column value would evaluate to True.
+`vulnxscan` supports using whitelist csv file as a more generic record of manual analysis results, by allowing non-whitelisting rules. That is, the whitelist csv file can include a boolean `whitelist` column to indicate if the matching vulnerabilities should be whitelisted or not. The default value for `whitelist` is True, that is, if the `whitelist` column is missing or the value is empty, `vulnxscan` interprets the rule as if the `whitelist` column value would evaluate to True.
 
 As an example, consider the following manual analysis record (i.e. 'whitelist'):
 
@@ -278,6 +280,8 @@ csvlook manual_analysis.csv
 ```
 
 The above example `manual_analysis.csv` includes two rules: one for `CVE-2022-0856` and one for `CVE-2021-32490`. For both, the `whitelist` column value is '`False`', indicating the rule is a non-whitelisting rule. This means, for both cases, we want to record the manual analysis results as detailed in the `comment` column, but we don't want to whitelist the matching vulnerabilities. Specifically, in the case of `CVE-2022-0856` we don't want to whitelist the issue since it's not fixed upstream, but we still want to record the link to the upstream PR to make it easier to follow the upstream progress. In the case of `CVE-2021-32490` we don't want to whitelist the issue since the nixpkgs PR is pending merge. In this case too, we still want to record the nixpkgs PR to allow following the progress.
+
+See ghafscan [manual_analysis.csv](https://github.com/tiiuae/ghafscan/blob/main/manual_analysis.csv) for a more complete example and usage of non-whitelisting rules to help manual analysis.
 
 ### Triage to Help Manual Analysis
 `vulnxscan` can be used to help manual analysis with `--triage` and `--nixprs` command line options.
@@ -320,22 +324,21 @@ INFO     CVE-2023-2617 for 'opencv' is patched with: ['/nix/store/vw29nr5nrfs10v
 
 Potential vulnerabilities impacting version_local: 
 
-| vuln_id         | package   | version_local | version   | version | classify                             |
-|                 |           |               | nixpkgs   | upstream|                                      |
-|-----------------+-----------+---------------+-----------+---------+--------------------------------------|
-| CVE-2023-40360  | qemu      | 8.0.2         | 8.0.4     | 8.1.0   | fix_update_to_version_upstream       |
-| CVE-2023-40359  | xterm     | 379           | 384       | 384     | fix_update_to_version_nixpkgs        |
-| CVE-2023-39742  | giflib    | 5.2.1         | 5.2.1     | 5.2.1   | fix_not_available                    |
-| CVE-2023-39533  | go        | 1.20.6        | 1.21.0    | 1.21.0  | fix_update_to_version_nixpkgs        |
-| CVE-2023-38858  | faad2     | 2.10.1        | 2.10.1    | 2.10.1  | fix_not_available                    |
-| CVE-2023-38857  | faad2     | 2.10.1        | 2.10.1    | 2.10.1  | fix_not_available                    |
-| CVE-2023-38633  | librsvg   | 2.55.1        | 2.56.3    | 2.56.3  | fix_update_to_version_nixpkgs        |
-| CVE-2023-37769  | pixman    | 0.42.2        | 0.42.2    | 0.42.2  | err_not_vulnerable_based_on_repology |
-| CVE-2023-31484  | perl      | 5.36.0-env    | 5.38.0    | 5.38.0  | fix_update_to_version_nixpkgs        |
-| CVE-2023-31484  | perl      | 5.36.0        | 5.38.0    | 5.38.0  | fix_update_to_version_nixpkgs        |
-| CVE-2023-30571  | libarchive| 3.6.2         | 3.6.2     | 3.7.1   | fix_update_to_version_upstream       |
-| CVE-2023-29409  | go        | 1.20.6        | 1.21.0    | 1.21.0  | fix_update_to_version_nixpkgs        |
-| CVE-2023-29383  | shadow    | 4.13          | 4.13      | 4.14.0  | fix_update_to_version_upstream       |
+| vuln_id             | package    | severity | version_local | version_nixpkgs | version_upstream | classify                             |
+|---------------------+------------+----------+---------------+-----------------+------------------+--------------------------------------|
+| CVE-2023-40360      | qemu       | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            | fix_update_to_version_nixpkgs        |
+| CVE-2023-40359      | xterm      | 9.8      | 379           | 384             | 384              | fix_update_to_version_nixpkgs        |
+| CVE-2023-39742      | giflib     | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            | fix_not_available                    |
+| CVE-2023-39533      | go         | 7.5      | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs        |
+| CVE-2023-38858      | faad2      | 6.5      | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available                    |
+| CVE-2023-38857      | faad2      | 5.5      | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available                    |
+| CVE-2023-38633      | librsvg    | 5.5      | 2.55.1        | 2.56.3          | 2.56.3           | fix_update_to_version_nixpkgs        |
+| CVE-2023-37769      | pixman     | 6.5      | 0.42.2        | 0.42.2          | 0.42.2           | err_not_vulnerable_based_on_repology |
+| CVE-2023-31484      | perl       | 8.1      | 5.36.0-env    | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs        |
+| CVE-2023-31484      | perl       | 8.1      | 5.36.0        | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs        |
+| CVE-2023-30571      | libarchive | 5.3      | 3.6.2         | 3.6.2           | 3.7.1            | fix_update_to_version_upstream       |
+| CVE-2023-29409      | go         | 5.3      | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs        |
+| CVE-2023-29383      | shadow     | 3.3      | 4.13          | 4.13            | 4.14.0           | fix_update_to_version_upstream       |
 
 ... (output truncated) ...
 
@@ -365,30 +368,27 @@ INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx
 ...
 Potential vulnerabilities impacting version_local: 
 
-| vuln_id        | package   | version | version | version | classify                        | nixpkgs_pr
-|                |           | local   | nixpkgs | upstream|                                 |
-|----------------+-----------+---------+---------+---------+---------------------------------+----------------------------------------------|
-| CVE-2023-40360 | qemu      | 8.0.2   | 8.0.4   | 8.1.0   | fix_update_to_version_upstream  | https://github.com/NixOS/nixpkgs/pull/251154 |
-| CVE-2023-40359 | xterm     | 379     | 384     | 384     | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/244141 |
-| CVE-2023-39742 | giflib    | 5.2.1   | 5.2.1   | 5.2.1   | fix_not_available               |                                              |
-| CVE-2023-39533 | go        | 1.20.6  | 1.21.0  | 1.21.0  | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/113862 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/130806 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/248027 |
-| CVE-2023-38858 | faad2     | 2.10.1  | 2.10.1  | 2.10.1  | fix_not_available               |                                              |
-| CVE-2023-38857 | faad2     | 2.10.1  | 2.10.1  | 2.10.1  | fix_not_available               |                                              |
-| CVE-2023-38633 | librsvg   | 2.55.1  | 2.56.3  | 2.56.3  | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/246763 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/246860 |
-| CVE-2023-37769 | pixman    | 0.42.2  | 0.42.2  | 0.42.2  | err_not_vulnerable_based_on_repo|                                              |
-| CVE-2023-31484 | perl      | 5.36.0-e| 5.38.0  | 5.38.0  | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/241848 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/247547 |
-| CVE-2023-31484 | perl      | 5.36.0  | 5.38.0  | 5.38.0  | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/241848 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/247547 |
-| CVE-2023-30571 | libarchive| 3.6.2   | 3.6.2   | 3.7.1   | fix_update_to_version_upstream  |                                              |
-| CVE-2023-29409 | go        | 1.20.6  | 1.21.0  | 1.21.0  | fix_update_to_version_nixpkgs   | https://github.com/NixOS/nixpkgs/pull/113862 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/130806 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/247034 |
-|                |           |         |         |         |                                 | https://github.com/NixOS/nixpkgs/pull/248027 |
-| CVE-2023-29383 | shadow    | 4.13    | 4.13    | 4.14.0  | fix_update_to_version_upstream  | https://github.com/NixOS/nixpkgs/pull/233924 |
+
+| vuln_id        | package    | severity   | version_local | version_nixpkgs | version_upstream | classify                      | nixpkgs_pr                                    |
+|----------------+------------+------------+---------------+-----------------+------------------+-------------------------------+-----------------------------------------------|
+| CVE-2023-40360 | qemu       | 5.5        | 8.0.2         | 8.1.0           | 8.1.0            | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/251154  |
+| CVE-2023-40359 | xterm      | 9.8        | 379           | 384             | 384              | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/244141  |
+| CVE-2023-39742 | giflib     | 5.5        | 5.2.1         | 5.2.1           | 5.2.1            | fix_not_available             |                                               |
+| CVE-2023-39533 | go         | 7.5        | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/253738  |
+| CVE-2023-38858 | faad2      | 6.5        | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available             |                                               |
+| CVE-2023-38857 | faad2      | 5.5        | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available             |                                               |
+| CVE-2023-38633 | librsvg    | 5.5        | 2.55.1        | 2.56.3          | 2.56.3           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/246763  |
+|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/246860  |
+| CVE-2023-37769 | pixman     | 6.5        | 0.42.2        | 0.42.2          | 0.42.2           | err_not_vulnerable_based_on_re|                                               |
+| CVE-2023-31484 | perl       | 8.1        | 5.36.0-env    | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/241848  |
+|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/247547  |
+| CVE-2023-31484 | perl       | 8.1        | 5.36.0        | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/241848  |
+|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/247547  |
+| CVE-2023-30571 | libarchive | 5.3        | 3.6.2         | 3.6.2           | 3.7.1            | fix_update_to_version_upstream|                                               |
+| CVE-2023-29409 | go         | 5.3        | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/247034  |
+|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/253738  |
+| CVE-2023-29383 | shadow     | 3.3        | 4.13          | 4.13            | 4.14.0           | fix_update_to_version_upstream| https://github.com/NixOS/nixpkgs/pull/233924  |
+|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/254143  |
 ```
 
 `vulnxscan` option `--nixprs` adds the column `nixpkgs_pr` to the output, to help manual analysis by listing PRs that appear relevant for the given issue.
