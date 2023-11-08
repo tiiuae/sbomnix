@@ -29,6 +29,7 @@
       imports = [
         ./nix
         ./scripts
+        ./sbomnix.nix
       ];
 
       perSystem = {pkgs, ...}: {
