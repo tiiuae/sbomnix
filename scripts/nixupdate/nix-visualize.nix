@@ -5,7 +5,6 @@
   nixpkgs ? <nixpkgs>,
   pkgs ? import nixpkgs {},
   pythonPackages ? pkgs.python3Packages,
-  lib ? pkgs.lib,
 }:
 pythonPackages.buildPythonPackage rec {
   version = "1.0.5";

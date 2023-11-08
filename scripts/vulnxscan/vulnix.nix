@@ -4,7 +4,6 @@
 {
   nixpkgs ? <nixpkgs>,
   pkgs ? import nixpkgs {},
-  lib ? pkgs.lib,
 }:
 # Use build in upstream nixpkgs
 (pkgs.callPackage "${nixpkgs}/pkgs/tools/security/vulnix" {

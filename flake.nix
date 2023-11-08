@@ -28,6 +28,7 @@
 
       imports = [
         ./nix
+        ./scripts
       ];
 
       perSystem = {pkgs, ...}: {
