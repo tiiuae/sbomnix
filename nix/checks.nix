@@ -2,9 +2,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 {lib, ...}: {
-  perSystem = {self', ...}: {
+  perSystem = {
+    self',
+    pkgs,
+    ...
+  }: {
     checks =
+      {
+        reuse =
+          pkgs.runCommandLocal "reuse-lint" {
+            buildInputs = [pkgs.reuse];
+          } ''
+            cd ${../.}
+            reuse lint
+            touch $out
+          '';
+      }
+      //
       # merge in the package derivations to force a build of all packages during a `nix flake check`
-      with lib; mapAttrs' (n: nameValuePair "package-${n}") self'.packages;
+      (with lib; mapAttrs' (n: nameValuePair "package-${n}") self'.packages);
   };
 }
