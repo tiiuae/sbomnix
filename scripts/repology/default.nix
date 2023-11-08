@@ -81,6 +81,11 @@
           '';
 
           pythonImportsCheck = ["sbomnix"];
+
+          meta = {
+            # TODO add more meta attributes
+            mainProgram = "repology_cli.py";
+          };
         };
     };
   };

@@ -68,5 +68,11 @@
           pythonImportsCheck = ["sbomnix"];
         };
     };
+    apps = {
+      nix_outdated = {
+        type = "app";
+        program = "${self'.packages.nixupdate}/bin/nix_outdated.py";
+      };
+    };
   };
 }

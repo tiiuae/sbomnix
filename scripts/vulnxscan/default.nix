@@ -62,6 +62,11 @@
           '';
 
           pythonImportsCheck = ["sbomnix"];
+
+          meta = {
+            # TODO add more meta attributes
+            mainProgram = "vulnxscan.py";
+          };
         };
     };
   };
