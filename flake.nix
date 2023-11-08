@@ -31,10 +31,6 @@
         ./scripts
         ./sbomnix.nix
       ];
-
-      perSystem = {pkgs, ...}: {
-        devShells.default = pkgs.mkShell {};
-      };
     };
 
   #  outputs = { self, nixpkgs }:
