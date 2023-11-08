@@ -8,6 +8,7 @@ SDIR="$(realpath "$SDIR")"
 
 TMPF="/tmp/TEMP.MSG"
 
+# shellcheck disable=SC2317
 function On_exit {
     rm -f "$TMPF"
 }
