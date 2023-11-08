@@ -5,7 +5,6 @@
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
 }:
-
 pythonPackages.buildPythonPackage rec {
   pname = "repology_cli";
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../../VERSION);
@@ -13,9 +12,9 @@ pythonPackages.buildPythonPackage rec {
 
   src = ../../.;
 
-  requests-ratelimiter = import ./requests-ratelimiter.nix { pkgs=pkgs; };
+  requests-ratelimiter = import ./requests-ratelimiter.nix {inherit pkgs;};
 
-  propagatedBuildInputs = [ 
+  propagatedBuildInputs = [
     pkgs.reuse
     requests-ratelimiter
     pythonPackages.beautifulsoup4
@@ -35,5 +34,5 @@ pythonPackages.buildPythonPackage rec {
     install -vD scripts/repology/repology_cve.py $out/bin/repology_cve.py
   '';
 
-  pythonImportsCheck = [ "sbomnix" ];
+  pythonImportsCheck = ["sbomnix"];
 }

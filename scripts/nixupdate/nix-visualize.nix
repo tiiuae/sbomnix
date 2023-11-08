@@ -1,13 +1,12 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-
-{ nixpkgs ? <nixpkgs>
-, pkgs ? import nixpkgs {}
-, pythonPackages ? pkgs.python3Packages
-, lib ? pkgs.lib
+{
+  nixpkgs ? <nixpkgs>,
+  pkgs ? import nixpkgs {},
+  pythonPackages ? pkgs.python3Packages,
+  lib ? pkgs.lib,
 }:
-
 pythonPackages.buildPythonPackage rec {
   version = "1.0.5";
   pname = "nix-visualize";

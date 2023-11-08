@@ -1,15 +1,13 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-
 # TODO: this should be in nixpkgs
-
-{ nixpkgs ? <nixpkgs>
-, pkgs ? import nixpkgs {}
-, pythonPackages ? pkgs.python3Packages
-, lib ? pkgs.lib
+{
+  nixpkgs ? <nixpkgs>,
+  pkgs ? import nixpkgs {},
+  pythonPackages ? pkgs.python3Packages,
+  lib ? pkgs.lib,
 }:
-
 pythonPackages.buildPythonPackage rec {
   version = "0.4.0";
   pname = "requests-ratelimiter";
@@ -22,7 +20,7 @@ pythonPackages.buildPythonPackage rec {
     hash = "sha256-F9bfcwijyyKzlFKBJAC/5ETc4/hZpPhm2Flckku2z6M=";
   };
 
-  pyrate-limiter = import ./pyrate-limiter.nix { pkgs=pkgs; };
+  pyrate-limiter = import ./pyrate-limiter.nix {inherit pkgs;};
 
   propagatedBuildInputs = with pythonPackages; [
     poetry-core

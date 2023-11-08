@@ -5,22 +5,21 @@
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
 }:
-
 pythonPackages.buildPythonPackage rec {
   pname = "nixupdate";
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../../VERSION);
   format = "setuptools";
 
   src = ../../.;
-  repology_cli = import ../repology/repology_cli.nix { pkgs=pkgs; };
-  nix_visualize = import ./nix-visualize.nix { pkgs=pkgs; };
+  repology_cli = import ../repology/repology_cli.nix {inherit pkgs;};
+  nix_visualize = import ./nix-visualize.nix {inherit pkgs;};
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ repology_cli nix_visualize ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [repology_cli nix_visualize]}"
   ];
 
-  requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
+  requests-ratelimiter = import ../repology/requests-ratelimiter.nix {inherit pkgs;};
 
-  propagatedBuildInputs = [ 
+  propagatedBuildInputs = [
     pkgs.reuse
     requests-ratelimiter
     pythonPackages.beautifulsoup4
@@ -39,5 +38,5 @@ pythonPackages.buildPythonPackage rec {
     install -vD scripts/nixupdate/nix_outdated.py $out/bin/nix_outdated.py
   '';
 
-  pythonImportsCheck = [ "sbomnix" ];
+  pythonImportsCheck = ["sbomnix"];
 }

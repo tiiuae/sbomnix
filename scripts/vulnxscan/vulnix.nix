@@ -1,17 +1,17 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-
-{ nixpkgs ? <nixpkgs>
-, pkgs ? import nixpkgs {}
-, lib ? pkgs.lib
+{
+  nixpkgs ? <nixpkgs>,
+  pkgs ? import nixpkgs {},
+  lib ? pkgs.lib,
 }:
-
 # Use build in upstream nixpkgs
 (pkgs.callPackage "${nixpkgs}/pkgs/tools/security/vulnix" {
-  python3Packages = pkgs.python3Packages;
-}).overrideAttrs (
-  old: rec {
+  inherit (pkgs) python3Packages;
+})
+.overrideAttrs (
+  _old: rec {
     # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
     # vulnix support for runtime-only scan ('-C' command-line option)
     # which is currently not available in released version of vulnix.

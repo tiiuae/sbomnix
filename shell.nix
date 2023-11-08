@@ -5,18 +5,20 @@
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
 }:
-
 pkgs.mkShell rec {
   name = "sbomnix-dev-shell";
 
-  nixupdate = import ./scripts/nixupdate/nixupdate.nix { pkgs=pkgs; };
-  nix_visualize = import ./scripts/nixupdate/nix-visualize.nix { pkgs=pkgs; };
-  requests-ratelimiter = import ./scripts/repology/requests-ratelimiter.nix { pkgs=pkgs; };
-  repology_cli = import ./scripts/repology/repology_cli.nix { pkgs=pkgs; };
-  vulnix = import ./scripts/vulnxscan/vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; };
-  vulnxscan = import ./scripts/vulnxscan/vulnxscan.nix { pkgs=pkgs; };
+  nixupdate = import ./scripts/nixupdate/nixupdate.nix {inherit pkgs;};
+  nix_visualize = import ./scripts/nixupdate/nix-visualize.nix {inherit pkgs;};
+  requests-ratelimiter = import ./scripts/repology/requests-ratelimiter.nix {inherit pkgs;};
+  repology_cli = import ./scripts/repology/repology_cli.nix {inherit pkgs;};
+  vulnix = import ./scripts/vulnxscan/vulnix.nix {
+    nixpkgs = pkgs.path;
+    inherit pkgs;
+  };
+  vulnxscan = import ./scripts/vulnxscan/vulnxscan.nix {inherit pkgs;};
 
-  buildInputs = [ 
+  buildInputs = [
     nixupdate
     nix_visualize
     requests-ratelimiter
@@ -51,7 +53,7 @@ pkgs.mkShell rec {
 
     # https://github.com/NixOS/nix/issues/1009:
     export TMPDIR="/tmp"
-    
+
     # Enter python development environment
     make install-dev
   '';

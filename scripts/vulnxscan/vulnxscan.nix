@@ -4,24 +4,27 @@
 {
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
-  vulnix ? import ./vulnix.nix { nixpkgs=pkgs.path; pkgs=pkgs; },
+  vulnix ?
+    import ./vulnix.nix {
+      nixpkgs = pkgs.path;
+      inherit pkgs;
+    },
 }:
-
 pythonPackages.buildPythonPackage rec {
   pname = "vulnxscan";
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../../VERSION);
   format = "setuptools";
 
   src = ../../.;
-  sbomnix = import ../../default.nix { pkgs=pkgs; };
-  repology_cli = import ../repology/repology_cli.nix { pkgs=pkgs; };
+  sbomnix = import ../../default.nix {inherit pkgs;};
+  repology_cli = import ../repology/repology_cli.nix {inherit pkgs;};
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ sbomnix repology_cli pkgs.grype pkgs.nix vulnix ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [sbomnix repology_cli pkgs.grype pkgs.nix vulnix]}"
   ];
 
-  requests-ratelimiter = import ../repology/requests-ratelimiter.nix { pkgs=pkgs; };
+  requests-ratelimiter = import ../repology/requests-ratelimiter.nix {inherit pkgs;};
 
-  propagatedBuildInputs = [ 
+  propagatedBuildInputs = [
     pkgs.reuse
     requests-ratelimiter
     pythonPackages.beautifulsoup4
@@ -40,5 +43,5 @@ pythonPackages.buildPythonPackage rec {
     install -vD scripts/vulnxscan/vulnxscan.py $out/bin/vulnxscan.py
   '';
 
-  pythonImportsCheck = [ "sbomnix" ];
+  pythonImportsCheck = ["sbomnix"];
 }
