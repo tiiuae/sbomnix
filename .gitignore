@@ -21,3 +21,4 @@ result
 /*.dot
 /*.svg
 .idea
+.direnv
