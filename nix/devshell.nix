@@ -5,6 +5,7 @@
   perSystem = {
     pkgs,
     self',
+    inputs',
     ...
   }: {
     devShells.default = let
@@ -44,6 +45,7 @@
           pythonPackages.tabulate
           pythonPackages.venvShellHook
           pythonPackages.wheel
+          inputs'.nix-fast-build.packages.default
         ];
         venvDir = "venv";
         postShellHook = ''
