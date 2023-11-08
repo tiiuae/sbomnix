@@ -5,7 +5,6 @@
   pkgs ? import <nixpkgs> {},
   pythonPackages ? pkgs.python3Packages,
 }:
-
 pythonPackages.buildPythonPackage rec {
   pname = "sbomnix";
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
@@ -13,10 +12,10 @@ pythonPackages.buildPythonPackage rec {
 
   src = ./.;
   makeWrapperArgs = [
-    "--prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nix pkgs.graphviz ]}"
+    "--prefix PATH : ${pkgs.lib.makeBinPath [pkgs.nix pkgs.graphviz]}"
   ];
 
-  propagatedBuildInputs = [ 
+  propagatedBuildInputs = [
     pkgs.reuse
     pythonPackages.colorlog
     pythonPackages.graphviz
@@ -27,5 +26,5 @@ pythonPackages.buildPythonPackage rec {
     pythonPackages.requests
     pythonPackages.tabulate
   ];
-  pythonImportsCheck = [ "sbomnix" ];
+  pythonImportsCheck = ["sbomnix"];
 }
