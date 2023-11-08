@@ -1,6 +1,7 @@
 {
   imports = [
-    ./repology
     ./nixupdate
+    ./repology
+    ./vulnxscan
   ];
 }
