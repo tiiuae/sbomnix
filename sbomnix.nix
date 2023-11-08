@@ -1,5 +1,9 @@
 {
-  perSystem = {pkgs, ...}: let
+  perSystem = {
+    pkgs,
+    self',
+    ...
+  }: let
     pythonPackages = pkgs.python3Packages;
   in {
     packages.sbomnix = pythonPackages.buildPythonPackage rec {
@@ -24,6 +28,10 @@
         pythonPackages.tabulate
       ];
       pythonImportsCheck = ["sbomnix"];
+    };
+    apps.nixgraph = {
+      type = "app";
+      program = "${self'.packages.sbomnix}/bin/nixgraph";
     };
   };
 }
