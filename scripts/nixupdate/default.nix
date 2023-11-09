@@ -43,8 +43,6 @@
 
           src = ../../.;
 
-          inherit repology_cli nix_visualize requests-ratelimiter;
-
           makeWrapperArgs = [
             "--prefix PATH : ${pkgs.lib.makeBinPath [repology_cli nix_visualize]}"
           ];

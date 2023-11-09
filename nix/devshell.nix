@@ -15,8 +15,6 @@
       pkgs.mkShell rec {
         name = "sbomnix-dev-shell";
 
-        inherit nixupdate nix_visualize requests-ratelimiter repology_cli vulnix vulnxscan;
-
         buildInputs = [
           nixupdate
           nix_visualize
