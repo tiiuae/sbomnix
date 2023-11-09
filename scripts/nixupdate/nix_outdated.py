@@ -90,7 +90,7 @@ def _run_repology_cli(sbompath):
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
         cmd = (
-            "repology_cli.py "
+            "repology_cli "
             f"--sbom_cdx={sbompath} --repository=nix_unstable --out={f.name}"
         )
         exec_cmd(cmd.split())

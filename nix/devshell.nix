@@ -4,39 +4,44 @@
 {
   perSystem = {
     pkgs,
-    self',
+    lib,
     inputs',
     ...
   }: {
     devShells.default = let
-      pythonPackages = pkgs.python3Packages;
+      pp = pkgs.python3Packages;
     in
       pkgs.mkShell rec {
         name = "sbomnix-dev-shell";
 
-        buildInputs = [
-          pkgs.coreutils
-          pkgs.curl
-          pkgs.gnugrep
-          pkgs.gnused
-          pkgs.graphviz
-          pkgs.grype
-          pkgs.gzip
-          pkgs.nix
-          pkgs.reuse
-          pythonPackages.beautifulsoup4
-          pythonPackages.colorlog
-          pythonPackages.graphviz
-          pythonPackages.numpy
-          pythonPackages.packageurl-python
-          pythonPackages.packaging
-          pythonPackages.pandas
-          pythonPackages.requests
-          pythonPackages.requests-cache
-          pythonPackages.tabulate
-          pythonPackages.venvShellHook
-          pythonPackages.wheel
-          inputs'.nix-fast-build.packages.default
+        buildInputs = lib.flatten [
+          (with pkgs; [
+            coreutils
+            curl
+            gnugrep
+            gnused
+            graphviz
+            grype
+            gzip
+            nix
+            reuse
+          ])
+          (with pp; [
+            beautifulsoup4
+            colorlog
+            graphviz
+            numpy
+            packageurl-python
+            packaging
+            pandas
+            requests
+            requests-cache
+            tabulate
+            venvShellHook
+            wheel
+          ])
+
+          [inputs'.nix-fast-build.packages.default]
         ];
         venvDir = "venv";
         postShellHook = ''
