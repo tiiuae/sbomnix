@@ -56,6 +56,10 @@ setuptools.setup(
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",
             "nixgraph = nixgraph.main:main",
+            "nix_outdated = scripts.nixupdate.nix_outdated:main",
+            "vulnxscan = scripts.vulnxscan.vulnxscan:main",
+            "repology_cli = scripts.repology.repology_cli:main",
+            "repology_cve = scripts.repology.repology_cve:main"
         ]
     },
 )

@@ -26,8 +26,12 @@
       };
     };
     nix-visualize = {
-        url = "github:craigmbooth/nix-visualize";
-        flake = false;
+      url = "github:craigmbooth/nix-visualize";
+      flake = false;
+    };
+    vulnix = {
+      url = "github:henrirosten/vulnix";
+      flake = false;
     };
   };
 
@@ -45,8 +49,6 @@
 
       imports = [
         ./nix
-        ./scripts
-        ./sbomnix.nix
       ];
     };
 }
