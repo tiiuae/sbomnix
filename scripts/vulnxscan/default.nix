@@ -39,8 +39,6 @@
 
           src = ../../.;
 
-          inherit sbomnix repology_cli;
-
           makeWrapperArgs = [
             "--prefix PATH : ${pkgs.lib.makeBinPath [sbomnix repology_cli pkgs.grype pkgs.nix vulnix]}"
           ];

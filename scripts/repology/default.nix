@@ -42,8 +42,6 @@
             hash = "sha256-F9bfcwijyyKzlFKBJAC/5ETc4/hZpPhm2Flckku2z6M=";
           };
 
-          inherit pyrate-limiter;
-
           propagatedBuildInputs = with pythonPackages; [
             poetry-core
             pyrate-limiter
@@ -60,8 +58,6 @@
           format = "setuptools";
 
           src = ../../.;
-
-          inherit requests-ratelimiter;
 
           propagatedBuildInputs = [
             pkgs.reuse
