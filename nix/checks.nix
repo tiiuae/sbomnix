@@ -9,6 +9,8 @@
   }: {
     checks =
       {
+        # checks that copyright headers are compliant
+        # todo this could be moved into a shared flake
         reuse =
           pkgs.runCommandLocal "reuse-lint" {
             buildInputs = [pkgs.reuse];

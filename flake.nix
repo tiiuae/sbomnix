@@ -25,6 +25,10 @@
         treefmt-nix.follows = "treefmt-nix";
       };
     };
+    nix-visualize = {
+        url = "github:craigmbooth/nix-visualize";
+        flake = false;
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:

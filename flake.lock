@@ -73,6 +73,22 @@
         "type": "github"
       }
     },
+    "nix-visualize": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1687577587,
+        "narHash": "sha256-Z1r8XHszoUnQinl63yXvQG6Czp5HnYNG37AY+EEiT4w=",
+        "owner": "craigmbooth",
+        "repo": "nix-visualize",
+        "rev": "cafaba50cd63ba9c759c56af71fd0d22fd60a548",
+        "type": "github"
+      },
+      "original": {
+        "owner": "craigmbooth",
+        "repo": "nix-visualize",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1698890957,
@@ -129,6 +145,7 @@
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",
         "nix-fast-build": "nix-fast-build",
+        "nix-visualize": "nix-visualize",
         "nixpkgs": "nixpkgs_2",
         "treefmt-nix": "treefmt-nix"
       }
