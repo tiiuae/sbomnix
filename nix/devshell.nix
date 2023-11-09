@@ -10,18 +10,11 @@
   }: {
     devShells.default = let
       pythonPackages = pkgs.python3Packages;
-      inherit (self'.packages) nixupdate nix_visualize requests-ratelimiter repology_cli vulnix vulnxscan;
     in
       pkgs.mkShell rec {
         name = "sbomnix-dev-shell";
 
         buildInputs = [
-          nixupdate
-          nix_visualize
-          requests-ratelimiter
-          repology_cli
-          vulnix
-          vulnxscan
           pkgs.coreutils
           pkgs.curl
           pkgs.gnugrep
