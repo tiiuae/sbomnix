@@ -4,7 +4,6 @@
 {
   perSystem = {
     pkgs,
-    lib,
     inputs',
     ...
   }: {
@@ -14,7 +13,7 @@
       pkgs.mkShell rec {
         name = "sbomnix-dev-shell";
 
-        buildInputs = lib.flatten [
+        buildInputs =
           (with pkgs; [
             coreutils
             curl
@@ -26,7 +25,7 @@
             nix
             reuse
           ])
-          (with pp; [
+          ++ (with pp; [
             beautifulsoup4
             colorlog
             graphviz
@@ -40,9 +39,8 @@
             venvShellHook
             wheel
           ])
+          ++ [inputs'.nix-fast-build.packages.default];
 
-          [inputs'.nix-fast-build.packages.default]
-        ];
         venvDir = "venv";
         postShellHook = ''
           source $PWD/scripts/env.sh

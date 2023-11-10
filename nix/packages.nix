@@ -61,13 +61,13 @@
 
         src = lib.cleanSource ../.;
 
-        propagatedBuildInputs = lib.flatten [
+        propagatedBuildInputs =
           [
             pyrate-limiter
             requests-ratelimiter
+            pkgs.reuse
           ]
-          [pkgs.reuse]
-          (with pp; [
+          ++ (with pp; [
             beautifulsoup4
             colorlog
             graphviz
@@ -78,8 +78,7 @@
             requests
             requests-cache
             tabulate
-          ])
-        ];
+          ]);
 
         pythonImportsCheck = ["sbomnix"];
 
