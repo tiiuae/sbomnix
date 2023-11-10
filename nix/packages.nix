@@ -12,6 +12,7 @@
     # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
     # vulnix support for runtime-only scan ('-C' command-line option)
     # which is currently not available in released version of vulnix.
+    # Pending https://github.com/nix-community/vulnix/pull/80
     vulnix = (import inputs.vulnix) {
       inherit (inputs) nixpkgs; # required but not used as we provide pkgs
       inherit pkgs lib;
