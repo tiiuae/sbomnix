@@ -24,7 +24,7 @@
         program = "${sbomnix}/bin/nix_outdated";
       };
 
-      # nix run .#nix_outdated
+      # nix run .#nixgraph
       nixgraph = {
         type = "app";
         program = "${sbomnix}/bin/nixgraph";
