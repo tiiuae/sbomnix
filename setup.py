@@ -51,7 +51,13 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="SBOM",
-    packages=["sbomnix", "nixgraph", "scripts.vulnxscan"],
+    packages=[
+        "sbomnix",
+        "nixgraph",
+        "scripts.vulnxscan",
+        "scripts.nixupdate",
+        "scripts.repology",
+    ],
     entry_points={
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",
