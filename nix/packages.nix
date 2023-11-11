@@ -9,17 +9,6 @@
   }: let
     pp = pkgs.python3Packages;
 
-    # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
-    # vulnix support for runtime-only scan ('-C' command-line option)
-    # which is currently not available in released version of vulnix.
-    # Pending https://github.com/nix-community/vulnix/pull/80
-    vulnix = (import inputs.vulnix) {
-      inherit (inputs) nixpkgs; # required but not used as we provide pkgs
-      inherit pkgs lib;
-    };
-
-    nix-visualize = (import inputs.nix-visualize) {inherit pkgs;};
-
     pyrate-limiter = pp.buildPythonPackage rec {
       version = "2.10.0";
       pname = "pyrate-limiter";
@@ -54,6 +43,17 @@
   in {
     packages = rec {
       default = sbomnix;
+
+      # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
+      # vulnix support for runtime-only scan ('-C' command-line option)
+      # which is currently not available in released version of vulnix.
+      # Pending https://github.com/nix-community/vulnix/pull/80
+      vulnix = (import inputs.vulnix) {
+        inherit (inputs) nixpkgs; # required but not used as we provide pkgs
+        inherit pkgs lib;
+      };
+
+      nix-visualize = (import inputs.nix-visualize) {inherit pkgs;};
 
       sbomnix = pp.buildPythonPackage rec {
         pname = "sbomnix";

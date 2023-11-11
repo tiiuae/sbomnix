@@ -5,6 +5,7 @@
   perSystem = {
     pkgs,
     inputs',
+    self',
     ...
   }: {
     devShells.default = let
@@ -24,6 +25,10 @@
             gzip
             nix
             reuse
+          ])
+          ++ (with self'.packages; [
+            vulnix
+            nix-visualize
           ])
           ++ (with pp; [
             beautifulsoup4
