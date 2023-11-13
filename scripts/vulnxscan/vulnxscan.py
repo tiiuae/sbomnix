@@ -557,7 +557,7 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
         suffix = ".csv"
         with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
             args = f"{repo_pkg_name} {pkg_version}"
-            cmd = f"repology_cve.py --out={f.name} {args}"
+            cmd = f"repology_cve --out={f.name} {args}"
             exec_cmd(cmd.split(), raise_on_error=False)
             df = df_from_csv_file(f.name, exit_on_error=False)
             if df is None:
