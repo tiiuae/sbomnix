@@ -429,7 +429,7 @@ def _run_repology_cli(pname, match_type="--pkg_exact"):
             status = "--re_status=outdated|newest|devel|unique"
             out = f"--out={f.name}"
             search = f"{match_type}={pname}"
-            cmd = f"repology_cli.py {repo} {status} {search} {out} "
+            cmd = f"repology_cli {repo} {status} {search} {out} "
             ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
             if ret and ret.stderr and "No matching packages" in ret.stderr:
                 return None
