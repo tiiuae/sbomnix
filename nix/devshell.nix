@@ -7,42 +7,40 @@
     self',
     ...
   }: {
-    devShells.default = let
-      pp = pkgs.python3Packages;
-    in
-      pkgs.mkShell rec {
-        name = "sbomnix-dev-shell";
+    devShells.default = pkgs.mkShell rec {
+      name = "sbomnix-dev-shell";
 
-        buildInputs =
-          (with pkgs; [
-            coreutils
-            curl
-            gnugrep
-            gnused
-            graphviz
-            grype
-            gzip
-            nix
-            reuse
-          ])
-          ++ (with self'.packages; [
-            vulnix
-            nix-visualize
-          ])
-          ++ (with pp; [
-            beautifulsoup4
-            colorlog
-            graphviz
-            numpy
-            packageurl-python
-            packaging
-            pandas
-            requests
-            requests-cache
-            tabulate
-            venvShellHook
-            wheel
-          ]);
+      buildInputs =
+        (with pkgs; [
+          coreutils
+          curl
+          gnugrep
+          gnused
+          graphviz
+          grype
+          gzip
+          nix
+          reuse
+        ])
+        ++ (with self'.packages; [
+          vulnix
+          nix-visualize
+        ])
+        ++ (with pkgs.python3Packages; [
+          beautifulsoup4
+          colorlog
+          graphviz
+          numpy
+          packageurl-python
+          packaging
+          pandas
+          requests
+          requests-cache
+          tabulate
+          venvShellHook
+          wheel
+        ]);
+    };
 
         venvDir = "venv";
         postShellHook = ''
