@@ -17,14 +17,6 @@
       url = "github:nix-community/flake-compat";
       flake = false;
     };
-    nix-fast-build = {
-      url = "github:Mic92/nix-fast-build";
-      # re-use some existing inputs
-      inputs = {
-        flake-parts.follows = "flake-parts";
-        treefmt-nix.follows = "treefmt-nix";
-      };
-    };
     nix-visualize = {
       url = "github:craigmbooth/nix-visualize";
       flake = false;

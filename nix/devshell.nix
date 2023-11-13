@@ -4,7 +4,6 @@
 {
   perSystem = {
     pkgs,
-    inputs',
     self',
     ...
   }: {
@@ -43,8 +42,7 @@
             tabulate
             venvShellHook
             wheel
-          ])
-          ++ [inputs'.nix-fast-build.packages.default];
+          ]);
 
         venvDir = "venv";
         postShellHook = ''
