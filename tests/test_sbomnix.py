@@ -83,8 +83,15 @@ def set_up_test_data(test_work_dir):
 
 
 def _run_python_script(args, **kwargs):
-    """small helper function invoking the python script and args, ensuring 0 return code"""
-    return subprocess.run(args, **kwargs, check=True)
+    """small helper function invoking the python script and args, ensuring 0 return code
+
+    This also sets PYTHONPATH to the repo root, so these scripts can import
+    sbomnix or scripts on their own.
+    """
+    # copy, so we don't mutate env for this process, only for the spawned one.
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{env['PYTHONPATH']}:{REPOROOT}"
+    return subprocess.run(args, **kwargs, check=True, env=env)
 
 
 def test_sbomnix_help():
