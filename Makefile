@@ -17,12 +17,15 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
-pre-push: test black style pylint reuse-lint  ## Run tests, pycodestyle, pylint, reuse-lint
+pre-push: test black style pylint check  ## Run tests, black, pycodestyle, pylint, and flake checks
 	$(call target_success,$@)
 
-test-ci: style pylint reuse-lint  ## Run CI tests
+test-ci: style pylint check  ## Run CI tests
 	pytest -vx -k "not skip_in_ci" tests/
 	$(call target_success,$@)
+
+check: clean
+	nix --extra-experimental-features flakes flake check
 
 test: ## Run tests
 	pytest -vx tests/
@@ -41,10 +44,6 @@ style: clean ## Check with pycodestyle (pep8)
 
 pylint: clean ## Check with pylint
 	pylint --disable duplicate-code -rn $(PYTHON_TARGETS) || exit 1
-	$(call target_success,$@)
-
-reuse-lint: clean ## Check with reuse lint
-	reuse lint
 	$(call target_success,$@)
 
 release-asset: clean ## Build release asset
