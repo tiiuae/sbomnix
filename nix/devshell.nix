@@ -22,32 +22,11 @@
           nix
           black
           reuse
-
-          # a python with all python packages imported by sbomnix itself
-          (pkgs.python3.withPackages (ps:
-            with ps; [
-              beautifulsoup4
-              colorlog
-              graphviz
-              numpy
-              packageurl-python
-              packaging
-              pandas
-              self'.packages.requests-ratelimiter
-              requests
-              requests-cache
-              tabulate
-              venvShellHook
-              wheel
-
-              # dev dependencies
-              jsonschema
-              pytest
-            ]))
         ])
         ++ (with self'.packages; [
-          vulnix
           nix-visualize
+          python # that python with all sbomnix [dev-]dependencies
+          vulnix
         ]);
     };
   };

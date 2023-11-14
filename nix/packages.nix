@@ -99,6 +99,27 @@
 
         '';
       };
+      # a python with all python packages imported by sbomnix itself
+      python = pkgs.python3.withPackages (ps:
+        with ps; [
+          beautifulsoup4
+          colorlog
+          graphviz
+          numpy
+          packageurl-python
+          packaging
+          pandas
+          requests
+          requests-cache
+          requests-ratelimiter
+          tabulate
+          venvShellHook
+          wheel
+
+          # dev dependencies
+          jsonschema
+          pytest
+        ]);
     };
   };
 }

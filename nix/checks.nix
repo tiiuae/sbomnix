@@ -40,9 +40,10 @@
           '';
         pylint =
           pkgs.runCommandLocal "pylint" {
-            nativeBuildInputs = [pkgs.python3.pkgs.pylint];
+            nativeBuildInputs = [self'.packages.python pkgs.python3.pkgs.pylint];
           } ''
             cd ${../.}
+            export HOME=/tmp
             pylint --disable duplicate-code -rn $(find . -name "*.py" ! -path "*venv*" ! -path "*eggs*")
             touch $out
           '';
