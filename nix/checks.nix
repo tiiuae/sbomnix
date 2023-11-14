@@ -13,7 +13,7 @@
         # todo this could be moved into a shared flake
         reuse =
           pkgs.runCommandLocal "reuse-lint" {
-            buildInputs = [pkgs.reuse];
+            nativeBuildInputs = [pkgs.reuse];
           } ''
             cd ${../.}
             reuse lint
