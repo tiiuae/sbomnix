@@ -9,6 +9,17 @@
   }: {
     checks =
       {
+        black =
+          pkgs.runCommandLocal "black" {
+            nativeBuildInputs = [pkgs.python3.pkgs.black];
+          } ''
+            cd ${../.}
+            for py in $(find . -name "*.py" ! -path "*venv*" ! -path "*eggs*"); do
+              echo "$py:"
+              black --check $py
+            done
+            touch $out
+          '';
         # checks that copyright headers are compliant
         # todo this could be moved into a shared flake
         reuse =
