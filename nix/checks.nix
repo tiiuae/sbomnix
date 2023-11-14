@@ -27,6 +27,14 @@
             pycodestyle --max-line-length 90 $(find . -name "*.py" ! -path "*venv*" ! -path "*eggs*")
             touch $out
           '';
+        pylint =
+          pkgs.runCommandLocal "pylint" {
+            nativeBuildInputs = [pkgs.python3.pkgs.pylint];
+          } ''
+            cd ${../.}
+            pylint --disable duplicate-code -rn $(find . -name "*.py" ! -path "*venv*" ! -path "*eggs*")
+            touch $out
+          '';
       }
       //
       # merge in the package derivations to force a build of all packages during a `nix flake check`
