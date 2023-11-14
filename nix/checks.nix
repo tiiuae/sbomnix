@@ -19,6 +19,14 @@
             reuse lint
             touch $out
           '';
+        pycodestyle =
+          pkgs.runCommandLocal "pycodestyle" {
+            nativeBuildInputs = [pkgs.python3.pkgs.pycodestyle];
+          } ''
+            cd ${../.}
+            pycodestyle --max-line-length 90 $(find . -name "*.py" ! -path "*venv*" ! -path "*eggs*")
+            touch $out
+          '';
       }
       //
       # merge in the package derivations to force a build of all packages during a `nix flake check`
