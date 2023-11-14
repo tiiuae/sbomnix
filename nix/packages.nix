@@ -44,6 +44,50 @@
         propagatedBuildInputs = [pyrate-limiter pp.requests];
       };
 
+      # reuse is imported by sbomdb.py. For this to work with a python.withPackages,
+      # reuse needs to be a buildPythonPackage, not buildPythonApplication.
+      # Sent to nixpkgs in https://github.com/NixOS/nixpkgs/pull/267527
+      #
+      # Also note their library docstring:
+      # > reuse is a tool for compliance with the REUSE recommendations.
+      # > Although the API is documented, it is **NOT** guaranteed stable
+      # > between minor or even patch releases.
+      # > The semantic versioning of this program pertains exclusively to the
+      # > reuse CLI command. If you want to use reuse as a Python library, you
+      # > should pin reuse to an exact version.
+      # … so it might be a good idea to pin this anyways.
+      reuse = pp.buildPythonPackage rec {
+        pname = "reuse";
+        version = "2.1.0";
+        format = "pyproject";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "fsfe";
+          repo = "reuse-tool";
+          rev = "refs/tags/v${version}";
+          hash = "sha256-MEQiuBxe/ctHlAnmLhQY4QH62uAcHb7CGfZz+iZCRSk=";
+        };
+
+        nativeBuildInputs = with pp; [
+          poetry-core
+        ];
+
+        propagatedBuildInputs = with pp; [
+          binaryornot
+          boolean-py
+          debian
+          jinja2
+          license-expression
+        ];
+
+        nativeCheckInputs = with pp; [pytestCheckHook];
+
+        disabledTestPaths = [
+          # pytest wants to execute the actual source files for some reason, which fails with ImportPathMismatchError()
+          "src/reuse"
+        ];
+      };
+
       # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
       # vulnix support for runtime-only scan ('-C' command-line option)
       # which is currently not available in released version of vulnix.
@@ -66,7 +110,7 @@
           [
             pyrate-limiter
             requests-ratelimiter
-            pkgs.reuse
+            reuse
           ]
           ++ (with pp; [
             beautifulsoup4
@@ -101,7 +145,7 @@
       };
       # a python with all python packages imported by sbomnix itself
       python = pkgs.python3.withPackages (ps:
-        with ps; [
+        (with ps; [
           beautifulsoup4
           colorlog
           graphviz
@@ -119,7 +163,8 @@
           # dev dependencies
           jsonschema
           pytest
-        ]);
+        ])
+        ++ [reuse]);
     };
   };
 }
