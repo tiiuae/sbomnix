@@ -9,13 +9,6 @@ define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
 endef
 
-define try_run_sbomnix
-@if ! source scripts/env.sh && sbomnix -h 2>/dev/null; then \
-	echo "\033[31mError:\033[0m failed to run sbomnix, maybe it's not in your PATH?"; \
-	exit 1; \
-fi
-endef
-
 .DEFAULT_GOAL := help
 
 TARGET: ## DESCRIPTION
@@ -24,34 +17,15 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install sbomnix
-	pip install --user .
-	$(call try_run_sbomnix,$@)
-	$(call target_success,$@)
-
-install-dev: uninstall install-dev-requirements ## Install for development
-	pip install --editable .
-	$(call try_run_sbomnix,$@)
-	$(call target_success,$@)
-
-uninstall: ## Uninstall sbomnix
-	find . -name '*.egg-info' -exec rm -fr {} +
-	pip uninstall -y sbomnix 
-	$(call target_success,$@)
-
-install-dev-requirements: clean ## Install all requirements
-	pip install -q -r requirements.txt --no-cache-dir
-	$(call target_success,$@)
-
 pre-push: test black style pylint reuse-lint  ## Run tests, pycodestyle, pylint, reuse-lint
 	$(call target_success,$@)
 
-test-ci: install-dev-requirements style pylint reuse-lint  ## Run CI tests
-	source scripts/env.sh && pytest -vx -k "not skip_in_ci" tests/
+test-ci: style pylint reuse-lint  ## Run CI tests
+	pytest -vx -k "not skip_in_ci" tests/
 	$(call target_success,$@)
 
-test: install-dev-requirements ## Run tests
-	source scripts/env.sh && pytest -vx tests/
+test: ## Run tests
+	pytest -vx tests/
 	$(call target_success,$@)
 
 black: clean ## Reformat with black
@@ -73,8 +47,7 @@ reuse-lint: clean ## Check with reuse lint
 	reuse lint
 	$(call target_success,$@)
 
-release-asset: clean install-dev-requirements ## Build release asset
-	nix build
+release-asset: clean ## Build release asset
 	nix-shell -p nix-info --run "nix-info -m"
 	nix-env -qa --meta --json -f $(shell nix-shell -p nix-info --run "nix-info -m" | grep "nixpkgs: " | cut -d'`' -f2) '.*' >meta.json
 	mkdir -p build/

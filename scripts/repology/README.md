@@ -64,11 +64,9 @@ Running `repology_cli` as Python script requires Python packages specified in [r
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
-$ pip install --user -r requirements.txt
 ```
-After requirements have been installed, you can run repology_cli.py as follows:
+After you entered the devshell, you can run repology_cli.py as follows:
 ```bash
-$ source scripts/env.sh
 $ scripts/repology/repology_cli.py 
 ```
 
