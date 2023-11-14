@@ -21,37 +21,28 @@
           gzip
           nix
           reuse
+
+          # a python with all python packages imported by sbomnix itself
+          (pkgs.python3.withPackages (ps:
+            with ps; [
+              beautifulsoup4
+              colorlog
+              graphviz
+              numpy
+              packageurl-python
+              packaging
+              pandas
+              requests
+              requests-cache
+              tabulate
+              venvShellHook
+              wheel
+            ]))
         ])
         ++ (with self'.packages; [
           vulnix
           nix-visualize
-        ])
-        ++ (with pkgs.python3Packages; [
-          beautifulsoup4
-          colorlog
-          graphviz
-          numpy
-          packageurl-python
-          packaging
-          pandas
-          requests
-          requests-cache
-          tabulate
-          venvShellHook
-          wheel
         ]);
     };
-
-        venvDir = "venv";
-        postShellHook = ''
-          source $PWD/scripts/env.sh
-
-          # https://github.com/NixOS/nix/issues/1009:
-          export TMPDIR="/tmp"
-
-          # Enter python development environment
-          make install-dev
-        '';
-      };
   };
 }
