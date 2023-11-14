@@ -20,6 +20,7 @@
           grype
           gzip
           nix
+          black
           reuse
 
           # a python with all python packages imported by sbomnix itself
@@ -40,10 +41,7 @@
               wheel
 
               # dev dependencies
-              black
               jsonschema
-              pycodestyle
-              pylint
               pytest
             ]))
         ])
