@@ -44,7 +44,7 @@ NIXGRAPH = REPOROOT / "nixgraph" / "main.py"
 NIX_OUTDATED = REPOROOT / "scripts" / "nixupdate" / "nix_outdated.py"
 VULNXSCAN = REPOROOT / "scripts" / "vulnxscan" / "vulnxscan.py"
 REPOLOGY_CLI = REPOROOT / "scripts" / "repology" / "repology_cli.py"
-REPOLOGY_CLI = REPOROOT / "scripts" / "repology" / "repology_cve.py"
+REPOLOGY_CVE = REPOROOT / "scripts" / "repology" / "repology_cve.py"
 
 TEST_WORK_DIR = None
 TEST_NIX_RESULT = None
