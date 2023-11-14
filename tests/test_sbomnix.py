@@ -527,7 +527,9 @@ def test_vulnxscan_scan_sbom():
     )
 
 
-@pytest.mark.skip_in_ci
+@pytest.mark.skip
+# vulnxscan --triage assumes repology_cli in $PATH.
+# FUTUREWORK: expose this as library code?
 def test_vulnxscan_triage():
     """Test vulnxscan scan with --triage"""
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
@@ -542,7 +544,9 @@ def test_vulnxscan_triage():
     )
 
 
-@pytest.mark.skip_in_ci
+@pytest.mark.skip
+# vulnxscan --triage assumes repology_cli in $PATH.
+# FUTUREWORK: expose this as library code?
 def test_vulnxscan_triage_whitelist():
     """Test vulnxscan scan with --triage and --whitelist"""
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
@@ -614,6 +618,9 @@ def test_nix_outdated_help():
     _run_python_script([NIX_OUTDATED, "-h"])
 
 
+@pytest.mark.skip
+# vulnxscan --triage assumes repology_cli in $PATH.
+# FUTUREWORK: expose this as library code?
 def test_nix_outdated_result():
     """Test nix_outdated with TEST_NIX_RESULT as input"""
     out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
