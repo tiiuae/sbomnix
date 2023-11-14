@@ -10,7 +10,7 @@
     devShells.default = pkgs.mkShell rec {
       name = "sbomnix-dev-shell";
 
-      buildInputs =
+      packages =
         (with pkgs; [
           coreutils
           curl
