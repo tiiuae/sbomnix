@@ -17,10 +17,10 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
-pre-push: test black style pylint check  ## Run tests, black, pycodestyle, pylint, and flake checks
+pre-push: test black pylint check  ## Run tests, black, pylint, and flake checks
 	$(call target_success,$@)
 
-test-ci: style pylint check  ## Run CI tests
+test-ci: pylint check  ## Run CI tests
 	pytest -vx -k "not skip_in_ci" tests/
 	$(call target_success,$@)
 
@@ -36,10 +36,6 @@ black: clean ## Reformat with black
 		do echo "$$py:"; \
 		black -q $$py; \
 	done
-	$(call target_success,$@)
-
-style: clean ## Check with pycodestyle (pep8)
-	pycodestyle --max-line-length 90 $(PYTHON_TARGETS)
 	$(call target_success,$@)
 
 pylint: clean ## Check with pylint
