@@ -28,11 +28,23 @@ from scripts.vulnxscan.vulnxscan import (
 
 
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
-REPOROOT = MYDIR / ".."
-SBOMNIX = MYDIR / ".." / "sbomnix" / "main.py"
-NIXGRAPH = MYDIR / ".." / "nixgraph" / "main.py"
+
+# These two tools are executed as scripts from this file,
+# but don't contain any tests themselves
 COMPARE_DEPS = MYDIR / "compare_deps.py"
 COMPARE_SBOMS = MYDIR / "compare_sboms.py"
+
+REPOROOT = MYDIR / ".."
+
+# The different entrypoints of the application. Currently we invoke them with a
+# new python interpreter, as it's not in a shape yet to import a function we
+# pass arguments to.
+SBOMNIX = REPOROOT / "sbomnix" / "main.py"
+NIXGRAPH = REPOROOT / "nixgraph" / "main.py"
+NIX_OUTDATED = REPOROOT / "scripts" / "nixupdate" / "nix_outdated.py"
+VULNXSCAN = REPOROOT / "scripts" / "vulnxscan" / "vulnxscan.py"
+REPOLOGY_CLI = REPOROOT / "scripts" / "repology" / "repology_cli.py"
+REPOLOGY_CLI = REPOROOT / "scripts" / "repology" / "repology_cve.py"
 
 TEST_WORK_DIR = None
 TEST_NIX_RESULT = None
@@ -73,12 +85,6 @@ def set_up_test_data(test_work_dir):
 def test_sbomnix_help():
     """Test sbomnix command line argument: '-h'"""
     cmd = [SBOMNIX, "-h"]
-    assert subprocess.run(cmd, check=True).returncode == 0
-
-
-def test_sbomnix_help_flake():
-    """Test sbomnix command line argument: '-h' running sbomnix as flake"""
-    cmd = ["nix", "run", f"{REPOROOT}#sbomnix", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -200,12 +206,6 @@ def test_sbomnix_depth():
 def test_nixgraph_help():
     """Test nixgraph command line argument: '-h'"""
     cmd = [NIXGRAPH, "-h"]
-    assert subprocess.run(cmd, check=True).returncode == 0
-
-
-def test_nixgraph_help_flake():
-    """Test nixgraph command line argument: '-h' running nixgraph as flake"""
-    cmd = ["nix", "run", f"{REPOROOT}#nixgraph", "--", "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -453,9 +453,9 @@ def test_compare_spdx_and_cdx_sboms():
 ################################################################################
 
 
-def test_vulnxscan_help_flake():
-    """Test vulnxscan command line argument: '-h' running vulnxscan as flake"""
-    cmd = ["nix", "run", f"{REPOROOT}#vulnxscan", "--", "-h"]
+def test_vulnxscan_help():
+    """Test vulnxscan command line argument: '-h'"""
+    cmd = [VULNXSCAN, "--help"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -464,10 +464,7 @@ def test_vulnxscan_scan_nix_result():
     """Test vulnxscan scan with TEST_NIX_RESULT as input"""
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#vulnxscan",
-        "--",
+        VULNXSCAN,
         TEST_NIX_RESULT.as_posix(),
         "--out",
         out_path_vulns.as_posix(),
@@ -480,10 +477,7 @@ def test_vulnxscan_scan_sbom():
     """Test vulnxscan scan with SBOM as input"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#sbomnix",
-        "--",
+        SBOMNIX,
         TEST_NIX_RESULT,
         "--cdx",
         out_path_cdx,
@@ -493,10 +487,7 @@ def test_vulnxscan_scan_sbom():
 
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#vulnxscan",
-        "--",
+        VULNXSCAN,
         "--sbom",
         out_path_cdx.as_posix(),
         "--out",
@@ -510,10 +501,7 @@ def test_vulnxscan_triage():
     """Test vulnxscan scan with --triage"""
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#vulnxscan",
-        "--",
+        VULNXSCAN,
         "--triage",
         "--out",
         out_path_vulns.as_posix(),
@@ -529,10 +517,7 @@ def test_vulnxscan_triage_whitelist():
     whitelist_csv = MYDIR / "resources" / "whitelist_all.csv"
     assert whitelist_csv.exists()
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#vulnxscan",
-        "--",
+        VULNXSCAN,
         "--triage",
         "--whitelist",
         whitelist_csv.as_posix(),
@@ -550,11 +535,11 @@ def test_vulnxscan_triage_whitelist():
 ################################################################################
 
 
-def test_repology_cli_help_flake():
+def test_repology_cli_help():
     """
-    Test repology_cli command line argument: '-h' running repology_cli as flake
+    Test repology_cli command line argument: '-h'
     """
-    cmd = ["nix", "run", f"{REPOROOT}#repology_cli", "--", "-h"]
+    cmd = [REPOLOGY_CLI, "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -562,10 +547,7 @@ def test_repology_cli_sbom():
     """Test repology_cli with SBOM as input"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#sbomnix",
-        "--",
+        SBOMNIX,
         TEST_NIX_RESULT,
         "--cdx",
         out_path_cdx,
@@ -575,10 +557,7 @@ def test_repology_cli_sbom():
 
     out_path_repology = TEST_WORK_DIR / "repology.csv"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#repology_cli",
-        "--",
+        REPOLOGY_CLI,
         "--sbom_cdx",
         out_path_cdx.as_posix(),
         "--repository",
@@ -593,11 +572,11 @@ def test_repology_cli_sbom():
 ################################################################################
 
 
-def test_nix_outdated_help_flake():
+def test_nix_outdated_help():
     """
-    Test nix_outdated command line argument: '-h' running nix_outdated as flake
+    Test nix_outdated command line argument: '-h'
     """
-    cmd = ["nix", "run", f"{REPOROOT}#nix_outdated", "--", "-h"]
+    cmd = [NIX_OUTDATED, "-h"]
     assert subprocess.run(cmd, check=True).returncode == 0
 
 
@@ -605,10 +584,7 @@ def test_nix_outdated_result():
     """Test nix_outdated with TEST_NIX_RESULT as input"""
     out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
     cmd = [
-        "nix",
-        "run",
-        f"{REPOROOT}#nix_outdated",
-        "--",
+        NIX_OUTDATED,
         "--out",
         out_path_nix_outdated.as_posix(),
         TEST_NIX_RESULT,
