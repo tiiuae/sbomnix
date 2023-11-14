@@ -8,41 +8,41 @@
     ...
   }: let
     pp = pkgs.python3Packages;
-
-    pyrate-limiter = pp.buildPythonPackage rec {
-      version = "2.10.0";
-      pname = "pyrate-limiter";
-      format = "pyproject";
-
-      src = pkgs.fetchFromGitHub {
-        owner = "vutran1710";
-        repo = "PyrateLimiter";
-        rev = "v${version}";
-        hash = "sha256-CPusPeyTS+QyWiMHsU0ii9ZxPuizsqv0wQy3uicrDw0=";
-      };
-
-      propagatedBuildInputs = [
-        pp.poetry-core
-      ];
-    };
-
-    requests-ratelimiter = pp.buildPythonPackage rec {
-      version = "0.4.0";
-      pname = "requests-ratelimiter";
-      format = "pyproject";
-
-      src = pkgs.fetchFromGitHub {
-        owner = "JWCook";
-        repo = pname;
-        rev = "v${version}";
-        hash = "sha256-F9bfcwijyyKzlFKBJAC/5ETc4/hZpPhm2Flckku2z6M=";
-      };
-
-      propagatedBuildInputs = [pyrate-limiter pp.requests];
-    };
   in {
     packages = rec {
       default = sbomnix;
+
+      pyrate-limiter = pp.buildPythonPackage rec {
+        version = "2.10.0";
+        pname = "pyrate-limiter";
+        format = "pyproject";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "vutran1710";
+          repo = "PyrateLimiter";
+          rev = "v${version}";
+          hash = "sha256-CPusPeyTS+QyWiMHsU0ii9ZxPuizsqv0wQy3uicrDw0=";
+        };
+
+        propagatedBuildInputs = [
+          pp.poetry-core
+        ];
+      };
+
+      requests-ratelimiter = pp.buildPythonPackage rec {
+        version = "0.4.0";
+        pname = "requests-ratelimiter";
+        format = "pyproject";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "JWCook";
+          repo = pname;
+          rev = "v${version}";
+          hash = "sha256-F9bfcwijyyKzlFKBJAC/5ETc4/hZpPhm2Flckku2z6M=";
+        };
+
+        propagatedBuildInputs = [pyrate-limiter pp.requests];
+      };
 
       # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
       # vulnix support for runtime-only scan ('-C' command-line option)
