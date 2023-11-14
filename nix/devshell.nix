@@ -32,11 +32,19 @@
               packageurl-python
               packaging
               pandas
+              self'.packages.requests-ratelimiter
               requests
               requests-cache
               tabulate
               venvShellHook
               wheel
+
+              # dev dependencies
+              black
+              jsonschema
+              pycodestyle
+              pylint
+              pytest
             ]))
         ])
         ++ (with self'.packages; [
