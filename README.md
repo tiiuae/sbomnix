@@ -71,12 +71,22 @@ $ cd sbomnix
 $ nix-shell
 ```
 
-From the development shell, run `sbomnix` as follows:
+Keep in mind this doesn't add the various entrypoint binaries to your `PATH`
+directly. They are produced during the setuptools build.
+
+While you're in the devshell, you can run run `sbomnix` via the entrypoint file
+directly:
+
 ```bash
-$ sbomnix --help
+$ sbomnix/main.py --help
 ```
 
 ## Usage Examples
+The usage examples work for both the built package, as well as inside the devshell.
+
+Keep in mind inside the devshell, calls to `sbomnix` need to be replaced with
+`sbomnix/main.py` (and similar for other entrypoints).
+
 In the below examples, we use Nix package `wget` as an example target.
 To print `wget` out-path on your local system, try:
 ```bash
