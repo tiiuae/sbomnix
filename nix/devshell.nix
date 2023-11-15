@@ -28,6 +28,15 @@
           python # that python with all sbomnix [dev-]dependencies
           vulnix
         ]);
+
+      # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
+      # able to find the python packages in the repo) becomes possible.
+      # `pytest.ini` already sets this for invoking `pytest`
+      # (cascading down to the processes it spawns), but this is for the developer
+      # invoking entrypoints from inside the devshell.
+      shellHook = ''
+        export PYTHONPATH="$PYTHONPATH:$(pwd)"
+      '';
     };
   };
 }
