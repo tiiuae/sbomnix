@@ -35,7 +35,7 @@
       # (cascading down to the processes it spawns), but this is for the developer
       # invoking entrypoints from inside the devshell.
       shellHook = ''
-        export PYTHONPATH="$PYTHONPATH:$(pwd)"
+        export PYTHONPATH="$PYTHONPATH:$(pwd)/src"
       '';
     };
   };

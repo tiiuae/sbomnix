@@ -10,7 +10,7 @@ import os
 import json
 import pandas as pd
 
-from sbomnix.utils import LOG, LOG_SPAM, exec_cmd
+from common.utils import LOG, LOG_SPAM, exec_cmd
 from sbomnix.derivation import load
 
 ###############################################################################

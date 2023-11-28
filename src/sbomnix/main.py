@@ -9,7 +9,7 @@
 import argparse
 import pathlib
 from sbomnix.sbomdb import SbomDb
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     set_log_verbosity,
     check_positive,

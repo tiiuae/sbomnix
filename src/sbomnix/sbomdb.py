@@ -19,7 +19,7 @@ import numpy as np
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store, find_deriver
-from sbomnix.utils import LOG, df_to_csv_file, get_py_pkg_version
+from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 
 ###############################################################################
 

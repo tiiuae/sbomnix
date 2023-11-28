@@ -13,7 +13,7 @@ import datetime
 import shutil
 import requests
 
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     LOG_SPAM,
     df_from_csv_file,

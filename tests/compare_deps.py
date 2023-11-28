@@ -15,7 +15,7 @@ import sys
 import pathlib
 import json
 import pandas as pd
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     LOG_SPAM,
     set_log_verbosity,
