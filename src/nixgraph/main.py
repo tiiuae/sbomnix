@@ -9,7 +9,7 @@
 import argparse
 import pathlib
 from nixgraph.graph import NixDependencies
-from sbomnix.utils import (
+from common.utils import (
     set_log_verbosity,
     get_py_pkg_version,
     check_positive,

@@ -17,11 +17,11 @@ import pandas as pd
 import jsonschema
 import pytest
 
-from sbomnix.utils import (
+from common.utils import (
     df_from_csv_file,
 )
 
-from scripts.vulnxscan.vulnxscan import (
+from vulnxscan.vulnxscan_cli import (
     load_whitelist,
     df_apply_whitelist,
 )
@@ -35,16 +35,17 @@ COMPARE_DEPS = MYDIR / "compare_deps.py"
 COMPARE_SBOMS = MYDIR / "compare_sboms.py"
 
 REPOROOT = MYDIR / ".."
+SRCDIR = REPOROOT / "src"
 
 # The different entrypoints of the application. Currently we invoke them with a
 # new python interpreter, as it's not in a shape yet to import a function we
 # pass arguments to.
-SBOMNIX = REPOROOT / "sbomnix" / "main.py"
-NIXGRAPH = REPOROOT / "nixgraph" / "main.py"
-NIX_OUTDATED = REPOROOT / "scripts" / "nixupdate" / "nix_outdated.py"
-VULNXSCAN = REPOROOT / "scripts" / "vulnxscan" / "vulnxscan.py"
-REPOLOGY_CLI = REPOROOT / "scripts" / "repology" / "repology_cli.py"
-REPOLOGY_CVE = REPOROOT / "scripts" / "repology" / "repology_cve.py"
+SBOMNIX = SRCDIR / "sbomnix" / "main.py"
+NIXGRAPH = SRCDIR / "nixgraph" / "main.py"
+NIX_OUTDATED = SRCDIR / "nixupdate" / "nix_outdated.py"
+VULNXSCAN = SRCDIR / "vulnxscan" / "vulnxscan_cli.py"
+REPOLOGY_CLI = SRCDIR / "repology" / "repology_cli.py"
+REPOLOGY_CVE = SRCDIR / "repology" / "repology_cve.py"
 
 TEST_WORK_DIR = None
 TEST_NIX_RESULT = None

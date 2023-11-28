@@ -15,7 +15,7 @@ from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
 from tabulate import tabulate
 from sbomnix.sbomdb import SbomDb
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     LOG_SPAM,
     set_log_verbosity,

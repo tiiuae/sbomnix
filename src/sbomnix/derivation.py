@@ -14,7 +14,7 @@ import bisect
 from packageurl import PackageURL
 from sbomnix.cpe import CPE
 
-from sbomnix.utils import LOG, LOG_SPAM
+from common.utils import LOG, LOG_SPAM
 
 
 ###############################################################################

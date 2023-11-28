@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import pandas as pd
 import graphviz as gv
 
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     LOG_SPAM,
     exec_cmd,

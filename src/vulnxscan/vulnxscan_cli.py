@@ -32,9 +32,9 @@ import pandas as pd
 import numpy as np
 
 from tabulate import tabulate
-from scripts.vulnxscan.osv import OSV
+from vulnxscan.osv import OSV
 from sbomnix.sbomdb import SbomDb
-from sbomnix.utils import (
+from common.utils import (
     LOG,
     LOG_SPAM,
     set_log_verbosity,

@@ -15,7 +15,7 @@ import pathlib
 import json
 import requests
 import pandas as pd
-from sbomnix.utils import LOG, LOG_SPAM, df_to_csv_file, set_log_verbosity
+from common.utils import LOG, LOG_SPAM, df_to_csv_file, set_log_verbosity
 
 ###############################################################################
 

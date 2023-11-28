@@ -50,22 +50,16 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3 :: Only",
     ],
-    keywords="SBOM",
-    packages=[
-        "sbomnix",
-        "nixgraph",
-        "scripts.vulnxscan",
-        "scripts.nixupdate",
-        "scripts.repology",
-    ],
+    packages=setuptools.find_namespace_packages(where="src"),
+    package_dir={"": "src"},
     entry_points={
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",
             "nixgraph = nixgraph.main:main",
-            "nix_outdated = scripts.nixupdate.nix_outdated:main",
-            "vulnxscan = scripts.vulnxscan.vulnxscan:main",
-            "repology_cli = scripts.repology.repology_cli:main",
-            "repology_cve = scripts.repology.repology_cve:main",
+            "nix_outdated = nixupdate.nix_outdated:main",
+            "vulnxscan = vulnxscan.vulnxscan_cli:main",
+            "repology_cli = repology.repology_cli:main",
+            "repology_cve = repology.repology_cve:main",
         ]
     },
 )
