@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+
+Copyright: 2023 Technology Innovation Institute (TII)
+License: CC-BY-3.0
+Files: doc/img/*
+
+Copyright: 2023 Technology Innovation Institute (TII)
+License: Apache-2.0
+Files: *.lock *.csv *.json VERSION

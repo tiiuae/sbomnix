@@ -17,7 +17,7 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
-pre-push: test format check  ## Run tests, black, and flake checks
+pre-push: test format check  ## Run tests and flake checks
 	$(call target_success,$@)
 
 test-ci: check  ## Run CI tests
