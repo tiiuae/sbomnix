@@ -11,7 +11,6 @@
 """ Command-line interface to repology.org """
 
 import os
-import sys
 import pathlib
 import json
 import re
@@ -24,6 +23,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
+import repology.exceptions
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -43,8 +43,14 @@ def _pkg_str(str_obj):
     raise ArgumentTypeError("Value must be a non-empty string")
 
 
-def getargs():
-    """Parse command line arguments"""
+def getargs(args=None):
+    """
+    Parse arguments: by default parses the sys.argv if `args` is not
+    specified, otherwise, parses arguments from the `args` list of strings.
+
+    This is simply a wrapper for function ArgumentParser.parse_args(),
+    returning argument attributes in argparse.Namespace object.
+    """
     desc = "Command line client to query repology.org for package information."
     epil = (
         f"Example: ./{os.path.basename(__file__)} --pkg_search 'firef' "
@@ -90,6 +96,8 @@ def getargs():
     optional.add_argument("--verbose", help=helps, type=int, default=1)
     helps = "Path to output report file (default: ./repology_report.csv)"
     optional.add_argument("--out", help=helps, default="repology_report.csv")
+    if args:
+        return parser.parse_args(args)
     return parser.parse_args()
 
 
@@ -174,20 +182,20 @@ class Repology:
         self.df.drop("name", axis=1, inplace=True)
 
     def _get_resp(self, query):
-        LOG.info("GET: %s", query)
+        LOG.debug("GET: %s", query)
         resp = self.session.get(query, headers=self.headers)
         LOG.debug("resp.status_code: %s", resp.status_code)
         if resp.status_code == 404:
             LOG.fatal("No matching packages found")
-            sys.exit(1)
+            raise repology.exceptions.RepologyNoMatchingPackages
         resp.raise_for_status()
         return resp
 
-    def _report(self, args):
+    def _report(self, args, console_report=True):
         """Generate result report to console and to csv file"""
         if self.df.empty:
-            LOG.warning("No matching packages found")
-            sys.exit(1)
+            LOG.debug("No matching packages found")
+            raise repology.exceptions.RepologyNoMatchingPackages
         if self.df_sbom is not None:
             self._sbom_fields()
             self.df["sbom_version_classify"] = self.df.apply(_sbom_row_classify, axis=1)
@@ -201,26 +209,28 @@ class Repology:
         df = df[~df.status.isin(["IGNORED", "NO_VERSION"])]
         df = df.drop_duplicates(keep="first")
         # Write the console report
-        table = tabulate(
-            df,
-            headers="keys",
-            tablefmt="orgtbl",
-            numalign="center",
-            showindex=False,
-        )
-        LOG.info(
-            "Repology package info, packages:%s\n\n%s\n\n"
-            "For more details, see: %s\n",
-            df.shape[0],
-            table,
-            self.urlq,
-        )
-        if args.stats:
-            self._stats_repology()
-            if self.df_sbom is not None:
-                self._stats_sbom()
-        # Write the full report to csv file
-        df_to_csv_file(self.df, args.out)
+        if console_report:
+            table = tabulate(
+                df,
+                headers="keys",
+                tablefmt="orgtbl",
+                numalign="center",
+                showindex=False,
+            )
+            LOG.info(
+                "Repology package info, packages:%s\n\n%s\n\n"
+                "For more details, see: %s\n",
+                df.shape[0],
+                table,
+                self.urlq,
+            )
+            if args.stats:
+                self._stats_repology()
+                if self.df_sbom is not None:
+                    self._stats_sbom()
+        if args.out is not None:
+            # Write the full report to csv file
+            df_to_csv_file(self.df, args.out)
 
     def _stats_sbom(self):
         df = self.df.copy()
@@ -332,8 +342,8 @@ class Repology:
         for idx, header in enumerate(projects_table.thead.find_all("th")):
             headers[header.text] = idx
         if not headers:
-            LOG.fatal("Unexpected response")
-            sys.exit(1)
+            LOG.fatal("Unexpected response, missing headers")
+            raise repology.exceptions.RepologyUnexpectedResponse
         LOG.log(LOG_SPAM, headers)
         projects_table_rows = projects_table.tbody.find_all("tr")
         rows = 0
@@ -475,7 +485,7 @@ class Repology:
             LOG.debug("Package: %s", cmp)
             if not cmp.name:
                 LOG.fatal("Missing package name: %s", cmp)
-                sys.exit(1)
+                raise repology.exceptions.RepologyUnexpectedResponse
             pkg_id = f"{args.repository}:{cmp.name}"
             if pkg_id in self.processed:
                 LOG.debug("Package '%s' in sbom already processed", cmp.name)
@@ -513,8 +523,10 @@ class Repology:
             self._packages_to_df(args, re_pkg_internal=cmp.name)
         self.urlq = self.url_projects
 
-    def query(self, args):
+    def query(self, args, stdout_report=True, file_report=True):
         """Query package information from repology.org"""
+        if not file_report:
+            args.out = None
         if args.pkg_search:
             self._query_pkg_search(args)
         elif args.pkg_exact:
@@ -522,7 +534,8 @@ class Repology:
         elif args.sbom_cdx:
             self._query_sbom_cdx(args)
         self._packages_to_df(args, re_pkg_internal=args.pkg_exact)
-        self._report(args)
+        self._report(args, console_report=stdout_report)
+        return self.df.copy(deep=True)
 
 
 ################################################################################
@@ -555,8 +568,11 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    repology = Repology()
-    repology.query(args)
+    repology_cli = Repology()
+    try:
+        repology_cli.query(args)
+    except repology.exceptions.RepologyNoMatchingPackages:
+        LOG.warning("No matching packages found")
 
 
 ################################################################################
