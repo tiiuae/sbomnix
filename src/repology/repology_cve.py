@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
+import repology.exceptions
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -77,7 +78,7 @@ def _parse_cve_resp(resp, pkg_name, pkg_version):
         headers[header.text] = idx
     if not headers or "CVE ID" not in headers:
         LOG.fatal("Unexpected response")
-        sys.exit(1)
+        raise repology.exceptions.RepologyUnexpectedResponse
     LOG.log(LOG_SPAM, headers)
     cve_table_rows = cve_table.tbody.find_all("tr")
     cve_dict = {}
@@ -118,7 +119,7 @@ def _is_affected(version, affected_ver_str):
     version_local = parse_version(version)
     if not version_local:
         LOG.fatal("Unexpected local version string: %s", version)
-        sys.exit(1)
+        raise repology.exceptions.RepologyError
     # Pad with spaces to simplify regexps
     affected_ver_str = f" {affected_ver_str} "
     # Match version group
@@ -131,7 +132,7 @@ def _is_affected(version, affected_ver_str):
     for impacted_group in matches:
         if len(impacted_group) != 4:
             LOG.fatal("Unexpected version group: %s", affected_ver_str)
-            sys.exit(1)
+            raise repology.exceptions.RepologyUnexpectedResponse
         # impacted_group[0] = beg
         beg_ind = impacted_group[0]
         # impacted_group[1] = begver
@@ -168,7 +169,7 @@ def _is_affected(version, affected_ver_str):
 
 
 def _report(df):
-    if df.empty:
+    if df is None or df.empty:
         LOG.warning("No matching vulnerabilities found")
         sys.exit(0)
     # Write the console report
@@ -182,7 +183,11 @@ def _report(df):
     LOG.info("Repology affected CVE(s)\n\n%s\n\n", table)
 
 
-def _query_cve(pkg_name, pkg_version):
+def query_cve(pkg_name, pkg_version):
+    """
+    Return vulnerabilities known to repology that impact the given package name
+    and version. Results are returned in pandas dataframe.
+    """
     session = CachedLimiterSession(per_second=1, expire_after=7200)
     ua_product = "repology_cli/0"
     ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
@@ -190,12 +195,12 @@ def _query_cve(pkg_name, pkg_version):
     pkg = urllib.parse.quote(pkg_name)
     ver = urllib.parse.quote(pkg_version)
     query = f"https://repology.org/project/{pkg}/cves?version={ver}"
-    LOG.info("GET: %s", query)
+    LOG.debug("GET: %s", query)
     resp = session.get(query, headers=headers)
     LOG.debug("resp.status_code: %s", resp.status_code)
     if resp.status_code == 404:
-        LOG.fatal("Package '%s' not found", pkg_name)
-        sys.exit(1)
+        LOG.warning("Repology package '%s' not found", pkg_name)
+        return None
     resp.raise_for_status()
     return _parse_cve_resp(resp, pkg_name, pkg_version)
 
@@ -207,7 +212,7 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    df = _query_cve(args.PKG_NAME, args.PKG_VERSION)
+    df = query_cve(args.PKG_NAME, args.PKG_VERSION)
     _report(df)
     df_to_csv_file(df, args.out)
 

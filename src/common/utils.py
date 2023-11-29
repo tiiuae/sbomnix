@@ -200,14 +200,14 @@ def version_distance(v1, v2):
     re_vsplit = re.compile(r".*?(?P<ver_beg>[0-9][0-9]*)(?P<ver_end>.*)$")
     match = re.match(re_vsplit, v1_clean)
     if not match:
-        LOG.warning("Unexpected v1 version '%s'", v1)
+        LOG.debug("Unexpected v1 version '%s'", v1)
         return 0.0
     v1_major = match.group("ver_beg")
     v1_minor = match.group("ver_end").replace(".", "")
     v1_float = float(v1_major + "." + v1_minor)
     match = re.match(re_vsplit, v2_clean)
     if not match:
-        LOG.warning("Unexpected v2 version '%s'", v2)
+        LOG.debug("Unexpected v2 version '%s'", v2)
         return 0.0
     v2_major = match.group("ver_beg")
     v2_minor = match.group("ver_end").replace(".", "")
@@ -226,7 +226,7 @@ def parse_version(ver_str):
     re_ver = re.compile(r".*?(?P<ver_beg>[0-9][0-9.]*)(?P<ver_end>.*)$")
     match = re_ver.match(ver_str)
     if not match:
-        LOG.warning("Unable to parse version '%s'", ver_str)
+        LOG.debug("Unable to parse version '%s'", ver_str)
         return None
     ver_beg = match.group("ver_beg").rstrip(".")
     ver_end = match.group("ver_end")
@@ -240,7 +240,7 @@ def parse_version(ver_str):
     ver = re.sub(r"\.+", ".", ver)
     LOG.log(LOG_SPAM, "%s --> %s", ver_str, ver)
     if not ver:
-        LOG.warning("Invalid version '%s'", ver_str)
+        LOG.debug("Invalid version '%s'", ver_str)
         return None
     return packaging.version.parse(ver)
 

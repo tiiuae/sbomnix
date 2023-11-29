@@ -15,6 +15,7 @@ from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
 from tabulate import tabulate
 from sbomnix.sbomdb import SbomDb
+import repology.repology_cli
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -86,15 +87,15 @@ def _generate_sbom(target_path, runtime=True, buildtime=False):
 
 def _run_repology_cli(sbompath):
     LOG.info("Running repology_cli")
-    prefix = "repology_"
-    suffix = ".csv"
-    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        cmd = (
-            "repology_cli "
-            f"--sbom_cdx={sbompath} --repository=nix_unstable --out={f.name}"
-        )
-        exec_cmd(cmd.split())
-        return f.name
+    repology_cli = repology.repology_cli.Repology()
+    args = []
+    args.append("--repository=nix_unstable")
+    args.append(f"--sbom_cdx={sbompath}")
+    return repology_cli.query(
+        repology.repology_cli.getargs(args),
+        stdout_report=False,
+        file_report=False,
+    )
 
 
 def _run_nix_visualize(targt_path):
@@ -258,9 +259,7 @@ def main():
     sbom_path = _generate_sbom(target_path_abs, runtime, args.buildtime)
     LOG.info("Using SBOM '%s'", sbom_path)
 
-    repology_out_path = _run_repology_cli(sbom_path)
-    LOG.info("Using repology out: '%s'", repology_out_path)
-    df_repology = df_from_csv_file(repology_out_path)
+    df_repology = _run_repology_cli(sbom_path)
     df_log(df_repology, LOG_SPAM)
 
     if not args.buildtime:

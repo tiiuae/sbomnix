@@ -34,6 +34,9 @@ import numpy as np
 from tabulate import tabulate
 from vulnxscan.osv import OSV
 from sbomnix.sbomdb import SbomDb
+import repology.repology_cli
+import repology.repology_cve
+import repology.exceptions
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -396,7 +399,6 @@ class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
 
 _repology_cve_dfs = {}
 _repology_cli_dfs = {}
-_repology_nix_repo = "nix_unstable"
 # Rate-limited and cached session. For github api rate limits, see:
 # https://docs.github.com/en/rest/search?apiVersion=latest#rate-limit
 _session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=7200)
@@ -422,23 +424,25 @@ def _run_repology_cli(pname, match_type="--pkg_exact"):
         LOG.log(LOG_SPAM, "Using cached repology_cli results")
         df_repology_cli = _repology_cli_dfs[pname]
     else:
-        prefix = "repology_cli_"
-        suffix = ".csv"
-        with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
-            repo = f"--repository {_repology_nix_repo}"
-            status = "--re_status=outdated|newest|devel|unique"
-            out = f"--out={f.name}"
-            search = f"{match_type}={pname}"
-            cmd = f"repology_cli {repo} {status} {search} {out} "
-            ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
-            if ret and ret.stderr and "No matching packages" in ret.stderr:
-                return None
-            df_repology_cli = df_from_csv_file(f.name, exit_on_error=False)
-            if df_repology_cli is None:
-                return None
-            df_repology_cli = _select_newest(df_repology_cli)
-            _repology_cli_dfs[pname] = df_repology_cli
-            df_log(df_repology_cli, LOG_SPAM)
+        repology_cli = repology.repology_cli.Repology()
+        args = []
+        args.append("--repository=nix_unstable")
+        args.append("--re_status=outdated|newest|devel|unique")
+        args.append(f"{match_type}={pname}")
+        try:
+            df_repology_cli = repology_cli.query(
+                repology.repology_cli.getargs(args),
+                stdout_report=False,
+                file_report=False,
+            )
+        except repology.exceptions.RepologyNoMatchingPackages:
+            pass
+        if df_repology_cli is None or df_repology_cli.empty:
+            LOG.debug("No results from repology_cli")
+            return None
+        df_repology_cli = _select_newest(df_repology_cli)
+        _repology_cli_dfs[pname] = df_repology_cli
+        df_log(df_repology_cli, LOG_SPAM)
     return df_repology_cli
 
 
@@ -553,16 +557,10 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
         LOG.log(LOG_SPAM, "Using cached repology_cve results")
         df = _repology_cve_dfs[key]
     else:
-        prefix = "repology_cve_"
-        suffix = ".csv"
-        with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
-            args = f"{repo_pkg_name} {pkg_version}"
-            cmd = f"repology_cve --out={f.name} {args}"
-            exec_cmd(cmd.split(), raise_on_error=False)
-            df = df_from_csv_file(f.name, exit_on_error=False)
-            if df is None:
-                df = pd.DataFrame()
-            df_log(df, LOG_SPAM)
+        df = repology.repology_cve.query_cve(str(repo_pkg_name), str(pkg_version))
+        if df is None:
+            df = pd.DataFrame()
+        df_log(df, LOG_SPAM)
         _repology_cve_dfs[key] = df
     if cve_id and not df.empty:
         df = df[df["cve"] == cve_id]
