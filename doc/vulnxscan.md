@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # vulnxscan
 
-`vulnxscan` is a command line utility that demonstrates automating vulnerability scans using SBOM as input. It mainly targets nix packages, however, it can be used with any other targets too as long as the target is expressed as valid CycloneDX SBOM.
+[`vulnxscan`](../src/vulnxscan/vulnxscan_cli.py) is a command line utility that demonstrates running vulnerability scans using SBOM as input. It mainly targets nix packages, however, it can be used with any other targets too as long as the target is expressed as valid CycloneDX SBOM.
 
 Table of Contents
 =================
@@ -17,8 +17,6 @@ Table of Contents
    * [Nix and Grype](#nix-and-grype)
    * [Vulnix](#vulnix)
 * [Vulnxscan Usage Examples](#vulnxscan-usage-examples)
-   * [Running Vulnxscan as Flake](#running-vulnxscan-as-flake)
-   * [Running from Nix Development Shell](#running-from-nix-development-shell)
    * [Find Vulnerabilities Impacting Runtime Dependencies](#find-vulnerabilities-impacting-runtime-dependencies)
    * [Whitelisting Vulnerabilities](#whitelisting-vulnerabilities)
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
@@ -28,7 +26,14 @@ Table of Contents
 * [Footnotes and Future Work](#footnotes-and-future-work)
 
 ## Getting Started
-To get started, follow the [Getting Started](../../README.md#getting-started) section from the main [README](../../README.md).
+To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md).
+
+As an example, to run the `vulnxscan` from your local clone of the `tiiuae/sbomnix` repository:
+```bash
+# '--' signifies the end of argument list for `nix`.
+# '--help' is the first argument to `vulnxscan`
+$ nix run .#vulnxscan -- --help
+```
 
 ## Example Target
 In the below examples, we use `git` as an example target for `vulnxscan`.
@@ -58,47 +63,11 @@ Vulnix matches vulnerabilities based on [heuristic](https://github.com/flyingcir
 
 ## Vulnxscan Usage Examples
 
-### Running Vulnxscan as Flake
-`vulnxscan` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
-```bash
-# '--' signifies the end of argument list for `nix`.
-# '--help' is the first argument to `vulnxscan`
-$ nix run github:tiiuae/sbomnix#vulnxscan -- --help
-```
-
-or from a local repository:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix run .#vulnxscan -- --help
-```
-
-### Running from Nix Development Shell
-
-If you have nix flakes [enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes), start a development shell:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix develop
-```
-
-You can also use `nix-shell` to enter the development shell:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix-shell
-```
-
-From the development shell, run `vulnxscan` as follows:
-```bash
-$ vulnxscan.py --help
-```
-
 ### Find Vulnerabilities Impacting Runtime Dependencies
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
 
 ```bash
-$ nix run .#vulnxscan -- /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
+$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
 
 INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
 INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
@@ -136,7 +105,7 @@ Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q
 INFO     Wrote: vulns.csv
 ```
 
-As printed in the console output, `vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/nix-community/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file `vulns.csv` to allow easier post-processing of the output.
+As printed in the console output, `vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/nix-community/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](../src/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file `vulns.csv` to allow easier post-processing of the output.
 
 It is worth mentioning that `vulnxscan` filters out vulnerabilities that it detects are patched, as printed out in the console output on lines like '`CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']`'.
 This patch auto-detection works in the similar way as the [patch auto-detection on vulnix](https://github.com/nix-community/vulnix#cve-patch-auto-detection), that is, it is based on detecting vulnerability identifiers from the patch filenames.
@@ -170,7 +139,7 @@ $ cat whitelist.csv
 "CVE-20.* ","git","Incorrect package: Impacts Jenkins git plugin, not git."
 
 # Apply the whitelist to git vulnxscan output
-$ nix run .#vulnxscan -- /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv 
+$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv 
 
 INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
 INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
@@ -233,7 +202,7 @@ INFO     Wrote: sbom.cdx.json
 
 Then, give the generated SBOM as input to `vulnxscan`:
 ```bash
-$ nix run .#vulnxscan -- --sbom sbom.cdx.json
+$ vulnxscan --sbom sbom.cdx.json
 
 INFO     Running grype scan
 INFO     Running OSV scan
@@ -260,7 +229,7 @@ Also notice that `vulnxscan` drops the patch auto-detection if the input is SBOM
 By default, `vulnxscan` scans the given target for vulnerabilities that impact its runtime-only dependencies. This example shows how to use `vulnxscan` to include also buildtime dependencies to the scan.
 
 ```bash
-$ nix run .#vulnxscan -- ./result --buildtime
+$ vulnxscan ./result --buildtime
 
 # ... output not included in this snippet ... 
 ```
@@ -304,7 +273,7 @@ $ nix eval github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-rele
 #               superset of runtime dependencies.
 #  --whitelist: Use 'manual_analysis.csv' as a whitelist file.
 #  --triage   : Help manual analysis by querying version info from repology.org.
-$ vulnxscan.py /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage
+$ vulnxscan /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage
 INFO     Generating SBOM for target '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 INFO     Using cdx SBOM '/tmp/vulnxscan_wt98z5yu.json'
@@ -362,7 +331,7 @@ Consider the following example, using the same Ghaf target as earlier:
 
 ```bash
 # Run vulnscan with --triage and --nixprs
-$ vulnxscan.py /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage --nixprs
+$ vulnxscan /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage --nixprs
 INFO     Generating SBOM for target '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 ...
@@ -403,4 +372,4 @@ For now, consider `vulnxscan` as a demonstration. Some improvement ideas are lis
 
 ### Other Future Work
 - [vulnxscan](./vulnxscan.py) uses vulnix from a [forked repository](https://github.com/henrirosten/vulnix), to include vulnix support for [scanning runtime-only dependencies](https://github.com/flyingcircusio/vulnix/compare/master...henrirosten:vulnix:master).
-- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](https://github.com/tiiuae/sbomnix/blob/main/scripts/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX or SPDX SBOMs are welcome. Consider e.g. [bombon](https://github.com/nikstur/bombon) and [cve-bin-tool](https://github.com/intel/cve-bin-tool). Adding cve-bin-tool to vulnxscan was [demonstrated](https://github.com/tiiuae/sbomnix/pull/75) earlier, but not merged due to reasons explained in the [PR](https://github.com/tiiuae/sbomnix/pull/75#issuecomment-1670958503).
+- [vulnxscan](./vulnxscan.py) could include more scanners in addition to [vulnix](https://github.com/flyingcircusio/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](../src/vulnxscan/osv.py). Suggestions for other open-source scanners, especially those that can digest CycloneDX or SPDX SBOMs are welcome. Consider e.g. [bombon](https://github.com/nikstur/bombon) and [cve-bin-tool](https://github.com/intel/cve-bin-tool). Adding cve-bin-tool to vulnxscan was [demonstrated](https://github.com/tiiuae/sbomnix/pull/75) earlier, but not merged due to reasons explained in the [PR](https://github.com/tiiuae/sbomnix/pull/75#issuecomment-1670958503).

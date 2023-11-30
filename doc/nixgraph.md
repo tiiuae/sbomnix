@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # nixgraph
 
-`nixgraph` is a python library and command line utility for querying and visualizing dependency graphs for [nix](https://nixos.org/) packages.
+[`nixgraph`](../src/nixgraph/main.py) is a python library and command line utility for querying and visualizing dependency graphs for [Nix](https://nixos.org/) packages.
 
 
 Table of Contents
@@ -24,6 +24,13 @@ Table of Contents
 
 ## Getting Started
 To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md).
+
+As an example, to run the [`nixgraph`](../src/nixgraph/main.py) from your local clone of the `tiiuae/sbomnix` repository:
+```bash
+# '--' signifies the end of argument list for `nix`.
+# '--help' is the first argument to `repology_cli`
+$ nix run .#nixgraph -- --help
+```
 
 ## Usage examples
 In the below examples, we use nix package `wget` as an example target.
@@ -83,7 +90,7 @@ $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --i
 `--inverse` is especially useful when working with larger graphs. 
 
 As an example, consider the following graph for `git`:
-(`nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)
+(`nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)
 
 <img src="img/git_r2_col.svg" width="900">
 <br /><br />
@@ -94,7 +101,7 @@ To find out what are all the runtime dependency paths from `git` to the highligh
 # --inverse="openssl-3|sqlite-3": draw the graph backwards starting from nodes that
 #                                 match the specified reqular expression
 # --colorize="openssl-3|sqlite-3": colorize the matching nodes
-nixgraph  /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=100 --colorize="openssl-3|sqlite-3" --inverse="openssl-3|sqlite-3"
+nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=100 --colorize="openssl-3|sqlite-3" --inverse="openssl-3|sqlite-3"
 ```
 The output now becomes:
 

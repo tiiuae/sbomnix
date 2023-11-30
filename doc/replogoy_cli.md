@@ -6,68 +6,28 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # repology_cli
 
-`repology_cli` is a command line interface to [repology.org](https://repology.org/). It supports querying package information via package search terms in the same manner as https://repology.org/projects/?search. In addition, it supports querying package information from all packages in a CycloneDX SBOM and printing out some simple statistics based on the input.
+[`repology_cli`](../src/repology/repology_cli.py) is a command line interface to [repology.org](https://repology.org/). It supports querying package information via package search terms in the same manner as https://repology.org/projects/?search. In addition, it supports querying package information from all packages in a CycloneDX SBOM and printing out some simple statistics based on the input.
 
 
 Table of Contents
 =================
 
 * [Getting Started](#getting-started)
-   * [Running from Nix Development Shell](#running-from-nix-development-shell)
-   * [Running as Python Script](#running-as-python-script)
 * [Usage Examples](#usage-examples)
    * [Search by Package Name Exact Match](#search-by-package-name-exact-match)
    * [Search by Package Name Search Term](#search-by-package-name-search-term)
    * [Search by Package Names in SBOM](#search-by-package-names-in-sbom)
    * [Statistics: SBOM Packages](#statistics-sbom-packages)
+   * [Repology CVE search](#repology-cve-search)
 
 ## Getting Started
+To get started, follow the [Getting Started](../README.md#getting-started) section from the main [README](../README.md).
 
-### Running as Nix Flake
-`repology_cli` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
+As an example, to run the [`repology_cli`](../src/repology/repology_cli.py) from your local clone of the `tiiuae/sbomnix` repository:
 ```bash
 # '--' signifies the end of argument list for `nix`.
 # '--help' is the first argument to `repology_cli`
-$ nix run github:tiiuae/sbomnix#repology_cli -- --help
-```
-
-or from a local repository:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
 $ nix run .#repology_cli -- --help
-```
-
-### Running from Nix Development Shell
-
-If you have nix flakes enabled, run:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix develop
-```
-
-You can also use `nix-shell` to enter the development shell:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix-shell
-```
-
-From the development shell, you can run `repology_cli` as follows:
-```bash
-$ scripts/repology/repology_cli.py
-```
-
-### Running as Python Script
-Running `repology_cli` as Python script requires Python packages specified in [requirements.txt](./requirements.txt). You can install the required packages with:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-```
-After you entered the devshell, you can run repology_cli.py as follows:
-```bash
-$ scripts/repology/repology_cli.py 
 ```
 
 ## Usage Examples
@@ -75,7 +35,7 @@ $ scripts/repology/repology_cli.py
 ### Search by Package Name Exact Match
 Following query finds package name 'firefox' versions in 'nix_unstable' repository:
 ```bash
-$ scripts/repology/repology_cli.py --pkg_exact "firefox" --repository nix_unstable
+$ repology_cli --pkg_exact "firefox" --repository nix_unstable
 
 INFO     GET: https://repology.org/projects/?search=firefox&inrepo=nix_unstable
 INFO     Repology package info, packages:5
@@ -106,7 +66,7 @@ In addition to the above datapoints, `repology_cli` adds the column 'repo_versio
 Full list of repositories available in repology are available in https://repology.org/repositories/statistics. As an example, to repeat the earlier query for Debian 12, you would run:
 
 ```bash
-$ scripts/repology/repology_cli.py --pkg_exact "firefox" --repository debian_12
+$ repology_cli --pkg_exact "firefox" --repository debian_12
 
 INFO     GET: https://repology.org/projects/?search=firefox&inrepo=debian_12
 INFO     Repology package info, packages:1
@@ -124,7 +84,7 @@ INFO     Wrote: repology_report.csv
 Following query finds 'debian_12' packages that include 'firefox' anywhere in the name string:
 
 ```bash
-$ scripts/repology/repology_cli.py --pkg_search "firefox" --repository debian_12
+$ repology_cli --pkg_search "firefox" --repository debian_12
 
 INFO     GET: https://repology.org/projects/?search=firefox&inrepo=debian_12
 INFO     Repology package info, packages:5
@@ -144,7 +104,7 @@ Notice: using short search strings with `--pkg_search` might result a large numb
 Following query finds 'nix_unstable' packages that match the packages in the CycloneDX sbom 'wget.runtime.sbom.cdx.json':
 
 ```bash
-$ scripts/repology/repology_cli.py --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable
+$ repology_cli --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable
 
 INFO     GET: https://repology.org/projects/?search=glibc&inrepo=nix_unstable
 INFO     GET: https://repology.org/projects/?search=libidn2&inrepo=nix_unstable
@@ -175,7 +135,7 @@ Output includes package details from the packages in the given SBOM that were al
 Following is the same query as above, but adds the command-line argument `--stats` to print out some simple statistics that might help explain the results.
 
 ```bash
-$ scripts/repology/repology_cli.py --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable --stats
+$ repology_cli --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable --stats
 INFO     GET: https://repology.org/projects/?search=glibc&inrepo=nix_unstable
 INFO     GET: https://repology.org/projects/?search=libidn2&inrepo=nix_unstable
 INFO     GET: https://repology.org/projects/?search=libunistring&inrepo=nix_unstable
@@ -244,3 +204,23 @@ $ csvsql --query "select * from repology_report where status == 'NOT_FOUND'" rep
 ```
 
 Above, we can see the package 'util-linux-minimal' which is one of the components in the example sbom 'wget.runtime.sbom.cdx.json', is not available (with that exact same name) in repology.org.
+
+### Repology CVE search
+Following query shows an example of using the [`repology_cve`](../src/repology/repology_cve.py) client to query CVEs known to repology.org that impact package `openssl` version `3.1.1`.
+
+```bash
+$ repology_cve openssl 3.1.1
+
+INFO     Repology affected CVE(s)
+
+| package   | version   | cve           |
+|-----------+-----------+---------------|
+| openssl   | 3.1.1     | CVE-2023-2975 |
+| openssl   | 3.1.1     | CVE-2023-3446 |
+| openssl   | 3.1.1     | CVE-2023-3817 |
+| openssl   | 3.1.1     | CVE-2023-4807 |
+| openssl   | 3.1.1     | CVE-2023-5363 |
+| openssl   | 3.1.1     | CVE-2023-5678 |
+
+INFO     Wrote: repology_cves.csv
+```

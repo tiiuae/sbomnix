@@ -6,17 +6,18 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # sbomnix
 
-`sbomnix` is a utility that generates SBOMs given [Nix](https://nixos.org/) derivations or out paths.
+This repository is home to various command line tools and Python libraries that aim to help with software supply chain challenges:
+- [`sbomnix`](#generate-sbom-based-on-derivation-file-or-out-path) is a utility that generates SBOMs given [Nix](https://nixos.org/) derivation or out path.
+- [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) derivation or out path.
+- [`vulnxscan`](./doc/vulnxscan/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
+- [`repology_cli`](./doc/replogoy_cli.md) and [`repology_cve`](./doc/replogoy_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
+- [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 
-In addition to `sbomnix` this repository is home to [nixgraph](./doc/nixgraph.md) - a Python library and command line utility for querying and visualizing dependency graphs for [Nix](https://nixos.org/) Packages.
+For an example of how to use the tooling provided in this repository to automate daily vulnerability scans for a nix flake project, see: [ghafscan](https://github.com/tiiuae/ghafscan).
 
-For a demonstration of how to use `sbomnix` generated SBOM in automating vulnerability scans, see: [vulnxscan](scripts/vulnxscan/README.md).
+The [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) SBOMs for each release of sbomnix tooling is available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
 
-For an example of how to use the tooling provided in this repository to automate vulnerability scanning for a nix flake project, see: [ghafscan](https://github.com/tiiuae/ghafscan).
-
-The [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) SBOMs for each release of `sbomnix` itself are available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
-
-`sbomnix` and other tools in this repository originate from [Ghaf Framework](https://github.com/tiiuae/ghaf).
+All the tools in this repository originate from [Ghaf Framework](https://github.com/tiiuae/ghaf).
 
 Table of Contents
 =================
@@ -24,6 +25,9 @@ Table of Contents
 * [Getting Started](#getting-started)
    * [Running as Nix Flake](#running-as-nix-flake)
    * [Running from Nix Development Shell](#running-from-nix-development-shell)
+* [Buildtime vs Runtime Dependencies](#buildtime-vs-runtime-dependencies)
+   * [Buildtime Dependencies](#buildtime-dependencies)
+   * [Runtime Dependencies](#runtime-dependencies)
 * [Usage Examples](#usage-examples)
    * [Generate SBOM Based on Derivation File or Out-path](#generate-sbom-based-on-derivation-file-or-out-path)
    * [Generate SBOM Including Meta Information](#generate-sbom-including-meta-information)
@@ -51,8 +55,6 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix
 $ nix run .#sbomnix -- --help
 ```
-Similarly, you can run `nixgraph` with `nix run github:tiiuae/sbomnix#nixgraph --  --help`
-
 See the full list of supported flake targets by running `nix flake show`.
 
 ### Running from Nix Development Shell
@@ -74,18 +76,46 @@ $ nix-shell
 Keep in mind this doesn't add the various entrypoint binaries to your `PATH`
 directly. They are produced during the setuptools build.
 
-While you're in the devshell, you can run run `sbomnix` via the entrypoint file
+While you're in the devshell, you can run various command line tools via the entrypoint files
 directly:
 
 ```bash
-$ sbomnix/main.py --help
+# sbomnix:
+$ src/sbomnix/main.py --help
+
+# nixgraph:
+$ src/nixgraph/main.py --help
+
+# vulnxscan:
+$ src/vulnxscan/vulnxscan_cli.py --help
+
+# repology_cli:
+$ src/repology/repology_cli.py --help
+
+# repology_cve:
+$ src/repology/repology_cve.py --help
+
+# nix_outdated:
+$ src/nixupdate/nix_outdated.py --help
 ```
+
+## Buildtime vs Runtime Dependencies
+#### Buildtime Dependencies
+[Closure](https://nixos.org/manual/nix/stable/glossary.html#gloss-closure) of a nix store path is a list of all the dependent store paths, recursively, referenced by the target store path. For a package, the closure of it's derivation lists all the buildtime dependencies. As an example, for a simple C program, the buildtime dependencies include packages to bootstrap gcc, stdenv, glibc, bash, etc. on the target architecture. Even a simple hello-world C program typically includes over 150 packages in its list of buildtime dependencies. It's important to note that generating buildtime dependencies in Nix does not require building the target.
+
+For reference, following is a link to graph from an example hello-world C program that includes the first two layers of buildtime dependencies: direct dependencies and the first level of transitive dependencies: [C hello-world buildtime, depth=2](doc/img/c_hello_world_buildtime_d2.svg).
+
+#### Runtime Dependencies
+[Runtime dependencies](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-why-depends.html#description) are a subset of buildtime dependencies. Nix automatically determines the runtime dependencies by scanning the generated output paths (i.e. build output) for the buildtime dependencies' store paths. This means nix needs to build the target output first, before runtime dependencies can be determined. For reference, below is a complete runtime dependency graph of an example hello-world C program:
+
+<img src="doc/img/c_hello_world_runtime.svg" width="700">
+
 
 ## Usage Examples
 The usage examples work for both the built package, as well as inside the devshell.
 
 Keep in mind inside the devshell, calls to `sbomnix` need to be replaced with
-`sbomnix/main.py` (and similar for other entrypoints).
+`src/sbomnix/main.py` (and similar for other entrypoints).
 
 In the below examples, we use Nix package `wget` as an example target.
 To print `wget` out-path on your local system, try:
@@ -95,7 +125,8 @@ $ nix eval -f '<nixpkgs>' 'wget.outPath'
 ```
 
 #### Generate SBOM Based on Derivation File or Out-path
-By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies. Notice that determining the target runtime dependencies requires realising (building) the target. This stems from the way Nix determines potential [runtime dependencies](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-why-depends.html#description):
+By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
+Keep in mind that determining the target runtime dependencies requires building the target.
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
@@ -117,7 +148,8 @@ $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.js
 
 #### Generate SBOM Including Buildtime Dependencies
 By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to determine the buildtime dependencies using the `--type` argument. 
-Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime dependencies. Notice that determining buildtime dependencies does not require realising (building) the target.
+Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime dependencies.
+Notice: as opposed to runtime dependencies, determining the buildtime dependencies does not require building the target.
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --type=buildtime
 ```
@@ -141,7 +173,7 @@ Which outputs the dependency graph as an image (with maxdepth 2):
 For more examples on querying and visualizing the package dependencies, see: [nixgraph](./doc/nixgraph.md).
 
 ## Contribute
-Any pull requests, suggestions, and error reports are welcome.
+Any pull requests, questions and error reports are welcome.
 To start development, we recommend using Nix flakes development shell:
 ```bash
 $ git clone https://github.com/tiiuae/sbomnix
