@@ -136,7 +136,7 @@ class Repology:
         # - Cache all responses locally for 7200 seconds
         self.session = CachedLimiterSession(per_second=1, expire_after=7200)
         ua_product = "repology_cli/0"
-        ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
+        ua_comment = "(https://github.com/tiiuae/sbomnix/)"
         self.headers = {"User-Agent": f"{ua_product} {ua_comment}"}
 
     def _packages_to_df(self, args, re_pkg_internal=None):
