@@ -190,7 +190,7 @@ def query_cve(pkg_name, pkg_version):
     """
     session = CachedLimiterSession(per_second=1, expire_after=7200)
     ua_product = "repology_cli/0"
-    ua_comment = "(https://github.com/tiiuae/sbomnix/tree/main/scripts/repology)"
+    ua_comment = "(https://github.com/tiiuae/sbomnix/)"
     headers = {"User-Agent": f"{ua_product} {ua_comment}"}
     pkg = urllib.parse.quote(pkg_name)
     ver = urllib.parse.quote(pkg_version)
