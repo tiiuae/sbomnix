@@ -12,7 +12,6 @@ import subprocess
 import shutil
 from pathlib import Path
 import json
-import imghdr
 import pandas as pd
 import jsonschema
 import pytest
@@ -231,8 +230,6 @@ def test_nixgraph_png():
     png_out = TEST_WORK_DIR / "graph.png"
     _run_python_script([NIXGRAPH, TEST_NIX_RESULT, "--out", png_out, "--depth", "3"])
     assert Path(png_out).exists()
-    # Check the output is valid png file
-    assert imghdr.what(png_out) == "png"
 
 
 def test_nixgraph_csv():

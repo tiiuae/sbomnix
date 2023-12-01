@@ -12,6 +12,8 @@
     packages = rec {
       default = sbomnix;
 
+      # requests-ratelimiter currently does not support pyrate-limiter v3,
+      # see: https://github.com/JWCook/requests-ratelimiter/issues/78
       pyrate-limiter = pp.buildPythonPackage rec {
         version = "2.10.0";
         pname = "pyrate-limiter";
@@ -29,6 +31,8 @@
         ];
       };
 
+      # requests-ratelimiter currently does not support pyrate-limiter v3,
+      # see: https://github.com/JWCook/requests-ratelimiter/issues/78
       requests-ratelimiter = pp.buildPythonPackage rec {
         version = "0.4.0";
         pname = "requests-ratelimiter";
