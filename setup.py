@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, import-error, missing-function-docstring
+# pylint: disable=missing-function-docstring
 
 """ setup.py for setuptools """
 
