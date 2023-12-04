@@ -82,7 +82,7 @@ def _generate_sbom(target_path, runtime=True, buildtime=False):
     suffix = ".cdx.json"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
         sbomdb.to_cdx(f.name, printinfo=False)
-        return f.name
+        return pathlib.Path(f.name)
 
 
 def _run_repology_cli(sbompath):
@@ -105,7 +105,7 @@ def _run_nix_visualize(targt_path):
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
         cmd = "nix-visualize " f"--output={f.name} {targt_path}"
         exec_cmd(cmd.split())
-        return f.name
+        return pathlib.Path(f.name)
 
 
 def _nix_visualize_csv_to_df(csvpath):
@@ -257,16 +257,21 @@ def main():
     exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
 
     sbom_path = _generate_sbom(target_path_abs, runtime, args.buildtime)
-    LOG.info("Using SBOM '%s'", sbom_path)
+    LOG.debug("Using SBOM '%s'", sbom_path)
 
     df_repology = _run_repology_cli(sbom_path)
+    if LOG.level > logging.DEBUG:
+        sbom_path.unlink(missing_ok=True)
     df_log(df_repology, LOG_SPAM)
 
     if not args.buildtime:
         nix_visualize_out = _run_nix_visualize(target_path_abs)
-        LOG.info("Using nix-visualize out: '%s'", nix_visualize_out)
+        LOG.debug("Using nix-visualize out: '%s'", nix_visualize_out)
         df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
         df_log(df_nix_visualize, LOG_SPAM)
+        if LOG.level > logging.DEBUG:
+            # Remove temp file unless verbosity is DEBUG or more verbose
+            nix_visualize_out.unlink(missing_ok=True)
     else:
         LOG.info("Not running nix-visualize due to '--buildtime' argument")
         df_nix_visualize = None
