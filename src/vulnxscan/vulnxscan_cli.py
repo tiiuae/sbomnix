@@ -747,7 +747,7 @@ def _generate_sbom(target_path, runtime=True, buildtime=False):
     ) as fcsv:
         sbomdb.to_cdx(fcdx.name, printinfo=False)
         sbomdb.to_csv(fcsv.name, loglevel=logging.DEBUG)
-        return fcdx.name, fcsv.name
+        return pathlib.Path(fcdx.name), pathlib.Path(fcsv.name)
 
 
 def _is_json(path):
@@ -887,12 +887,16 @@ def main():
         sbom_cdx_path, sbom_csv_path = _generate_sbom(
             target_path_abs, runtime, args.buildtime
         )
-        LOG.info("Using cdx SBOM '%s'", sbom_cdx_path)
-        LOG.info("Using csv SBOM '%s'", sbom_csv_path)
+        LOG.debug("Using cdx SBOM '%s'", sbom_cdx_path)
+        LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
     scanner.scan_grype(sbom_cdx_path)
     scanner.scan_osv(sbom_cdx_path)
     scanner.report(args, sbom_csv_path)
+    if not args.sbom and LOG.level > logging.DEBUG:
+        # Remove generated temp files unless verbosity is DEBUG or more verbose
+        sbom_cdx_path.unlink(missing_ok=True)
+        sbom_csv_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
