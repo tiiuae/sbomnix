@@ -9,7 +9,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 This repository is home to various command line tools and Python libraries that aim to help with software supply chain challenges:
 - [`sbomnix`](#generate-sbom-based-on-derivation-file-or-out-path) is a utility that generates SBOMs given [Nix](https://nixos.org/) derivation or out path.
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) derivation or out path.
-- [`vulnxscan`](./doc/vulnxscan/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
+- [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
 - [`repology_cli`](./doc/replogoy_cli.md) and [`repology_cve`](./doc/replogoy_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 
@@ -194,4 +194,4 @@ This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt]
 
 
 ## Acknowledgements
-`sbomnix` uses Nix store derivation scanner ([nix.py](sbomnix/nix.py) and [derivation.py](sbomnix/derivation.py)) originally from [vulnix](https://github.com/flyingcircusio/vulnix).
+`sbomnix` uses Nix store derivation scanner ([nix.py](src/sbomnix/nix.py) and [derivation.py](src/sbomnix/derivation.py)) originally from [vulnix](https://github.com/nix-community/vulnix).
