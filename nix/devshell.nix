@@ -36,6 +36,8 @@
       # invoking entrypoints from inside the devshell.
       shellHook = ''
         export PYTHONPATH="$PYTHONPATH:$(pwd)/src"
+        # https://github.com/NixOS/nix/issues/1009:
+        export TMPDIR="/tmp"
       '';
     };
   };
