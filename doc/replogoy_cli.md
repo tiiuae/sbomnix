@@ -98,7 +98,7 @@ INFO     Repology package info, packages:5
 | debian_12 | perl:firefox-marionette     | 1.35    | newest   |           0            | 1.35                    |                       |
 ```
 
-Notice: using short search strings with `--pkg_search` might result a large number of matches and, thus, potentially a large number of queries to repology.org. To avoid spamming repology.org with such queries, `repology_cli` limits the number of requests sent to repology.org to at most one request per second. In addition, it caches all responses locally for 3600 seconds.
+Notice: using short search strings with `--pkg_search` might result a large number of matches and, thus, potentially a large number of queries to repology.org. To avoid spamming repology.org with such queries, `repology_cli` limits the number of requests sent to repology.org to at most one request per second. In addition, it caches all responses locally for two hours.
 
 ### Search by Package Names in SBOM
 Following query finds 'nix_unstable' packages that match the packages in the CycloneDX sbom 'wget.runtime.sbom.cdx.json':
