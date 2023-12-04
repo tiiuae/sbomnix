@@ -23,12 +23,18 @@ with open(project_path("VERSION"), encoding="utf-8") as f:
 
 
 requires = [
+    "beautifulsoup4",
     "colorlog",
     "graphviz",
+    "numpy",
+    "pandas",
     "packageurl-python",
     "packaging",
-    "pandas",
     "reuse",
+    "requests",
+    "requests-cache",
+    "requests-ratelimiter",
+    "setuptools",
     "tabulate",
 ]
 
