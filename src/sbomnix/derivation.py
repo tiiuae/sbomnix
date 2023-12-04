@@ -4,7 +4,7 @@
 
 # SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
-# pylint: disable=unnecessary-pass, invalid-name, eval-used
+# pylint: disable=invalid-name, eval-used
 # pylint: disable=too-many-instance-attributes
 
 """ Nix derivation, originally from https://github.com/flyingcircusio/vulnix """

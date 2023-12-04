@@ -4,8 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, import-error, too-many-arguments
-# pylint: disable=singleton-comparison
+# pylint: disable=invalid-name
 # pylint: disable=too-many-return-statements
 
 """

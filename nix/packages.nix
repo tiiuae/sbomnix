@@ -160,9 +160,9 @@
           requests
           requests-cache
           requests-ratelimiter
+          setuptools
           tabulate
           venvShellHook
-          wheel
 
           # dev dependencies
           jsonschema
