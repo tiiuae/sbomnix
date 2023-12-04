@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, abstract-method
 
 """ sbomnix utils """
 
@@ -18,6 +18,10 @@ import packaging.version
 from tabulate import tabulate
 from colorlog import ColoredFormatter, default_log_colors
 import pandas as pd
+
+from requests import Session
+from requests_cache import CacheMixin
+from requests_ratelimiter import LimiterMixin
 
 ###############################################################################
 
@@ -278,6 +282,13 @@ def check_positive(val):
     if intval <= 0:
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
     return intval
+
+
+class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
+    """
+    Session class with caching and rate-limiting
+    https://requests-cache.readthedocs.io/en/stable/user_guide/compatibility.html
+    """
 
 
 ################################################################################

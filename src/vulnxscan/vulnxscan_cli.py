@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, import-error, too-many-arguments
-# pylint: disable=singleton-comparison, abstract-method
+# pylint: disable=singleton-comparison
 # pylint: disable=too-many-return-statements
 
 """
@@ -25,9 +25,6 @@ import urllib.parse
 from tempfile import NamedTemporaryFile
 from shutil import which
 
-from requests import Session
-from requests_cache import CacheMixin
-from requests_ratelimiter import LimiterMixin
 import pandas as pd
 import numpy as np
 
@@ -49,6 +46,7 @@ from common.utils import (
     nix_to_repology_pkg_name,
     parse_version,
     version_distance,
+    CachedLimiterSession,
 )
 
 ###############################################################################
@@ -391,10 +389,6 @@ class VulnScan:
 ################################################################################
 
 # Triage
-
-
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
-    """Session class with caching and rate-limiting"""
 
 
 _repology_cve_dfs = {}
