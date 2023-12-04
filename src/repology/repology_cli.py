@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, import-error, unexpected-keyword-arg,
-# pylint: disable=abstract-method, too-few-public-methods, too-many-statements
+# pylint: disable=too-few-public-methods, too-many-statements
 # pylint: disable=too-many-instance-attributes, too-many-locals,
 
 """ Command-line interface to repology.org """
@@ -16,9 +16,6 @@ import json
 import re
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError, SUPPRESS
-from requests import Session
-from requests_cache import CacheMixin
-from requests_ratelimiter import LimiterMixin
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
@@ -32,6 +29,7 @@ from common.utils import (
     df_regex_filter,
     nix_to_repology_pkg_name,
     parse_version,
+    CachedLimiterSession,
 )
 
 ###############################################################################
@@ -102,12 +100,6 @@ def getargs(args=None):
 
 
 ################################################################################
-
-
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
-    """Session class with caching and rate-limiting"""
-
-    # See: https://requests-cache.readthedocs.io/en/stable/user_guide/compatibility.html
 
 
 class Repology:

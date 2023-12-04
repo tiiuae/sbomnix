@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name abstract-method too-many-locals
+# pylint: disable=invalid-name too-many-locals
 
 """ Command-line interface to query CVE info from repology.org """
 
@@ -13,9 +13,6 @@ import sys
 import re
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError
-from requests import Session
-from requests_cache import CacheMixin
-from requests_ratelimiter import LimiterMixin
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
@@ -27,6 +24,7 @@ from common.utils import (
     set_log_verbosity,
     df_to_csv_file,
     parse_version,
+    CachedLimiterSession,
 )
 
 ###############################################################################
@@ -58,12 +56,6 @@ def getargs():
 
 
 ################################################################################
-
-
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
-    """Session class with caching and rate-limiting"""
-
-    # See: https://requests-cache.readthedocs.io/en/stable/user_guide/compatibility.html
 
 
 def _parse_cve_resp(resp, pkg_name, pkg_version):
