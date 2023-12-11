@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, too-many-instance-attributes, too-many-arguments
+# pylint: disable=invalid-name, too-many-instance-attributes
 
 """ Module for generating SBOMs in various formats """
 
@@ -27,19 +27,15 @@ from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(
-        self, nix_path, runtime=True, buildtime=False, meta_path=None, depth=None
-    ):
+    def __init__(self, nix_path, buildtime=False, meta_path=None, depth=None):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
         self.uid = "store_path"
-        self.runtime = runtime
         self.buildtime = buildtime
         self.meta_path = meta_path
         self.target_deriver = find_deriver(nix_path)
-        self.df_rdeps = None
-        self.df_bdeps = None
+        self.df_deps = None
         self.depth = depth
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
@@ -47,19 +43,17 @@ class SbomDb:
         self._init_sbomdb()
         self.uuid = uuid.uuid4()
         self.sbom_type = "runtime_and_buildtime"
-        if self.runtime and not self.buildtime:
+        if not self.buildtime:
             self.sbom_type = "runtime_only"
-        elif not self.runtime and self.buildtime:
-            self.sbom_type = "buildtime_only"
 
     def _init_dependencies(self, nix_path):
-        """Initialize runtime and buildtime dependencies (df_rdeps, df_bdeps)"""
-        if self.runtime:
-            runtime_dependencies = NixDependencies(nix_path, buildtime=False)
-            self.df_rdeps = self._get_dependencies_df(runtime_dependencies)
+        """Initialize dependencies (df_deps)"""
         if self.buildtime:
             buildtime_dependencies = NixDependencies(nix_path, buildtime=True)
-            self.df_bdeps = self._get_dependencies_df(buildtime_dependencies)
+            self.df_deps = self._get_dependencies_df(buildtime_dependencies)
+        else:
+            runtime_dependencies = NixDependencies(nix_path, buildtime=False)
+            self.df_deps = self._get_dependencies_df(runtime_dependencies)
 
     def _get_dependencies_df(self, nix_dependencies):
         if self.depth:
@@ -75,18 +69,14 @@ class SbomDb:
 
     def _init_sbomdb(self):
         """Initialize self.df_sbomdb"""
-        if (self.df_bdeps is None or self.df_bdeps.empty) and (
-            self.df_rdeps is None or self.df_rdeps.empty
-        ):
+        if self.df_deps is None or self.df_deps.empty:
             # No dependencies, so the only component in the sbom
             # will be the target itself
             paths = set([self.target_deriver])
         else:
-            # Concat buildtime and runtime dependencies dropping duplicates
-            df_paths = pd.concat([self.df_rdeps, self.df_bdeps], ignore_index=True)
             # Get unique src_paths and target_paths
-            src_paths = df_paths["src_path"].unique().tolist()
-            target_paths = df_paths["target_path"].unique().tolist()
+            src_paths = self.df_deps["src_path"].unique().tolist()
+            target_paths = self.df_deps["target_path"].unique().tolist()
             paths = set(src_paths + target_paths)
         # Populate store based on the dependencies
         store = Store(self.buildtime)
@@ -128,17 +118,17 @@ class SbomDb:
         # Find runtime dependencies
         # Runtime dependencies: drv.outputs matches with target_path
         dfr = None
-        if self.df_rdeps is not None and not self.df_rdeps.empty:
-            df = self.df_rdeps[self.df_rdeps["target_path"].isin(drv.outputs)]
+        if self.df_deps is not None and not self.df_deps.empty:
+            df = self.df_deps[self.df_deps["target_path"].isin(drv.outputs)]
             # Find the requested 'uid' values for the dependencies (df.src_path)
             dfr = self.df_sbomdb_outputs_exploded.merge(
                 df, how="inner", left_on=["outputs"], right_on=["src_path"]
             ).loc[:, [uid]]
         # Find buildtime dependencies
         dfb = None
-        if self.df_bdeps is not None and not self.df_bdeps.empty:
+        if self.df_deps is not None and not self.df_deps.empty:
             # Buildtime dependencies: drv.store_path matches with target_path
-            df = self.df_bdeps[self.df_bdeps["target_path"] == drv.store_path]
+            df = self.df_deps[self.df_deps["target_path"] == drv.store_path]
             # Find the requested 'uid' values for the dependencies (df.src_path)
             dfb = self.df_sbomdb.merge(
                 df, how="inner", left_on=["store_path"], right_on=["src_path"]

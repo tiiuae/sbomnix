@@ -157,7 +157,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     df_sbom = df_sbom.astype(str)
 
     if (graph_type == "runtime" and sbom_type != "runtime_only") or (
-        graph_type == "buildtime" and sbom_type != "buildtime_only"
+        graph_type == "buildtime" and sbom_type == "runtime_only"
     ):
         LOG.fatal("Unable to compare: graph='%s' vs sbom='%s'", graph_type, sbom_type)
         return False

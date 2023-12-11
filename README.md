@@ -111,6 +111,9 @@ For reference, following is a link to graph from an example hello-world C progra
 <img src="doc/img/c_hello_world_runtime.svg" width="700">
 
 
+By default, all the tools in this repository assume runtime dependencies. This means, for instance, that unless specified otherwise, `sbomnix` will output an SBOM including the target runtime dependencies, `nixgraph` outputs runtime dependency graph, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since Nix needs to build the target output to determine the runtime dependencies, all the tools in this repository will also build (force-realise) the target output as part of each tool's invocation when determining the runtime dependencies. All the mentioned tools in this repository also support working with buildtime dependencies instead of runtime dependencies with the help of `--buildtime` command line argument. As mentioned earlier, generating buildtime dependencies in Nix does not require building the target. Similarly, when `--buildtime` is specified, the tools in this repository do not need to be build the given target.
+
+
 ## Usage Examples
 The usage examples work for both the built package, as well as inside the devshell.
 
@@ -126,7 +129,7 @@ $ nix eval -f '<nixpkgs>' 'wget.outPath'
 
 #### Generate SBOM Based on Derivation File or Out-path
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
-Keep in mind that determining the target runtime dependencies requires building the target.
+Notice: determining the target runtime dependencies in Nix requires building the target.
 ```bash
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
@@ -147,11 +150,11 @@ $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.js
 ```
 
 #### Generate SBOM Including Buildtime Dependencies
-By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to determine the buildtime dependencies using the `--type` argument. 
-Acceptable values for `--type` are `runtime, buildtime, both`. Below example generates SBOM including buildtime dependencies.
+By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to determine the buildtime dependencies using the `--buildtime` argument. 
+Below example generates SBOM including buildtime dependencies.
 Notice: as opposed to runtime dependencies, determining the buildtime dependencies does not require building the target.
 ```bash
-$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --type=buildtime
+$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --buildtime
 ```
 #### Generate SBOM Based on Result Symlink
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):

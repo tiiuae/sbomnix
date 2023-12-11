@@ -100,7 +100,7 @@ def test_sbomnix_help():
 
 
 def test_sbomnix_type_runtime():
-    """Test sbomnix '--type=runtime' generates valid CycloneDX json"""
+    """Test sbomnix generates valid CycloneDX json with runtime dependencies"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
     out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
     _run_python_script(
@@ -111,8 +111,6 @@ def test_sbomnix_type_runtime():
             out_path_cdx.as_posix(),
             "--spdx",
             out_path_spdx.as_posix(),
-            "--type",
-            "runtime",
         ]
     )
     assert out_path_cdx.exists()
@@ -126,7 +124,7 @@ def test_sbomnix_type_runtime():
 
 
 def test_sbomnix_type_buildtime():
-    """Test sbomnix '--type=runtime' generates valid CycloneDX json"""
+    """Test sbomnix generates valid CycloneDX json with buildtime dependencies"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
     out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
     _run_python_script(
@@ -137,34 +135,7 @@ def test_sbomnix_type_buildtime():
             out_path_cdx.as_posix(),
             "--spdx",
             out_path_spdx.as_posix(),
-            "--type",
-            "buildtime",
-        ]
-    )
-    assert out_path_cdx.exists()
-    assert out_path_spdx.exists()
-    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
-    assert cdx_schema_path.exists()
-    validate_json(out_path_cdx.as_posix(), cdx_schema_path)
-    spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
-    assert spdx_schema_path.exists()
-    validate_json(out_path_spdx.as_posix(), spdx_schema_path)
-
-
-def test_sbomnix_cdx_type_both():
-    """Test sbomnix '--type=both' generates valid CycloneDX json"""
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
-    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
-    _run_python_script(
-        [
-            SBOMNIX,
-            TEST_NIX_RESULT,
-            "--cdx",
-            out_path_cdx.as_posix(),
-            "--spdx",
-            out_path_spdx.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_cdx.exists()
@@ -187,8 +158,6 @@ def test_sbomnix_depth():
             TEST_NIX_RESULT,
             "--csv",
             out_path_csv_1.as_posix(),
-            "--type",
-            "runtime",
         ]
     )
     assert out_path_csv_1.exists()
@@ -201,8 +170,6 @@ def test_sbomnix_depth():
             TEST_NIX_RESULT,
             "--csv",
             out_path_csv_2.as_posix(),
-            "--type",
-            "runtime",
             "--depth=1",
         ]
     )
@@ -319,8 +286,6 @@ def test_compare_deps_runtime():
             TEST_NIX_RESULT,
             "--cdx",
             out_path_cdx.as_posix(),
-            "--type",
-            "runtime",
         ]
     )
     assert out_path_cdx.exists()
@@ -358,8 +323,7 @@ def test_compare_deps_buildtime():
             TEST_NIX_RESULT,
             "--cdx",
             out_path_cdx.as_posix(),
-            "--type",
-            "buildtime",
+            "--buildtime",
         ]
     )
     assert out_path_cdx.exists()
@@ -384,8 +348,7 @@ def test_compare_subsequent_cdx_sboms():
             TEST_NIX_RESULT,
             "--cdx",
             out_path_cdx_1.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_cdx_1.exists()
@@ -397,8 +360,7 @@ def test_compare_subsequent_cdx_sboms():
             TEST_NIX_RESULT,
             "--cdx",
             out_path_cdx_2.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_cdx_2.exists()
@@ -421,8 +383,7 @@ def test_compare_subsequent_spdx_sboms():
             TEST_NIX_RESULT,
             "--spdx",
             out_path_spdx_1.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_spdx_1.exists()
@@ -434,8 +395,7 @@ def test_compare_subsequent_spdx_sboms():
             TEST_NIX_RESULT,
             "--spdx",
             out_path_spdx_2.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_spdx_2.exists()
@@ -461,8 +421,7 @@ def test_compare_spdx_and_cdx_sboms():
             out_path_cdx.as_posix(),
             "--spdx",
             out_path_spdx.as_posix(),
-            "--type",
-            "both",
+            "--buildtime",
         ]
     )
     assert out_path_cdx.exists()
