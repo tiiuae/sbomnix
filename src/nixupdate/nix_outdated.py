@@ -75,9 +75,9 @@ def getargs():
 ################################################################################
 
 
-def _generate_sbom(target_path, runtime=True, buildtime=False):
+def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
+    sbomdb = SbomDb(target_path, buildtime, meta_path=None)
     prefix = "nixdeps_"
     suffix = ".cdx.json"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
@@ -121,7 +121,7 @@ def _nix_visualize_csv_to_df(csvpath):
         # Followed by the version string
         r"(\d[-_.0-9pf]*g?b?(?:pre[0-9])*(?:\+git[0-9]*)?)"
         # Optionally followed by any of the following strings
-        r"(?:-lib|-bin|-env|-man|-su|-dev|-doc|-info|-nc|-host|-p[0-9]+|)"
+        r"(?:-lib|-bin|-env|-man|-su|-dev|-doc|-info|-nc|-host|-p[0-9]+|\.drv|)"
         # Followed by the end of line
         r"$"
     )
@@ -256,7 +256,7 @@ def main():
     LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path_abs)
     exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
 
-    sbom_path = _generate_sbom(target_path_abs, runtime, args.buildtime)
+    sbom_path = _generate_sbom(target_path_abs, args.buildtime)
     LOG.debug("Using SBOM '%s'", sbom_path)
 
     df_repology = _run_repology_cli(sbom_path)
@@ -276,6 +276,8 @@ def main():
         LOG.info("Not running nix-visualize due to '--buildtime' argument")
         df_nix_visualize = None
 
+    df_log(df_repology, logging.DEBUG)
+    df_log(df_nix_visualize, logging.DEBUG)
     df_report = _generate_report_df(df_nix_visualize, df_repology)
     _report(df_report, args)
 

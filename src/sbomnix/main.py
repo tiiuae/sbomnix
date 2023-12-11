@@ -40,15 +40,8 @@ def getargs():
         "to the output of this script (default: None)"
     )
     parser.add_argument("--meta", nargs="?", help=helps, default=None)
-    helps = (
-        "Set the type of dependencies included to the SBOM (default: runtime). "
-        "Note: generating 'runtime' SBOM requires realising (building) the "
-        "output paths of the target derivation. When 'runtime' SBOM is "
-        "requested, sbomnix will realise the target derivation unless its already "
-        "realised. See `nix-store --realise --help` for more info."
-    )
-    types = ["runtime", "buildtime", "both"]
-    parser.add_argument("--type", choices=types, help=helps, default="runtime")
+    helps = "Scan buildtime dependencies instead of runtime dependencies"
+    parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = (
         "Set the depth of the included dependencies. As an example, --depth=1 "
         "indicates the SBOM should include only the NIX_PATH direct dependencies. "
@@ -81,15 +74,14 @@ def main():
     args = getargs()
     set_log_verbosity(args.verbose)
     target_path = args.NIX_PATH.resolve().as_posix()
-    runtime = args.type in ("runtime", "both")
-    buildtime = args.type in ("buildtime", "both")
+    runtime = args.buildtime is False
     exit_unless_nix_artifact(target_path, force_realise=runtime)
     if not args.meta:
         LOG.warning(
             "Command line argument '--meta' missing: SBOM will not include "
             "license information (see '--help' for more details)"
         )
-    sbomdb = SbomDb(target_path, runtime, buildtime, args.meta, args.depth)
+    sbomdb = SbomDb(target_path, args.buildtime, args.meta, args.depth)
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
     if args.spdx:

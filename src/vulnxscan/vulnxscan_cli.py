@@ -734,9 +734,9 @@ def _is_patched(row):
     return False
 
 
-def _generate_sbom(target_path, runtime=True, buildtime=False):
+def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, runtime, buildtime, meta_path=None)
+    sbomdb = SbomDb(target_path, buildtime, meta_path=None)
     prefix = "vulnxscan_"
     cdx_suffix = ".json"
     csv_suffix = ".csv"
@@ -884,9 +884,7 @@ def main():
     else:
         runtime = args.buildtime is False
         exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
-        sbom_cdx_path, sbom_csv_path = _generate_sbom(
-            target_path_abs, runtime, args.buildtime
-        )
+        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
         LOG.debug("Using cdx SBOM '%s'", sbom_cdx_path)
         LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path_abs, args.buildtime)
