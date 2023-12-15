@@ -41,6 +41,7 @@ SRCDIR = REPOROOT / "src"
 # pass arguments to.
 SBOMNIX = SRCDIR / "sbomnix" / "main.py"
 NIXGRAPH = SRCDIR / "nixgraph" / "main.py"
+NIXMETA = SRCDIR / "nixmeta" / "main.py"
 NIX_OUTDATED = SRCDIR / "nixupdate" / "nix_outdated.py"
 VULNXSCAN = SRCDIR / "vulnxscan" / "vulnxscan_cli.py"
 REPOLOGY_CLI = SRCDIR / "repology" / "repology_cli.py"
@@ -581,6 +582,36 @@ def test_nix_outdated_result():
         ]
     )
     assert out_path_nix_outdated.exists()
+
+
+################################################################################
+
+
+def test_nixmeta_help():
+    """
+    Test nixmeta command line argument: '-h'
+    """
+    _run_python_script([NIXMETA, "-h"])
+
+
+def test_nixmeta_sbomnix_flakeref():
+    """Test nixmeta with sbomnix flakeref"""
+    out_path = TEST_WORK_DIR / "nixmeta.csv"
+    _run_python_script(
+        [
+            NIXMETA,
+            "--out",
+            out_path.as_posix(),
+            "--flakeref",
+            REPOROOT,
+        ]
+    )
+    assert out_path.exists()
+    # Quick sanity checks for the output data
+    df_meta = df_from_csv_file(out_path)
+    assert df_meta is not None
+    entries = df_meta.shape[0]
+    assert entries > 50000
 
 
 ################################################################################

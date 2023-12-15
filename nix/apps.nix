@@ -30,6 +30,12 @@
         program = "${sbomnix}/bin/nixgraph";
       };
 
+      # nix run .#nixmeta
+      nixmeta = {
+        type = "app";
+        program = "${sbomnix}/bin/nixmeta";
+      };
+
       # nix run .#vulnxscan
       vulnxscan = {
         type = "app";

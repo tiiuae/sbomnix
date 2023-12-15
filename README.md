@@ -9,6 +9,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 This repository is home to various command line tools and Python libraries that aim to help with software supply chain challenges:
 - [`sbomnix`](#generate-sbom-based-on-derivation-file-or-out-path) is a utility that generates SBOMs given [Nix](https://nixos.org/) derivation or out path.
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) derivation or out path.
+- [`nixmeta`](./doc/nixmeta.md) summarizes nixpkgs meta-attributes from the given nixpkgs version.
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
 - [`repology_cli`](./doc/replogoy_cli.md) and [`repology_cve`](./doc/replogoy_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
@@ -86,6 +87,9 @@ $ src/sbomnix/main.py --help
 # nixgraph:
 $ src/nixgraph/main.py --help
 
+# nixmeta:
+$ src/nixmeta/main.py --help
+
 # vulnxscan:
 $ src/vulnxscan/vulnxscan_cli.py --help
 
@@ -111,7 +115,7 @@ For reference, following is a link to graph from an example hello-world C progra
 <img src="doc/img/c_hello_world_runtime.svg" width="700">
 
 
-By default, all the tools in this repository assume runtime dependencies. This means, for instance, that unless specified otherwise, `sbomnix` will output an SBOM including the target runtime dependencies, `nixgraph` outputs runtime dependency graph, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since Nix needs to build the target output to determine the runtime dependencies, all the tools in this repository will also build (force-realise) the target output as part of each tool's invocation when determining the runtime dependencies. All the mentioned tools in this repository also support working with buildtime dependencies instead of runtime dependencies with the help of `--buildtime` command line argument. As mentioned earlier, generating buildtime dependencies in Nix does not require building the target. Similarly, when `--buildtime` is specified, the tools in this repository do not need to be build the given target.
+By default, where applicable, the tools in this repository assume runtime dependencies. This means, for instance, that unless specified otherwise, `sbomnix` will output an SBOM including runtime-only dependencies, `nixgraph` outputs runtime dependency graph, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since Nix needs to build the target output to determine the runtime dependencies, all the tools in this repository will also build (force-realise) the target output as part of each tool's invocation when determining the runtime dependencies. All the mentioned tools in this repository also support working with buildtime dependencies instead of runtime dependencies with the help of `--buildtime` command line argument. As mentioned earlier, generating buildtime dependencies in Nix does not require building the target. Similarly, when `--buildtime` is specified, the tools in this repository do not need to be build the given target.
 
 
 ## Usage Examples
