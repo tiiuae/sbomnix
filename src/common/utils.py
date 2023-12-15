@@ -14,6 +14,8 @@ import csv
 import logging
 import subprocess
 import importlib.metadata
+from shutil import which
+
 import packaging.version
 from tabulate import tabulate
 from colorlog import ColoredFormatter, default_log_colors
@@ -136,6 +138,14 @@ def exec_cmd(
         if return_error:
             return error
         return None
+
+
+def exit_unless_command_exists(name):
+    """Check if `name` is an executable in PATH"""
+    name_is_in_path = which(name) is not None
+    if not name_is_in_path:
+        LOG.fatal("command '%s' is not in PATH", name)
+        sys.exit(1)
 
 
 def exit_unless_nix_artifact(path, force_realise=False):
