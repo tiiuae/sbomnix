@@ -22,7 +22,6 @@ import re
 import time
 import urllib.parse
 from tempfile import NamedTemporaryFile
-from shutil import which
 
 import pandas as pd
 import numpy as np
@@ -42,6 +41,7 @@ from common.utils import (
     df_from_csv_file,
     df_log,
     exit_unless_nix_artifact,
+    exit_unless_command_exists,
     nix_to_repology_pkg_name,
     parse_version,
     version_distance,
@@ -761,14 +761,6 @@ def _is_json(path):
         return False
 
 
-def _exit_unless_command_exists(name):
-    """Check if `name` is an executable in PATH"""
-    name_is_in_path = which(name) is not None
-    if not name_is_in_path:
-        LOG.fatal("command '%s' is not in PATH", name)
-        sys.exit(1)
-
-
 ################################################################################
 
 # Whitelist
@@ -868,8 +860,8 @@ def main():
     set_log_verbosity(args.verbose)
 
     # Fail early if following commands are not in path
-    _exit_unless_command_exists("grype")
-    _exit_unless_command_exists("vulnix")
+    exit_unless_command_exists("grype")
+    exit_unless_command_exists("vulnix")
 
     target_path_abs = args.TARGET.resolve().as_posix()
     scanner = VulnScan()

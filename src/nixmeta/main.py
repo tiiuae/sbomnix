@@ -5,12 +5,10 @@
 
 """ Python script for summarizing nixpkgs meta-attributes """
 
-import sys
 import argparse
 import pathlib
-import shutil
 from nixmeta.scanner import NixMetaScanner
-from common.utils import LOG, set_log_verbosity
+from common.utils import set_log_verbosity, exit_unless_command_exists
 
 
 ################################################################################
@@ -68,24 +66,13 @@ def _getargs():
 ###############################################################################
 
 
-def _exit_unless_command_exists(name):
-    """Check if `name` is an executable in PATH"""
-    name_is_in_path = shutil.which(name) is not None
-    if not name_is_in_path:
-        LOG.fatal("command '%s' is not in PATH", name)
-        sys.exit(1)
-
-
-###############################################################################
-
-
 def main():
     """main entry point"""
     args = _getargs()
     set_log_verbosity(args.verbose)
     # Fail early if the following commands are not in PATH
-    _exit_unless_command_exists("nix")
-    _exit_unless_command_exists("nix-env")
+    exit_unless_command_exists("nix")
+    exit_unless_command_exists("nix-env")
     # Scan metadata from the flakeref pinned nixpkgs
     scanner = NixMetaScanner()
     scanner.scan(args.flakeref)
