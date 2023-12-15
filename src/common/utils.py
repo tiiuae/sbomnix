@@ -112,12 +112,18 @@ def df_log(df, loglevel, tablefmt="presto"):
         LOG.log(loglevel, "\n%s\n", table)
 
 
-def exec_cmd(cmd, raise_on_error=True, return_error=False, loglevel=logging.DEBUG):
+def exec_cmd(
+    cmd, raise_on_error=True, return_error=False, loglevel=logging.DEBUG, stdout=None
+):
     """Run shell command cmd"""
     command_str = " ".join(cmd)
     LOG.log(loglevel, "Running: %s", command_str)
     try:
-        return subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
+        if stdout:
+            ret = subprocess.run(cmd, encoding="utf-8", check=True, stdout=stdout)
+        else:
+            ret = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
+        return ret
     except subprocess.CalledProcessError as error:
         LOG.debug(
             "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",
