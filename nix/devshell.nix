@@ -12,7 +12,9 @@
 
       packages =
         (with pkgs; [
+          black
           coreutils
+          csvkit
           curl
           gnugrep
           gnused
@@ -20,7 +22,7 @@
           grype
           gzip
           nix
-          black
+          pylint
           reuse
         ])
         ++ (with self'.packages; [
