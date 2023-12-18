@@ -14,6 +14,9 @@ import csv
 import logging
 import subprocess
 import importlib.metadata
+import pathlib
+import tempfile
+import urllib.error
 from shutil import which
 
 import packaging.version
@@ -29,6 +32,9 @@ from requests_ratelimiter import LimiterMixin
 
 LOG_SPAM = logging.DEBUG - 1
 LOG = logging.getLogger(os.path.abspath(__file__))
+
+# DataFrameDiskCache cache local path
+DFCACHE_PATH = pathlib.Path(tempfile.gettempdir()) / "sbomnix_df_cache"
 
 ###############################################################################
 
@@ -88,7 +94,11 @@ def df_from_csv_file(name, exit_on_error=True):
         df = pd.read_csv(name, keep_default_na=False, dtype=str)
         df.reset_index(drop=True, inplace=True)
         return df
-    except (pd.errors.EmptyDataError, pd.errors.ParserError) as error:
+    except (
+        pd.errors.EmptyDataError,
+        pd.errors.ParserError,
+        urllib.error.HTTPError,
+    ) as error:
         if exit_on_error:
             LOG.fatal("Error reading csv file '%s':\n%s", name, error)
             sys.exit(1)

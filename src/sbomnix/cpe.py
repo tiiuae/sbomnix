@@ -12,6 +12,7 @@ from dfdiskcache import DataFrameDiskCache
 from common.utils import (
     LOG,
     LOG_SPAM,
+    DFCACHE_PATH,
     df_from_csv_file,
     df_log,
 )
@@ -19,6 +20,8 @@ from common.utils import (
 ###############################################################################
 
 _CPE_CSV_URL = "https://github.com/tiiuae/cpedict/raw/main/data/cpes.csv"
+# Update local cached version of _CPE_CSV_URL once a day or when local cache
+# is cleaned:
 _CPE_CSV_CACHE_TTL = 60 * 60 * 24
 
 ###############################################################################
@@ -37,15 +40,14 @@ class _CPE:
     _instance = None
 
     def __init__(self):
-        LOG.debug("")
-        self.cache = DataFrameDiskCache()
+        self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
         self.df_cpedict = self.cache.get(_CPE_CSV_URL)
-        if self.df_cpedict is None:
+        if self.df_cpedict is not None and not self.df_cpedict.empty:
+            LOG.debug("read CPE dictionary from cache")
+        else:
             LOG.debug("CPE cache miss, downloading: %s", _CPE_CSV_URL)
             self.df_cpedict = df_from_csv_file(_CPE_CSV_URL)
             self.cache.set(_CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL)
-        else:
-            LOG.debug("read CPE dictionary from cache")
         if self.df_cpedict is not None:
             # Verify the loaded cpedict contains at least the following columns
             required_cols = {"vendor", "product"}
