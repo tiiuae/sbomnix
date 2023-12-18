@@ -12,6 +12,32 @@
     packages = rec {
       default = sbomnix;
 
+      # https://github.com/thombashi/df-diskcache
+      dfdiskcache = pp.buildPythonPackage rec {
+        version = "0.0.2";
+        pname = "df-diskcache";
+        format = "setuptools";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "thombashi";
+          repo = "df-diskcache";
+          rev = "v${version}";
+          hash = "sha256-s+sqEPXw6tbEz9mnG+qeUSF6BmDssYhaDYOmraFaRbw=";
+        };
+
+        propagatedBuildInputs =
+          [
+            simplesqlite
+          ]
+          ++ [
+            pp.pandas
+            pp.typing-extensions
+          ];
+
+        pythonImportsCheck = ["dfdiskcache"];
+        doCheck = false;
+      };
+
       # requests-ratelimiter currently does not support pyrate-limiter v3,
       # see: https://github.com/JWCook/requests-ratelimiter/issues/78
       pyrate-limiter = pp.buildPythonPackage rec {
@@ -92,6 +118,58 @@
         ];
       };
 
+      # Required due to dfdiskcache
+      simplesqlite = pp.buildPythonPackage rec {
+        version = "1.5.2";
+        pname = "SimpleSQLite";
+        format = "setuptools";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "thombashi";
+          repo = "SimpleSQLite";
+          rev = "v${version}";
+          hash = "sha256-Yr17T0/EwVaOjG+mzdxopivj0fuvQdZdX1bFj8vq0MM=";
+        };
+
+        propagatedBuildInputs =
+          [
+            sqliteschema
+          ]
+          ++ [
+            pp.dataproperty
+            pp.mbstrdecoder
+            pp.pathvalidate
+            pp.tabledata
+            pp.typepy
+          ];
+
+        pythonImportsCheck = ["simplesqlite"];
+        doCheck = false;
+      };
+
+      # Required due to dfdiskcache
+      sqliteschema = pp.buildPythonPackage rec {
+        version = "1.4.0";
+        pname = "sqliteschema";
+        format = "setuptools";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "thombashi";
+          repo = "sqliteschema";
+          rev = "v${version}";
+          hash = "sha256-IzHdYBnh6udVsanWTPSsX4p4PG934YCdzs9Ow/NW86E=";
+        };
+
+        propagatedBuildInputs = [
+          pp.mbstrdecoder
+          pp.tabledata
+          pp.typepy
+        ];
+
+        pythonImportsCheck = ["sqliteschema"];
+        doCheck = false;
+      };
+
       # We use vulnix from 'https://github.com/henrirosten/vulnix' to get
       # vulnix support for runtime-only scan ('-C' command-line option)
       # which is currently not available in released version of vulnix.
@@ -112,6 +190,7 @@
 
         propagatedBuildInputs =
           [
+            dfdiskcache
             pyrate-limiter
             requests-ratelimiter
             reuse
@@ -168,7 +247,7 @@
           jsonschema
           pytest
         ])
-        ++ [reuse]);
+        ++ [dfdiskcache reuse]);
     };
   };
 }
