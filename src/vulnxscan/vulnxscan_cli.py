@@ -736,7 +736,7 @@ def _is_patched(row):
 
 def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, meta_path=None)
+    sbomdb = SbomDb(target_path, buildtime)
     prefix = "vulnxscan_"
     cdx_suffix = ".json"
     csv_suffix = ".csv"

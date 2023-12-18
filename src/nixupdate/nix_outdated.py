@@ -77,7 +77,7 @@ def getargs():
 
 def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, meta_path=None)
+    sbomdb = SbomDb(target_path, buildtime)
     prefix = "nixdeps_"
     suffix = ".cdx.json"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:

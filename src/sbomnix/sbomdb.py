@@ -19,6 +19,7 @@ import numpy as np
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store, find_deriver
+from sbomnix.meta import Meta
 from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 
 ###############################################################################
@@ -27,19 +28,19 @@ from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(self, nix_path, buildtime=False, meta_path=None, depth=None):
+    def __init__(self, nix_path, buildtime=False, depth=None, flakeref=None):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
         self.uid = "store_path"
         self.buildtime = buildtime
-        self.meta_path = meta_path
         self.target_deriver = find_deriver(nix_path)
         self.df_deps = None
         self.depth = depth
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
+        self.flakeref = flakeref
         self._init_sbomdb()
         self.uuid = uuid.uuid4()
         self.sbom_type = "runtime_and_buildtime"
@@ -84,18 +85,26 @@ class SbomDb:
             store.add_path(path)
         self.df_sbomdb = store.to_dataframe()
         # Join with meta information
-        self._sbomdb_join_meta(self.meta_path)
+        self._sbomdb_join_meta()
         # Clean, drop duplicates, sort
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
         self.df_sbomdb.sort_values(by=["name", self.uid], inplace=True)
         self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode("outputs")
 
-    def _sbomdb_join_meta(self, meta_path):
+    def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
-        if meta_path is None:
+        meta = Meta()
+        if self.flakeref:
+            df_meta = meta.get_nixpkgs_meta(self.flakeref)
+        else:
+            df_meta = meta.get_nixpkgs_meta()
+        if df_meta is None or df_meta.empty:
+            LOG.warning(
+                "Failed reading nix meta information: "
+                "SBOM will include only minimum set of attributes"
+            )
             return
-        df_meta = _parse_json_metadata(meta_path)
         if LOG.level <= logging.DEBUG:
             df_to_csv_file(df_meta, "meta.csv")
         # Join based on package name including the version number
@@ -404,55 +413,6 @@ def _drv_to_cdx_dependency(drv, deps_list, uid="store_path"):
     if deps_list:
         dependency["dependsOn"] = deps_list
     return dependency
-
-
-###############################################################################
-
-# Nix package metadata
-
-
-def _parse_meta_entry(meta, key):
-    """Parse the given key from the metadata entry"""
-    items = []
-    if isinstance(meta, dict):
-        items.extend([_parse_meta_entry(meta.get(key, ""), key)])
-    elif isinstance(meta, list):
-        items.extend([_parse_meta_entry(x, key) for x in meta])
-    else:
-        return str(meta)
-    return ";".join(list(filter(None, items)))
-
-
-def _parse_json_metadata(json_filename):
-    """Parse package metadata from the specified json file"""
-    with open(json_filename, "r", encoding="utf-8") as inf:
-        LOG.info('Loading meta info from "%s"', json_filename)
-        json_dict = json.loads(inf.read())
-        dict_selected = {}
-        setcol = dict_selected.setdefault
-        for nixpkg_name, pkg in json_dict.items():
-            # generic package info
-            setcol("nixpkgs", []).append(nixpkg_name)
-            setcol("name", []).append(pkg.get("name", ""))
-            setcol("pname", []).append(pkg.get("pname", ""))
-            setcol("version", []).append(pkg.get("version", ""))
-            # meta
-            meta = pkg.get("meta", {})
-            setcol("meta_homepage", []).append(meta.get("homepage", ""))
-            setcol("meta_position", []).append(meta.get("position", ""))
-            setcol("meta_unfree", []).append(meta.get("unfree", ""))
-            setcol("meta_description", []).append(meta.get("description", ""))
-            # meta.license
-            meta_license = meta.get("license", {})
-            license_short = _parse_meta_entry(meta_license, key="shortName")
-            setcol("meta_license_short", []).append(license_short)
-            license_spdx = _parse_meta_entry(meta_license, key="spdxId")
-            setcol("meta_license_spdxid", []).append(license_spdx)
-            # meta.maintainers
-            meta_maintainers = meta.get("maintainers", {})
-            emails = _parse_meta_entry(meta_maintainers, key="email")
-            setcol("meta_maintainers_email", []).append(emails)
-        return pd.DataFrame(dict_selected)
 
 
 ################################################################################

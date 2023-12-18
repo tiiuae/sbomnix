@@ -34,6 +34,7 @@ Table of Contents
    * [Generate SBOM Including Meta Information](#generate-sbom-including-meta-information)
    * [Generate SBOM Including Buildtime Dependencies](#generate-sbom-including-buildtime-dependencies)
    * [Generate SBOM Based on Result Symlink](#generate-sbom-based-on-result-symlink)
+   * [Generate SBOM Based on Flake Reference](#generate-sbom-based-on-flake-reference)
    * [Visualize Package Dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
@@ -143,28 +144,26 @@ INFO     Wrote: sbom.csv
 ```
 Main outputs are the SBOM json files sbom.cdx.json and sbom.spdx.json in [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) formats.
 
-#### Generate SBOM Including Meta Information
-To include license information to the SBOM, first generate package meta information with `nix-env`:
-```bash
-$ nix-env -qa --meta --json '.*' >meta.json
-```
-Then, run `sbomnix` with `--meta` argument to tell sbomnix to read meta information from the given json file:
-```bash
-$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json
-```
-
 #### Generate SBOM Including Buildtime Dependencies
 By default `sbomnix` scans the given target for runtime dependencies. You can tell sbomnix to determine the buildtime dependencies using the `--buildtime` argument. 
 Below example generates SBOM including buildtime dependencies.
 Notice: as opposed to runtime dependencies, determining the buildtime dependencies does not require building the target.
 ```bash
-$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --meta meta.json --buildtime
+$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --buildtime
 ```
+
 #### Generate SBOM Based on Result Symlink
 `sbomnix` can be used with output paths too (e.g. anything which produces a result symlink):
 ```bash
 $ sbomnix /path/to/result 
 ```
+
+#### Generate SBOM Based on Flake Reference
+`sbomnix` also supports scanning [flake references](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references):
+```bash
+$ sbomnix github:NixOS/nixpkgs?ref=nixos-unstable#wget --buildtime
+```
+
 #### Visualize Package Dependencies
 `sbomnix` finds the package dependencies using `nixgraph`. 
 Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.

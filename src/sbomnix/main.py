@@ -15,6 +15,7 @@ from common.utils import (
     check_positive,
     get_py_pkg_version,
     exit_unless_nix_artifact,
+    exec_cmd,
 )
 
 ###############################################################################
@@ -23,28 +24,20 @@ from common.utils import (
 def getargs():
     """Parse command line arguments"""
     desc = (
-        "This tool finds dependencies of the specified nix artifact "
-        "in NIX_PATH and "
+        "This tool finds dependencies of the specified nix store path "
+        "or flake reference NIXREF and "
         "writes SBOM file(s) as specified in output arguments."
     )
-    epil = "Example: sbomnix /path/to/nix/out --meta /path/to/meta.json"
+    epil = "Example: sbomnix /nix/store/path/or/flakeref"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
-    helps = "Path to nix artifact, e.g.: derivation file or nix output path"
-    parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
-    helps = (
-        "Path to json file that details meta information. "
-        "Generate this file with: `nix-env -qa --meta --json '.*' >meta.json` "
-        "then give the path to generated json file to this script via the "
-        "--meta argument to include the license and maintainer information "
-        "to the output of this script (default: None)"
-    )
-    parser.add_argument("--meta", nargs="?", help=helps, default=None)
+    helps = "Nix store path (e.g. derivation file or nix output path) or flakeref"
+    parser.add_argument("NIXREF", help=helps, type=str)
     helps = "Scan buildtime dependencies instead of runtime dependencies"
     parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = (
         "Set the depth of the included dependencies. As an example, --depth=1 "
-        "indicates the SBOM should include only the NIX_PATH direct dependencies. "
+        "indicates the SBOM should include only the NIXREF direct dependencies. "
         "With --depth=2, the output SBOM includes the direct dependencies and the "
         "first level of transitive dependencies. "
         "By default, when --depth is not specified, the output SBOM includes "
@@ -69,19 +62,44 @@ def getargs():
 ################################################################################
 
 
+def try_resolve_flakeref(flakeref, force_realise):
+    """Resolve flakeref to out-path"""
+    LOG.debug("")
+    cmd = f"nix eval --raw {flakeref}"
+    ret = exec_cmd(cmd.split(), raise_on_error=False)
+    if not ret:
+        LOG.debug("not a flakeref: '%s'", flakeref)
+        return None
+    nixpath = ret.stdout
+    LOG.debug("nixpath=%s", nixpath)
+    if not force_realise:
+        return nixpath
+    cmd = f"nix build --no-link {flakeref}"
+    ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
+    if not ret:
+        LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
+    return nixpath
+
+
 def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    target_path = args.NIX_PATH.resolve().as_posix()
     runtime = args.buildtime is False
-    exit_unless_nix_artifact(target_path, force_realise=runtime)
-    if not args.meta:
-        LOG.warning(
-            "Command line argument '--meta' missing: SBOM will not include "
-            "license information (see '--help' for more details)"
-        )
-    sbomdb = SbomDb(target_path, args.buildtime, args.meta, args.depth)
+    flakeref = None
+    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    if target_path:
+        flakeref = args.NIXREF
+        LOG.debug("flakeref='%s' maps to path='%s'", flakeref, target_path)
+    else:
+        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
+        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
+    sbomdb = SbomDb(
+        nix_path=target_path,
+        buildtime=args.buildtime,
+        depth=args.depth,
+        flakeref=flakeref,
+    )
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
     if args.spdx:

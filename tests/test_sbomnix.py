@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, global-statement, redefined-outer-name
+# pylint: disable=too-few-public-methods
 
 """ Tests for sbomnix """
 
@@ -15,6 +16,9 @@ import json
 import pandas as pd
 import jsonschema
 import pytest
+import referencing
+import referencing.retrieval
+import requests
 
 from common.utils import (
     df_from_csv_file,
@@ -653,6 +657,19 @@ def test_whitelist():
 ################################################################################
 
 
+class JSONSchemaRetrieve:
+    """Cached retriever that can be used with jsonschema.validate"""
+
+    @staticmethod
+    @referencing.retrieval.to_cached_resource()
+    def _retrieve_via_requests(uri):
+        print(f"retrieving schema: {uri}")
+        return requests.get(uri, timeout=10).text
+
+    def __call__(self, uri):
+        return self._retrieve_via_requests(uri)
+
+
 def validate_json(file_path, schema_path):
     """Validate json file matches schema"""
     with open(file_path, encoding="utf-8") as json_file, open(
@@ -660,7 +677,8 @@ def validate_json(file_path, schema_path):
     ) as schema_file:
         json_obj = json.load(json_file)
         schema_obj = json.load(schema_file)
-        jsonschema.validate(json_obj, schema_obj)
+        reg = referencing.Registry(retrieve=JSONSchemaRetrieve())
+        jsonschema.validate(json_obj, schema_obj, registry=reg)
 
 
 def df_to_string(df):
