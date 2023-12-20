@@ -39,16 +39,12 @@ format: clean ## Reformat with black
 	$(call target_success,$@)
 
 release-asset: clean ## Build release asset
-	nix-shell -p nix-info --run "nix-info -m"
-	nix-env -qa --meta --json -f $(shell nix-shell -p nix-info --run "nix-info -m" | grep "nixpkgs: " | cut -d'`' -f2) '.*' >meta.json
 	mkdir -p build/
-	nix run .#sbomnix -- result \
-		--meta=./meta.json \
+	nix run .#sbomnix -- . \
         --cdx=./build/sbom.runtime.cdx.json \
         --spdx=./build/sbom.runtime.spdx.json \
         --csv=./build/sbom.runtime.csv
-	nix run .#sbomnix -- result --buildtime \
-		--meta=./meta.json \
+	nix run .#sbomnix -- --buildtime . \
         --cdx=./build/sbom.buildtime.cdx.json \
         --spdx=./build/sbom.buildtime.spdx.json \
         --csv=./build/sbom.buildtime.csv

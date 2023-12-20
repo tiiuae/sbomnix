@@ -21,8 +21,6 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixpkgs-unstable
-      - name: Make sure nix-build works
-        run: nix-build '<nixpkgs>' -A hello
       - name: Build release asset
         run: nix develop --command make release-asset
       - name: Upload release asset
