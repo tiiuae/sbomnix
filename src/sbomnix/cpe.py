@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, protected-access, too-few-public-methods
+# pylint: disable=invalid-name, too-few-public-methods
 
 """ Generate CPE (Common Platform Enumeration) identifiers"""
 
@@ -27,17 +27,8 @@ _CPE_CSV_CACHE_TTL = 60 * 60 * 24
 ###############################################################################
 
 
-def CPE():
-    """Return CPE instance"""
-    if _CPE._instance is None:
-        _CPE._instance = _CPE()
-    return _CPE._instance
-
-
-class _CPE:
+class CPE:
     """Generate Common Platform Enumeration identifiers"""
-
-    _instance = None
 
     def __init__(self):
         self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)

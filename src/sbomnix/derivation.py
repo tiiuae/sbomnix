@@ -12,7 +12,6 @@
 import json
 import bisect
 from packageurl import PackageURL
-from sbomnix.cpe import CPE
 
 from common.utils import LOG, LOG_SPAM
 
@@ -83,7 +82,6 @@ class Derive:
         self.cpe = ""
         self.purl = ""
         if self.pname != "source":
-            self.cpe = CPE().generate(self.pname, self.version)
             self.purl = str(
                 PackageURL(type="nix", name=self.pname, version=self.version)
             )
@@ -91,6 +89,11 @@ class Derive:
 
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
+
+    def set_cpe(self, cpe_generator):
+        """Generate cpe identifier"""
+        if self.pname != "source" and cpe_generator is not None:
+            self.cpe = cpe_generator.generate(self.pname, self.version)
 
     def add_output_path(self, path):
         """Add an output path to derivation"""

@@ -41,6 +41,7 @@ from common.utils import (
     df_from_csv_file,
     df_log,
     exit_unless_nix_artifact,
+    try_resolve_flakeref,
     exit_unless_command_exists,
     nix_to_repology_pkg_name,
     parse_version,
@@ -57,10 +58,12 @@ def getargs():
         "Scan nix artifact or CycloneDX SBOM for vulnerabilities with "
         "various open-source vulnerability scanners."
     )
-    epil = "Example: ./vulnxscan.py /path/to/nix/out/or/drv"
+    epil = "Example: ./vulnxscan.py /path/to/nix/out/or/drv/or/flakeref"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
-    helps = "Target derivation path or nix out path"
-    parser.add_argument("TARGET", help=helps, type=pathlib.Path)
+    helps = (
+        "Target nix store path (e.g. derivation file or nix output path) or flakeref"
+    )
+    parser.add_argument("TARGET", help=helps, type=str)
     helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
     parser.add_argument("--verbose", help=helps, type=int, default=1)
     helps = "Path to output file (default: ./vulns.csv)"
@@ -736,7 +739,7 @@ def _is_patched(row):
 
 def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime)
+    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
     prefix = "vulnxscan_"
     cdx_suffix = ".json"
     csv_suffix = ".csv"
@@ -863,23 +866,26 @@ def main():
     exit_unless_command_exists("grype")
     exit_unless_command_exists("vulnix")
 
-    target_path_abs = args.TARGET.resolve().as_posix()
     scanner = VulnScan()
     if args.sbom:
-        if not _is_json(target_path_abs):
+        target_path = pathlib.Path(args.TARGET).resolve().as_posix()
+        if not _is_json(target_path):
             LOG.fatal(
                 "Specified sbom target is not a json file: '%s'", str(args.TARGET)
             )
             sys.exit(0)
-        sbom_cdx_path = target_path_abs
+        sbom_cdx_path = target_path
         sbom_csv_path = None
     else:
         runtime = args.buildtime is False
-        exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
-        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path_abs, args.buildtime)
+        target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
+        if not target_path:
+            target_path = pathlib.Path(args.TARGET).resolve().as_posix()
+            exit_unless_nix_artifact(args.TARGET, force_realise=runtime)
+        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path, args.buildtime)
         LOG.debug("Using cdx SBOM '%s'", sbom_cdx_path)
         LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
-        scanner.scan_vulnix(target_path_abs, args.buildtime)
+        scanner.scan_vulnix(target_path, args.buildtime)
     scanner.scan_grype(sbom_cdx_path)
     scanner.scan_osv(sbom_cdx_path)
     scanner.report(args, sbom_csv_path)
