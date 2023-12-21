@@ -22,11 +22,10 @@ from common.utils import LOG, LOG_SPAM
 
 def load(path):
     """Load derivation from path"""
-    LOG.debug("")
     with open(path, encoding="utf-8") as f:
         d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
     d_obj.store_path = path
-    LOG.debug("load derivation: %s", d_obj)
+    LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
     LOG.log(LOG_SPAM, "deivation attrs: %s", d_obj.to_dict())
     return d_obj
 
@@ -96,7 +95,7 @@ class Derive:
     def add_output_path(self, path):
         """Add an output path to derivation"""
         if path not in self.outputs and path != self.store_path:
-            LOG.debug("adding outpath to %s:%s", self, path)
+            LOG.log(LOG_SPAM, "adding outpath to %s:%s", self, path)
             bisect.insort(self.outputs, path)
 
     def to_dict(self):
