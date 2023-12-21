@@ -37,16 +37,16 @@ class Store:
         return self.derivations[path] if path in self.derivations else None
 
     def _update(self, drv_path, nixpath=None):
-        LOG.debug("drv_path=%s, nixpath=%s", drv_path, nixpath)
+        LOG.log(LOG_SPAM, "drv_path=%s, nixpath=%s", drv_path, nixpath)
         if not drv_path.endswith(".drv"):
-            LOG.debug("Not a derivation, skipping: '%s'", drv_path)
+            LOG.log(LOG_SPAM, "Not a derivation, skipping: '%s'", drv_path)
             self._add_cached(drv_path, drv=None)
             return
         if nixpath and self._is_cached(nixpath):
-            LOG.debug("Skipping redundant nixpath '%s'", nixpath)
+            LOG.log(LOG_SPAM, "Skipping redundant nixpath '%s'", nixpath)
             return
         if not nixpath and self._is_cached(drv_path):
-            LOG.debug("Skipping redundant drvpath '%s'", drv_path)
+            LOG.log(LOG_SPAM, "Skipping redundant drvpath '%s'", drv_path)
             return
         drv_obj = self._get_cached(drv_path)
         if not drv_obj:
@@ -63,9 +63,9 @@ class Store:
 
     def add_path(self, nixpath):
         """Add the derivation referenced by a store path (nixpath)"""
-        LOG.debug(nixpath)
+        LOG.log(LOG_SPAM, nixpath)
         if self._is_cached(nixpath):
-            LOG.debug("Skipping redundant path '%s'", nixpath)
+            LOG.log(LOG_SPAM, "Skipping redundant path '%s'", nixpath)
             return
         if not os.path.exists(nixpath):
             raise RuntimeError(
@@ -74,7 +74,7 @@ class Store:
             )
         drv_path = find_deriver(nixpath)
         if not drv_path:
-            LOG.debug("No deriver found for: '%s", nixpath)
+            LOG.log(LOG_SPAM, "No deriver found for: '%s", nixpath)
             self._add_cached(nixpath, drv=None)
             return
         self._update(drv_path, nixpath)
@@ -85,7 +85,6 @@ class Store:
 
     def to_dataframe(self):
         """Return store derivations as pandas dataframe"""
-        LOG.debug("")
         drv_dicts = [drv.to_dict() for drv in self.derivations.values() if drv]
         return pd.DataFrame.from_records(drv_dicts)
 
@@ -95,25 +94,27 @@ class Store:
 
 def find_deriver(path):
     """Return drv path for the given nix store artifact path"""
-    LOG.debug(path)
+    LOG.log(LOG_SPAM, path)
     if path.endswith(".drv"):
         return path
     # Deriver from QueryValidDerivers
-    ret = exec_cmd(["nix", "derivation", "show", path], raise_on_error=False)
+    ret = exec_cmd(
+        ["nix", "derivation", "show", path], raise_on_error=False, loglevel=LOG_SPAM
+    )
     if not ret:
-        LOG.debug("Deriver not found for '%s'", path)
+        LOG.log(LOG_SPAM, "Deriver not found for '%s'", path)
         return None
     qvd_json_keys = list(json.loads(ret.stdout).keys())
     if not qvd_json_keys or len(qvd_json_keys) < 1:
-        LOG.debug("Not qvd_deriver for '%s'", path)
+        LOG.log(LOG_SPAM, "Not qvd_deriver for '%s'", path)
         return None
     qvd_deriver = qvd_json_keys[0]
-    LOG.debug("qvd_deriver: %s", qvd_deriver)
+    LOG.log(LOG_SPAM, "qvd_deriver: %s", qvd_deriver)
     if qvd_deriver and os.path.exists(qvd_deriver):
         return qvd_deriver
     # Deriver from QueryPathInfo
     qpi_deriver = exec_cmd(["nix-store", "-qd", path]).stdout.strip()
-    LOG.debug("qpi_deriver: %s", qpi_deriver)
+    LOG.log(LOG_SPAM, "qpi_deriver: %s", qpi_deriver)
     if qpi_deriver and qpi_deriver != "unknown-deriver" and os.path.exists(qpi_deriver):
         return qpi_deriver
 

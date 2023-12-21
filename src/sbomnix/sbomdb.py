@@ -20,7 +20,7 @@ from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from nixgraph.graph import NixDependencies
 from sbomnix.nix import Store, find_deriver
 from sbomnix.meta import Meta
-from common.utils import LOG, df_to_csv_file, get_py_pkg_version
+from common.utils import LOG, LOG_SPAM, df_to_csv_file, get_py_pkg_version
 
 ###############################################################################
 
@@ -359,7 +359,7 @@ def _cdx_component_add_licenses(component, drv):
         licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_short", "name")
     # Give up if package does not have license information associated
     if not licenses:
-        LOG.debug("No license info found for '%s'", drv.name)
+        LOG.log(LOG_SPAM, "No license info found for '%s'", drv.name)
         return
     # Otherwise, add the licenses entry
     component["licenses"] = licenses
