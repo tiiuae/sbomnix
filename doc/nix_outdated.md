@@ -23,11 +23,16 @@ $ nix eval -f '<nixpkgs>' 'git.outPath'
 ```
 
 # nix_outdated
-[`nix_outdated`](../src/nixupdate/nix_outdated.py) is a command line tool to list outdated nix dependencies for given target nix out path. By default, the script outputs runtime dependencies for the given nix out path that appear outdated in nixpkgs 'nix_unstable' channel - the list of output packages would potentially need a PR to update the package in nixpkgs to the package's latest upstream release version specified in the output table column 'version_upstream'. The list of output packages is in priority order based on how many other packages depend on the potentially outdated package.
+[`nix_outdated`](../src/nixupdate/nix_outdated.py) is a command line tool to list outdated nix dependencies for given target nix out path or flakeref. By default, the script outputs runtime dependencies for the given target that appear outdated in nixpkgs 'nix_unstable' channel - the list of output packages would potentially need a PR to update the package in nixpkgs to the package's latest upstream release version specified in the output table column 'version_upstream'. The list of output packages is in priority order based on how many other packages depend on the potentially outdated package.
 
 Below command finds `git` runtime dependencies that would have an update in the package's upstream repository based on repology, and the latest release version is not available in nix unstable:
 
 ```bash
+# Target can be specified with flakeref too, e.g.:
+# nix_outdated .
+# nix_outdated github:tiiuae/sbomnix
+# nix_outdated nixpkgs#git
+# Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
 $ nix_outdated /nix/store/2853v0cidl7jww2hs1mlkg0i372mk368-git-2.39.2
 INFO     Generating SBOM for target '/nix/store/2853v0cidl7jww2hs1mlkg0i372mk368-git-2.39.2'
 INFO     Loading runtime dependencies referenced by '/nix/store/2853v0cidl7jww2hs1mlkg0i372mk368-git-2.39.2'

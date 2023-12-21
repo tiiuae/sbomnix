@@ -14,6 +14,7 @@ from common.utils import (
     get_py_pkg_version,
     check_positive,
     exit_unless_nix_artifact,
+    try_resolve_flakeref,
 )
 
 ###############################################################################
@@ -25,8 +26,11 @@ def getargs():
     epil = "Example: nixgraph /path/to/derivation.drv "
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
-    helps = "Path to nix artifact, e.g.: derivation file or nix output path"
-    parser.add_argument("NIX_PATH", help=helps, type=pathlib.Path)
+    helps = (
+        "Target nix store path (e.g. derivation file or nix output path) or flakeref"
+    )
+    parser.add_argument("NIXREF", help=helps, type=str)
+
     parser.add_argument("--version", action="version", version=get_py_pkg_version())
 
     helps = "Scan buildtime dependencies instead of runtime dependencies"
@@ -81,9 +85,11 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    target_path = args.NIX_PATH.resolve().as_posix()
     runtime = args.buildtime is False
-    exit_unless_nix_artifact(target_path, force_realise=runtime)
+    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    if not target_path:
+        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
+        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
     deps = NixDependencies(target_path, args.buildtime)
     deps.graph(args)
 

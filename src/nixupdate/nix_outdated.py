@@ -26,6 +26,7 @@ from common.utils import (
     df_to_csv_file,
     nix_to_repology_pkg_name,
     exit_unless_nix_artifact,
+    try_resolve_flakeref,
 )
 
 ###############################################################################
@@ -34,9 +35,9 @@ from common.utils import (
 def getargs():
     """Parse command line arguments"""
     desc = (
-        "Command line tool to list outdated nix dependencies for nix out path "
-        "NIXPATH. By default, the script outputs runtime dependencies of "
-        "NIXPATH that appear outdated in nixpkgs 'nix_unstable' channel - the "
+        "Command line tool to list outdated nix dependencies for NIXREF. "
+        "By default, the script outputs runtime dependencies of "
+        "NIXREF that appear outdated in nixpkgs 'nix_unstable' channel - the "
         "list of output packages would potentially need a PR to update the "
         "package in nixpkgs to the latest upstream release version specified "
         "in the output table column 'version_upstream'. "
@@ -44,11 +45,13 @@ def getargs():
         "order based on how many other packages depend on the potentially "
         "outdated package."
     )
-    epil = f"Example: ./{os.path.basename(__file__)} '/nix/target/out/path'"
+    epil = f"Example: ./{os.path.basename(__file__)} '/nix/path/or/flakeref'"
     parser = ArgumentParser(description=desc, epilog=epil)
     # Arguments that specify the target:
-    helps = "Target nix out path"
-    parser.add_argument("NIXPATH", help=helps, type=pathlib.Path)
+    helps = (
+        "Target nix store path (e.g. derivation file or nix output path) or flakeref"
+    )
+    parser.add_argument("NIXREF", help=helps, type=str)
     # Other arguments:
     helps = (
         "Include locally outdated dependencies to the output. "
@@ -77,7 +80,7 @@ def getargs():
 
 def _generate_sbom(target_path, buildtime=False):
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime)
+    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
     prefix = "nixdeps_"
     suffix = ".cdx.json"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
@@ -250,13 +253,14 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    target_path_abs = args.NIXPATH.resolve().as_posix()
     runtime = args.buildtime is False
+    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    if not target_path:
+        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
+        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
     dtype = "runtime" if runtime else "buildtime"
-    LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path_abs)
-    exit_unless_nix_artifact(target_path_abs, force_realise=runtime)
-
-    sbom_path = _generate_sbom(target_path_abs, args.buildtime)
+    LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path)
+    sbom_path = _generate_sbom(target_path, args.buildtime)
     LOG.debug("Using SBOM '%s'", sbom_path)
 
     df_repology = _run_repology_cli(sbom_path)
@@ -265,7 +269,7 @@ def main():
     df_log(df_repology, LOG_SPAM)
 
     if not args.buildtime:
-        nix_visualize_out = _run_nix_visualize(target_path_abs)
+        nix_visualize_out = _run_nix_visualize(target_path)
         LOG.debug("Using nix-visualize out: '%s'", nix_visualize_out)
         df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
         df_log(df_nix_visualize, LOG_SPAM)

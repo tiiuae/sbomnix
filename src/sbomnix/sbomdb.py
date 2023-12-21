@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, too-many-instance-attributes
+# pylint: disable=invalid-name, too-many-instance-attributes, too-many-arguments
 
 """ Module for generating SBOMs in various formats """
 
@@ -28,7 +28,9 @@ from common.utils import LOG, LOG_SPAM, df_to_csv_file, get_py_pkg_version
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(self, nix_path, buildtime=False, depth=None, flakeref=None):
+    def __init__(
+        self, nix_path, buildtime=False, depth=None, flakeref=None, include_meta=True
+    ):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
@@ -41,7 +43,8 @@ class SbomDb:
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
         self.flakeref = flakeref
-        self._init_sbomdb()
+        self.meta = None
+        self._init_sbomdb(include_meta)
         self.uuid = uuid.uuid4()
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
@@ -68,7 +71,7 @@ class SbomDb:
         LOG.debug("Reading all dependencies")
         return nix_dependencies.to_dataframe()
 
-    def _init_sbomdb(self):
+    def _init_sbomdb(self, include_meta):
         """Initialize self.df_sbomdb"""
         if self.df_deps is None or self.df_deps.empty:
             # No dependencies, so the only component in the sbom
@@ -85,7 +88,8 @@ class SbomDb:
             store.add_path(path)
         self.df_sbomdb = store.to_dataframe()
         # Join with meta information
-        self._sbomdb_join_meta()
+        if include_meta:
+            self._sbomdb_join_meta()
         # Clean, drop duplicates, sort
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
@@ -94,11 +98,11 @@ class SbomDb:
 
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
-        meta = Meta()
+        self.meta = Meta()
         if self.flakeref:
-            df_meta = meta.get_nixpkgs_meta(self.flakeref)
+            df_meta = self.meta.get_nixpkgs_meta(self.flakeref)
         else:
-            df_meta = meta.get_nixpkgs_meta()
+            df_meta = self.meta.get_nixpkgs_meta()
         if df_meta is None or df_meta.empty:
             LOG.warning(
                 "Failed reading nix meta information: "

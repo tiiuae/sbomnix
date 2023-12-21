@@ -67,6 +67,11 @@ Vulnix matches vulnerabilities based on [heuristic](https://github.com/nix-commu
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
 
 ```bash
+# Target can be specified with flakeref too, e.g.:
+# vulnxscan .
+# vulnxscan github:tiiuae/sbomnix
+# vulnxscan nixpkgs#git
+# Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
 $ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
 
 INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'

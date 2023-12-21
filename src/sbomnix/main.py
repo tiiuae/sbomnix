@@ -10,12 +10,11 @@ import argparse
 import pathlib
 from sbomnix.sbomdb import SbomDb
 from common.utils import (
-    LOG,
     set_log_verbosity,
     check_positive,
     get_py_pkg_version,
     exit_unless_nix_artifact,
-    exec_cmd,
+    try_resolve_flakeref,
 )
 
 ###############################################################################
@@ -31,7 +30,9 @@ def getargs():
     epil = "Example: sbomnix /nix/store/path/or/flakeref"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
 
-    helps = "Nix store path (e.g. derivation file or nix output path) or flakeref"
+    helps = (
+        "Target nix store path (e.g. derivation file or nix output path) or flakeref"
+    )
     parser.add_argument("NIXREF", help=helps, type=str)
     helps = "Scan buildtime dependencies instead of runtime dependencies"
     parser.add_argument("--buildtime", help=helps, action="store_true")
@@ -62,25 +63,6 @@ def getargs():
 ################################################################################
 
 
-def try_resolve_flakeref(flakeref, force_realise):
-    """Resolve flakeref to out-path"""
-    LOG.debug("")
-    cmd = f"nix eval --raw {flakeref}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False)
-    if not ret:
-        LOG.debug("not a flakeref: '%s'", flakeref)
-        return None
-    nixpath = ret.stdout
-    LOG.debug("nixpath=%s", nixpath)
-    if not force_realise:
-        return nixpath
-    cmd = f"nix build --no-link {flakeref}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
-    if not ret:
-        LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
-    return nixpath
-
-
 def main():
     """main entry point"""
     args = getargs()
@@ -90,7 +72,6 @@ def main():
     target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
     if target_path:
         flakeref = args.NIXREF
-        LOG.debug("flakeref='%s' maps to path='%s'", flakeref, target_path)
     else:
         target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
         exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)

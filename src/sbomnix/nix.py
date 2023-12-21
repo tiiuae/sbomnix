@@ -12,6 +12,7 @@ import pandas as pd
 
 from common.utils import LOG, LOG_SPAM, exec_cmd
 from sbomnix.derivation import load
+from sbomnix.cpe import CPE
 
 ###############################################################################
 
@@ -22,6 +23,7 @@ class Store:
     def __init__(self, buildtime=False):
         self.buildtime = buildtime
         self.derivations = {}
+        self.cpe_generator = CPE()
 
     def _add_cached(self, path, drv):
         LOG.log(LOG_SPAM, "caching path - %s:%s", path, drv)
@@ -51,6 +53,7 @@ class Store:
         drv_obj = self._get_cached(drv_path)
         if not drv_obj:
             drv_obj = load(drv_path)
+            drv_obj.set_cpe(self.cpe_generator)
             self._add_cached(drv_path, drv=drv_obj)
         assert drv_obj.store_path == drv_path, f"unexpected drv_path: {drv_path}"
         if nixpath:

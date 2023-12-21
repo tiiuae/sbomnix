@@ -42,6 +42,11 @@ $ nix eval -f '<nixpkgs>' 'wget.outPath'
 
 #### Example: package runtime dependencies
 ```bash
+# Target can be specified with flakeref too, e.g.:
+# nixgraph .
+# nixgraph github:tiiuae/sbomnix
+# nixgraph nixpkgs#wget
+# Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
 $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 
 INFO     Loading runtime dependencies referenced by '/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3'

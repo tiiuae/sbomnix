@@ -136,6 +136,11 @@ $ nix eval -f '<nixpkgs>' 'wget.outPath'
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
 Notice: determining the target runtime dependencies in Nix requires building the target.
 ```bash
+# Target can be specified with flakeref too, e.g.:
+# sbomnix .
+# sbomnix github:tiiuae/sbomnix
+# sbomnix nixpkgs#wget
+# Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
 $ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
 ...
 INFO     Wrote: sbom.cdx.json

@@ -160,12 +160,13 @@ def exit_unless_command_exists(name):
 
 def exit_unless_nix_artifact(path, force_realise=False):
     """
-    Exit with error if `path` is not a nix artifact. If `force_realize` is True,
-    run the nix-store-query command with `--force-realize` realising the `path`
+    Exit with error if `path` is not a nix artifact. If `force_realise` is True,
+    run the nix-store-query command with `--force-realise` realising the `path`
     argument before running query.
     """
     LOG.debug("force_realize: %s", force_realise)
     if force_realise:
+        LOG.info("Try force-realising store-path '%s'", path)
         cmd = ["nix-store", "-qf", path]
     else:
         cmd = ["nix-store", "-q", path]
@@ -175,6 +176,30 @@ def exit_unless_nix_artifact(path, force_realise=False):
     except subprocess.CalledProcessError:
         LOG.fatal("Specified target is not a nix artifact: '%s'", path)
         sys.exit(1)
+
+
+def try_resolve_flakeref(flakeref, force_realise=False):
+    """
+    Resolve flakeref to out-path, force-realising the output if `force_realise`
+    is True. Returns resolved path if flakeref can be resolved to out-path,
+    otherwise, returns None.
+    """
+    LOG.info("Evaluating '%s'", flakeref)
+    cmd = f"nix eval --raw {flakeref}"
+    ret = exec_cmd(cmd.split(), raise_on_error=False)
+    if not ret:
+        LOG.debug("not a flakeref: '%s'", flakeref)
+        return None
+    nixpath = ret.stdout
+    LOG.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
+    if not force_realise:
+        return nixpath
+    LOG.info("Try force-realising flakeref '%s'", flakeref)
+    cmd = f"nix build --no-link {flakeref}"
+    ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
+    if not ret:
+        LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
+    return nixpath
 
 
 def regex_match(regex, string):
