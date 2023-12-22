@@ -37,8 +37,13 @@ class CPE:
             LOG.debug("read CPE dictionary from cache")
         else:
             LOG.debug("CPE cache miss, downloading: %s", _CPE_CSV_URL)
-            self.df_cpedict = df_from_csv_file(_CPE_CSV_URL)
-            self.cache.set(_CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL)
+            self.df_cpedict = df_from_csv_file(_CPE_CSV_URL, exit_on_error=False)
+            if self.df_cpedict is None or self.df_cpedict.empty:
+                LOG.warning(
+                    "Failed downloading cpedict: CPE information might not be accurate"
+                )
+            else:
+                self.cache.set(_CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL)
         if self.df_cpedict is not None:
             # Verify the loaded cpedict contains at least the following columns
             required_cols = {"vendor", "product"}
