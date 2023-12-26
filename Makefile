@@ -25,7 +25,7 @@ test-ci: check  ## Run CI tests
 	$(call target_success,$@)
 
 check: clean
-	nix --extra-experimental-features flakes flake check
+	nix --extra-experimental-features 'flakes nix-command' flake check
 
 test: ## Run tests
 	pytest -vx tests/
@@ -40,11 +40,11 @@ format: clean ## Reformat with black
 
 release-asset: clean ## Build release asset
 	mkdir -p build/
-	nix run .#sbomnix -- . \
+	nix run --extra-experimental-features 'flakes nix-command' .#sbomnix -- . \
         --cdx=./build/sbom.runtime.cdx.json \
         --spdx=./build/sbom.runtime.spdx.json \
         --csv=./build/sbom.runtime.csv
-	nix run .#sbomnix -- --buildtime . \
+	nix run --extra-experimental-features 'flakes nix-command' .#sbomnix -- --buildtime . \
         --cdx=./build/sbom.buildtime.cdx.json \
         --spdx=./build/sbom.buildtime.spdx.json \
         --csv=./build/sbom.buildtime.csv

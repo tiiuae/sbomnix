@@ -185,7 +185,9 @@ def try_resolve_flakeref(flakeref, force_realise=False):
     otherwise, returns None.
     """
     LOG.info("Evaluating '%s'", flakeref)
-    cmd = f"nix eval --raw {flakeref}"
+    exp = "--extra-experimental-features flakes "
+    exp += "--extra-experimental-features nix-command"
+    cmd = f"nix eval --raw {flakeref} {exp}"
     ret = exec_cmd(cmd.split(), raise_on_error=False)
     if not ret:
         LOG.debug("not a flakeref: '%s'", flakeref)
@@ -195,7 +197,7 @@ def try_resolve_flakeref(flakeref, force_realise=False):
     if not force_realise:
         return nixpath
     LOG.info("Try force-realising flakeref '%s'", flakeref)
-    cmd = f"nix build --no-link {flakeref}"
+    cmd = f"nix build --no-link {flakeref} {exp}"
     ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
     if not ret:
         LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)

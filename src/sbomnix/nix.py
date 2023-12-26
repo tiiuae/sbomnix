@@ -101,9 +101,10 @@ def find_deriver(path):
     if path.endswith(".drv"):
         return path
     # Deriver from QueryValidDerivers
-    ret = exec_cmd(
-        ["nix", "derivation", "show", path], raise_on_error=False, loglevel=LOG_SPAM
-    )
+    exp = "--extra-experimental-features flakes "
+    exp += "--extra-experimental-features nix-command"
+    cmd = f"nix derivation show {path} {exp}"
+    ret = exec_cmd(cmd.split(), raise_on_error=False, loglevel=LOG_SPAM)
     if not ret:
         LOG.log(LOG_SPAM, "Deriver not found for '%s'", path)
         return None
