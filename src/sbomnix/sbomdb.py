@@ -369,6 +369,34 @@ def _cdx_component_add_licenses(component, drv):
     component["licenses"] = licenses
 
 
+def _cdx_component_add_patches(component, drv):
+    """Add security patch information to cdx component (if any)"""
+    if drv.patches:
+        security_patches = []
+        for p in drv.patches.split(" "):
+            ids = re.findall(r"CVE-\d{4}-\d+", p, re.IGNORECASE)
+            if ids:
+                resolves = []
+                for i in ids:
+                    resolves.append(
+                        {
+                            "type": "security",
+                            "id": i.upper(),
+                            "references": [f"file://{p}"],
+                        }
+                    )
+                security_patches.append(
+                    {
+                        "type": "unofficial",
+                        "resolves": resolves,
+                    }
+                )
+        if security_patches:
+            pedigree = {}
+            pedigree["patches"] = security_patches
+            component["pedigree"] = pedigree
+
+
 def _drv_to_cdx_component(drv, uid="store_path"):
     """Convert one entry from sbomdb (drv) to cdx component"""
     component = {}
@@ -383,26 +411,7 @@ def _drv_to_cdx_component(drv, uid="store_path"):
     if "meta_description" in drv._asdict() and drv.meta_description:
         component["description"] = drv.meta_description
     _cdx_component_add_licenses(component, drv)
-    if drv.patches:
-        security_patches = []
-        for p in drv.patches.split(" "):
-            m = re.search(r"CVE-\d{4}-\d+", p, re.IGNORECASE)
-            if m:
-                patch = {
-                    "type": "unofficial",
-                    "resolves": [
-                        {
-                            "type": "security",
-                            "id": m.group(0).upper(),
-                            "references": [f"file://{p}"],
-                        }
-                    ],
-                }
-                security_patches.append(patch)
-        if security_patches:
-            pedigree = {}
-            pedigree["patches"] = security_patches
-            component["pedigree"] = pedigree
+    _cdx_component_add_patches(component, drv)
     properties = []
     for output_path in drv.outputs:
         prop = {}
