@@ -287,7 +287,7 @@ def parse_version(ver_str):
         return None
     ver_beg = match.group("ver_beg").rstrip(".")
     ver_end = match.group("ver_end")
-    ver_end = re.sub(r"[^0-9.]+", "", ver_end)
+    ver_end = re.sub(r"[^0-9.]+", "", ver_end).lstrip(".")
     if ver_end:
         ver_end = f"+{ver_end}"
     else:
