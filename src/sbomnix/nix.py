@@ -52,7 +52,7 @@ class Store:
             return
         drv_obj = self._get_cached(drv_path)
         if not drv_obj:
-            drv_obj = load(drv_path)
+            drv_obj = load(drv_path, nixpath)
             drv_obj.set_cpe(self.cpe_generator)
             self._add_cached(drv_path, drv=drv_obj)
         assert drv_obj.store_path == drv_path, f"unexpected drv_path: {drv_path}"
