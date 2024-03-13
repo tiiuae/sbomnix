@@ -7,8 +7,8 @@
 """ setup.py for setuptools """
 
 import os.path
-import setuptools
 
+import setuptools
 
 with open("README.md", encoding="utf-8") as readme:
     long_description = readme.read()
@@ -67,6 +67,7 @@ setuptools.setup(
             "vulnxscan = vulnxscan.vulnxscan_cli:main",
             "repology_cli = repology.repology_cli:main",
             "repology_cve = repology.repology_cve:main",
+            "provenance = provenance.main:main",
         ]
     },
 )

@@ -41,6 +41,12 @@
         type = "app";
         program = "${sbomnix}/bin/vulnxscan";
       };
+
+      # nix run .#provenance
+      provenance = {
+        type = "app";
+        program = "${sbomnix}/bin/provenance";
+      };
     };
   };
 }
