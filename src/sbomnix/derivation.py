@@ -19,13 +19,14 @@ from common.utils import LOG, LOG_SPAM
 ###############################################################################
 
 
-def load(path):
+def load(path, outpath):
     """Load derivation from path"""
+    d_obj = None
     with open(path, encoding="utf-8") as f:
         d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
-    d_obj.store_path = path
-    LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
-    LOG.log(LOG_SPAM, "deivation attrs: %s", d_obj.to_dict())
+        d_obj.init(path, outpath)
+        LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
+        LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
@@ -36,8 +37,6 @@ def destructure(env):
 
 class Derive:
     """Nix derivation as found as .drv files in the Nix store."""
-
-    store_path = None
 
     def __init__(
         self,
@@ -74,7 +73,9 @@ class Derive:
         self.version = envVars.get("version", "")
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
-        self.outputs = [envVars.get("out", "")]
+        self.out = envVars.get("out", "")
+        self.outputs = []
+        self.store_path = None
         # pname 'source' in Nix has special meaning - it is the default name
         # for all fetchFromGitHub derivations. As such, it should not be used
         # to construct cpe or purl, rather, cpe and purl should be empty
@@ -87,6 +88,14 @@ class Derive:
             )
         self.urls = envVars.get("urls", "")
 
+    def init(self, path, outpath):
+        """Initialize self.store_path and self.outputs"""
+        assert self.store_path is None
+        LOG.log(LOG_SPAM, "path:%s, outpath:%s", path, outpath)
+        self.store_path = path
+        outpath = outpath if outpath and outpath != path else self.out
+        self.add_output_path(outpath)
+
     def __repr__(self):
         return f"<Derive({repr(self.name)})>"
 
@@ -97,7 +106,7 @@ class Derive:
 
     def add_output_path(self, path):
         """Add an output path to derivation"""
-        if path not in self.outputs and path != self.store_path:
+        if path and path not in self.outputs and path != self.store_path:
             LOG.log(LOG_SPAM, "adding outpath to %s:%s", self, path)
             bisect.insort(self.outputs, path)
 
