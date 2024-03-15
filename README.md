@@ -13,6 +13,7 @@ This repository is home to various command line tools and Python libraries that 
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
 - [`repology_cli`](./doc/replogoy_cli.md) and [`repology_cve`](./doc/replogoy_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
+- [`provenance`](./doc/provenance.md) is a command line tool to generate SLSA v1.0 compliant [provenance](https://slsa.dev/spec/v1.0/provenance) attestation files in json format for any nix flake or derivation.
 
 For an example of how to use the tooling provided in this repository to automate daily vulnerability scans for a nix flake project, see: [ghafscan](https://github.com/tiiuae/ghafscan).
 
@@ -102,6 +103,9 @@ $ src/repology/repology_cve.py --help
 
 # nix_outdated:
 $ src/nixupdate/nix_outdated.py --help
+
+# provenance:
+$ src/provenance/main.py --help
 ```
 
 ## Buildtime vs Runtime Dependencies
