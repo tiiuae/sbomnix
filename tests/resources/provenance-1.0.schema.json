@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://in-toto.io/Statement/v1",
+  "title": "SLSA Provenance v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "_type",
+    "subject",
+    "predicateType",
+    "predicate"
+  ],
+  "properties": {
+    "_type": {
+      "description": "Identifier for the schema of the Statement. Always https://in-toto.io/Statement/v1 for this version of the spec.",
+      "type": "string"
+    },
+    "subject": {
+      "description": "Set of software artifacts that the attestation applies to. Each element represents a single software artifact.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Identifier to distinguish this artifact from others within the subject.",
+            "type": "string"
+          },
+          "digest": {
+            "description": "Collection of cryptographic digests for the contents of this artifact.",
+            "type": "object"
+          }
+        }
+      }
+    },
+    "predicateType": {
+      "description": "URI identifying the type of the Predicate.",
+      "type": "string"
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buildDefinition",
+        "runDetails"
+      ],
+      "properties": {
+        "buildDefinition": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 4,
+          "properties": {
+            "buildType": {
+              "description": "Identifies the template for how to perform the build and interpret the parameters and dependencies.",
+              "type": "string"
+            },
+            "externalParameters": {
+              "description": "The parameters that are under external control, such as those set by a user or tenant of the build platform.",
+              "type": "object"
+            },
+            "internalParameters": {
+              "description": "The parameters that are under the control of the entity represented by builder.id.",
+              "type": "object"
+            },
+            "resolvedDependencies": {
+              "description": "Unordered collection of artifacts needed at build time.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ResourceDescriptor"
+              }
+            }
+          }
+        },
+        "runDetails": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "builder",
+            "metadata",
+            "byproducts"
+          ],
+          "properties": {
+            "builder": {
+              "description": "dentifies the build platform that executed the invocation.",
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "URI indicating the transitive closure of the trusted build platform.",
+                  "type": "string"
+                },
+                "builderDependencies": {
+                  "description": "Dependencies used by the orchestrator that are not run within the workload and that do not affect the build",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/ResourceDescriptor"
+                  }
+                },
+                "version": {
+                  "description": "Map of names of components of the build platform to their version.",
+                  "type": "object"
+                }
+              }
+            },
+            "metadata": {
+              "description": "Metadata about this particular execution of the build.",
+              "type": "object",
+              "properties": {
+                "invocationId": {
+                  "description": "Identifies this particular build invocation",
+                  "type": "string"
+                },
+                "startedOn": {
+                  "description": "The timestamp of when the build started.",
+                  "type": "string"
+                },
+                "finishedOn": {
+                  "description": "The timestamp of when the build completed.",
+                  "type": "string"
+                }
+              }
+            },
+            "byproducts": {
+              "description": "Additional artifacts generated during the build that are not considered the “output” of the build",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ResourceDescriptor"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ResourceDescriptor": {
+      "$id": "/schema/ResourceDescriptor",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Machine-readable identifier for distinguishing between descriptors.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "A URI used to identify the resource or artifact globally.",
+          "type": "string"
+        },
+        "digest": {
+          "description": "A set of cryptographic digests of the contents of the resource or artifact.",
+          "type": "object"
+        },
+        "content": {
+          "description": "The contents of the resource or artifact.",
+          "type": "string"
+        },
+        "downloadLocation": {
+          "description": "The location of the described resource or artifact, if different from the uri.",
+          "type": "string"
+        },
+        "mediaType": {
+          "description": "The MIME Type (i.e., media type) of the described resource or artifact.",
+          "type": "string"
+        },
+        "annotations": {
+          "description": "This field MAY be used to provide additional information or metadata about the resource or artifact that may be useful to the consumer when evaluating the attestation against a policy.",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

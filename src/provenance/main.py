@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Python script that generates SLSA v1.0 provenance file for a nix target """
+"""Python script that generates SLSA v1.0 provenance file for a nix target"""
 
 import argparse
 import json
@@ -42,7 +42,7 @@ def get_env_metadata():
         "PROVENANCE_INTERNAL_PARAMS",
     ]
 
-    values = [os.environ.get(name) for name in env_vars]
+    values = [os.environ.get(name, "") for name in env_vars]
 
     LOG.info("Reading metadata from environment:")
     for name, value in zip(env_vars, values):
@@ -128,10 +128,10 @@ def get_external_parameters(drv_path: str, metadata: BuildMeta) -> dict:
     return {k: v for k, v in params.items() if v}
 
 
-def timestamp(unix_time: int | str | None) -> str | None:
+def timestamp(unix_time: int | str | None) -> str:
     """Turn unix timestamp into RFC 3339 format"""
-    if unix_time is None:
-        return None
+    if not unix_time:
+        return ""
 
     dtime = datetime.fromtimestamp(
         int(unix_time),
@@ -222,6 +222,7 @@ def main():
 
     if args.out:
         with open(args.out, "w", encoding="utf-8") as filepath:
+            LOG.info("Writing provenance file into '%s'", args.out)
             filepath.write(json.dumps(schema, indent=2))
     else:
         print(json.dumps(schema, indent=2))

@@ -6,7 +6,7 @@
 # pylint: disable=invalid-name, global-statement, redefined-outer-name
 # pylint: disable=too-few-public-methods
 
-""" Tests for sbomnix """
+"""Tests for sbomnix"""
 
 import os
 import subprocess
@@ -46,6 +46,7 @@ SRCDIR = REPOROOT / "src"
 SBOMNIX = SRCDIR / "sbomnix" / "main.py"
 NIXGRAPH = SRCDIR / "nixgraph" / "main.py"
 NIXMETA = SRCDIR / "nixmeta" / "main.py"
+PROVENANCE = SRCDIR / "provenance" / "main.py"
 NIX_OUTDATED = SRCDIR / "nixupdate" / "nix_outdated.py"
 VULNXSCAN = SRCDIR / "vulnxscan" / "vulnxscan_cli.py"
 REPOLOGY_CLI = SRCDIR / "repology" / "repology_cli.py"
@@ -652,6 +653,49 @@ def test_whitelist():
     print("diff")
     print(df_diff)
     assert df_diff.empty, df_to_string(df_diff)
+
+
+################################################################################
+
+
+def test_provenance_help():
+    """Test provenance command line argument: '-h'"""
+    _run_python_script([PROVENANCE, "-h"])
+
+
+def test_provenance_schema():
+    """Test provenance generates valid schema"""
+    out_path = TEST_WORK_DIR / "provenance_test.json"
+    _run_python_script(
+        [
+            PROVENANCE,
+            TEST_NIX_RESULT,
+            "--out",
+            out_path.as_posix(),
+        ]
+    )
+    assert out_path.exists()
+    schema_path = MYDIR / "resources" / "provenance-1.0.schema.json"
+    assert schema_path.exists()
+    validate_json(out_path.as_posix(), schema_path)
+
+
+def test_provenance_schema_recursive():
+    """Test provenance generates valid schema with recursive option"""
+    out_path = TEST_WORK_DIR / "recursive_provenance_test.json"
+    _run_python_script(
+        [
+            PROVENANCE,
+            TEST_NIX_RESULT,
+            "--recursive",
+            "--out",
+            out_path.as_posix(),
+        ]
+    )
+    assert out_path.exists()
+    schema_path = MYDIR / "resources" / "provenance-1.0.schema.json"
+    assert schema_path.exists()
+    validate_json(out_path.as_posix(), schema_path)
 
 
 ################################################################################
