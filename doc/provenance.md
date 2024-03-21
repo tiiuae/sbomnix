@@ -72,10 +72,10 @@ nix build $target
 PROVENANCE_TIMESTAMP_FINISHED="$(date +%s)"
 
 PROVENANCE_EXTERNAL_PARAMS="$(jq -n --arg target "$target" '$ARGS.named')"
-PROVENANCE_INTERNAL_PARAMS="$(jq -n --arg nixVersion $(nix --version) '$ARGS.named')"
+PROVENANCE_INTERNAL_PARAMS="$(jq -n --arg nixVersion "$(nix --version)" '$ARGS.named')"
 
 export PROVENANCE_TIMESTAMP_BEGIN
-export PROVENANCE_TIMESTAMP_END
+export PROVENANCE_TIMESTAMP_FINISHED
 export PROVENANCE_EXTERNAL_PARAMS
 export PROVENANCE_INTERNAL_PARAMS
 
