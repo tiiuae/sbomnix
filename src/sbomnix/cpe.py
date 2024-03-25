@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, too-few-public-methods
+# pylint: disable=too-few-public-methods
 
 """ Generate CPE (Common Platform Enumeration) identifiers"""
 

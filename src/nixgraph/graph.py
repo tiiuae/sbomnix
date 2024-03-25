@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-few-public-methods, invalid-name
+# pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
 
 """ Python script to query and visualize nix package dependencies """

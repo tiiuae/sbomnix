@@ -4,7 +4,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
 # pylint: disable=too-few-public-methods, too-many-statements
 # pylint: disable=too-many-instance-attributes, too-many-locals
 

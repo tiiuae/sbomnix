@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, abstract-method
+# pylint: disable=abstract-method
 
 """ sbomnix utils """
 

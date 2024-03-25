@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name too-many-locals
+# pylint: disable=too-many-locals
 
 """ Command-line interface to query CVE info from repology.org """
 
