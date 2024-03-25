@@ -146,7 +146,10 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
 
     LOG.info("Generating provenance file for '%s'", target)
 
-    drv_json = json.loads(exec_cmd(["nix", "derivation", "show", target]).stdout)
+    exp = "--extra-experimental-features flakes "
+    exp += "--extra-experimental-features nix-command"
+    cmd = f"nix derivation show {target} {exp}"
+    drv_json = json.loads(exec_cmd(cmd.split()).stdout)
     drv_path = next(iter(drv_json))
     drv_json = drv_json[drv_path]
 
