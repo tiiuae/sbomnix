@@ -4,7 +4,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
 # pylint: disable=too-many-return-statements
 
 """
@@ -786,7 +785,9 @@ def load_whitelist(whitelist_csv_path):
         # Interpret possible string values in "whitelist" column
         # to boolean as follows:
         df["whitelist"] = df["whitelist"].replace({"": True})
-        df["whitelist"] = df["whitelist"].replace({"False": False, "0": False})
+        df["whitelist"] = (
+            df["whitelist"].astype(str).replace({"False": False, "0": False})
+        )
         df["whitelist"] = df["whitelist"].astype("bool")
     return df
 

@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, global-statement, redefined-outer-name
+# pylint: disable=global-statement, redefined-outer-name
 # pylint: disable=too-few-public-methods
 
 """Tests for sbomnix"""

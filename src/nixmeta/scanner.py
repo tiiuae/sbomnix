@@ -3,8 +3,6 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
-
 """ Summarize nixpkgs meta-attributes """
 
 import re

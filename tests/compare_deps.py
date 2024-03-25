@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, too-many-locals
+# pylint: disable=too-many-locals
 
 """ Python script that compares dependencies between sbomnix and nixgraph """
 

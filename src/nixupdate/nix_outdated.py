@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name
-
 """ Command-line tool to list outdated nix dependencies in priority order"""
 
 import logging
