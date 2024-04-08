@@ -180,7 +180,8 @@ def query_cve(pkg_name, pkg_version):
     Return vulnerabilities known to repology that impact the given package name
     and version. Results are returned in pandas dataframe.
     """
-    session = CachedLimiterSession(per_second=1, expire_after=7200)
+    # Cache all responses locally for 6 hours
+    session = CachedLimiterSession(per_second=1, expire_after=6 * 60 * 60)
     ua_product = "repology_cli/0"
     ua_comment = "(https://github.com/tiiuae/sbomnix/)"
     headers = {"User-Agent": f"{ua_product} {ua_comment}"}
