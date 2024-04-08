@@ -396,7 +396,8 @@ _repology_cve_dfs = {}
 _repology_cli_dfs = {}
 # Rate-limited and cached session. For github api rate limits, see:
 # https://docs.github.com/en/rest/search?apiVersion=latest#rate-limit
-_session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=7200)
+# (caching all responses locally for 6 hours)
+_session = CachedLimiterSession(per_minute=9, per_second=1, expire_after=6 * 60 * 60)
 
 
 def _select_newest(df):
