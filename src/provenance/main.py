@@ -117,12 +117,19 @@ def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     return dependencies
 
 
-def get_external_parameters(drv_path: str, metadata: BuildMeta) -> dict:
-    """Get externalParameters from env variable and add derivation"""
+def get_external_parameters(metadata: BuildMeta) -> dict:
+    """Get externalParameters from env variable"""
+
     params = json.loads(metadata.external_parameters or "{}")
 
-    # add derivation path always to params
-    params["derivation"] = drv_path
+    # return only params with non-empty values
+    return {k: v for k, v in params.items() if v}
+
+
+def get_internal_parameters(metadata: BuildMeta) -> dict:
+    """Get internalParameters from env variable"""
+
+    params = json.loads(metadata.internal_parameters or "{}")
 
     # return only params with non-empty values
     return {k: v for k, v in params.items() if v}
@@ -130,6 +137,7 @@ def get_external_parameters(drv_path: str, metadata: BuildMeta) -> dict:
 
 def timestamp(unix_time: int | str | None) -> str:
     """Turn unix timestamp into RFC 3339 format"""
+
     if not unix_time:
         return ""
 
@@ -162,8 +170,8 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
         "predicate": {
             "buildDefinition": {
                 "buildType": metadata.build_type,
-                "externalParameters": get_external_parameters(drv_path, metadata),
-                "internalParameters": json.loads(metadata.internal_parameters or "{}"),
+                "externalParameters": get_external_parameters(metadata),
+                "internalParameters": get_internal_parameters(metadata),
                 "resolvedDependencies": get_dependencies(drv_path, recursive),
             },
             "runDetails": {
@@ -185,6 +193,7 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
 
 def getargs():
     """Parse command line arguments"""
+
     parser = argparse.ArgumentParser(
         prog="nix-provenance",
         description="Get SLSA v1.0 provenance file from nix flake or derivation",
@@ -216,6 +225,7 @@ def getargs():
 
 def main():
     """main entry point"""
+
     args = getargs()
     set_log_verbosity(args.verbose)
 
