@@ -6,10 +6,12 @@
 
 """Cache nixpkgs meta information"""
 
+import time
 import os
 import re
 import logging
 
+from sqlite3 import OperationalError
 import pandas as pd
 from dfdiskcache import DataFrameDiskCache
 from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
@@ -33,7 +35,15 @@ class Meta:
     """Cache nixpkgs meta information"""
 
     def __init__(self):
-        self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
+        waiting = True
+        while waiting:
+            try:
+                self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
+                waiting = False
+            except OperationalError:
+                LOG.warning("DFCACHE Sqlite database is locked! Retrying in 1 second")
+                time.sleep(1)
+
         # df_nixmeta includes the meta-info from _NIXMETA_CSV_URL
         self.df_nixmeta = self.cache.get(_NIXMETA_CSV_URL)
         if self.df_nixmeta is not None and not self.df_nixmeta.empty:
