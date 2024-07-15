@@ -4,10 +4,12 @@
 
 # pylint: disable=too-few-public-methods
 
-""" Generate CPE (Common Platform Enumeration) identifiers"""
+"""Generate CPE (Common Platform Enumeration) identifiers"""
 
 import sys
 import string
+import time
+from sqlite3 import OperationalError
 from dfdiskcache import DataFrameDiskCache
 from common.utils import (
     LOG,
@@ -43,7 +45,19 @@ class CPE:
                     "Failed downloading cpedict: CPE information might not be accurate"
                 )
             else:
-                self.cache.set(_CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL)
+                waiting = True
+                while waiting:
+                    try:
+                        self.cache.set(
+                            _CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL
+                        )
+                        waiting = False
+                    except OperationalError:
+                        LOG.warning(
+                            "CPE Sqlite database is locked! Retrying in 1 second"
+                        )
+                        time.sleep(1)
+
         if self.df_cpedict is not None:
             # Verify the loaded cpedict contains at least the following columns
             required_cols = {"vendor", "product"}
