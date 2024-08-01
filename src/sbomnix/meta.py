@@ -75,7 +75,9 @@ class Meta:
         if nixref:
             # Read meta from nixpkgs pinned by nixref
             LOG.debug("Reading nixpkgs path from nixref: %s", nixref)
-            nixpkgs_path = nixref_to_nixpkgs_path(nixref).as_posix()
+            nixpath = nixref_to_nixpkgs_path(nixref)
+            if nixpath:
+                nixpkgs_path = nixpath.as_posix()
         elif "NIX_PATH" in os.environ:
             # Read meta from nipxkgs referenced in NIX_PATH
             LOG.debug("Reading nixpkgs path from NIX_PATH environment")
