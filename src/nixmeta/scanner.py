@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 # SPDX-License-Identifier: Apache-2.0
 
-""" Summarize nixpkgs meta-attributes """
+"""Summarize nixpkgs meta-attributes"""
 
 import re
 import pathlib
@@ -100,11 +100,10 @@ def nixref_to_nixpkgs_path(flakeref):
         # If flakeref is not nixpkgs flake, try finding the nixpkgs
         # revision pinned by the given flakeref
         LOG.debug("non-nixpkgs flakeref: %s", flakeref)
-        rev = _get_flake_nixpkgs_pin(meta_json)
-        if not rev:
-            LOG.warning("Failed reading nixpkgs pin: %s", flakeref)
+        nixpkgs_flakeref = _get_nixpkgs_flakeref(meta_json)
+        if not nixpkgs_flakeref:
+            LOG.warning("Failed parsing locked nixpkgs: %s", flakeref)
             return None
-        nixpkgs_flakeref = f"github:NixOS/nixpkgs?ref={rev}"
         LOG.log(LOG_SPAM, "using nixpkgs_flakeref: %s", nixpkgs_flakeref)
         meta_json = _get_flake_metadata(nixpkgs_flakeref)
         if not _is_nixpkgs_metadata(meta_json):
@@ -159,12 +158,75 @@ def _is_nixpkgs_metadata(meta_json):
     return False
 
 
-def _get_flake_nixpkgs_pin(meta_json):
-    """Given nixpkgs flake metadata, return the pinned revision"""
+def _get_flake_nixpkgs_val(meta_json, key):
+    """Given nixpkgs flake metadata, return the locked key"""
     try:
-        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"]["rev"]
+        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"][key]
     except (KeyError, TypeError):
         return None
+
+
+def _get_flake_nixpkgs_obj(meta_json):
+    """Given nixpkgs flake metadata, return the locked nixpkgs object"""
+    try:
+        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"]
+    except (KeyError, TypeError):
+        return None
+
+
+def _get_nixpkgs_flakeref_github(meta_json):
+    owner = _get_flake_nixpkgs_val(meta_json, "owner")
+    repo = _get_flake_nixpkgs_val(meta_json, "repo")
+    rev = _get_flake_nixpkgs_val(meta_json, "rev")
+    if None in [owner, repo, rev]:
+        LOG.debug(
+            "owner, repo, or rev not found: %s", _get_flake_nixpkgs_obj(meta_json)
+        )
+        return None
+    return f"github:{owner}/{repo}?rev={rev}"
+
+
+def _get_nixpkgs_flakeref_git(meta_json):
+    url = _get_flake_nixpkgs_val(meta_json, "url")
+    rev = _get_flake_nixpkgs_val(meta_json, "rev")
+    ref = _get_flake_nixpkgs_val(meta_json, "ref")
+    if None in [url, rev, ref]:
+        LOG.debug("url, rev, or ref not found: %s", _get_flake_nixpkgs_obj(meta_json))
+        return None
+    return f"git+{url}?ref={ref}&rev={rev}"
+
+
+def _get_nixpkgs_flakeref_path(meta_json):
+    path = _get_flake_nixpkgs_val(meta_json, "path")
+    if None in [path]:
+        LOG.debug("path not found: %s", _get_flake_nixpkgs_obj(meta_json))
+        return None
+    return f"path:{path}"
+
+
+def _get_nixpkgs_flakeref_tarball(meta_json):
+    url = _get_flake_nixpkgs_val(meta_json, "url")
+    if None in [url]:
+        LOG.debug("url not found: %s", _get_flake_nixpkgs_obj(meta_json))
+        return None
+    return f"{url}"
+
+
+def _get_nixpkgs_flakeref(meta_json):
+    """Given nixpkgs flake metadata, return the locked ref"""
+    _type = _get_flake_nixpkgs_val(meta_json, "type")
+    nixpkgs_flakeref = None
+    if _type == "github":
+        nixpkgs_flakeref = _get_nixpkgs_flakeref_github(meta_json)
+    elif _type == "git":
+        nixpkgs_flakeref = _get_nixpkgs_flakeref_git(meta_json)
+    elif _type == "path":
+        nixpkgs_flakeref = _get_nixpkgs_flakeref_path(meta_json)
+    elif _type == "tarball":
+        nixpkgs_flakeref = _get_nixpkgs_flakeref_tarball(meta_json)
+    else:
+        LOG.debug("Unsupported nixpkgs locked type: %s", _type)
+    return nixpkgs_flakeref
 
 
 def _parse_meta_entry(meta, key):
