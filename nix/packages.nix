@@ -213,16 +213,16 @@
         postInstall = ''
 
           wrapProgram $out/bin/sbomnix \
-              --prefix PATH : ${lib.makeBinPath [pkgs.nix pkgs.graphviz]}
+              --prefix PATH : ${lib.makeBinPath [pkgs.git pkgs.nix pkgs.graphviz]}
 
           wrapProgram $out/bin/nixgraph \
               --prefix PATH : ${lib.makeBinPath [pkgs.nix pkgs.graphviz]}
 
           wrapProgram $out/bin/nix_outdated \
-              --prefix PATH : ${lib.makeBinPath [nix-visualize]}
+              --prefix PATH : ${lib.makeBinPath [pkgs.git nix-visualize]}
 
           wrapProgram $out/bin/vulnxscan \
-              --prefix PATH : ${lib.makeBinPath [pkgs.grype pkgs.nix vulnix]}
+              --prefix PATH : ${lib.makeBinPath [pkgs.git pkgs.grype pkgs.nix vulnix]}
 
           wrapProgram $out/bin/provenance \
               --prefix PATH : ${lib.makeBinPath [pkgs.nix]}
