@@ -83,36 +83,34 @@ def get_subjects(outputs: dict) -> list[dict]:
 def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     """Get dependencies of derivation and parse them into ResourceDescriptors"""
 
-    LOG.info("Querying derivation dependencies%s", "recursively" if recursive else "")
+    LOG.info("Querying derivation dependencies %s", "recursively" if recursive else "")
 
     depth = "--requisites" if recursive else "--references"
-    deps_drv = exec_cmd(["nix-store", "--query", depth, drv_path]).stdout.split()
+
+    references = exec_cmd(
+        ["nix-store", "--query", depth, "--include-outputs", drv_path]
+    ).stdout.split()
+    hashes = exec_cmd(["nix-store", "--query", "--hash"] + references).stdout.split()
+    infos = json.loads(exec_cmd(["nix", "derivation", "show", "-r", drv_path]).stdout)
 
     dependencies = []
-    for drv in deps_drv:
-        store_hash = exec_cmd(["nix-store", "--query", "--hash", drv]).stdout.strip()
-        hash_type, hash_value = store_hash.split(":")
+    for drv, output_hash in zip(references, hashes):
+        LOG.debug("Creating dependency entry for %s", drv)
+        hash_type, hash_value = output_hash.split(":")
 
-        dependency_json = {
+        package = {
+            "name": drv.split("-", 1)[-1].removesuffix(".drv"),
             "uri": drv,
             "digest": {hash_type: hash_value},
         }
 
-        annotations = {}
+        info = infos.get(drv)
+        if info:
+            package["name"] = info["name"]
+            if version := info["env"].get("version"):
+                package["annotations"] = {"version": version}
 
-        if drv.endswith(".drv"):
-            dep_json = json.loads(exec_cmd(["nix", "derivation", "show", drv]).stdout)
-            env = dep_json[drv]["env"]
-            dependency_json["name"] = dep_json[drv]["name"]
-
-            version = env.get("version")
-            if version:
-                annotations["version"] = version
-
-        if annotations:
-            dependency_json["annotations"] = annotations
-
-        dependencies.append(dependency_json)
+        dependencies.append(package)
 
     return dependencies
 
