@@ -210,23 +210,11 @@
 
         pythonImportsCheck = ["sbomnix"];
 
-        postInstall = ''
-
-          wrapProgram $out/bin/sbomnix \
-              --prefix PATH : ${lib.makeBinPath [pkgs.git pkgs.nix pkgs.graphviz]}
-
-          wrapProgram $out/bin/nixgraph \
-              --prefix PATH : ${lib.makeBinPath [pkgs.nix pkgs.graphviz]}
-
-          wrapProgram $out/bin/nix_outdated \
-              --prefix PATH : ${lib.makeBinPath [pkgs.git nix-visualize]}
-
-          wrapProgram $out/bin/vulnxscan \
-              --prefix PATH : ${lib.makeBinPath [pkgs.git pkgs.grype pkgs.nix vulnix]}
-
-          wrapProgram $out/bin/provenance \
-              --prefix PATH : ${lib.makeBinPath [pkgs.nix]}
-        '';
+        makeWrapperArgs = [
+          "--prefix PATH : ${lib.makeBinPath (with pkgs; [
+            git nix graphviz nix-visualize vulnix grype
+          ])}"
+        ];
       };
       # a python with all python packages imported by sbomnix itself
       python = pkgs.python3.withPackages (ps:
