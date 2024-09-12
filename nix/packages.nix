@@ -212,7 +212,12 @@
 
         makeWrapperArgs = [
           "--prefix PATH : ${lib.makeBinPath (with pkgs; [
-            git nix graphviz nix-visualize vulnix grype
+            git
+            nix
+            graphviz
+            nix-visualize
+            vulnix
+            grype
           ])}"
         ];
       };
