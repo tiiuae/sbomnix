@@ -23,11 +23,7 @@ import requests
 from common.utils import (
     df_from_csv_file,
 )
-
-from vulnxscan.vulnxscan_cli import (
-    load_whitelist,
-    df_apply_whitelist,
-)
+from vulnxscan.whitelist import df_apply_whitelist, load_whitelist
 
 
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
