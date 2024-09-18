@@ -30,8 +30,10 @@ from common.utils import (
     parse_version,
     version_distance,
 )
-import repology
+from repology.exceptions import RepologyNoMatchingPackages
 from repology.repology_cli import Repology
+from repology.repology_cli import getargs as cli_getargs
+from repology.repology_cve import query_cve
 from sbomnix.sbomdb import SbomDb
 
 
@@ -274,7 +276,7 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
         LOG.log(LOG_SPAM, "Using cached repology_cve results")
         df = _repology_cve_dfs[key]
     else:
-        df = repology.repology_cve.query_cve(str(repo_pkg_name), str(pkg_version))
+        df = query_cve(str(repo_pkg_name), str(pkg_version))
         if df is None:
             df = pd.DataFrame()
         df_log(df, LOG_SPAM)
@@ -298,11 +300,11 @@ def _run_repology_cli(pname, match_type="--pkg_exact"):
         args.append(f"{match_type}={pname}")
         try:
             df_repology_cli = repology_cli.query(
-                repology.repology_cli.getargs(args),
+                cli_getargs(args),
                 stdout_report=False,
                 file_report=False,
             )
-        except repology.exceptions.RepologyNoMatchingPackages:
+        except RepologyNoMatchingPackages:
             pass
         if df_repology_cli is None or df_repology_cli.empty:
             LOG.debug("No results from repology_cli")
