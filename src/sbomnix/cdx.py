@@ -6,10 +6,11 @@
 
 """ CycloneDX utils """
 
-
 import re
+
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 from common.utils import LOG, LOG_SPAM
+from vulnxscan.utils import _vuln_source, _vuln_url
 
 
 def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
@@ -128,3 +129,27 @@ def _drv_to_cdx_dependency(drv, deps_list, uid="store_path"):
     if deps_list:
         dependency["dependsOn"] = deps_list
     return dependency
+
+
+def _vuln_to_cdx_vuln(vuln):
+    """Return cdx vulnerability entry from vulnix row"""
+    vulnerability = {}
+    vulnerability["bom-ref"] = vuln.store_path
+    vulnerability["id"] = vuln.vuln_id
+    source = {}
+    source["url"] = _vuln_url(vuln)
+    source["name"] = _vuln_source(vuln)
+    vulnerability["source"] = source
+    vulnerability["ratings"] = []
+    # If the vulnerability is still being assessed, it will be missing a valid number
+    if vuln.severity != "":
+        rating = {}
+        rating["source"] = source
+        rating["score"] = vuln.severity
+        vulnerability["ratings"].append(rating)
+    vulnerability["tools"] = []
+    for scanner in vuln.scanner:
+        tool = {}
+        tool["name"] = scanner
+        vulnerability["tools"].append(tool)
+    return vulnerability
