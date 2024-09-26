@@ -63,8 +63,16 @@ def _vuln_url(row):
     nvd_url = "https://nvd.nist.gov/vuln/detail/"
     if "cve" in row.vuln_id.lower():
         return f"{nvd_url}{row.vuln_id}"
-    if row.osv:
+    if getattr(row, "osv", False) or ("osv" in getattr(row, "scanner", [])):
         return f"{osv_url}{row.vuln_id}"
+    return ""
+
+
+def _vuln_source(row):
+    if "cve" in row.vuln_id.lower():
+        return "NVD"
+    if getattr(row, "osv", False) or ("osv" in getattr(row, "scanner", [])):
+        return "OSV"
     return ""
 
 
