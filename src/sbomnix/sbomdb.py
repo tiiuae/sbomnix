@@ -219,8 +219,9 @@ class SbomDb:
             [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
             ignore_index=True,
         )
-        # Concat adds a modified column, remove
-        vulns.drop("modified", axis=1, inplace=True)
+        # Concat adds a modified column, remove as it will invalidate groupby logic
+        if "modified" in vulns.columns:
+            vulns.drop("modified", axis=1, inplace=True)
         # Deduplicate repeated vulnerabilities, making the scanner column into an array
         vuln_grouped = vulns.groupby(
             ["package", "version", "severity", "vuln_id"],
