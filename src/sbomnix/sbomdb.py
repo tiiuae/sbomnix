@@ -183,7 +183,7 @@ class SbomDb:
         if self.depth:
             prop = {}
             prop["name"] = "sbom_dependencies_depth"
-            prop["value"] = self.depth
+            prop["value"] = str(self.depth)
             cdx["metadata"]["properties"].append(prop)
         tool = {}
         tool["vendor"] = "TII"
