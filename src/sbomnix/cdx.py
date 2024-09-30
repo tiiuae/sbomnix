@@ -83,7 +83,7 @@ def _cdx_component_add_patches(component, drv):
 def _drv_to_cdx_component(drv, uid="store_path"):
     """Convert one entry from sbomdb (drv) to cdx component"""
     component = {}
-    component["type"] = "application"
+    component["type"] = "library"
     component["bom-ref"] = getattr(drv, uid)
     component["name"] = drv.pname
     component["version"] = drv.version
