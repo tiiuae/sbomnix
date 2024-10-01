@@ -6,16 +6,18 @@
 
 """Cache nixpkgs meta information"""
 
-import time
 import os
 import re
 import logging
+import pathlib
+import tempfile
+from getpass import getuser
 
-from sqlite3 import OperationalError
 import pandas as pd
-from dfdiskcache import DataFrameDiskCache
+from filelock import FileLock
+from sbomnix.dfcache import LockedDfCache
 from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
-from common.utils import LOG, df_from_csv_file, df_to_csv_file, DFCACHE_PATH
+from common.utils import LOG, df_from_csv_file, df_to_csv_file
 
 ###############################################################################
 
@@ -28,6 +30,9 @@ _NIXMETA_CSV_URL_TTL = 60 * 60 * 24
 # is cleaned.
 _NIXMETA_NIXPKGS_TTL = 60 * 60 * 24 * 30
 
+# FileLock lock path
+_FLOCK = pathlib.Path(tempfile.gettempdir()) / f"{getuser()}_sbomnix_meta.lock"
+
 ###############################################################################
 
 
@@ -35,15 +40,8 @@ class Meta:
     """Cache nixpkgs meta information"""
 
     def __init__(self):
-        waiting = True
-        while waiting:
-            try:
-                self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
-                waiting = False
-            except OperationalError:
-                LOG.warning("DFCACHE Sqlite database is locked! Retrying in 1 second")
-                time.sleep(1)
-
+        self.lock = FileLock(_FLOCK)
+        self.cache = LockedDfCache()
         # df_nixmeta includes the meta-info from _NIXMETA_CSV_URL
         self.df_nixmeta = self.cache.get(_NIXMETA_CSV_URL)
         if self.df_nixmeta is not None and not self.df_nixmeta.empty:
@@ -103,22 +101,33 @@ class Meta:
         return df_concat
 
     def _scan(self, nixpkgs_path):
-        df = self.cache.get(nixpkgs_path)
-        if df is not None and not df.empty:
-            LOG.debug("found from cache: %s", nixpkgs_path)
+        # In case sbomnix is run concurrently, we want to make sure there's
+        # only one instance of NixMetaScanner.scan() running at a time.
+        # The reason is, NixMetaScanner.scan() potentially invokes
+        # `nix-env -qa --meta --json -f /path/to/nixpkgs` which is very
+        # memory intensive. The locking needs to happen here (and not in
+        # NixMetaScanner) because this object caches the nixmeta info.
+        # First scan generates the cache, after which the consecutive scans
+        # will read the scan results from the cache, not having to run
+        # the nix-env command again, making the consecutive scans relatively
+        # fast and light-weight.
+        with self.lock:
+            df = self.cache.get(nixpkgs_path)
+            if df is not None and not df.empty:
+                LOG.debug("found from cache: %s", nixpkgs_path)
+                return df
+            LOG.debug("cache miss, scanning: %s", nixpkgs_path)
+            scanner = NixMetaScanner()
+            scanner.scan(nixpkgs_path)
+            df = scanner.to_df()
+            if df is None or df.empty:
+                LOG.warning("Failed scanning nixmeta: %s", nixpkgs_path)
+                return None
+            # Cache requires some TTL, so we set it to some value here.
+            # Although, we could as well store it indefinitely as it should
+            # not change given the same key (nixpkgs store path).
+            self.cache.set(key=nixpkgs_path, value=df, ttl=_NIXMETA_NIXPKGS_TTL)
             return df
-        LOG.debug("cache miss, scanning: %s", nixpkgs_path)
-        scanner = NixMetaScanner()
-        scanner.scan(nixpkgs_path)
-        df = scanner.to_df()
-        if df is None or df.empty:
-            LOG.warning("Failed scanning nixmeta: %s", nixpkgs_path)
-            return None
-        # Cache requires some TTL, so we set it to some value here.
-        # Although, we could as well store it indefinitely as it should
-        # not change given the same key (nixpkgs store path).
-        self.cache.set(key=nixpkgs_path, value=df, ttl=_NIXMETA_NIXPKGS_TTL)
-        return df
 
 
 ###############################################################################

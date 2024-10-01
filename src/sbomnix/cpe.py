@@ -8,13 +8,10 @@
 
 import sys
 import string
-import time
-from sqlite3 import OperationalError
-from dfdiskcache import DataFrameDiskCache
+from sbomnix.dfcache import LockedDfCache
 from common.utils import (
     LOG,
     LOG_SPAM,
-    DFCACHE_PATH,
     df_from_csv_file,
     df_log,
 )
@@ -33,7 +30,7 @@ class CPE:
     """Generate Common Platform Enumeration identifiers"""
 
     def __init__(self):
-        self.cache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
+        self.cache = LockedDfCache()
         self.df_cpedict = self.cache.get(_CPE_CSV_URL)
         if self.df_cpedict is not None and not self.df_cpedict.empty:
             LOG.debug("read CPE dictionary from cache")
@@ -45,18 +42,7 @@ class CPE:
                     "Failed downloading cpedict: CPE information might not be accurate"
                 )
             else:
-                waiting = True
-                while waiting:
-                    try:
-                        self.cache.set(
-                            _CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL
-                        )
-                        waiting = False
-                    except OperationalError:
-                        LOG.warning(
-                            "CPE Sqlite database is locked! Retrying in 1 second"
-                        )
-                        time.sleep(1)
+                self.cache.set(_CPE_CSV_URL, self.df_cpedict, ttl=_CPE_CSV_CACHE_TTL)
 
         if self.df_cpedict is not None:
             # Verify the loaded cpedict contains at least the following columns
