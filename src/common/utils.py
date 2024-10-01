@@ -14,8 +14,6 @@ import csv
 import logging
 import subprocess
 import importlib.metadata
-import pathlib
-import tempfile
 import urllib.error
 from shutil import which
 
@@ -32,9 +30,6 @@ from requests_ratelimiter import LimiterMixin
 
 LOG_SPAM = logging.DEBUG - 1
 LOG = logging.getLogger(os.path.abspath(__file__))
-
-# DataFrameDiskCache cache local path
-DFCACHE_PATH = pathlib.Path(tempfile.gettempdir()) / "sbomnix_df_cache"
 
 ###############################################################################
 

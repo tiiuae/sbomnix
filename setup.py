@@ -25,6 +25,7 @@ with open(project_path("VERSION"), encoding="utf-8") as f:
 requires = [
     "beautifulsoup4",
     "colorlog",
+    "filelock",
     "graphviz",
     "numpy",
     "pandas",

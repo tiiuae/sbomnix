@@ -198,6 +198,7 @@
           ++ (with pp; [
             beautifulsoup4
             colorlog
+            filelock
             graphviz
             numpy
             packageurl-python
@@ -226,6 +227,7 @@
         (with ps; [
           beautifulsoup4
           colorlog
+          filelock
           graphviz
           numpy
           packageurl-python
