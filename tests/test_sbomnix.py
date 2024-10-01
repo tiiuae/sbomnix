@@ -117,7 +117,7 @@ def test_sbomnix_type_runtime():
     )
     assert out_path_cdx.exists()
     assert out_path_spdx.exists()
-    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.4.schema.json"
     assert cdx_schema_path.exists()
     validate_json(out_path_cdx.as_posix(), cdx_schema_path)
     spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
@@ -142,7 +142,7 @@ def test_sbomnix_type_buildtime():
     )
     assert out_path_cdx.exists()
     assert out_path_spdx.exists()
-    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.3.schema.json"
+    cdx_schema_path = MYDIR / "resources" / "cdx_bom-1.4.schema.json"
     assert cdx_schema_path.exists()
     validate_json(out_path_cdx.as_posix(), cdx_schema_path)
     spdx_schema_path = MYDIR / "resources" / "spdx_bom-2.3.schema.json"
