@@ -80,6 +80,7 @@ def main():
         buildtime=args.buildtime,
         depth=args.depth,
         flakeref=flakeref,
+        include_vulns=True,
     )
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
