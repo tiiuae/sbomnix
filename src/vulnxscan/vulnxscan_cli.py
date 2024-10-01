@@ -97,6 +97,26 @@ def getargs():
 
 ################################################################################
 
+
+def _generate_sbom(target_path, buildtime=False):
+    LOG.info("Generating SBOM for target '%s'", target_path)
+    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
+    prefix = "vulnxscan_"
+    cdx_suffix = ".json"
+    csv_suffix = ".csv"
+    with NamedTemporaryFile(
+        delete=False, prefix=prefix, suffix=cdx_suffix
+    ) as fcdx, NamedTemporaryFile(
+        delete=False, prefix=prefix, suffix=csv_suffix
+    ) as fcsv:
+        sbomdb.to_cdx(fcdx.name, printinfo=False)
+        sbomdb.to_csv(fcsv.name, loglevel=logging.DEBUG)
+        return pathlib.Path(fcdx.name), pathlib.Path(fcsv.name)
+
+
+################################################################################
+
+
 # Main
 
 
@@ -140,24 +160,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-################################################################################
-
-
-def _generate_sbom(target_path, buildtime=False):
-    LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
-    prefix = "vulnxscan_"
-    cdx_suffix = ".json"
-    csv_suffix = ".csv"
-    with NamedTemporaryFile(
-        delete=False, prefix=prefix, suffix=cdx_suffix
-    ) as fcdx, NamedTemporaryFile(
-        delete=False, prefix=prefix, suffix=csv_suffix
-    ) as fcsv:
-        sbomdb.to_cdx(fcdx.name, printinfo=False)
-        sbomdb.to_csv(fcsv.name, loglevel=logging.DEBUG)
-        return pathlib.Path(fcdx.name), pathlib.Path(fcsv.name)
-
 
 ################################################################################

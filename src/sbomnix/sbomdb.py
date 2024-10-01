@@ -4,7 +4,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-instance-attributes, too-many-arguments, too-many-locals
+# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-locals, too-many-statements
 
 """ Module for generating SBOMs in various formats """
 
@@ -32,7 +33,13 @@ class SbomDb:
     """Generates SBOMs in various formats"""
 
     def __init__(
-        self, nix_path, buildtime=False, depth=None, flakeref=None, include_meta=True
+        self,
+        nix_path,
+        buildtime=False,
+        depth=None,
+        flakeref=None,
+        include_meta=True,
+        include_vulns=False,
     ):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
@@ -48,6 +55,7 @@ class SbomDb:
         self.flakeref = flakeref
         self.meta = None
         self._init_sbomdb(include_meta)
+        self.include_vulns = include_vulns
         self.uuid = uuid.uuid4()
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
@@ -204,40 +212,44 @@ class SbomDb:
             deps = self._lookup_dependencies(drv, uid=self.uid)
             dependency = _drv_to_cdx_dependency(drv, deps, uid=self.uid)
             cdx["dependencies"].append(dependency)
-        scanner = VulnScan()
-        scanner.scan_vulnix(self.target_deriver, self.buildtime)
-        # Write incomplete sbom to a temporary path, then perform a vulnerability scan
-        with NamedTemporaryFile(
-            delete=False, prefix="vulnxscan_", suffix=".json"
-        ) as fcdx:
-            self._write_json(fcdx.name, cdx, printinfo=False)
-            scanner.scan_grype(fcdx.name)
-            scanner.scan_osv(fcdx.name)
-        cdx["vulnerabilities"] = []
-        # Union all scans into a single dataframe
-        vulns = pd.concat(
-            [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
-            ignore_index=True,
-        )
-        # Concat adds a modified column, remove as it will invalidate groupby logic
-        if "modified" in vulns.columns:
-            vulns.drop("modified", axis=1, inplace=True)
-        # Deduplicate repeated vulnerabilities, making the scanner column into an array
-        vuln_grouped = vulns.groupby(
-            ["package", "version", "severity", "vuln_id"],
-            as_index=False,
-        ).agg({"scanner": pd.Series.unique})
-        # Do a join so we have access to bom-ref
-        vulnix_components = pd.merge(
-            left=vuln_grouped,
-            right=self.df_sbomdb,
-            how="left",
-            left_on=["package", "version"],
-            right_on=["pname", "version"],
-        )
-        for vuln in vulnix_components.itertuples():
-            vulnix_vuln = _vuln_to_cdx_vuln(vuln)
-            cdx["vulnerabilities"].append(vulnix_vuln)
+        df_vulns = None
+        if self.include_vulns:
+            scanner = VulnScan()
+            scanner.scan_vulnix(self.target_deriver, self.buildtime)
+            # Write incomplete sbom to a temporary path, then perform a vulnerability scan
+            with NamedTemporaryFile(
+                delete=False, prefix="vulnxscan_", suffix=".json"
+            ) as fcdx:
+                self._write_json(fcdx.name, cdx, printinfo=False)
+                scanner.scan_grype(fcdx.name)
+                scanner.scan_osv(fcdx.name)
+            cdx["vulnerabilities"] = []
+            # Union all scans into a single dataframe
+            df_vulns = pd.concat(
+                [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
+                ignore_index=True,
+            )
+        if df_vulns is not None and not df_vulns.empty:
+            # Concat adds a modified column, remove as it will invalidate groupby logic
+            if "modified" in df_vulns.columns:
+                df_vulns.drop("modified", axis=1, inplace=True)
+            # Deduplicate repeated vulnerabilities, making the scanner column into an
+            # array
+            vuln_grouped = df_vulns.groupby(
+                ["package", "version", "severity", "vuln_id"],
+                as_index=False,
+            ).agg({"scanner": pd.Series.unique})
+            # Do a join so we have access to bom-ref
+            vulnix_components = pd.merge(
+                left=vuln_grouped,
+                right=self.df_sbomdb,
+                how="left",
+                left_on=["package", "version"],
+                right_on=["pname", "version"],
+            )
+            for vuln in vulnix_components.itertuples():
+                vulnix_vuln = _vuln_to_cdx_vuln(vuln)
+                cdx["vulnerabilities"].append(vulnix_vuln)
         self._write_json(cdx_path, cdx, printinfo)
 
     def to_spdx(self, spdx_path, printinfo=True):
