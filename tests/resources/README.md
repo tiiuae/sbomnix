@@ -6,6 +6,11 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # Test resources
 
+## CycloneDX 1.4 json schema
+
+- cdx_bom-1.4.schema.json
+- <https://github.com/CycloneDX/specification/blob/6638df1da64d4e4d2122c099db44e344cde0055d/schema/bom-1.4.schema.json>
+
 ## CycloneDX 1.3 json schema
 
 - cdx_bom-1.3.schema.json
