@@ -22,13 +22,13 @@
           grype
           gzip
           nix
+          nix-visualize
           pylint
           reuse
+          vulnix
         ])
         ++ (with self'.packages; [
-          nix-visualize
           python # that python with all sbomnix [dev-]dependencies
-          vulnix
         ]);
 
       # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
