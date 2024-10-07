@@ -17,14 +17,6 @@
       url = "github:nix-community/flake-compat";
       flake = false;
     };
-    nix-visualize = {
-      url = "github:craigmbooth/nix-visualize";
-      flake = false;
-    };
-    vulnix = {
-      url = "github:henrirosten/vulnix";
-      flake = false;
-    };
   };
 
   outputs = inputs @ {flake-parts, ...}:
