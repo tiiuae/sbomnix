@@ -215,7 +215,6 @@ class SbomDb:
         df_vulns = None
         if self.include_vulns:
             scanner = VulnScan()
-            scanner.scan_vulnix(self.target_deriver, self.buildtime)
             # Write incomplete sbom to a temporary path, then perform a vulnerability scan
             with NamedTemporaryFile(
                 delete=False, prefix="vulnxscan_", suffix=".json"
@@ -226,7 +225,7 @@ class SbomDb:
             cdx["vulnerabilities"] = []
             # Union all scans into a single dataframe
             df_vulns = pd.concat(
-                [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
+                [scanner.df_grype, scanner.df_osv],
                 ignore_index=True,
             )
         if df_vulns is not None and not df_vulns.empty:
@@ -240,16 +239,16 @@ class SbomDb:
                 as_index=False,
             ).agg({"scanner": pd.Series.unique})
             # Do a join so we have access to bom-ref
-            vulnix_components = pd.merge(
+            vuln_components = pd.merge(
                 left=vuln_grouped,
                 right=self.df_sbomdb,
                 how="left",
                 left_on=["package", "version"],
                 right_on=["pname", "version"],
             )
-            for vuln in vulnix_components.itertuples():
-                vulnix_vuln = _vuln_to_cdx_vuln(vuln)
-                cdx["vulnerabilities"].append(vulnix_vuln)
+            for vuln in vuln_components.itertuples():
+                cdx_vuln = _vuln_to_cdx_vuln(vuln)
+                cdx["vulnerabilities"].append(cdx_vuln)
         self._write_json(cdx_path, cdx, printinfo)
 
     def to_spdx(self, spdx_path, printinfo=True):
