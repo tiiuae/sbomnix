@@ -215,6 +215,7 @@ class SbomDb:
         df_vulns = None
         if self.include_vulns:
             scanner = VulnScan()
+            scanner.scan_vulnix(self.target_deriver, self.buildtime)
             # Write incomplete sbom to a temporary path, then perform a vulnerability scan
             with NamedTemporaryFile(
                 delete=False, prefix="vulnxscan_", suffix=".json"
@@ -225,7 +226,7 @@ class SbomDb:
             cdx["vulnerabilities"] = []
             # Union all scans into a single dataframe
             df_vulns = pd.concat(
-                [scanner.df_grype, scanner.df_osv],
+                [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
                 ignore_index=True,
             )
         if df_vulns is not None and not df_vulns.empty:
@@ -242,7 +243,7 @@ class SbomDb:
             vuln_components = pd.merge(
                 left=vuln_grouped,
                 right=self.df_sbomdb,
-                how="left",
+                how="inner",
                 left_on=["package", "version"],
                 right_on=["pname", "version"],
             )
