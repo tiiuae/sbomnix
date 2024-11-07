@@ -81,10 +81,6 @@ class Store:
             self._add_cached(nixpath, drv=None)
             return
         self._update(drv_path, nixpath)
-        if self.buildtime:
-            ret = exec_cmd(["nix-store", "-qR", drv_path])
-            for candidate in ret.stdout.splitlines():
-                self._update(candidate)
 
     def to_dataframe(self):
         """Return store derivations as pandas dataframe"""
