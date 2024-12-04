@@ -97,6 +97,9 @@ class OSV:
         batchquery = {}
         batchquery["queries"] = []
         for drv in df_sbom.itertuples():
+            if not drv.version:
+                LOG.debug("skipping osv query (unknown version): %s", drv.name)
+                continue
             query = {}
             query["version"] = drv.version
             query["package"] = {}
