@@ -84,7 +84,14 @@ def _cdx_component_add_patches(component, drv):
 def _drv_to_cdx_component(drv, uid="store_path"):
     """Convert one entry from sbomdb (drv) to cdx component"""
     component = {}
+    # Set the cdx component type based on the following heuristic:
+    # - Set the default component type to 'library'
+    # - Set the component type to 'file' if the drv version string is missing
+    #   and out-path matches the below pattern
     component["type"] = "library"
+    if not drv.version:
+        if drv.out and re.search(r"(\.tar\.|\?|\.[a-z]+$)", drv.out):
+            component["type"] = "file"
     component["bom-ref"] = getattr(drv, uid)
     component["name"] = drv.pname
     component["version"] = drv.version
