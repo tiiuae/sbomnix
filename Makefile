@@ -21,14 +21,14 @@ pre-push: test check  ## Run tests and flake checks
 	$(call target_success,$@)
 
 test-ci: check  ## Run CI tests
-	pytest -vx -k "not skip_in_ci" tests/
+	pytest -n auto -vx -k "not skip_in_ci" tests/
 	$(call target_success,$@)
 
 check: clean
 	nix --extra-experimental-features 'flakes nix-command' flake check
 
 test: ## Run tests
-	pytest -vx tests/
+	pytest -n auto -vx tests/
 	$(call target_success,$@)
 
 release-asset: clean ## Build release asset
