@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=too-many-instance-attributes, too-many-arguments
-# pylint: disable=too-many-locals, too-many-statements
+# pylint: disable=too-many-locals, too-many-statements, too-many-positional-arguments
 
 """Module for generating SBOMs in various formats"""
 
