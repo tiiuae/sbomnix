@@ -16,11 +16,12 @@
       inherit (config.flake-root) projectRootFile;
 
       programs = {
-        alejandra.enable = true; # nix formatter https://github.com/kamadorueda/alejandra
         black.enable = true; # lints python https://github.com/psf/black
-        isort.enable = true; # sort python imports https://github.com/PyCQA/isort
         deadnix.enable = true; # removes dead nix code https://github.com/astro/deadnix
+        isort.enable = true; # sort python imports https://github.com/PyCQA/isort
         shellcheck.enable = true; # lints shell scripts https://github.com/koalaman/shellcheck
+        nixfmt.enable = true; # nix formatter https://github.com/NixOS/nixfmt
+        nixfmt.package = pkgs.nixfmt-rfc-style; # rfc-166 formatting conform version
         statix.enable = true; # prevents use of nix anti-patterns https://github.com/nerdypepper/statix
       };
     };
