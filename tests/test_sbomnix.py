@@ -123,6 +123,7 @@ def test_sbomnix_type_runtime():
     validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
+@pytest.mark.slow
 def test_sbomnix_type_buildtime():
     """Test sbomnix generates valid CycloneDX json with buildtime dependencies"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
@@ -301,6 +302,7 @@ def test_compare_deps_runtime():
     )
 
 
+@pytest.mark.slow
 def test_compare_deps_buildtime():
     """Compare nixgraph vs sbom buildtime dependencies"""
     graph_csv_out = TEST_WORK_DIR / "graph.csv"
@@ -339,6 +341,7 @@ def test_compare_deps_buildtime():
     )
 
 
+@pytest.mark.slow
 def test_compare_subsequent_cdx_sboms():
     """Compare two sbomnix runs with same target produce the same cdx sbom"""
     out_path_cdx_1 = TEST_WORK_DIR / "sbom_cdx_test_1.json"
@@ -374,6 +377,7 @@ def test_compare_subsequent_cdx_sboms():
     )
 
 
+@pytest.mark.slow
 def test_compare_subsequent_spdx_sboms():
     """Compare two sbomnix runs with same target produce the same spdx sbom"""
     out_path_spdx_1 = TEST_WORK_DIR / "sbom_spdx_test_1.json"
@@ -409,6 +413,7 @@ def test_compare_subsequent_spdx_sboms():
     )
 
 
+@pytest.mark.slow
 def test_compare_spdx_and_cdx_sboms():
     """Compare spdx and cdx sboms from the same sbomnix invocation"""
     out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
@@ -531,6 +536,7 @@ def test_repology_cli_help():
     _run_python_script([REPOLOGY_CLI, "-h"])
 
 
+@pytest.mark.slow
 def test_repology_cli_sbom():
     """Test repology_cli with SBOM as input"""
     out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
@@ -569,6 +575,7 @@ def test_nix_outdated_help():
     _run_python_script([NIX_OUTDATED, "-h"])
 
 
+@pytest.mark.slow
 def test_nix_outdated_result():
     """Test nix_outdated with TEST_NIX_RESULT as input"""
     out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
@@ -593,6 +600,7 @@ def test_nixmeta_help():
     _run_python_script([NIXMETA, "-h"])
 
 
+@pytest.mark.slow
 def test_nixmeta_sbomnix_flakeref():
     """Test nixmeta with sbomnix flakeref"""
     out_path = TEST_WORK_DIR / "nixmeta.csv"

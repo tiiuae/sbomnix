@@ -27,6 +27,10 @@ test-ci: check  ## Run CI tests
 check: clean
 	nix --extra-experimental-features 'flakes nix-command' flake check
 
+test-smoke: ## Run smoke tests
+	pytest -n auto -vx -k "not slow" tests/
+	$(call target_success,$@)
+
 test: ## Run tests
 	pytest -n auto -vx tests/
 	$(call target_success,$@)
