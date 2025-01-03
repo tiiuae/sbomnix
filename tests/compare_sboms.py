@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Python script that compares two sboms """
+"""Python script that compares two sboms"""
 
 import argparse
 import json

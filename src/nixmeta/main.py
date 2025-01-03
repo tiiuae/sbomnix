@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 # SPDX-License-Identifier: Apache-2.0
 
-""" Python script for summarizing nixpkgs meta-attributes """
+"""Python script for summarizing nixpkgs meta-attributes"""
 
 import argparse
 import pathlib

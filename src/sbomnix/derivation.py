@@ -7,7 +7,7 @@
 # pylint: disable=invalid-name, eval-used
 # pylint: disable=too-many-instance-attributes
 
-""" Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
+"""Nix derivation, originally from https://github.com/flyingcircusio/vulnix"""
 
 import bisect
 import json

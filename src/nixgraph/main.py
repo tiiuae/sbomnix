@@ -4,14 +4,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Python script to query and visualize nix package dependencies """
+"""Python script to query and visualize nix package dependencies"""
 
 import argparse
 import pathlib
 
-from common.utils import (check_positive, exit_unless_nix_artifact,
-                          get_py_pkg_version, set_log_verbosity,
-                          try_resolve_flakeref)
+from common.utils import (
+    check_positive,
+    exit_unless_nix_artifact,
+    get_py_pkg_version,
+    set_log_verbosity,
+    try_resolve_flakeref,
+)
 from nixgraph.graph import NixDependencies
 
 ###############################################################################

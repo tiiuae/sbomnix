@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Command-line tool to list outdated nix dependencies in priority order"""
+"""Command-line tool to list outdated nix dependencies in priority order"""
 
 import logging
 import os
@@ -15,10 +15,18 @@ from tempfile import NamedTemporaryFile
 from tabulate import tabulate
 
 import repology.repology_cli
-from common.utils import (LOG, LOG_SPAM, df_from_csv_file, df_log,
-                          df_to_csv_file, exec_cmd, exit_unless_nix_artifact,
-                          nix_to_repology_pkg_name, set_log_verbosity,
-                          try_resolve_flakeref)
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    df_from_csv_file,
+    df_log,
+    df_to_csv_file,
+    exec_cmd,
+    exit_unless_nix_artifact,
+    nix_to_repology_pkg_name,
+    set_log_verbosity,
+    try_resolve_flakeref,
+)
 from sbomnix.sbomdb import SbomDb
 
 ###############################################################################

@@ -7,7 +7,7 @@
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
 
-""" Python script to query and visualize nix package dependencies """
+"""Python script to query and visualize nix package dependencies"""
 
 import html
 import logging
@@ -19,8 +19,14 @@ from dataclasses import dataclass
 import graphviz as gv
 import pandas as pd
 
-from common.utils import (LOG, LOG_SPAM, df_regex_filter, df_to_csv_file,
-                          exec_cmd, regex_match)
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    df_regex_filter,
+    df_to_csv_file,
+    exec_cmd,
+    regex_match,
+)
 from sbomnix.nix import find_deriver
 
 ###############################################################################

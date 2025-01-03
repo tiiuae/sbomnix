@@ -6,7 +6,7 @@
 
 # pylint: disable=too-many-locals
 
-""" Command-line interface to query CVE info from repology.org """
+"""Command-line interface to query CVE info from repology.org"""
 
 import os
 import re
@@ -20,8 +20,14 @@ from bs4 import BeautifulSoup
 from tabulate import tabulate
 
 import repology.exceptions
-from common.utils import (LOG, LOG_SPAM, CachedLimiterSession, df_to_csv_file,
-                          parse_version, set_log_verbosity)
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    CachedLimiterSession,
+    df_to_csv_file,
+    parse_version,
+    set_log_verbosity,
+)
 
 ###############################################################################
 

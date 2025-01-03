@@ -4,7 +4,7 @@
 
 # pylint: disable=missing-function-docstring
 
-""" setup.py for setuptools """
+"""setup.py for setuptools"""
 
 import os.path
 

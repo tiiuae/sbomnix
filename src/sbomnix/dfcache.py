@@ -29,7 +29,6 @@ class LockedDfCache:
         self.dflock = FileLock(DFCACHE_LOCK)
 
     def __getattr__(self, name):
-
         def wrap(*a, **k):
             with self.dflock:
                 # We intentionally do not store the dfcache as object variable

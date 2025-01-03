@@ -10,7 +10,6 @@
 Utility functions
 """
 
-
 import json
 import re
 import time
@@ -18,9 +17,15 @@ import urllib.parse
 
 import pandas as pd
 
-from common.utils import (LOG, LOG_SPAM, CachedLimiterSession, df_log,
-                          nix_to_repology_pkg_name, parse_version,
-                          version_distance)
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    CachedLimiterSession,
+    df_log,
+    nix_to_repology_pkg_name,
+    parse_version,
+    version_distance,
+)
 from repology.exceptions import RepologyNoMatchingPackages
 from repology.repology_cli import Repology
 from repology.repology_cli import getargs as cli_getargs
