@@ -710,9 +710,10 @@ class JSONSchemaRetrieve:
 
 def validate_json(file_path, schema_path):
     """Validate json file matches schema"""
-    with open(file_path, encoding="utf-8") as json_file, open(
-        schema_path, encoding="utf-8"
-    ) as schema_file:
+    with (
+        open(file_path, encoding="utf-8") as json_file,
+        open(schema_path, encoding="utf-8") as schema_file,
+    ):
         json_obj = json.load(json_file)
         schema_obj = json.load(schema_file)
         reg = referencing.Registry(retrieve=JSONSchemaRetrieve())
