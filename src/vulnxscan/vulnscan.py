@@ -21,13 +21,16 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from common.utils import (LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file,
-                          exec_cmd)
+from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file, exec_cmd
 from vulnxscan.osv import OSV
-from vulnxscan.utils import (_is_patched, _reformat_scanner, _triage,
-                             _vuln_sortcol, _vuln_url)
-from vulnxscan.whitelist import (df_apply_whitelist, df_drop_whitelisted,
-                                 load_whitelist)
+from vulnxscan.utils import (
+    _is_patched,
+    _reformat_scanner,
+    _triage,
+    _vuln_sortcol,
+    _vuln_url,
+)
+from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist
 
 
 class VulnScan:

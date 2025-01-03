@@ -4,7 +4,7 @@
 
 # pylint: disable=abstract-method
 
-""" sbomnix utils """
+"""sbomnix utils"""
 
 import argparse
 import csv

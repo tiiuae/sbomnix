@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" Demonstrate querying OSV db for vulnerabilities based on cdx SBOM """
+"""Demonstrate querying OSV db for vulnerabilities based on cdx SBOM"""
 
 import argparse
 import json

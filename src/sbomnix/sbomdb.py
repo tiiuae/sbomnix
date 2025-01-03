@@ -7,7 +7,7 @@
 # pylint: disable=too-many-instance-attributes, too-many-arguments
 # pylint: disable=too-many-locals, too-many-statements
 
-""" Module for generating SBOMs in various formats """
+"""Module for generating SBOMs in various formats"""
 
 import argparse
 import json
@@ -23,8 +23,7 @@ from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 
 from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 from nixgraph.graph import NixDependencies
-from sbomnix.cdx import (_drv_to_cdx_component, _drv_to_cdx_dependency,
-                         _vuln_to_cdx_vuln)
+from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
 from sbomnix.meta import Meta
 from sbomnix.nix import Store, find_deriver
 from vulnxscan.vulnscan import VulnScan

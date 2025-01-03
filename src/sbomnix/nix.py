@@ -4,7 +4,7 @@
 
 # SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
-""" Nix store, originally from https://github.com/flyingcircusio/vulnix """
+"""Nix store, originally from https://github.com/flyingcircusio/vulnix"""
 
 import json
 import os

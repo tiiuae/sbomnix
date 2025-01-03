@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-""" CycloneDX utils """
+"""CycloneDX utils"""
 
 import re
 

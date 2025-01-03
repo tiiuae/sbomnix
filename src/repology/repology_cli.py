@@ -7,7 +7,7 @@
 # pylint: disable=too-few-public-methods, too-many-statements
 # pylint: disable=too-many-instance-attributes, too-many-locals
 
-""" Command-line interface to repology.org """
+"""Command-line interface to repology.org"""
 
 import json
 import os
@@ -22,9 +22,16 @@ from bs4 import BeautifulSoup
 from tabulate import tabulate
 
 import repology.exceptions
-from common.utils import (LOG, LOG_SPAM, CachedLimiterSession, df_regex_filter,
-                          df_to_csv_file, nix_to_repology_pkg_name,
-                          parse_version, set_log_verbosity)
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    CachedLimiterSession,
+    df_regex_filter,
+    df_to_csv_file,
+    nix_to_repology_pkg_name,
+    parse_version,
+    set_log_verbosity,
+)
 
 ###############################################################################
 

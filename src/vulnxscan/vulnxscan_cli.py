@@ -9,16 +9,19 @@ Scan nix artifact or CycloneDX SBOM for vulnerabilities with various
 open-source vulnerability scanners.
 """
 
-
 import argparse
 import logging
 import pathlib
 import sys
 from tempfile import NamedTemporaryFile
 
-from common.utils import (LOG, exit_unless_command_exists,
-                          exit_unless_nix_artifact, set_log_verbosity,
-                          try_resolve_flakeref)
+from common.utils import (
+    LOG,
+    exit_unless_command_exists,
+    exit_unless_nix_artifact,
+    set_log_verbosity,
+    try_resolve_flakeref,
+)
 from sbomnix.sbomdb import SbomDb
 from vulnxscan.utils import _is_json
 from vulnxscan.vulnscan import VulnScan
