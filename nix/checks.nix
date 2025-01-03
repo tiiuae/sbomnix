@@ -28,16 +28,6 @@
                 reuse lint
                 touch $out
               '';
-          pycodestyle =
-            pkgs.runCommandLocal "pycodestyle"
-              {
-                nativeBuildInputs = [ pkgs.python3.pkgs.pycodestyle ];
-              }
-              ''
-                cd ${self.outPath}
-                pycodestyle --max-line-length 90 $(find . -name "*.py")
-                touch $out
-              '';
           pylint =
             pkgs.runCommandLocal "pylint"
               {
