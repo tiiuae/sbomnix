@@ -5,18 +5,15 @@
 
 """Summarize nixpkgs meta-attributes"""
 
-import re
-import pathlib
 import json
+import pathlib
+import re
 from tempfile import NamedTemporaryFile
+
 import pandas as pd
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    df_from_csv_file,
-    df_to_csv_file,
-    exec_cmd,
-)
+
+from common.utils import (LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file,
+                          exec_cmd)
 
 ###############################################################################
 

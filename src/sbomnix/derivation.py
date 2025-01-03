@@ -9,12 +9,12 @@
 
 """ Nix derivation, originally from https://github.com/flyingcircusio/vulnix """
 
-import json
 import bisect
+import json
+
 from packageurl import PackageURL
 
 from common.utils import LOG, LOG_SPAM
-
 
 ###############################################################################
 

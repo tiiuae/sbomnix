@@ -12,20 +12,16 @@ open-source vulnerability scanners.
 
 import argparse
 import logging
-import sys
 import pathlib
+import sys
 from tempfile import NamedTemporaryFile
 
+from common.utils import (LOG, exit_unless_command_exists,
+                          exit_unless_nix_artifact, set_log_verbosity,
+                          try_resolve_flakeref)
 from sbomnix.sbomdb import SbomDb
 from vulnxscan.utils import _is_json
 from vulnxscan.vulnscan import VulnScan
-from common.utils import (
-    LOG,
-    set_log_verbosity,
-    exit_unless_nix_artifact,
-    try_resolve_flakeref,
-    exit_unless_command_exists,
-)
 
 ###############################################################################
 

@@ -7,12 +7,14 @@
 """ Demonstrate querying OSV db for vulnerabilities based on cdx SBOM """
 
 import argparse
-import os
-import sys
-import pathlib
 import json
-import requests
+import os
+import pathlib
+import sys
+
 import pandas as pd
+import requests
+
 from common.utils import LOG, LOG_SPAM, df_to_csv_file, set_log_verbosity
 
 ###############################################################################

@@ -7,12 +7,14 @@
 """ Python script that compares two sboms """
 
 import argparse
+import json
 import logging
 import os
-import sys
 import pathlib
-import json
+import sys
+
 import pandas as pd
+
 from common.utils import LOG, df_to_csv_file, set_log_verbosity
 
 ###############################################################################

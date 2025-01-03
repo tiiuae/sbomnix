@@ -9,27 +9,22 @@
 
 """ Command-line interface to repology.org """
 
+import json
 import os
 import pathlib
-import json
 import re
 import urllib.parse
-from argparse import ArgumentParser, ArgumentTypeError, SUPPRESS
-from bs4 import BeautifulSoup
+from argparse import SUPPRESS, ArgumentParser, ArgumentTypeError
+
 import numpy as np
 import pandas as pd
+from bs4 import BeautifulSoup
 from tabulate import tabulate
+
 import repology.exceptions
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    set_log_verbosity,
-    df_to_csv_file,
-    df_regex_filter,
-    nix_to_repology_pkg_name,
-    parse_version,
-    CachedLimiterSession,
-)
+from common.utils import (LOG, LOG_SPAM, CachedLimiterSession, df_regex_filter,
+                          df_to_csv_file, nix_to_repology_pkg_name,
+                          parse_version, set_log_verbosity)
 
 ###############################################################################
 

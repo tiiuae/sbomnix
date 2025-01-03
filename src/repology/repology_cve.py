@@ -9,23 +9,19 @@
 """ Command-line interface to query CVE info from repology.org """
 
 import os
-import sys
 import re
+import sys
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError
-from bs4 import BeautifulSoup
+
 import numpy as np
 import pandas as pd
+from bs4 import BeautifulSoup
 from tabulate import tabulate
+
 import repology.exceptions
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    set_log_verbosity,
-    df_to_csv_file,
-    parse_version,
-    CachedLimiterSession,
-)
+from common.utils import (LOG, LOG_SPAM, CachedLimiterSession, df_to_csv_file,
+                          parse_version, set_log_verbosity)
 
 ###############################################################################
 

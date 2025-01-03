@@ -8,23 +8,21 @@
 
 """Tests for sbomnix"""
 
-import os
-import subprocess
-import shutil
-from pathlib import Path
 import json
-import pandas as pd
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
 import jsonschema
+import pandas as pd
 import pytest
 import referencing
 import referencing.retrieval
 import requests
 
-from common.utils import (
-    df_from_csv_file,
-)
+from common.utils import df_from_csv_file
 from vulnxscan.whitelist import df_apply_whitelist, load_whitelist
-
 
 MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
