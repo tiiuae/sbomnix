@@ -6,18 +6,19 @@
 
 """Cache nixpkgs meta information"""
 
-import os
-import re
 import logging
+import os
 import pathlib
+import re
 import tempfile
 from getpass import getuser
 
 import pandas as pd
 from filelock import FileLock
-from sbomnix.dfcache import LockedDfCache
-from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
+
 from common.utils import LOG, df_from_csv_file, df_to_csv_file
+from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
+from sbomnix.dfcache import LockedDfCache
 
 ###############################################################################
 

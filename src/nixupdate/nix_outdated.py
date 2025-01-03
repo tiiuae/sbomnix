@@ -9,23 +9,17 @@
 import logging
 import os
 import pathlib
-from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
+from tempfile import NamedTemporaryFile
+
 from tabulate import tabulate
-from sbomnix.sbomdb import SbomDb
+
 import repology.repology_cli
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    set_log_verbosity,
-    exec_cmd,
-    df_from_csv_file,
-    df_log,
-    df_to_csv_file,
-    nix_to_repology_pkg_name,
-    exit_unless_nix_artifact,
-    try_resolve_flakeref,
-)
+from common.utils import (LOG, LOG_SPAM, df_from_csv_file, df_log,
+                          df_to_csv_file, exec_cmd, exit_unless_nix_artifact,
+                          nix_to_repology_pkg_name, set_log_verbosity,
+                          try_resolve_flakeref)
+from sbomnix.sbomdb import SbomDb
 
 ###############################################################################
 

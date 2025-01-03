@@ -9,26 +9,19 @@
 
 """ Python script to query and visualize nix package dependencies """
 
-import sys
+import html
+import logging
 import os
 import re
-import logging
-import html
+import sys
 from dataclasses import dataclass
-import pandas as pd
+
 import graphviz as gv
+import pandas as pd
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    exec_cmd,
-    df_to_csv_file,
-    regex_match,
-    df_regex_filter,
-)
-
+from common.utils import (LOG, LOG_SPAM, df_regex_filter, df_to_csv_file,
+                          exec_cmd, regex_match)
 from sbomnix.nix import find_deriver
-
 
 ###############################################################################
 

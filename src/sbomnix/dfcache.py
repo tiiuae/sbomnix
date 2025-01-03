@@ -10,8 +10,8 @@ import pathlib
 import tempfile
 from getpass import getuser
 
-from filelock import FileLock
 from dfdiskcache import DataFrameDiskCache
+from filelock import FileLock
 
 ###############################################################################
 

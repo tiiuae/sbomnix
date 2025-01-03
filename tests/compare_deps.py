@@ -9,20 +9,16 @@
 """ Python script that compares dependencies between sbomnix and nixgraph """
 
 import argparse
+import json
 import logging
 import os
-import sys
 import pathlib
-import json
+import sys
+
 import pandas as pd
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    set_log_verbosity,
-    df_to_csv_file,
-    df_from_csv_file,
-    regex_match,
-)
+
+from common.utils import (LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file,
+                          regex_match, set_log_verbosity)
 
 ###############################################################################
 

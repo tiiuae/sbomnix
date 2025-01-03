@@ -7,9 +7,9 @@
 
 import argparse
 import pathlib
-from nixmeta.scanner import NixMetaScanner
-from common.utils import set_log_verbosity, exit_unless_command_exists
 
+from common.utils import exit_unless_command_exists, set_log_verbosity
+from nixmeta.scanner import NixMetaScanner
 
 ################################################################################
 

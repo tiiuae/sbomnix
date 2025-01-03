@@ -6,13 +6,14 @@
 
 """ Nix store, originally from https://github.com/flyingcircusio/vulnix """
 
-import os
 import json
+import os
+
 import pandas as pd
 
 from common.utils import LOG, LOG_SPAM, exec_cmd
-from sbomnix.derivation import load
 from sbomnix.cpe import CPE
+from sbomnix.derivation import load
 
 ###############################################################################
 

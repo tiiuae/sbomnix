@@ -9,6 +9,7 @@
 import re
 
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
+
 from common.utils import LOG, LOG_SPAM
 from vulnxscan.utils import _vuln_source, _vuln_url
 

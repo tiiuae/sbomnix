@@ -9,21 +9,24 @@
 
 """ Module for generating SBOMs in various formats """
 
-from tempfile import NamedTemporaryFile
-import uuid
-import logging
-import json
-import re
 import argparse
+import json
+import logging
+import re
+import uuid
 from datetime import datetime, timezone
-import pandas as pd
+from tempfile import NamedTemporaryFile
+
 import numpy as np
+import pandas as pd
 from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
-from nixgraph.graph import NixDependencies
-from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
-from sbomnix.nix import Store, find_deriver
-from sbomnix.meta import Meta
+
 from common.utils import LOG, df_to_csv_file, get_py_pkg_version
+from nixgraph.graph import NixDependencies
+from sbomnix.cdx import (_drv_to_cdx_component, _drv_to_cdx_dependency,
+                         _vuln_to_cdx_vuln)
+from sbomnix.meta import Meta
+from sbomnix.nix import Store, find_deriver
 from vulnxscan.vulnscan import VulnScan
 
 ###############################################################################

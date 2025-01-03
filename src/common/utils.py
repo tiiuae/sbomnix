@@ -6,25 +6,24 @@
 
 """ sbomnix utils """
 
-import os
 import argparse
-import re
-import sys
 import csv
-import logging
-import subprocess
 import importlib.metadata
+import logging
+import os
+import re
+import subprocess
+import sys
 import urllib.error
 from shutil import which
 
 import packaging.version
-from tabulate import tabulate
-from colorlog import ColoredFormatter, default_log_colors
 import pandas as pd
-
+from colorlog import ColoredFormatter, default_log_colors
 from requests import Session
 from requests_cache import CacheMixin
 from requests_ratelimiter import LimiterMixin
+from tabulate import tabulate
 
 ###############################################################################
 
