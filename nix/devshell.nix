@@ -8,29 +8,13 @@
     ...
   }: {
     devShells.default = pkgs.mkShell rec {
-      name = "sbomnix-dev-shell";
-
-      packages =
-        (with pkgs; [
-          black
-          coreutils
-          csvkit
-          curl
-          gnugrep
-          gnused
-          graphviz
-          grype
-          gzip
-          nix
-          nix-visualize
-          pylint
-          reuse
-          vulnix
-        ])
-        ++ (with self'.packages; [
-          python # that python with all sbomnix [dev-]dependencies
-        ]);
-
+      name = "sbomnix-devshell";
+      packages = with self'.packages; [
+        pkgs.python3.pkgs.pylint # for running pylint manually in devshell
+        pkgs.black # for running black manually in devshell
+        sbomnix.propagatedBuildInputs
+        sbomnix.nativeBuildInputs
+      ];
       # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
       # able to find the python packages in the repo) becomes possible.
       # `pytest.ini` already sets this for invoking `pytest`
