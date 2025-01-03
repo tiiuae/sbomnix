@@ -12,6 +12,7 @@
       packages = with self'.packages; [
         pkgs.python3.pkgs.pylint # for running pylint manually in devshell
         pkgs.black # for running black manually in devshell
+        pkgs.isort # for running isort manually in devshell
         sbomnix.propagatedBuildInputs
         sbomnix.nativeBuildInputs
       ];
