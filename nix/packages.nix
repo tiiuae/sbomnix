@@ -8,6 +8,14 @@
     ...
   }: let
     pp = pkgs.python3Packages;
+    prefix_path = with pkgs; [
+      git
+      graphviz
+      grype
+      nix
+      nix-visualize
+      vulnix
+    ];
   in {
     packages = rec {
       default = sbomnix;
@@ -18,6 +26,13 @@
         format = "setuptools";
 
         src = lib.cleanSource ../.;
+
+        nativeCheckInputs = with pp;
+          [
+            jsonschema
+            pytest
+          ]
+          ++ prefix_path;
 
         propagatedBuildInputs = with pp; [
           beautifulsoup4
@@ -40,41 +55,9 @@
         pythonImportsCheck = ["sbomnix"];
 
         makeWrapperArgs = [
-          "--prefix PATH : ${lib.makeBinPath (with pkgs; [
-            git
-            nix
-            graphviz
-            nix-visualize
-            vulnix
-            grype
-          ])}"
+          "--prefix PATH : ${lib.makeBinPath prefix_path}"
         ];
       };
-      # a python with all python packages imported by sbomnix itself
-      python = pkgs.python3.withPackages (
-        ps: (with ps; [
-          beautifulsoup4
-          colorlog
-          dfdiskcache
-          filelock
-          graphviz
-          numpy
-          packageurl-python
-          packaging
-          pandas
-          reuse
-          requests
-          requests-cache
-          requests-ratelimiter
-          setuptools
-          tabulate
-          venvShellHook
-
-          # dev dependencies
-          jsonschema
-          pytest
-        ])
-      );
     };
   };
 }
