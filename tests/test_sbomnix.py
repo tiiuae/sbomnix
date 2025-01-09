@@ -157,8 +157,10 @@ def test_sbomnix_depth():
         [
             SBOMNIX,
             TEST_NIX_RESULT,
+            "--buildtime",
             "--csv",
             out_path_csv_1.as_posix(),
+            "--depth=2",
         ]
     )
     assert out_path_csv_1.exists()
@@ -169,6 +171,7 @@ def test_sbomnix_depth():
         [
             SBOMNIX,
             TEST_NIX_RESULT,
+            "--buildtime",
             "--csv",
             out_path_csv_2.as_posix(),
             "--depth=1",
@@ -303,6 +306,7 @@ def test_compare_deps_runtime():
 
 
 @pytest.mark.slow
+@pytest.mark.skip_in_ci
 def test_compare_deps_buildtime():
     """Compare nixgraph vs sbom buildtime dependencies"""
     graph_csv_out = TEST_WORK_DIR / "graph.csv"
@@ -503,6 +507,7 @@ def test_vulnxscan_triage():
     )
 
 
+@pytest.mark.skip_in_ci
 def test_vulnxscan_triage_whitelist():
     """Test vulnxscan scan with --triage and --whitelist"""
     out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"

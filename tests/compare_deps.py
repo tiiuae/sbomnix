@@ -232,13 +232,13 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         passed = False
         LOG.fatal("Dependencies only in sbom:")
         for dep in sorted(deps_only_in_sbom):
-            print(f"  {dep}")
+            LOG.fatal("  %s", dep)
 
     if deps_only_in_graph:
         passed = False
         LOG.fatal("Dependencies only in graph:")
         for dep in sorted(deps_only_in_graph):
-            print(f"  {dep}")
+            LOG.fatal("  %s", dep)
 
     return passed
 
