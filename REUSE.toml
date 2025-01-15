@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2022-2025 Technology Innovation Institute (TII)
+# SPDX-License-Identifier: Apache-2.0
+version = 1
+SPDX-PackageName = "sbomnix"
+SPDX-PackageSupplier = "Technology Innovation Institute <https://tii.ae>"
+SPDX-PackageDownloadLocation = "https://github.com/tiiuae/sbomnix"
+
+[[annotations]]
+SPDX-License-Identifier = "CC-BY-3.0"
+SPDX-FileCopyrightText = "2022-2025 Technology Innovation Institute (TII)"
+precedence = "closest"
+path = [
+  "doc/img/*",
+]
+
+[[annotations]]
+SPDX-License-Identifier = "Apache-2.0"
+SPDX-FileCopyrightText = "2022-2025 Technology Innovation Institute (TII)"
+precedence = "closest"
+path = [
+  "flake.lock",
+  "VERSION",
+  "tests/resources/**",
+]
