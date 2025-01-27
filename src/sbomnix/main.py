@@ -59,6 +59,8 @@ def getargs():
     group.add_argument("--cdx", nargs="?", help=helps, default="sbom.cdx.json")
     helps = "Path to spdx json output file (default: ./sbom.spdx.json)"
     group.add_argument("--spdx", nargs="?", help=helps, default="sbom.spdx.json")
+    helps = "Run nix command with --impure"
+    parser.add_argument("--impure", help=helps, action="store_true")
 
     return parser.parse_args()
 
@@ -72,7 +74,7 @@ def main():
     set_log_verbosity(args.verbose)
     runtime = args.buildtime is False
     flakeref = None
-    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime, impure=args.impure)
     if target_path:
         flakeref = args.NIXREF
     else:
