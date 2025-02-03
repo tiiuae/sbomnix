@@ -74,7 +74,9 @@ def main():
     set_log_verbosity(args.verbose)
     runtime = args.buildtime is False
     flakeref = None
-    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime, impure=args.impure)
+    target_path = try_resolve_flakeref(
+        args.NIXREF, force_realise=runtime, impure=args.impure
+    )
     if target_path:
         flakeref = args.NIXREF
     else:
