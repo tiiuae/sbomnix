@@ -172,7 +172,7 @@ def exit_unless_nix_artifact(path, force_realise=False):
         sys.exit(1)
 
 
-def try_resolve_flakeref(flakeref, force_realise=False):
+def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     """
     Resolve flakeref to out-path, force-realising the output if `force_realise`
     is True. Returns resolved path if flakeref can be resolved to out-path,
@@ -181,7 +181,8 @@ def try_resolve_flakeref(flakeref, force_realise=False):
     LOG.info("Evaluating '%s'", flakeref)
     exp = "--extra-experimental-features flakes "
     exp += "--extra-experimental-features nix-command"
-    cmd = f"nix eval --raw {flakeref} {exp}"
+    extra_args = "--impure" if impure else ""
+    cmd = f"nix eval --raw {flakeref} {exp} {extra_args}"
     ret = exec_cmd(cmd.split(), raise_on_error=False)
     if not ret:
         LOG.debug("not a flakeref: '%s'", flakeref)
@@ -191,7 +192,7 @@ def try_resolve_flakeref(flakeref, force_realise=False):
     if not force_realise:
         return nixpath
     LOG.info("Try force-realising flakeref '%s'", flakeref)
-    cmd = f"nix build --no-link {flakeref} {exp}"
+    cmd = f"nix build --no-link {flakeref} {exp} {extra_args}"
     ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
     if not ret:
         LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
