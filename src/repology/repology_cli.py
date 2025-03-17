@@ -232,7 +232,7 @@ class Repology:
         repo_skipped_cols = ["NO_VERSION", "IGNORED", "NOT_FOUND"]
         df_skipped = df[df.status.isin(repo_skipped_cols)]
         repo_skipped_n = df_skipped.shape[0]
-        repo_skipped_pct = f"{repo_skipped_n/repo_rows_n:.0%}"
+        repo_skipped_pct = f"{repo_skipped_n / repo_rows_n:.0%}"
         df_ignored = df[df.status.isin(["IGNORED"])]
         ignored_n = df_ignored.shape[0]
         df_no_version = df[df.status.isin(["NO_VERSION"])]
@@ -241,7 +241,7 @@ class Repology:
         not_found_n = df_not_found.shape[0]
         df_repology = df[~df.status.isin(repo_skipped_cols)]
         repology_rows_n = df_repology.shape[0]
-        sbom_in_repo = f"{repology_rows_n/repo_rows_n:.0%}"
+        sbom_in_repo = f"{repology_rows_n / repo_rows_n:.0%}"
 
         # We don't use self.df_sbom in calculating these numbers.
         # The reason is that repology might include information from package
@@ -288,16 +288,16 @@ class Repology:
             return
         df_newest = df[df.status.isin(["newest"])]
         newest_rows_n = df_newest.shape[0]
-        newest_pct = f"{newest_rows_n/base_rows_n:.0%}"
+        newest_pct = f"{newest_rows_n / base_rows_n:.0%}"
         df_outdated = df[df.status.isin(["outdated"])]
         outdated_rows_n = df_outdated.shape[0]
-        outdated_pct = f"{outdated_rows_n/base_rows_n:.0%}"
+        outdated_pct = f"{outdated_rows_n / base_rows_n:.0%}"
         df_dev_uniq = df[df.status.isin(["devel", "unique"])]
         dev_uniq_rows_n = df_dev_uniq.shape[0]
-        dev_uniq_pct = f"{dev_uniq_rows_n/base_rows_n:.0%}"
+        dev_uniq_pct = f"{dev_uniq_rows_n / base_rows_n:.0%}"
         df_vuln = df[df.potentially_vulnerable.isin(["1"])]
         vuln_rows_n = df_vuln.shape[0]
-        vuln_pct = f"{vuln_rows_n/base_rows_n:.0%}"
+        vuln_pct = f"{vuln_rows_n / base_rows_n:.0%}"
         base_rows = (
             f"Unique compared packages: {base_rows_n} ({1:.0%})"
             f"\t(status in: {base_cols})"

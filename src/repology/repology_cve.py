@@ -41,8 +41,7 @@ def _pkg_str(str_obj):
 def getargs():
     """Parse command line arguments"""
     desc = (
-        "Query repology.org for CVEs that impact package PKG_NAME version "
-        "PKG_VERSION."
+        "Query repology.org for CVEs that impact package PKG_NAME version PKG_VERSION."
     )
     epil = f"Example: ./{os.path.basename(__file__)} openssl 3.1.0"
     parser = ArgumentParser(description=desc, epilog=epil)
