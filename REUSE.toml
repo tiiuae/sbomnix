@@ -18,6 +18,7 @@ SPDX-License-Identifier = "Apache-2.0"
 SPDX-FileCopyrightText = "2022-2025 Technology Innovation Institute (TII)"
 precedence = "closest"
 path = [
+  "**.yml",
   "flake.lock",
   "VERSION",
   "tests/resources/**",
