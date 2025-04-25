@@ -30,9 +30,15 @@ class NixMetaScanner:
         """
         nixpkgs_path = nixref_to_nixpkgs_path(nixref)
         if not nixpkgs_path:
-            # try format which is understood by nix-env: https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
-            # { ... }: (builtins.getFlake "ownpkgs-special-unstable").outputs.legacyPackages.${builtins.currentSystem}
-            # NIX_PATH="nixpkgs=$HOME/.nix-defexpr/flakgs/default.nix"
+            # try format which is understood by nix-env:
+            #   https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
+            # ownpkgs-nix-env.nix:
+            #   { ... }:
+            #     (builtins.getFlake "/tmp/ownpkgs-special-unstable").
+            #     outputs.legacyPackages.${builtins.currentSystem}
+            # and execute
+            #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
+            #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output
             nixpkgs_path = pathlib.Path(nixref)
             if not nixpkgs_path.exists():
                 return
