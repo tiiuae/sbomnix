@@ -9,7 +9,22 @@
       ...
     }:
     let
-      pp = pkgs.python3Packages;
+      python = pkgs.python3.override {
+        self = pkgs.python3;
+        packageOverrides = _final: prev: {
+          pyrate-limiter = prev.pyrate-limiter.overridePythonAttrs (oldAttrs: rec {
+            # https://github.com/JWCook/requests-ratelimiter/issues/78
+            version = "2.10.0";
+            src = pkgs.fetchFromGitHub {
+              inherit (oldAttrs.src) owner repo;
+              tag = "v${version}";
+              hash = "sha256-CPusPeyTS+QyWiMHsU0ii9ZxPuizsqv0wQy3uicrDw0=";
+            };
+            doCheck = false;
+          });
+        };
+      };
+      pp = python.pkgs;
       prefix_path = with pkgs; [
         git
         graphviz
