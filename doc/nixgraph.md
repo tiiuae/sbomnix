@@ -64,12 +64,12 @@ The default output is a png image `graph.png`:
 $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2
 ```
 
-By default, when `--depth` argument is not specified, `nixgraph` shows the direct dependencies. Increasing the `--depth` makes `nixgraph` walk the dependency chain deeper. For instance, with `--depth=2`, the output graph for `wget` becomes: 
+By default, when `--depth` argument is not specified, `nixgraph` shows the direct dependencies. Increasing the `--depth` makes `nixgraph` walk the dependency chain deeper. For instance, with `--depth=2`, the output graph for `wget` becomes:
 
 <img src="img/wget_r2.svg" width="900">
 <br /><br />
 
-The value of `--depth` indicates the maximum depth between any two nodes in the resulting graph. For instance, in the above example, `libunistring-1.0` gets included with `--depth=2` because the shortest path between `wget` and `libunistring` is two hops deep (`wget --> libidn2 --> libunistring`). 
+The value of `--depth` indicates the maximum depth between any two nodes in the resulting graph. For instance, in the above example, `libunistring-1.0` gets included with `--depth=2` because the shortest path between `wget` and `libunistring` is two hops deep (`wget --> libidn2 --> libunistring`).
 
 #### Example: colorize
 ```bash
@@ -92,7 +92,7 @@ $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --i
 <img src="img/wget_r2_inv.svg">
 <br /><br />
 
-`--inverse` is especially useful when working with larger graphs. 
+`--inverse` is especially useful when working with larger graphs.
 
 As an example, consider the following graph for `git`:
 (`nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)

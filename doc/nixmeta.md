@@ -29,7 +29,7 @@ Output summarizes the meta-attributes of all the target nixpkgs packages enumera
 For each package, the output includes the following details:
 
 ```bash
-$ head -n2 nixmeta.csv | csvlook 
+$ head -n2 nixmeta.csv | csvlook
 | name       | pname | version | meta_homepage        | meta_unfree | meta_license_short               | meta_license_spdxid                    | meta_maintainers_email |
 | ---------- | ----- | ------- | -------------------- | ----------- | -------------------------------- | -------------------------------------- | ---------------------- |
 | 0ad-0.0.26 | 0ad   | 0.0.26  | https://play0ad.com/ |       False | gpl2;lgpl21;mit;cc-by-sa-30;zlib | GPL-2.0;LGPL-2.1;MIT;CC-BY-SA-3.0;Zlib | nixpkgs@cvpetegem.be   |

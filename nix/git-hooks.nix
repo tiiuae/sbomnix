@@ -23,6 +23,13 @@
             "^tests/resources/.*"
           ];
         };
+        trim-trailing-whitespace = {
+          enable = true;
+          excludes = [
+            "^LICENSES/.*"
+            "^tests/resources/.*"
+          ];
+        };
         reuse.enable = true;
       };
     };
