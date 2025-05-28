@@ -101,12 +101,12 @@ def _run_repology_cli(sbompath):
     )
 
 
-def _run_nix_visualize(targt_path):
+def _run_nix_visualize(target_path):
     LOG.info("Running nix-visualize")
     prefix = "nix-visualize_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        cmd = f"nix-visualize --output={f.name} {targt_path}"
+        cmd = f"nix-visualize --output={f.name} {target_path}"
         exec_cmd(cmd.split())
         return pathlib.Path(f.name)
 

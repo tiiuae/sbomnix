@@ -77,7 +77,7 @@ def df_apply_whitelist(df_whitelist, df_vulns):
         LOG.log(LOG_SPAM, "whitelist regex: %s", regex)
         df_matches = df_vulns["vuln_id"].str.fullmatch(regex)
         if check_pkg_name and whitelist_entry.package:
-            LOG.log(LOG_SPAM, "filtering by pacakge name: %s", whitelist_entry.package)
+            LOG.log(LOG_SPAM, "filtering by package name: %s", whitelist_entry.package)
             df_matches = df_matches & (df_vulns["package"] == whitelist_entry.package)
         df_vulns.loc[df_matches, "whitelist"] = True
         if check_whitelist:

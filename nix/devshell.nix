@@ -6,6 +6,7 @@
     {
       pkgs,
       self',
+      config,
       ...
     }:
     {
@@ -24,6 +25,8 @@
         # (cascading down to the processes it spawns), but this is for the developer
         # invoking entrypoints from inside the devshell.
         shellHook = ''
+          ${config.pre-commit.installationScript}
+          echo 1>&2 "Welcome to the development shell!"
           export PYTHONPATH="$PYTHONPATH:$(pwd)/src"
           # https://github.com/NixOS/nix/issues/1009:
           export TMPDIR="/tmp"

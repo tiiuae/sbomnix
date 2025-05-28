@@ -19,6 +19,7 @@ SPDX-FileCopyrightText = "2022-2025 Technology Innovation Institute (TII)"
 precedence = "closest"
 path = [
   "**.yml",
+  "**.toml",
   "flake.lock",
   "VERSION",
   "tests/resources/**",

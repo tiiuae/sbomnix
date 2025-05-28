@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2025 TII (SSRC) and the Ghaf contributors
+# SPDX-License-Identifier: Apache-2.0
+
+[general]
+# Ignore rules, reference them by id or name (comma-separated)
+# https://jorisroovers.com/gitlint/latest/rules/builtin_rules/
+ignore=body-is-missing
+
+# Enable specific community contributed rules
+# https://jorisroovers.com/gitlint/latest/rules/contrib_rules/#available-contrib-rules
+contrib=contrib-body-requires-signed-off-by

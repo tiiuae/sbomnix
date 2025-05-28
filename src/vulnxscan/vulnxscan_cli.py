@@ -61,7 +61,7 @@ def getargs():
         "If this option is specified, vulnix scan will not run, since vulnix "
         "is nix-only and requires components' nix store paths. "
         "Also, if this option is specified, option '--buildtime' will be "
-        "ignored since target pacakges will be read from the given SBOM."
+        "ignored since target packages will be read from the given SBOM."
     )
     parser.add_argument("--sbom", help=helps, action="store_true")
     helps = (

@@ -17,6 +17,14 @@
       url = "github:nix-community/flake-compat";
       flake = false;
     };
+    # pre-commit hooks
+    git-hooks-nix = {
+      url = "github:cachix/git-hooks.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-compat.follows = "flake-compat";
+      };
+    };
   };
 
   outputs =
