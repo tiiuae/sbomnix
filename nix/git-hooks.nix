@@ -23,6 +23,7 @@
             "^tests/resources/.*"
           ];
         };
+        reuse.enable = true;
       };
     };
   };
