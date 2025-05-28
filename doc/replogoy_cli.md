@@ -160,7 +160,7 @@ INFO     Repology package info, packages:9
 
 For more details, see: https://repology.org/projects/
 
-INFO     
+INFO
 	Repology package statistics:
 	 (see the status descriptions in: https://repology.org/docs/about)
 	   Unique compared packages: 7 (100%)	(status in: ['newest', 'devel', 'unique', 'outdated'])
@@ -169,7 +169,7 @@ INFO
 	    ==> devel or unique: 0 (0%)
 	    ==> potentially vulnerable: 0 (0%)
 
-INFO     
+INFO
 	Repology SBOM package statistics:
 	  Unique packages: 10 (100%)
 	   ==> sbom packages in repology: 9 (90%)

@@ -45,11 +45,11 @@ $ nix eval -f '<nixpkgs>' 'git.drvPath'
 
 ## Supported Scanners
 ### Nix and OSV Vulnerability Database
-[OSV](https://osv.dev/) is a vulnerability database for open-source projects [initiated by Google](https://security.googleblog.com/2021/02/launching-osv-better-vulnerability.html). 
+[OSV](https://osv.dev/) is a vulnerability database for open-source projects [initiated by Google](https://security.googleblog.com/2021/02/launching-osv-better-vulnerability.html).
 
 [OSV database](https://osv.dev/list?ecosystem=) currently [does not support Nix ecosystem](https://ossf.github.io/osv-schema/#affectedpackage-field), so queries that specify Nix as ecosystem would not return any matches. For this reason `vulnxscan` currently does not use Google's official [OSV-Scanner](https://security.googleblog.com/2022/12/announcing-osv-scanner-vulnerability.html) front-end, but implements it's own OSV client demo in [osv.py](../src/vulnxscan/osv.py).
 
-`osv.py` sends queries to [OSV API](https://osv.dev/docs/) without specifying the ecosystem, only the target package name and version. At the time of writing, such queries to OSV API return vulnerabilities that match the given package and version across all ecosystems. As a result, the OSV vulnerabilities for Nix ecosystem will include false positives. 
+`osv.py` sends queries to [OSV API](https://osv.dev/docs/) without specifying the ecosystem, only the target package name and version. At the time of writing, such queries to OSV API return vulnerabilities that match the given package and version across all ecosystems. As a result, the OSV vulnerabilities for Nix ecosystem will include false positives.
 
 Also, it is worth mentioning that OSV queries without ecosystem are undocumented in the [API specification](https://osv.dev/docs/#tag/api/operation/OSV_QueryAffected) currently.
 
@@ -120,7 +120,7 @@ This patch auto-detection works in the similar way as the [patch auto-detection 
 `vulnxscan` supports whitelisting vulnerabilities to exclude false positives, unfixable issues, or vulnerabilities known to be addressed. Whitelist is a csv file that contains rules for the vulnerabilities to be excluded from the vulnxscan console report. Consider the following example whitelist:
 
 ```
-$ csvlook whitelist.csv 
+$ csvlook whitelist.csv
 
 | vuln_id        | package   | comment                                                                 |
 | -------------- | --------- | ----------------------------------------------------------------------- |
@@ -137,14 +137,14 @@ To be able to verify which vulnerabilities are whitelisted, `vulnxscan` csv outp
 
 ```bash
 # Given the whitelist.csv contents:
-$ cat whitelist.csv 
+$ cat whitelist.csv
 "vuln_id","package","comment"
 "MAL-2022-4301",,"Incorrect package: Issue refers npm libidn2, not libidn2."
 "CVE-2016-2781","coreutils","NVD data issue: CPE entry does not correctly state the version numbers."
 "CVE-20.* ","git","Incorrect package: Impacts Jenkins git plugin, not git."
 
 # Apply the whitelist to git vulnxscan output
-$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv 
+$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv
 
 INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
 INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
@@ -172,7 +172,7 @@ INFO     Wrote: vulns.csv
 
 # In addition to the console report, vulnxscan writes a detailed report in a csv file,
 # by default 'vulns.csv', which includes the full details also from  the whitelisted vulnerabilities:
-$ csvlook vulns.csv 
+$ csvlook vulns.csv
 
 | vuln_id          | url                                               | package   | version | severity | grype |   osv | vulnix | sum | sortcol         | whitelist | whitelist_comment                                                       |
 | ---------------- | ------------------------------------------------- | --------- | ------- | -------- | ----- | ----- | ------ | --- | --------------- | --------- | ----------------------------------------------------------------------- |
@@ -236,7 +236,7 @@ By default, `vulnxscan` scans the given target for vulnerabilities that impact i
 ```bash
 $ vulnxscan ./result --buildtime
 
-# ... output not included in this snippet ... 
+# ... output not included in this snippet ...
 ```
 
 ### Using Whitelist to Record Manual Analysis Results
@@ -245,7 +245,7 @@ $ vulnxscan ./result --buildtime
 As an example, consider the following manual analysis record (i.e. 'whitelist'):
 
 ```
-csvlook manual_analysis.csv 
+csvlook manual_analysis.csv
 
 | vuln_id        | whitelist | package   | comment                                                            |
 | -------------- | --------- | --------- | ------------------------------------------------------------------ |
@@ -296,7 +296,7 @@ INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9
 INFO     CVE-2023-2617 for 'opencv' is patched with: ['/nix/store/vw29nr5nrfs10vv5p3m7rpkqscwrh4sp-CVE-2023-2617.patch']
 ...
 
-Potential vulnerabilities impacting version_local: 
+Potential vulnerabilities impacting version_local:
 
 | vuln_id             | package    | severity | version_local | version_nixpkgs | version_upstream | classify                             |
 |---------------------+------------+----------+---------------+-----------------+------------------+--------------------------------------|
@@ -340,7 +340,7 @@ $ vulnxscan /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --b
 INFO     Generating SBOM for target '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
 ...
-Potential vulnerabilities impacting version_local: 
+Potential vulnerabilities impacting version_local:
 
 
 | vuln_id        | package    | severity   | version_local | version_nixpkgs | version_upstream | classify                      | nixpkgs_pr                                    |
