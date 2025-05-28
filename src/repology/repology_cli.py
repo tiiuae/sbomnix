@@ -401,7 +401,7 @@ class Repology:
         if rows > 200:
             LOG.warning(
                 "Unexpected response: raising this warning to notify the "
-                "posibility the repology API has changed and might no longer "
+                "possibility the repology API has changed and might no longer "
                 "match what this client expects"
             )
         return next_query_project
