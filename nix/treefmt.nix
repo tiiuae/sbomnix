@@ -26,6 +26,7 @@
           ruff-check.enable = true; # lints python https://github.com/astral-sh/ruff
           ruff-format.enable = true; # format python https://github.com/astral-sh/ruff
           statix.enable = true; # prevents use of nix anti-patterns https://github.com/nerdypepper/statix
+          actionlint.enable = true; # lints github actions
         };
       };
 
