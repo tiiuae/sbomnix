@@ -32,7 +32,7 @@ jobs:
       - name: Build release asset
         run: nix develop --command make release-asset
       - name: Upload release asset
-        uses: svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd # v2
+        uses: svenstaro/upload-release-action@ebd922b779f285dafcac6410a0710daee9c12b82 # v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/sbom*
