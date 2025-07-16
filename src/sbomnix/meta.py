@@ -6,26 +6,19 @@
 
 """Cache nixpkgs meta information"""
 
-import logging
 import os
 import pathlib
 import re
 import tempfile
 from getpass import getuser
 
-import pandas as pd
 from filelock import FileLock
 
-from common.utils import LOG, df_from_csv_file, df_to_csv_file
+from common.utils import LOG
 from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
 from sbomnix.dfcache import LockedDfCache
 
 ###############################################################################
-
-_NIXMETA_CSV_URL = "https://github.com/henrirosten/nixmeta/raw/main/data/nixmeta.csv"
-# Update local cached version of _NIXMETA_CSV_URL once a day or when local cache
-# is cleaned:
-_NIXMETA_CSV_URL_TTL = 60 * 60 * 24
 
 # Update locally generated nixpkgs meta-info every 30 days or when local cache
 # is cleaned.
@@ -43,26 +36,6 @@ class Meta:
     def __init__(self):
         self.lock = FileLock(_FLOCK)
         self.cache = LockedDfCache()
-        # df_nixmeta includes the meta-info from _NIXMETA_CSV_URL
-        self.df_nixmeta = self.cache.get(_NIXMETA_CSV_URL)
-        if self.df_nixmeta is not None and not self.df_nixmeta.empty:
-            LOG.debug("read nixmeta from cache")
-        else:
-            LOG.debug("nixmeta cache miss, downloading: %s", _NIXMETA_CSV_URL)
-            self.df_nixmeta = df_from_csv_file(_NIXMETA_CSV_URL, exit_on_error=False)
-            if self.df_nixmeta is None or self.df_nixmeta.empty:
-                LOG.warning(
-                    "Failed downloading nixmeta: meta information might not be accurate"
-                )
-            else:
-                # Nix meta dictionary stored at _NIXMETA_CSV_URL is
-                # regularly updated upstream, we want the local cache
-                # to be updated roughly on same schedule (once a day)
-                self.cache.set(
-                    key=_NIXMETA_CSV_URL,
-                    value=self.df_nixmeta,
-                    ttl=_NIXMETA_CSV_URL_TTL,
-                )
 
     def get_nixpkgs_meta(self, nixref=None):
         """
@@ -88,18 +61,7 @@ class Meta:
         if nixpkgs_path:
             LOG.debug("Scanning meta-info using nixpkgs path: %s", nixpkgs_path)
             df = self._scan(nixpkgs_path)
-        # Supplement the nix meta info from self.df_nixmeta with the
-        # meta information extracted either from nixref or NIX_PATH
-        df_concat = pd.concat([df, self.df_nixmeta]).astype(str)
-        df_concat = df_concat.drop_duplicates().reset_index(drop=True)
-        if LOG.level <= logging.DEBUG:
-            if df is not None:
-                df_to_csv_file(df, "df_nixref.csv")
-            if self.df_nixmeta is not None:
-                df_to_csv_file(self.df_nixmeta, "df_nixmeta.csv")
-            if df_concat is not None:
-                df_to_csv_file(df_concat, "df_concat.csv")
-        return df_concat
+        return df
 
     def _scan(self, nixpkgs_path):
         # In case sbomnix is run concurrently, we want to make sure there's
