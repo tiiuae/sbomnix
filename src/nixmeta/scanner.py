@@ -58,8 +58,18 @@ class NixMetaScanner:
         prefix = "nixmeta_"
         suffix = ".json"
         with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
-            cmd = f"nix-env -qa --meta --json -f {nixpkgs_path.as_posix()}"
-            exec_cmd(cmd.split(), stdout=f)
+            cmd = [
+                "nix-env",
+                "-qa",
+                "--meta",
+                "--json",
+                "-f",
+                f"{nixpkgs_path.as_posix()}",
+                "--arg",
+                "config",
+                "{allowAliases=false;}",
+            ]
+            exec_cmd(cmd, stdout=f)
             LOG.debug("Generated meta.json: %s", f.name)
             self.df_meta = _parse_json_metadata(f.name)
             self._drop_duplicates()
