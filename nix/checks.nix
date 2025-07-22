@@ -14,26 +14,25 @@
       ...
     }:
     {
-      checks =
-        {
-          pylint =
-            pkgs.runCommandLocal "pylint"
-              {
-                nativeBuildInputs = [ self'.devShells.default.nativeBuildInputs ];
-              }
-              ''
-                cd ${self.outPath}
-                export HOME=/tmp
-                pylint \
-                  $(find . -name "*.py") \
-                  --reports n \
-                  --enable=useless-suppression \
-                  --fail-on=useless-suppression \
-                  --disable=duplicate-code
-                touch $out
-              '';
-        }
-        //
+      checks = {
+        pylint =
+          pkgs.runCommandLocal "pylint"
+            {
+              nativeBuildInputs = [ self'.devShells.default.nativeBuildInputs ];
+            }
+            ''
+              cd ${self.outPath}
+              export HOME=/tmp
+              pylint \
+                $(find . -name "*.py") \
+                --reports n \
+                --enable=useless-suppression \
+                --fail-on=useless-suppression \
+                --disable=duplicate-code
+              touch $out
+            '';
+      }
+      //
         # Force a build of all packages during a `nix flake check`
         (with lib; mapAttrs' (n: nameValuePair "package-${n}") self'.packages);
     };
