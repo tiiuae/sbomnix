@@ -104,7 +104,7 @@ To find out what are all the runtime dependency paths from `git` to the highligh
 ```bash
 # --depth=100: make sure the output graph includes "long enough" dependency chains
 # --inverse="openssl-3|sqlite-3": draw the graph backwards starting from nodes that
-#                                 match the specified reqular expression
+#                                 match the specified regular expression
 # --colorize="openssl-3|sqlite-3": colorize the matching nodes
 nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=100 --colorize="openssl-3|sqlite-3" --inverse="openssl-3|sqlite-3"
 ```
