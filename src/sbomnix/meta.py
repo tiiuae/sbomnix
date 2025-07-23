@@ -54,7 +54,7 @@ class Meta:
             # Read meta from nipxkgs referenced in NIX_PATH
             LOG.debug("Reading nixpkgs path from NIX_PATH environment")
             nix_path = os.environ["NIX_PATH"]
-            m_nixpkgs = re.match(r"nixpkgs=([^:\s]+)", nix_path)
+            m_nixpkgs = re.match(r".*nixpkgs=([^:\s]+)", nix_path)
             if m_nixpkgs:
                 nixpkgs_path = m_nixpkgs.group(1)
         df = None
