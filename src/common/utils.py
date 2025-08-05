@@ -92,6 +92,7 @@ def df_from_csv_file(name, exit_on_error=True):
         pd.errors.EmptyDataError,
         pd.errors.ParserError,
         urllib.error.HTTPError,
+        urllib.error.URLError,
     ) as error:
         if exit_on_error:
             LOG.fatal("Error reading csv file '%s':\n%s", name, error)
