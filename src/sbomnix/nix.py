@@ -21,10 +21,10 @@ from sbomnix.derivation import load
 class Store:
     """Nix store"""
 
-    def __init__(self, buildtime=False):
+    def __init__(self, buildtime=False, include_cpe=True):
         self.buildtime = buildtime
         self.derivations = {}
-        self.cpe_generator = CPE()
+        self.cpe_generator = CPE(include_cpe=include_cpe)
 
     def _add_cached(self, path, drv):
         LOG.log(LOG_SPAM, "caching path - %s:%s", path, drv)
