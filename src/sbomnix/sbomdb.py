@@ -48,6 +48,7 @@ class SbomDb:
         flakeref=None,
         include_meta=True,
         include_vulns=False,
+        include_cpe=True,
     ):
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
@@ -62,11 +63,12 @@ class SbomDb:
         self.df_sbomdb_outputs_exploded = None
         self.flakeref = flakeref
         self.meta = None
+        self.include_cpe = include_cpe
         self._init_sbomdb(include_meta)
         self.include_vulns = include_vulns
         # Use a random UUID as the serial number when any data source that is
         # not strictly coming from the target_deriver is used
-        if include_vulns or include_meta:
+        if include_vulns or include_meta or include_cpe:
             LOG.info("Using random UUIDv4")
             self.uuid = uuid.uuid4()
         else:
@@ -111,7 +113,7 @@ class SbomDb:
             target_paths = self.df_deps["target_path"].unique().tolist()
             paths = set(src_paths + target_paths)
         # Populate store based on the dependencies
-        store = Store(self.buildtime)
+        store = Store(self.buildtime, include_cpe=self.include_cpe)
         for path in paths:
             store.add_path(path)
         self.df_sbomdb = store.to_dataframe()
