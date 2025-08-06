@@ -30,6 +30,12 @@ from vulnxscan.vulnscan import VulnScan
 
 ###############################################################################
 
+# Namespace UUID (a UUIDv4) for stable UUIDv5 identifiers.
+# See RFC9562, *6.6.  Namespace ID Usage and Allocation*.
+SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
+
+###############################################################################
+
 
 class SbomDb:
     """Generates SBOMs in various formats"""
@@ -58,7 +64,9 @@ class SbomDb:
         self.meta = None
         self._init_sbomdb(include_meta)
         self.include_vulns = include_vulns
-        self.uuid = uuid.uuid4()
+        # This uses a UUIDv5, which uses the deriver's store path as its input,
+        # resulting in a stable UUID across runs, depending on the SBOM's subject.
+        self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, self.target_deriver)
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
             self.sbom_type = "runtime_only"
