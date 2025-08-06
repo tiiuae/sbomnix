@@ -51,6 +51,10 @@ def getargs():
     parser.add_argument("--verbose", help=helps, type=int, default=1)
     helps = "Include vulnerabilities in the output of CyloneDX SBOM"
     parser.add_argument("--include-vulns", help=helps, action="store_true")
+    helps = "Exclude Nixpkgs metadata information in the output"
+    parser.add_argument(
+        "--exclude-meta", help=helps, action="store_true", default=False
+    )
 
     group = parser.add_argument_group("output arguments")
     helps = "Path to csv output file (default: ./sbom.csv)"
@@ -87,6 +91,7 @@ def main():
         buildtime=args.buildtime,
         depth=args.depth,
         flakeref=flakeref,
+        include_meta=not args.exclude_meta,
         include_vulns=args.include_vulns,
     )
     if args.cdx:
