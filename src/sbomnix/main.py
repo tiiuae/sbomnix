@@ -55,6 +55,10 @@ def getargs():
     parser.add_argument(
         "--exclude-meta", help=helps, action="store_true", default=False
     )
+    helps = "Exclude using heuristics-based CPE matches in the output"
+    parser.add_argument(
+        "--exclude-cpe-matching", help=helps, action="store_true", default=False
+    )
 
     group = parser.add_argument_group("output arguments")
     helps = "Path to csv output file (default: ./sbom.csv)"
@@ -93,6 +97,7 @@ def main():
         flakeref=flakeref,
         include_meta=not args.exclude_meta,
         include_vulns=args.include_vulns,
+        include_cpe=not args.exclude_cpe_matching,
     )
     if args.cdx:
         sbomdb.to_cdx(args.cdx)
