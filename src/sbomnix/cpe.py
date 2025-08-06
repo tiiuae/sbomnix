@@ -25,7 +25,15 @@ _CPE_CSV_CACHE_TTL = 60 * 60 * 24
 class CPE:
     """Generate Common Platform Enumeration identifiers"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        include_cpe=True,
+    ):
+        # Let's initialize the fields anyway.
+        if not include_cpe:
+            self.df_cpedict = None
+            return
+
         self.cache = LockedDfCache()
         self.df_cpedict = self.cache.get(_CPE_CSV_URL)
         if self.df_cpedict is not None and not self.df_cpedict.empty:
