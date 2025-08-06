@@ -64,9 +64,16 @@ class SbomDb:
         self.meta = None
         self._init_sbomdb(include_meta)
         self.include_vulns = include_vulns
-        # This uses a UUIDv5, which uses the deriver's store path as its input,
-        # resulting in a stable UUID across runs, depending on the SBOM's subject.
-        self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, self.target_deriver)
+        # Use a random UUID as the serial number when any data source that is
+        # not strictly coming from the target_deriver is used
+        if include_vulns or include_meta:
+            LOG.info("Using random UUIDv4")
+            self.uuid = uuid.uuid4()
+        else:
+            LOG.info("Using stable UUIDv5 for '%s'", self.target_deriver)
+            # This uses a UUIDv5, which uses the deriver's store path as its input,
+            # resulting in a stable UUID across runs, depending on the SBOM's subject.
+            self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, self.target_deriver)
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
             self.sbom_type = "runtime_only"
