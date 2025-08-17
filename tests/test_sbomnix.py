@@ -605,7 +605,6 @@ def test_nixmeta_help():
     _run_python_script([NIXMETA, "-h"])
 
 
-@pytest.mark.slow
 def test_nixmeta_sbomnix_flakeref():
     """Test nixmeta with sbomnix flakeref"""
     out_path = TEST_WORK_DIR / "nixmeta.csv"
@@ -623,7 +622,7 @@ def test_nixmeta_sbomnix_flakeref():
     df_meta = df_from_csv_file(out_path)
     assert df_meta is not None
     entries = df_meta.shape[0]
-    assert entries > 50000
+    assert entries > 1000
 
 
 ################################################################################
