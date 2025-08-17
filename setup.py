@@ -59,6 +59,8 @@ setuptools.setup(
     ],
     packages=setuptools.find_namespace_packages(where="src"),
     package_dir={"": "src"},
+    package_data={"": ["*.nix"]},
+    include_package_data=True,
     entry_points={
         "console_scripts": [
             "sbomnix  = sbomnix.main:main",

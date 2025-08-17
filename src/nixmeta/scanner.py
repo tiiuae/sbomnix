@@ -8,11 +8,20 @@
 import json
 import pathlib
 import re
-from tempfile import NamedTemporaryFile
+from getpass import getuser
+from pathlib import Path
+from tempfile import NamedTemporaryFile, TemporaryDirectory, gettempdir
 
 import pandas as pd
+from filelock import FileLock
 
 from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file, exec_cmd
+from sbomnix.dfcache import LockedDfCache
+
+###############################################################################
+
+_NIXMETA_NIXPKGS_TTL = 60 * 60 * 24 * 30
+_FLOCK = pathlib.Path(gettempdir()) / f"{getuser()}_sbomnix_meta.lock"
 
 ###############################################################################
 
@@ -22,31 +31,33 @@ class NixMetaScanner:
 
     def __init__(self):
         self.df_meta = None
+        self.lock = FileLock(_FLOCK)
+        self.cache = LockedDfCache()
 
     def scan(self, nixref):
         """
-        Scan nixpkgs meta-info using nixpkgs version pinned in nixref;
-        nixref can be a nix store path, flakeref or dynamical attribute set.
+        Scan nix meta-attributes from the given nixref
         """
-        nixpkgs_path = nixref_to_nixpkgs_path(nixref)
-        if not nixpkgs_path:
-            # try format which is understood by nix-env:
-            #   https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
-            # ownpkgs-nix-env.nix:
-            #   { ... }:
-            #     (builtins.getFlake "/tmp/ownpkgs-special-unstable").
-            #     outputs.legacyPackages.${builtins.currentSystem}
-            # and execute
-            #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
-            #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output
-            nixpkgs_path = pathlib.Path(nixref)
-            if not nixpkgs_path.exists():
+        LOG.debug("nixref: %s", nixref)
+        nixref = "" if not nixref else str(nixref)
+        match = re.match(r"([^#]+)#(.*)", nixref)
+        # Try reading nix meta with meta.nix: this works if nixref is
+        # a flake reference with output attribute
+        if match:
+            flakeref = match.group(1)
+            attr = match.group(2)
+            resolved = f"{flakeref}#{attr}"
+            LOG.debug("Resolved flakeref '%s' ==> '%s'", flakeref, resolved)
+            if self._read_flake_meta(resolved):
+                LOG.debug("Nix meta from meta.nix")
                 return
-        if not nixpkgs_path.exists():
-            LOG.warning("Nixpkgs not in nix store: %s", nixpkgs_path.as_posix())
+        # Otherwise, fallback to reading nix meta using the nixpkgs
+        # version pinned in nixref
+        nixpkgs_path = _nixref_to_nixpkgs_path(nixref)
+        if not nixpkgs_path or not nixpkgs_path.exists():
+            LOG.warning("Not a nixpkgs path: %s", nixpkgs_path)
             return
-        LOG.debug("nixpkgs: %s", nixpkgs_path)
-        self._read_nixpkgs_meta(nixpkgs_path)
+        self._read_nixpkgs_meta(nixpkgs_path.as_posix())
 
     def to_csv(self, csv_path, append=False):
         """Export meta-info to a csv file"""
@@ -65,25 +76,61 @@ class NixMetaScanner:
         """Return meta-info as dataframe"""
         return self.df_meta
 
-    def _read_nixpkgs_meta(self, nixpkgs_path):
-        prefix = "nixmeta_"
-        suffix = ".json"
-        with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
+    def _read_flake_meta(self, nixref):
+        with TemporaryDirectory(delete=True, prefix="nixmeta_") as tmpdir:
+            meta_nix_path = Path(__file__).parent.resolve() / "meta.nix"
+            outname = Path(tmpdir) / "meta.nix.out"
             cmd = [
-                "nix-env",
-                "-qa",
-                "--meta",
-                "--json",
+                "nix",
+                "build",
                 "-f",
-                f"{nixpkgs_path.as_posix()}",
-                "--arg",
-                "config",
-                "{allowAliases=false;}",
+                meta_nix_path.as_posix(),
+                "--out-link",
+                outname.as_posix(),
+                "--argstr",
+                "flakeStr",
+                nixref,
             ]
-            exec_cmd(cmd, stdout=f)
-            LOG.debug("Generated meta.json: %s", f.name)
-            self.df_meta = _parse_json_metadata(f.name)
+            if not exec_cmd(cmd, raise_on_error=False):
+                LOG.debug("Failed reading meta with meta.nix")
+                return False
+            LOG.debug("Read nix meta with meta.nix")
+            self.df_meta = _parse_json_metadata(outname.as_posix())
             self._drop_duplicates()
+            return True
+
+    def _read_nixpkgs_meta(self, nixpkgs_path):
+        LOG.debug("nixpkgs_path: %s", nixpkgs_path)
+        with self.lock:
+            self.df_meta = self.cache.get(nixpkgs_path)
+            if self.df_meta is not None and not self.df_meta.empty:
+                LOG.debug("found from cache: %s", nixpkgs_path)
+                return
+            LOG.debug("cache miss, scanning: %s", nixpkgs_path)
+            prefix = "nixmeta_"
+            suffix = ".json"
+            with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
+                cmd = [
+                    "nix-env",
+                    "-qa",
+                    "--meta",
+                    "--json",
+                    "-f",
+                    nixpkgs_path,
+                    "--arg",
+                    "config",
+                    "{allowAliases=false;}",
+                ]
+                exec_cmd(cmd, stdout=f)
+                LOG.debug("Generated meta.json: %s", f.name)
+                self.df_meta = _parse_json_metadata(f.name)
+                self._drop_duplicates()
+            # Cache requires some TTL, so we set it to some value here.
+            # Although, we could as well store it indefinitely as it should
+            # not change given the same key (nixpkgs store path).
+            self.cache.set(
+                key=nixpkgs_path, value=self.df_meta, ttl=_NIXMETA_NIXPKGS_TTL
+            )
 
     def _drop_duplicates(self):
         self.df_meta = self.df_meta.astype(str)
@@ -102,52 +149,52 @@ class NixMetaScanner:
 ###############################################################################
 
 
-def nixref_to_nixpkgs_path(flakeref):
-    """Return the store path of the nixpkgs pinned by flakeref"""
-    if not flakeref:
+def _nixref_to_nixpkgs_path(nixref):
+    """Return the store path of the nixpkgs pinned by nixref"""
+    if not nixref:
         return None
-    LOG.debug("Finding meta-info for nixpkgs pinned in nixref: %s", flakeref)
+    LOG.debug("Finding meta-info for nixpkgs pinned in nixref: %s", nixref)
     # Strip possible target specifier from flakeref (i.e. everything after '#')
-    m_flakeref = re.match(r"([^#]+)#", flakeref)
-    if m_flakeref:
-        flakeref = m_flakeref.group(1)
-        LOG.debug("Stripped target specifier: %s", flakeref)
-    meta_json = _get_flake_metadata(flakeref)
+    match = re.match(r"([^#]+)#", nixref)
+    if match:
+        nixref = match.group(1)
+        LOG.debug("Stripped target specifier: %s", nixref)
+    meta_json = _get_flake_metadata(nixref)
+    LOG.log(LOG_SPAM, "meta_json: %s", meta_json)
+    if not meta_json:
+        return None
     if not _is_nixpkgs_metadata(meta_json):
-        # If flakeref is not nixpkgs flake, try finding the nixpkgs
-        # revision pinned by the given flakeref
-        LOG.debug("non-nixpkgs flakeref: %s", flakeref)
         nixpkgs_flakeref = _get_nixpkgs_flakeref(meta_json)
         if not nixpkgs_flakeref:
-            LOG.warning("Failed parsing locked nixpkgs: %s", flakeref)
             return None
         LOG.log(LOG_SPAM, "using nixpkgs_flakeref: %s", nixpkgs_flakeref)
         meta_json = _get_flake_metadata(nixpkgs_flakeref)
         if not _is_nixpkgs_metadata(meta_json):
-            LOG.warning("Failed reading nixpkgs metadata: %s", flakeref)
             return None
     return pathlib.Path(meta_json["path"]).absolute()
 
 
-def _get_flake_metadata(flakeref):
+def _get_flake_metadata(nixref):
     """
     Return json object detailing the output of nix flake metadata
     for given flakeref
     """
-    # Strip possible nixpkgs= prefix to support cases where flakeref is
+    if not nixref:
+        return None
+    # Strip possible nixpkgs= prefix to support cases where nixref is
     # given the NIX_PATH environment variable
-    m_nixpkgs = re.match(r"nixpkgs=([^:\s]+)", flakeref)
+    m_nixpkgs = re.match(r"nixpkgs=([^:\s]+)", nixref)
     if m_nixpkgs:
-        flakeref = m_nixpkgs.group(1)
+        nixref = m_nixpkgs.group(1)
     # Read nix flake metadata as json
     exp = "--extra-experimental-features flakes "
     exp += "--extra-experimental-features nix-command"
-    cmd = f"nix flake metadata {flakeref} --json {exp}"
+    cmd = f"nix flake metadata {nixref} --json {exp}"
     ret = exec_cmd(
         cmd.split(), raise_on_error=False, return_error=True, log_error=False
     )
     if ret is None or ret.returncode != 0:
-        LOG.warning("Failed reading flake metadata: %s", flakeref)
+        LOG.debug("Failed reading flake metadata: %s", nixref)
         return None
     meta_json = json.loads(ret.stdout)
     LOG.log(LOG_SPAM, meta_json)
