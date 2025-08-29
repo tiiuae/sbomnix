@@ -86,7 +86,7 @@ class VulnScan:
             LOG.warning(ret)
             LOG.warning(ret.stderr)
             self.df_vulnix = None
-        elif ret and hasattr(ret, "stdout") and ret.stdout:
+        if ret and hasattr(ret, "stdout") and ret.stdout:
             self._parse_vulnix(ret.stdout)
 
     def _parse_grype(self, json_str):
