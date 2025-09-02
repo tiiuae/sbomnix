@@ -81,7 +81,7 @@ class VulnScan:
         # Therefore, we need to set the raise_on_error=False and
         # return_error=True to be able to read the vulnerabilities
         # from vulnix stdout even if the exit status indicates failure.
-        ret = exec_cmd(cmd, raise_on_error=False, return_error=True)
+        ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
         if ret and hasattr(ret, "stderr") and ret.stderr:
             LOG.warning(ret)
             LOG.warning(ret.stderr)
