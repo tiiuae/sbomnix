@@ -101,7 +101,7 @@ def find_deriver(path):
     exp = "--extra-experimental-features flakes "
     exp += "--extra-experimental-features nix-command"
     cmd = f"nix derivation show {path} {exp}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, loglevel=LOG_SPAM)
+    ret = exec_cmd(cmd.split(), raise_on_error=False, log_error=False)
     if not ret:
         LOG.log(LOG_SPAM, "Deriver not found for '%s'", path)
         return None

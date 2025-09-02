@@ -119,12 +119,10 @@ def df_log(df, loglevel, tablefmt="presto"):
         LOG.log(loglevel, "\n%s\n", table)
 
 
-def exec_cmd(
-    cmd, raise_on_error=True, return_error=False, loglevel=logging.DEBUG, stdout=None
-):
+def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdout=None):
     """Run shell command cmd"""
     command_str = " ".join(cmd)
-    LOG.log(loglevel, "Running: %s", command_str)
+    LOG.debug("Running: %s", command_str)
     try:
         if stdout:
             ret = subprocess.run(cmd, encoding="utf-8", check=True, stdout=stdout)
@@ -132,12 +130,13 @@ def exec_cmd(
             ret = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
         return ret
     except subprocess.CalledProcessError as error:
-        LOG.debug(
-            "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",
-            command_str,
-            error.stdout,
-            error.stderr,
-        )
+        if log_error:
+            LOG.error(
+                "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",
+                command_str,
+                error.stdout,
+                error.stderr,
+            )
         if raise_on_error:
             raise error
         if return_error:
@@ -184,7 +183,7 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     exp += "--extra-experimental-features nix-command"
     extra_args = "--impure" if impure else ""
     cmd = f"nix eval --raw {flakeref} {exp} {extra_args}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False)
+    ret = exec_cmd(cmd.split(), raise_on_error=False, log_error=False)
     if not ret:
         LOG.debug("not a flakeref: '%s'", flakeref)
         return None
@@ -194,7 +193,9 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
         return nixpath
     LOG.info("Try force-realising flakeref '%s'", flakeref)
     cmd = f"nix build --no-link {flakeref} {exp} {extra_args}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
+    ret = exec_cmd(
+        cmd.split(), raise_on_error=False, return_error=True, log_error=False
+    )
     if not ret:
         LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
     return nixpath

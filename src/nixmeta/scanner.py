@@ -132,7 +132,9 @@ def _get_flake_metadata(flakeref):
     exp = "--extra-experimental-features flakes "
     exp += "--extra-experimental-features nix-command"
     cmd = f"nix flake metadata {flakeref} --json {exp}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, return_error=True)
+    ret = exec_cmd(
+        cmd.split(), raise_on_error=False, return_error=True, log_error=False
+    )
     if ret is None or ret.returncode != 0:
         LOG.warning("Failed reading flake metadata: %s", flakeref)
         return None
