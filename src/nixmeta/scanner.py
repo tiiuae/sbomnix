@@ -26,11 +26,22 @@ class NixMetaScanner:
     def scan(self, nixref):
         """
         Scan nixpkgs meta-info using nixpkgs version pinned in nixref;
-        nixref can be a nix store path or flakeref.
+        nixref can be a nix store path, flakeref or dynamical attribute set.
         """
         nixpkgs_path = nixref_to_nixpkgs_path(nixref)
         if not nixpkgs_path:
-            return
+            # try format which is understood by nix-env:
+            #   https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
+            # ownpkgs-nix-env.nix:
+            #   { ... }:
+            #     (builtins.getFlake "/tmp/ownpkgs-special-unstable").
+            #     outputs.legacyPackages.${builtins.currentSystem}
+            # and execute
+            #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
+            #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output
+            nixpkgs_path = pathlib.Path(nixref)
+            if not nixpkgs_path.exists():
+                return
         if not nixpkgs_path.exists():
             LOG.warning("Nixpkgs not in nix store: %s", nixpkgs_path.as_posix())
             return
