@@ -12,6 +12,7 @@
 import argparse
 import json
 import logging
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -23,8 +24,8 @@ from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 
 from common.utils import LOG, df_to_csv_file, get_py_pkg_version
 from nixgraph.graph import NixDependencies
+from nixmeta.scanner import NixMetaScanner
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
-from sbomnix.meta import Meta
 from sbomnix.nix import Store, find_deriver
 from vulnxscan.vulnscan import VulnScan
 
@@ -62,7 +63,6 @@ class SbomDb:
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
         self.flakeref = flakeref
-        self.meta = None
         self.include_cpe = include_cpe
         self._init_sbomdb(include_meta)
         self.include_vulns = include_vulns
@@ -128,11 +128,10 @@ class SbomDb:
 
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
-        self.meta = Meta()
         if self.flakeref:
-            df_meta = self.meta.get_nixpkgs_meta(self.flakeref)
+            df_meta = self._get_nixpkgs_meta(self.flakeref)
         else:
-            df_meta = self.meta.get_nixpkgs_meta()
+            df_meta = self._get_nixpkgs_meta()
         if df_meta is None or df_meta.empty:
             LOG.warning(
                 "Failed reading nix meta information: "
@@ -149,6 +148,27 @@ class SbomDb:
             right_on=["name"],
             suffixes=["", "_meta"],
         )
+
+    def _get_nixpkgs_meta(self, nixref=None):
+        """
+        Return nixpkgs meta pinned in `nixref`. `nixref` can point to a
+        nix store path or flake reference optionally with an output attribute.
+        If all else fails, attempt to read the nix meta information from
+        the nixpkgs store path specified in NIX_PATH environment variable.
+        """
+        scanner = NixMetaScanner()
+        scanner.scan(nixref)
+        df = scanner.to_df()
+        # Fallback: try reading nix meta from nixpkgs referenced in NIX_PATH
+        if (df is None or df.empty) and "NIX_PATH" in os.environ:
+            LOG.debug("Reading nixpkgs path from NIX_PATH environment")
+            nix_path = os.environ["NIX_PATH"]
+            m_nixpkgs = re.match(r".*nixpkgs=([^:\s]+)", nix_path)
+            if m_nixpkgs:
+                nixpkgs_path = m_nixpkgs.group(1)
+                scanner.scan(nixpkgs_path)
+                df = scanner.to_df()
+        return df
 
     def _lookup_dependencies(self, drv, uid="store_path"):
         """
