@@ -5,7 +5,6 @@
   imports = [
     ./apps.nix
     ./checks.nix
-    ./devshell.nix
     ./packages.nix
     ./treefmt.nix
     ./git-hooks.nix
