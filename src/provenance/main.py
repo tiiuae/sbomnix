@@ -63,7 +63,7 @@ def get_subjects(outputs: dict) -> list[dict]:
             "uri": data["path"],
         }
         store_hash = exec_cmd(
-            ["nix-store", "--query", "--hash", data["path"]],
+            ["nix-store", "--query", "--force-realise", "--hash", data["path"]],
             raise_on_error=False,
         )
         if store_hash is None:
