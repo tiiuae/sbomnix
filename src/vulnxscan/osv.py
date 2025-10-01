@@ -57,6 +57,8 @@ class OSV:
                 continue
             LOG.debug("package: %s", package)
             LOG.debug("vulns: %s", vulns)
+            if "vulns" not in vulns:
+                continue
             self._parse_vulns(package, vulns)
 
     def _post_batch_query(self, query):
