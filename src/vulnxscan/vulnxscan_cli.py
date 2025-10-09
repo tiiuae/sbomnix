@@ -148,7 +148,6 @@ def main():
         LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
         scanner.scan_vulnix(target_path, args.buildtime)
     scanner.scan_grype(sbom_cdx_path)
-    scanner.scan_osv(sbom_cdx_path)
     scanner.report(args, sbom_csv_path)
     if not args.sbom and LOG.level > logging.DEBUG:
         # Remove generated temp files unless verbosity is DEBUG or more verbose
