@@ -59,7 +59,7 @@ def _vuln_sortcol(row):
 def _vuln_url(row):
     osv_url = "https://osv.dev/"
     nvd_url = "https://nvd.nist.gov/vuln/detail/"
-    if "cve" in row.vuln_id.lower():
+    if row.vuln_id.lower().startswith("cve"):
         return f"{nvd_url}{row.vuln_id}"
     if getattr(row, "osv", False) or ("osv" in getattr(row, "scanner", [])):
         return f"{osv_url}{row.vuln_id}"
@@ -67,7 +67,7 @@ def _vuln_url(row):
 
 
 def _vuln_source(row):
-    if "cve" in row.vuln_id.lower():
+    if row.vuln_id.lower().startswith("cve"):
         return "NVD"
     if getattr(row, "osv", False) or ("osv" in getattr(row, "scanner", [])):
         return "OSV"
