@@ -31,6 +31,11 @@ def getargs():
     parser.add_argument("SBOM", help=helps, type=pathlib.Path)
     helps = "Path to output file (default: ./osv.csv)"
     parser.add_argument("--out", nargs="?", help=helps, default="osv.csv")
+    helps = (
+        'List of ecosystems to query (default: "GIT,OSS-Fuzz"). '
+        "For more details, see https://osv.dev"
+    )
+    parser.add_argument("--ecosystems", type=str, help=helps, default="GIT,OSS-Fuzz")
     return parser.parse_args()
 
 
@@ -90,7 +95,7 @@ class OSV:
             df_components.reset_index(drop=True, inplace=True)
             return df_components
 
-    def query_vulns(self, sbom_path):
+    def query_vulns(self, sbom_path, ecosystems=None):
         """Query each package in sbom for OSV vulnerabilities"""
         LOG.info("Querying vulnerabilities")
         df_sbom = self._parse_sbom(sbom_path)
@@ -100,18 +105,22 @@ class OSV:
         max_queries = 1000
         batchquery = {}
         batchquery["queries"] = []
+        if ecosystems is None:
+            ecosystems = ["GIT", "OSS-Fuzz"]
         for drv in df_sbom.itertuples():
             if not drv.version:
                 LOG.debug("skipping osv query (unknown version): %s", drv.name)
                 continue
-            query = {}
-            query["version"] = drv.version
-            query["package"] = {}
-            query["package"]["name"] = drv.name
-            batchquery["queries"].append(query)
-            if len(batchquery["queries"]) >= max_queries:
-                self._post_batch_query(batchquery)
-                batchquery["queries"] = []
+            for ecosystem in ecosystems:
+                query = {}
+                query["version"] = drv.version
+                query["package"] = {}
+                query["package"]["name"] = drv.name
+                query["package"]["ecosystem"] = ecosystem
+                batchquery["queries"].append(query)
+                if len(batchquery["queries"]) >= max_queries:
+                    self._post_batch_query(batchquery)
+                    batchquery["queries"] = []
         if batchquery["queries"]:
             self._post_batch_query(batchquery)
 
@@ -131,7 +140,8 @@ def main():
         LOG.fatal("Invalid path: '%s'", args.SBOM)
         sys.exit(1)
     osv = OSV()
-    osv.query_vulns(args.SBOM.as_posix())
+    ecosystems = [str(x).strip() for x in args.ecosystems.split(",")]
+    osv.query_vulns(args.SBOM.as_posix(), ecosystems)
     df_vulns = osv.to_dataframe()
     df_to_csv_file(df_vulns, args.out)
 
