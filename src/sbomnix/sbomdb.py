@@ -241,10 +241,11 @@ class SbomDb:
             ) as fcdx:
                 self._write_json(fcdx.name, cdx, printinfo=False)
                 scanner.scan_grype(fcdx.name)
+                scanner.scan_osv(fcdx.name)
             cdx["vulnerabilities"] = []
             # Union all scans into a single dataframe
             df_vulns = pd.concat(
-                [scanner.df_grype, scanner.df_vulnix],
+                [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
                 ignore_index=True,
             )
         if df_vulns is not None and not df_vulns.empty:
