@@ -58,10 +58,6 @@ class Store:
             self._add_cached(drv_path, drv=drv_obj)
         assert drv_obj.store_path == drv_path, f"unexpected drv_path: {drv_path}"
         if nixpath:
-            # We end up here if the nix artifact read from output path 'nixpath'
-            # does not have it's own deriver, but it's produced by another
-            # deriver. This happens because 'drv_obj' is associated to more
-            # than one outputs:
             drv_obj.add_output_path(nixpath)
             self._add_cached(nixpath, drv=drv_obj)
 

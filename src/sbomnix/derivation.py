@@ -76,6 +76,11 @@ class Derive:
         self.out = envVars.get("out", "")
         self.outputs = []
         self.store_path = None
+        outputs = envVars.get("outputs", "").split()
+        for output in outputs:
+            path = envVars.get(output, None)
+            self.add_output_path(path)
+        LOG.log(LOG_SPAM, "%s outputs: %s", self, self.outputs)
         # pname 'source' in Nix has special meaning - it is the default name
         # for all fetchFromGitHub derivations. As such, it should not be used
         # to construct cpe or purl, rather, cpe and purl should be empty

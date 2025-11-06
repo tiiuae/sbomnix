@@ -153,8 +153,8 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
     """Compare dependencies in df_sbom and df_braph"""
     LOG.debug("sbom_type=%s", sbom_type)
     LOG.debug("graph_type=%s", graph_type)
-    deps_only_in_sbom = set()
-    deps_only_in_graph = set()
+    deps_sbom_all = set()
+    deps_graph_all = set()
     df_sbom = df_sbom.explode("output_path")
     df_sbom = df_sbom.astype(str)
 
@@ -170,6 +170,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
             df_sbom_deps = df_sbom[df_sbom["output_path"] == out_path]
             sbom_deps = list(filter(None, df_sbom_deps["depends_on"].unique().tolist()))
             LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
+            deps_sbom_all.update(set(sbom_deps))
             df_graph_deps = df_graph[df_graph["target_path"] == out_path]
             # Map graph src_path to sbom paths
             dfr = df_sbom.merge(
@@ -177,8 +178,7 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
             ).loc[:, ["drv_path"]]
             graph_deps = list(filter(None, dfr["drv_path"].unique().tolist()))
             LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
-            deps_only_in_sbom.update(set(sbom_deps) - set(graph_deps))
-            deps_only_in_graph.update(set(graph_deps) - set(sbom_deps))
+            deps_graph_all.update(set(graph_deps))
 
     if graph_type == "buildtime":
         LOG.info("Comparing buildtime dependencies")
@@ -187,11 +187,16 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
             df_sbom_deps = df_sbom[df_sbom["drv_path"] == drv_path]
             sbom_deps = list(filter(None, df_sbom_deps["depends_on"].unique().tolist()))
             LOG.log(LOG_SPAM, "sbom    depends-ons: %s", sbom_deps)
+            deps_sbom_all.update(set(sbom_deps))
             dfr = df_graph[df_graph["target_path"] == drv_path]
             graph_deps = list(filter(None, dfr["src_path"].unique().tolist()))
             LOG.log(LOG_SPAM, "graph   depends-ons: %s", graph_deps)
-            deps_only_in_sbom.update(set(sbom_deps) - set(graph_deps))
-            deps_only_in_graph.update(set(graph_deps) - set(sbom_deps))
+            deps_graph_all.update(set(graph_deps))
+
+    deps_only_in_sbom = set()
+    deps_only_in_graph = set()
+    deps_only_in_sbom.update(deps_sbom_all - deps_graph_all)
+    deps_only_in_graph.update(deps_graph_all - deps_sbom_all)
 
     # Filter out the following dependencies from the "deps_only_in_graph":
     # Store paths that match these regular expressions have no known derivers.
