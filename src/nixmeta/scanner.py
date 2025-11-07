@@ -278,6 +278,7 @@ def _parse_json_metadata(json_filename):
             setcol("meta_homepage", []).append(homepage)
             setcol("meta_unfree", []).append(meta.get("unfree", ""))
             setcol("meta_description", []).append(meta.get("description", ""))
+            setcol("meta_position", []).append(meta.get("position", ""))
             # meta.license
             meta_license = meta.get("license", {})
             license_short = _parse_meta_entry(meta_license, key="shortName")

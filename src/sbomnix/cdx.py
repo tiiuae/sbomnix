@@ -125,6 +125,11 @@ def _drv_to_cdx_component(drv, uid="store_path"):
         prop["name"] = "homepage"
         prop["value"] = drv.meta_homepage
         properties.append(prop)
+    if "meta_position" in drv._asdict() and drv.meta_position:
+        prop = {}
+        prop["name"] = "nix:position"
+        prop["value"] = drv.meta_position
+        properties.append(prop)
     if properties:
         component["properties"] = properties
     return component
