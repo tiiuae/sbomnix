@@ -17,14 +17,13 @@ from nixmeta.scanner import NixMetaScanner
 def _getargs():
     """Parse command line arguments"""
     desc = (
-        "Summarize nixpkgs meta-attributes from the given nixpkgs version "
-        "to a csv output file."
+        "Summarize nix meta-attributes from the given flakeref to a csv file, "
+        "optionally specifying the output attribute."
     )
-    epil = "Example: nixmeta --flakeref=github:NixOS/nixpkgs?ref=master"
+    epil = "Example: nixmeta --flakeref=github:NixOS/nixpkgs/master#hello"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
     helps = (
-        "Flake reference specifying the location of the flake "
-        "from which the pinned nixpkgs target version is read. "
+        "Target flake reference optionally including the output attribute. "
         "The default value is the "
         "current nixpkgs version in its 'nixos-unstable' branch. "
         "For more details, see: "
