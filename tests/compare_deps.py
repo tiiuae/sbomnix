@@ -229,6 +229,9 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         r".*\-inputrc$",
         r".*\-patch-registry-deps$",
         r".*\-make-initrd-ng$",
+        r".*\.kaem$",
+        r".*\.mk$",
+        r".*\-nuke-refs$",
     ]
     deps_only_in_graph = _filter_set(re_no_known_drvs, deps_only_in_graph)
 
