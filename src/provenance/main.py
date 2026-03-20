@@ -7,6 +7,7 @@
 """Python script that generates SLSA v1.0 provenance file for a nix target"""
 
 import argparse
+import errno
 import json
 import os
 from dataclasses import dataclass
@@ -80,6 +81,23 @@ def get_subjects(outputs: dict) -> list[dict]:
     return subjects
 
 
+def query_store_hashes(paths: list[str]) -> list[str]:
+    """Query store hashes, splitting the request when argv would exceed OS limits."""
+
+    if not paths:
+        return []
+
+    try:
+        return exec_cmd(["nix-store", "--query", "--hash", *paths]).stdout.split()
+    except OSError as error:
+        if error.errno != errno.E2BIG or len(paths) == 1:
+            raise
+        midpoint = len(paths) // 2
+        return query_store_hashes(paths[:midpoint]) + query_store_hashes(
+            paths[midpoint:]
+        )
+
+
 def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     """Get dependencies of derivation and parse them into ResourceDescriptors"""
 
@@ -90,7 +108,7 @@ def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     references = exec_cmd(
         ["nix-store", "--query", depth, "--include-outputs", drv_path]
     ).stdout.split()
-    hashes = exec_cmd(["nix-store", "--query", "--hash"] + references).stdout.split()
+    hashes = query_store_hashes(references)
     infos = json.loads(exec_cmd(["nix", "derivation", "show", "-r", drv_path]).stdout)
 
     dependencies = []
