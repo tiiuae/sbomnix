@@ -12,6 +12,7 @@
 import argparse
 import json
 import logging
+import pathlib
 import re
 import uuid
 from datetime import datetime, timezone
@@ -236,12 +237,18 @@ class SbomDb:
             scanner = VulnScan()
             scanner.scan_vulnix(self.target_deriver, self.buildtime)
             # Write incomplete sbom to a temporary path, then perform a vulnerability scan
-            with NamedTemporaryFile(
-                delete=False, prefix="vulnxscan_", suffix=".json"
-            ) as fcdx:
-                self._write_json(fcdx.name, cdx, printinfo=False)
-                scanner.scan_grype(fcdx.name)
-                scanner.scan_osv(fcdx.name)
+            temp_cdx_path = None
+            try:
+                with NamedTemporaryFile(
+                    delete=False, prefix="vulnxscan_", suffix=".json"
+                ) as fcdx:
+                    temp_cdx_path = pathlib.Path(fcdx.name)
+                    self._write_json(temp_cdx_path, cdx, printinfo=False)
+                scanner.scan_grype(temp_cdx_path)
+                scanner.scan_osv(temp_cdx_path)
+            finally:
+                if temp_cdx_path is not None:
+                    temp_cdx_path.unlink(missing_ok=True)
             cdx["vulnerabilities"] = []
             # Union all scans into a single dataframe
             df_vulns = pd.concat(
