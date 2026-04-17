@@ -103,13 +103,24 @@ def _generate_sbom(target_path, buildtime=False):
     prefix = "vulnxscan_"
     cdx_suffix = ".json"
     csv_suffix = ".csv"
-    with (
-        NamedTemporaryFile(delete=False, prefix=prefix, suffix=cdx_suffix) as fcdx,
-        NamedTemporaryFile(delete=False, prefix=prefix, suffix=csv_suffix) as fcsv,
-    ):
-        sbomdb.to_cdx(fcdx.name, printinfo=False)
-        sbomdb.to_csv(fcsv.name, loglevel=logging.DEBUG)
-        return pathlib.Path(fcdx.name), pathlib.Path(fcsv.name)
+    sbom_cdx_path = None
+    sbom_csv_path = None
+    try:
+        with NamedTemporaryFile(delete=False, prefix=prefix, suffix=cdx_suffix) as fcdx:
+            sbom_cdx_path = pathlib.Path(fcdx.name)
+            with NamedTemporaryFile(
+                delete=False, prefix=prefix, suffix=csv_suffix
+            ) as fcsv:
+                sbom_csv_path = pathlib.Path(fcsv.name)
+                sbomdb.to_cdx(sbom_cdx_path, printinfo=False)
+                sbomdb.to_csv(sbom_csv_path, loglevel=logging.DEBUG)
+        return sbom_cdx_path, sbom_csv_path
+    except Exception:
+        if sbom_cdx_path is not None:
+            sbom_cdx_path.unlink(missing_ok=True)
+        if sbom_csv_path is not None:
+            sbom_csv_path.unlink(missing_ok=True)
+        raise
 
 
 ################################################################################
@@ -128,15 +139,16 @@ def main():
     exit_unless_command_exists("vulnix")
 
     scanner = VulnScan()
+    sbom_cdx_path = None
+    sbom_csv_path = None
     if args.sbom:
         target_path = pathlib.Path(args.TARGET).resolve().as_posix()
         if not _is_json(target_path):
             LOG.fatal(
                 "Specified sbom target is not a json file: '%s'", str(args.TARGET)
             )
-            sys.exit(0)
+            sys.exit(1)
         sbom_cdx_path = target_path
-        sbom_csv_path = None
     else:
         runtime = args.buildtime is False
         target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
@@ -146,14 +158,17 @@ def main():
         sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path, args.buildtime)
         LOG.debug("Using cdx SBOM '%s'", sbom_cdx_path)
         LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
-        scanner.scan_vulnix(target_path, args.buildtime)
-    scanner.scan_grype(sbom_cdx_path)
-    scanner.scan_osv(sbom_cdx_path)
-    scanner.report(args, sbom_csv_path)
-    if not args.sbom and LOG.level > logging.DEBUG:
-        # Remove generated temp files unless verbosity is DEBUG or more verbose
-        sbom_cdx_path.unlink(missing_ok=True)
-        sbom_csv_path.unlink(missing_ok=True)
+    try:
+        if not args.sbom:
+            scanner.scan_vulnix(target_path, args.buildtime)
+        scanner.scan_grype(sbom_cdx_path)
+        scanner.scan_osv(sbom_cdx_path)
+        scanner.report(args, sbom_csv_path)
+    finally:
+        if not args.sbom and LOG.level > logging.DEBUG:
+            # Remove generated temp files unless verbosity is DEBUG or more verbose
+            sbom_cdx_path.unlink(missing_ok=True)
+            sbom_csv_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
