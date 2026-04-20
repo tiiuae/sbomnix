@@ -11,8 +11,10 @@
 import errno
 import json
 import os
+import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import jsonschema
@@ -93,7 +95,53 @@ def _run_python_script(args, **kwargs):
     # copy, so we don't mutate env for this process, only for the spawned one.
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{env['PYTHONPATH']}:{REPOROOT}"
-    return subprocess.run(args, **kwargs, check=True, env=env)
+    check = kwargs.pop("check", True)
+    return subprocess.run(args, check=check, env=env, **kwargs)
+
+
+def _output_mentions_repology_host(output):
+    patterns = (
+        r"https://repology\.org(?:/|$)",
+        r"host=['\"]repology\.org['\"]",
+        r"HTTPSConnectionPool\(host=['\"]repology\.org['\"]",
+    )
+    return any(re.search(pattern, output) for pattern in patterns)
+
+
+def _run_python_script_retry_on_repology_network_error(args):
+    """Retry transient repology.org connectivity failures before failing"""
+    markers = [
+        "requests.exceptions.ConnectTimeout",
+        "requests.exceptions.ConnectionError",
+        "requests.exceptions.ReadTimeout",
+        "urllib3.exceptions.ConnectTimeoutError",
+        "urllib3.exceptions.ReadTimeoutError",
+        "Max retries exceeded",
+        "Connection timed out",
+        "Temporary failure in name resolution",
+        "Name or service not known",
+    ]
+    retry_delays = [15, 45]
+    last_ret = None
+    for attempt in range(len(retry_delays) + 1):
+        ret = _run_python_script(args, check=False, capture_output=True, text=True)
+        if ret.returncode == 0:
+            return ret
+        last_ret = ret
+        output = "\n".join(filter(None, [ret.stdout, ret.stderr]))
+        is_repology_network_error = _output_mentions_repology_host(output) and any(
+            marker in output for marker in markers
+        )
+        if not is_repology_network_error or attempt >= len(retry_delays):
+            ret.check_returncode()
+        delay = retry_delays[attempt]
+        print(
+            f"repology.org request failed with a transient network error; "
+            f"retrying in {delay}s (attempt {attempt + 2}/{len(retry_delays) + 1})"
+        )
+        time.sleep(delay)
+    last_ret.check_returncode()
+    return last_ret
 
 
 def test_sbomnix_help():
@@ -558,7 +606,7 @@ def test_repology_cli_sbom():
     assert out_path_cdx.exists()
 
     out_path_repology = TEST_WORK_DIR / "repology.csv"
-    _run_python_script(
+    _run_python_script_retry_on_repology_network_error(
         [
             REPOLOGY_CLI,
             "--sbom_cdx",
@@ -586,7 +634,7 @@ def test_nix_outdated_help():
 def test_nix_outdated_result():
     """Test nix_outdated with TEST_NIX_RESULT as input"""
     out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
-    _run_python_script(
+    _run_python_script_retry_on_repology_network_error(
         [
             NIX_OUTDATED,
             "--out",
