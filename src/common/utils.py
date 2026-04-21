@@ -38,10 +38,11 @@ class FlakeRefResolutionError(RuntimeError):
 
     def __init__(self, flakeref, stderr="", action="evaluating"):
         self.flakeref = flakeref
-        self.stderr = (stderr or "").strip()
+        self.stderr = "" if stderr is None else str(stderr)
         message = f"Failed {action} flakeref '{flakeref}'"
-        if self.stderr:
-            message += f": {self.stderr}"
+        stderr_summary = self.stderr.strip()
+        if stderr_summary:
+            message += f": {stderr_summary}"
         super().__init__(message)
 
 
@@ -140,6 +141,8 @@ def df_log(df, loglevel, tablefmt="presto"):
 
 def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdout=None):
     """Run shell command cmd"""
+    if isinstance(cmd, (str, bytes, os.PathLike)):
+        raise TypeError("cmd must be an argv sequence, not a string-like value")
     cmd = [os.fspath(part) for part in cmd]
     command_str = shlex.join(cmd)
     LOG.debug("Running: %s", command_str)
@@ -237,20 +240,21 @@ def nix_cmd(*args, impure=False):
 
 def _looks_like_flakeref(flakeref):
     """Return true if the input is likely intended as a flake reference."""
-    if not flakeref:
-        return False
-    if flakeref.startswith("nixpkgs="):
-        return True
-    if "#" in flakeref or "?" in flakeref:
-        return True
-    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", flakeref):
-        return True
-    path = pathlib.Path(flakeref)
-    if path.exists():
-        return path.is_dir() and (path / "flake.nix").exists()
-    return re.fullmatch(
-        r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)?", flakeref
-    ) is not None and not flakeref.endswith(".drv")
+    looks_like = False
+    if flakeref:
+        path = pathlib.Path(flakeref)
+        if path.exists():
+            looks_like = path.is_dir() and (path / "flake.nix").exists()
+        else:
+            # Keep the heuristic to explicit flake syntax so missing local paths
+            # such as ./result or foo/bar still fall back to store-path handling.
+            looks_like = (
+                flakeref.startswith("nixpkgs=")
+                or "#" in flakeref
+                or "?" in flakeref
+                or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", flakeref) is not None
+            )
+    return looks_like
 
 
 def regex_match(regex, string):

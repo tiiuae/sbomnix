@@ -22,7 +22,10 @@
           deadnix.enable = true; # removes dead nix code https://github.com/astro/deadnix
           isort.enable = true; # sort python imports https://github.com/PyCQA/isort
           shellcheck.enable = true; # lints shell scripts https://github.com/koalaman/shellcheck
-          nixfmt.enable = true; # nix formatter https://github.com/NixOS/nixfmt
+          nixfmt = {
+            enable = true; # nix formatter https://github.com/NixOS/nixfmt
+            package = pkgs.nixfmt;
+          };
           ruff-check.enable = true; # lints python https://github.com/astral-sh/ruff
           ruff-format.enable = true; # format python https://github.com/astral-sh/ruff
           statix.enable = true; # prevents use of nix anti-patterns https://github.com/nerdypepper/statix
