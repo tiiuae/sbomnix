@@ -12,7 +12,14 @@ from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
-from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file, exec_cmd
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    df_from_csv_file,
+    df_to_csv_file,
+    exec_cmd,
+    nix_cmd,
+)
 
 ###############################################################################
 
@@ -140,12 +147,8 @@ def _get_flake_metadata(flakeref):
     if m_nixpkgs:
         flakeref = m_nixpkgs.group(1)
     # Read nix flake metadata as json
-    exp = "--extra-experimental-features flakes "
-    exp += "--extra-experimental-features nix-command"
-    cmd = f"nix flake metadata {flakeref} --json {exp}"
-    ret = exec_cmd(
-        cmd.split(), raise_on_error=False, return_error=True, log_error=False
-    )
+    cmd = nix_cmd("flake", "metadata", flakeref, "--json")
+    ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
     if ret is None or ret.returncode != 0:
         LOG.warning("Failed reading flake metadata: %s", flakeref)
         return None

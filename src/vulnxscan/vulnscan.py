@@ -73,10 +73,10 @@ class VulnScan:
         """Run vulnix scan for nix artifact at target_path"""
         LOG.info("Running vulnix scan")
         self.df_vulnix = pd.DataFrame()
-        extra_opts = "-C --json"
+        extra_opts = ["-C", "--json"]
         if buildtime:
-            extra_opts = "--json"
-        cmd = ["vulnix", target_path] + extra_opts.split()
+            extra_opts = ["--json"]
+        cmd = ["vulnix", target_path, *extra_opts]
         # vulnix exit status is non-zero if it found vulnerabilities.
         # Therefore, we need to set the raise_on_error=False and
         # return_error=True to be able to read the vulnerabilities

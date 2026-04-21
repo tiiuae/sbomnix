@@ -12,6 +12,7 @@ import importlib.metadata
 import logging
 import os
 import re
+import shlex
 import subprocess
 import sys
 import urllib.error
@@ -29,9 +30,6 @@ from tabulate import tabulate
 
 LOG_SPAM = logging.DEBUG - 1
 LOG = logging.getLogger(os.path.abspath(__file__))
-
-###############################################################################
-
 
 def set_log_verbosity(verbosity=1):
     """Set logging verbosity"""
@@ -121,7 +119,8 @@ def df_log(df, loglevel, tablefmt="presto"):
 
 def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdout=None):
     """Run shell command cmd"""
-    command_str = " ".join(cmd)
+    cmd = [os.fspath(part) for part in cmd]
+    command_str = shlex.join(cmd)
     LOG.debug("Running: %s", command_str)
     try:
         if stdout:
@@ -179,26 +178,34 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     otherwise, returns None.
     """
     LOG.info("Evaluating '%s'", flakeref)
-    exp = "--extra-experimental-features flakes "
-    exp += "--extra-experimental-features nix-command"
-    extra_args = "--impure" if impure else ""
-    cmd = f"nix eval --raw {flakeref} {exp} {extra_args}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, log_error=False)
+    cmd = nix_cmd("eval", "--raw", flakeref, impure=impure)
+    ret = exec_cmd(cmd, raise_on_error=False, log_error=False)
     if not ret:
         LOG.debug("not a flakeref: '%s'", flakeref)
         return None
-    nixpath = ret.stdout
+    nixpath = ret.stdout.strip()
     LOG.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     if not force_realise:
         return nixpath
     LOG.info("Try force-realising flakeref '%s'", flakeref)
-    cmd = f"nix build --no-link {flakeref} {exp} {extra_args}"
-    ret = exec_cmd(
-        cmd.split(), raise_on_error=False, return_error=True, log_error=False
-    )
-    if not ret:
-        LOG.fatal("Failed force_realising %s: %s", flakeref, ret.stderr)
+    cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
+    exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
     return nixpath
+
+
+def nix_cmd(*args, impure=False):
+    """Build argv for nix commands that require flakes + nix-command support."""
+    cmd = [
+        "nix",
+        *args,
+        "--extra-experimental-features",
+        "flakes",
+        "--extra-experimental-features",
+        "nix-command",
+    ]
+    if impure:
+        cmd.append("--impure")
+    return cmd
 
 
 def regex_match(regex, string):

@@ -106,8 +106,8 @@ def _run_nix_visualize(target_path):
     prefix = "nix-visualize_"
     suffix = ".csv"
     with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        cmd = f"nix-visualize --output={f.name} {target_path}"
-        exec_cmd(cmd.split())
+        cmd = ["nix-visualize", f"--output={f.name}", target_path]
+        exec_cmd(cmd)
         return pathlib.Path(f.name)
 
 

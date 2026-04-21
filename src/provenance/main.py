@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from common.utils import LOG, exec_cmd, set_log_verbosity
+from common.utils import LOG, exec_cmd, nix_cmd, set_log_verbosity
 
 
 @dataclass
@@ -170,10 +170,8 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
 
     LOG.info("Generating provenance file for '%s'", target)
 
-    exp = "--extra-experimental-features flakes "
-    exp += "--extra-experimental-features nix-command"
-    cmd = f"nix derivation show {target} {exp}"
-    drv_json = json.loads(exec_cmd(cmd.split()).stdout)
+    cmd = nix_cmd("derivation", "show", target)
+    drv_json = json.loads(exec_cmd(cmd).stdout)
     drv_path = next(iter(drv_json))
     drv_json = drv_json[drv_path]
 
