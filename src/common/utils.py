@@ -11,6 +11,7 @@ import csv
 import importlib.metadata
 import logging
 import os
+import pathlib
 import re
 import shlex
 import subprocess
@@ -32,16 +33,23 @@ LOG_SPAM = logging.DEBUG - 1
 LOG = logging.getLogger(os.path.abspath(__file__))
 
 
-class FlakeRefRealisationError(RuntimeError):
-    """Raised when a flakeref resolves but cannot be force-realised."""
+class FlakeRefResolutionError(RuntimeError):
+    """Raised when an input looks like a flakeref but cannot be resolved."""
 
-    def __init__(self, flakeref, stderr=""):
+    def __init__(self, flakeref, stderr="", action="evaluating"):
         self.flakeref = flakeref
         self.stderr = (stderr or "").strip()
-        message = f"Failed force-realising flakeref '{flakeref}'"
+        message = f"Failed {action} flakeref '{flakeref}'"
         if self.stderr:
             message += f": {self.stderr}"
         super().__init__(message)
+
+
+class FlakeRefRealisationError(FlakeRefResolutionError):
+    """Raised when a flakeref resolves but cannot be force-realised."""
+
+    def __init__(self, flakeref, stderr=""):
+        super().__init__(flakeref, stderr=stderr, action="force-realising")
 
 
 def set_log_verbosity(verbosity=1):
@@ -188,14 +196,16 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     """
     Resolve flakeref to out-path, force-realising the output if `force_realise`
     is True. Returns resolved path if flakeref can be resolved to out-path.
-    Returns None if `flakeref` is not understood by `nix eval`.
+    Returns None if the input does not appear to be a flakeref.
     Raises FlakeRefRealisationError if the flakeref resolves but realisation
     fails.
     """
     LOG.info("Evaluating '%s'", flakeref)
     cmd = nix_cmd("eval", "--raw", flakeref, impure=impure)
-    ret = exec_cmd(cmd, raise_on_error=False, log_error=False)
-    if not ret:
+    ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
+    if ret is None or ret.returncode != 0:
+        if _looks_like_flakeref(flakeref):
+            raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
         LOG.debug("not a flakeref: '%s'", flakeref)
         return None
     nixpath = ret.stdout.strip()
@@ -223,6 +233,24 @@ def nix_cmd(*args, impure=False):
     if impure:
         cmd.append("--impure")
     return cmd
+
+
+def _looks_like_flakeref(flakeref):
+    """Return true if the input is likely intended as a flake reference."""
+    if not flakeref:
+        return False
+    if flakeref.startswith("nixpkgs="):
+        return True
+    if "#" in flakeref or "?" in flakeref:
+        return True
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", flakeref):
+        return True
+    path = pathlib.Path(flakeref)
+    if path.exists():
+        return path.is_dir() and (path / "flake.nix").exists()
+    return re.fullmatch(
+        r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)?", flakeref
+    ) is not None and not flakeref.endswith(".drv")
 
 
 def regex_match(regex, string):
