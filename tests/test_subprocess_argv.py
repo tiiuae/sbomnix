@@ -104,11 +104,54 @@ def test_try_resolve_flakeref_returns_none_for_non_flake_path(monkeypatch):
     assert resolved is None
 
 
+@pytest.mark.parametrize("path", ["missing", "./missing", "foo/bar"])
+def test_try_resolve_flakeref_returns_none_for_missing_relative_paths(
+    monkeypatch, path
+):
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="", stderr="dummy eval failure", returncode=1)
+
+    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+
+    resolved = utils.try_resolve_flakeref(path)
+
+    assert resolved is None
+
+
+@pytest.mark.parametrize("name", ["artifact#1", "artifact?1"])
+def test_try_resolve_flakeref_returns_none_for_existing_non_flake_path_with_fragment_chars(
+    tmp_path, monkeypatch, name
+):
+    artifact = tmp_path / name
+    artifact.write_text("not a flake", encoding="utf-8")
+
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="", stderr="attribute missing", returncode=1)
+
+    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+
+    resolved = utils.try_resolve_flakeref(artifact.as_posix())
+
+    assert resolved is None
+
+
 def test_flakeref_realisation_error_accepts_none_stderr():
     error = utils.FlakeRefRealisationError("/tmp/my flake#pkg", None)
 
     assert error.stderr == ""
     assert str(error) == "Failed force-realising flakeref '/tmp/my flake#pkg'"
+
+
+def test_flake_ref_resolution_error_preserves_stderr_verbatim():
+    error = utils.FlakeRefResolutionError(".#missing", "attribute missing\n")
+
+    assert error.stderr == "attribute missing\n"
+    assert str(error) == "Failed evaluating flakeref '.#missing': attribute missing"
+
+
+def test_exec_cmd_rejects_string_commands():
+    with pytest.raises(TypeError, match="argv sequence"):
+        utils.exec_cmd("nix build .#sbomnix")
 
 
 def test_find_deriver_uses_argv_list(monkeypatch):
