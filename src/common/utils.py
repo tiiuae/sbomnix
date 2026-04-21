@@ -31,6 +31,19 @@ from tabulate import tabulate
 LOG_SPAM = logging.DEBUG - 1
 LOG = logging.getLogger(os.path.abspath(__file__))
 
+
+class FlakeRefRealisationError(RuntimeError):
+    """Raised when a flakeref resolves but cannot be force-realised."""
+
+    def __init__(self, flakeref, stderr=""):
+        self.flakeref = flakeref
+        self.stderr = (stderr or "").strip()
+        message = f"Failed force-realising flakeref '{flakeref}'"
+        if self.stderr:
+            message += f": {self.stderr}"
+        super().__init__(message)
+
+
 def set_log_verbosity(verbosity=1):
     """Set logging verbosity"""
     log_levels = [logging.NOTSET, logging.INFO, logging.DEBUG, LOG_SPAM]
@@ -174,8 +187,10 @@ def exit_unless_nix_artifact(path, force_realise=False):
 def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     """
     Resolve flakeref to out-path, force-realising the output if `force_realise`
-    is True. Returns resolved path if flakeref can be resolved to out-path,
-    otherwise, returns None.
+    is True. Returns resolved path if flakeref can be resolved to out-path.
+    Returns None if `flakeref` is not understood by `nix eval`.
+    Raises FlakeRefRealisationError if the flakeref resolves but realisation
+    fails.
     """
     LOG.info("Evaluating '%s'", flakeref)
     cmd = nix_cmd("eval", "--raw", flakeref, impure=impure)
@@ -189,7 +204,9 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
         return nixpath
     LOG.info("Try force-realising flakeref '%s'", flakeref)
     cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
-    exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
+    ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
+    if ret is None or ret.returncode != 0:
+        raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
     return nixpath
 
 

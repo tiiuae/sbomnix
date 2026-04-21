@@ -17,6 +17,7 @@ from tempfile import NamedTemporaryFile
 
 from common.utils import (
     LOG,
+    FlakeRefRealisationError,
     exit_unless_command_exists,
     exit_unless_nix_artifact,
     set_log_verbosity,
@@ -151,7 +152,11 @@ def main():
         sbom_cdx_path = target_path
     else:
         runtime = args.buildtime is False
-        target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
+        try:
+            target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
+        except FlakeRefRealisationError as error:
+            LOG.fatal("%s", error)
+            raise SystemExit(1) from error
         if not target_path:
             target_path = pathlib.Path(args.TARGET).resolve().as_posix()
             exit_unless_nix_artifact(args.TARGET, force_realise=runtime)
