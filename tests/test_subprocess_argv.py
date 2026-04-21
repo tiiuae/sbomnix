@@ -65,6 +65,26 @@ def test_try_resolve_flakeref_uses_argv_lists(monkeypatch):
         ),
     ]
 
+
+def test_try_resolve_flakeref_raises_on_failed_force_realise(monkeypatch):
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1] == "eval":
+            return SimpleNamespace(stdout="/nix/store/resolved\n", returncode=0)
+        return SimpleNamespace(stdout="", stderr="build failed", returncode=1)
+
+    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+
+    with pytest.raises(utils.FlakeRefRealisationError, match="build failed"):
+        utils.try_resolve_flakeref("/tmp/my flake#pkg", force_realise=True)
+
+
+def test_flakeref_realisation_error_accepts_none_stderr():
+    error = utils.FlakeRefRealisationError("/tmp/my flake#pkg", None)
+
+    assert error.stderr == ""
+    assert str(error) == "Failed force-realising flakeref '/tmp/my flake#pkg'"
+
+
 def test_find_deriver_uses_argv_list(monkeypatch):
     calls = []
     drv_path = "/nix/store/my drv.drv"

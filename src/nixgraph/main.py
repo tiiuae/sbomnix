@@ -10,6 +10,8 @@ import argparse
 import pathlib
 
 from common.utils import (
+    LOG,
+    FlakeRefRealisationError,
     check_positive,
     exit_unless_nix_artifact,
     get_py_pkg_version,
@@ -87,7 +89,11 @@ def main():
     args = getargs()
     set_log_verbosity(args.verbose)
     runtime = args.buildtime is False
-    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    try:
+        target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
+    except FlakeRefRealisationError as error:
+        LOG.fatal("%s", error)
+        raise SystemExit(1) from error
     if not target_path:
         target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
         exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
