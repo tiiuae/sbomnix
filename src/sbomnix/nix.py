@@ -11,7 +11,7 @@ import os
 
 import pandas as pd
 
-from common.utils import LOG, LOG_SPAM, exec_cmd
+from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd
 from sbomnix.cpe import CPE
 from sbomnix.derivation import load
 
@@ -94,10 +94,8 @@ def find_deriver(path):
     if path.endswith(".drv"):
         return path
     # Deriver from QueryValidDerivers
-    exp = "--extra-experimental-features flakes "
-    exp += "--extra-experimental-features nix-command"
-    cmd = f"nix derivation show {path} {exp}"
-    ret = exec_cmd(cmd.split(), raise_on_error=False, log_error=False)
+    cmd = nix_cmd("derivation", "show", path)
+    ret = exec_cmd(cmd, raise_on_error=False, log_error=False)
     if not ret:
         LOG.log(LOG_SPAM, "Deriver not found for '%s'", path)
         return None
