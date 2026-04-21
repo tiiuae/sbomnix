@@ -11,7 +11,7 @@ import pathlib
 
 from common.utils import (
     LOG,
-    FlakeRefRealisationError,
+    FlakeRefResolutionError,
     check_positive,
     exit_unless_nix_artifact,
     get_py_pkg_version,
@@ -88,7 +88,7 @@ def main():
         target_path = try_resolve_flakeref(
             args.NIXREF, force_realise=runtime, impure=args.impure
         )
-    except FlakeRefRealisationError as error:
+    except FlakeRefResolutionError as error:
         LOG.fatal("%s", error)
         raise SystemExit(1) from error
     if target_path:

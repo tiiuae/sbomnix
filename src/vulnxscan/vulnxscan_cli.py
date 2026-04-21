@@ -17,7 +17,7 @@ from tempfile import NamedTemporaryFile
 
 from common.utils import (
     LOG,
-    FlakeRefRealisationError,
+    FlakeRefResolutionError,
     exit_unless_command_exists,
     exit_unless_nix_artifact,
     set_log_verbosity,
@@ -154,7 +154,7 @@ def main():
         runtime = args.buildtime is False
         try:
             target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
-        except FlakeRefRealisationError as error:
+        except FlakeRefResolutionError as error:
             LOG.fatal("%s", error)
             raise SystemExit(1) from error
         if not target_path:

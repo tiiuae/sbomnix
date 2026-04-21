@@ -15,6 +15,7 @@ from common import utils
 from nixmeta import scanner
 from nixupdate import nix_outdated
 from sbomnix import nix as sbomnix_nix
+from sbomnix.meta import Meta
 from vulnxscan.vulnscan import VulnScan
 
 
@@ -47,7 +48,7 @@ def test_try_resolve_flakeref_uses_argv_lists(monkeypatch):
                 "nix-command",
                 "--impure",
             ],
-            {"raise_on_error": False, "log_error": False},
+            {"raise_on_error": False, "return_error": True, "log_error": False},
         ),
         (
             [
@@ -76,6 +77,31 @@ def test_try_resolve_flakeref_raises_on_failed_force_realise(monkeypatch):
 
     with pytest.raises(utils.FlakeRefRealisationError, match="build failed"):
         utils.try_resolve_flakeref("/tmp/my flake#pkg", force_realise=True)
+
+
+def test_try_resolve_flakeref_raises_on_failed_eval_for_flakeref(monkeypatch):
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="", stderr="attribute missing", returncode=1)
+
+    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+
+    with pytest.raises(utils.FlakeRefResolutionError, match="attribute missing"):
+        utils.try_resolve_flakeref(".#missing")
+
+
+def test_try_resolve_flakeref_returns_none_for_non_flake_path(monkeypatch):
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(
+            stdout="",
+            stderr="does not contain a 'flake.nix'",
+            returncode=1,
+        )
+
+    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+
+    resolved = utils.try_resolve_flakeref("/nix/store/not-a-flake-output")
+
+    assert resolved is None
 
 
 def test_flakeref_realisation_error_accepts_none_stderr():
@@ -184,6 +210,32 @@ def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
             {},
         )
     ]
+
+
+def test_get_flake_metadata_strips_nixpkgs_prefix_without_splitting_spaces(monkeypatch):
+    calls = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return SimpleNamespace(stdout='{"path": "/nix/store/nixpkgs"}', returncode=0)
+
+    monkeypatch.setattr(scanner, "exec_cmd", fake_exec_cmd)
+
+    scanner._get_flake_metadata("nixpkgs=/tmp/my flake")
+
+    assert calls[0][0][3] == "/tmp/my flake"
+
+
+def test_meta_reads_nix_path_entry_with_spaces(monkeypatch):
+    scanned = []
+
+    monkeypatch.setenv("NIX_PATH", "foo=/tmp/other:nixpkgs=/tmp/my flake")
+    monkeypatch.setattr(Meta, "_scan", lambda self, path: scanned.append(path) or path)
+
+    resolved = Meta().get_nixpkgs_meta()
+
+    assert resolved == "/tmp/my flake"
+    assert scanned == ["/tmp/my flake"]
 
 
 @pytest.mark.parametrize(

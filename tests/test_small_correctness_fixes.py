@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from common.utils import FlakeRefRealisationError
+from common.utils import FlakeRefRealisationError, FlakeRefResolutionError
 from nixgraph import main as nixgraph_main
 from nixupdate import nix_outdated
 from sbomnix import main as sbomnix_main
@@ -135,7 +135,97 @@ def test_cli_exits_on_flakeref_realisation_failure_without_store_fallback(
         module.main()
 
     assert excinfo.value.code == 1
-    assert artifact_checks == []
+    assert not artifact_checks
+
+
+@pytest.mark.parametrize(
+    ("module", "args", "prep"),
+    [
+        (
+            sbomnix_main,
+            SimpleNamespace(
+                NIXREF=".#broken",
+                buildtime=False,
+                depth=None,
+                verbose=1,
+                include_vulns=False,
+                exclude_meta=False,
+                exclude_cpe_matching=False,
+                csv=None,
+                cdx=None,
+                spdx=None,
+                impure=False,
+            ),
+            lambda monkeypatch: None,
+        ),
+        (
+            nixgraph_main,
+            SimpleNamespace(
+                NIXREF=".#broken",
+                buildtime=False,
+                depth=1,
+                inverse=None,
+                out="graph.png",
+                colorize=None,
+                until=None,
+                pathnames=False,
+                verbose=1,
+            ),
+            lambda monkeypatch: None,
+        ),
+        (
+            nix_outdated,
+            SimpleNamespace(
+                NIXREF=".#broken",
+                buildtime=False,
+                local=False,
+                out="nix_outdated.csv",
+                verbose=1,
+            ),
+            lambda monkeypatch: None,
+        ),
+        (
+            vulnxscan_cli,
+            SimpleNamespace(
+                TARGET=".#broken",
+                verbose=1,
+                out="vulns.csv",
+                buildtime=False,
+                sbom=False,
+                whitelist=None,
+                triage=False,
+                nixprs=False,
+            ),
+            lambda monkeypatch: monkeypatch.setattr(
+                vulnxscan_cli, "exit_unless_command_exists", lambda _command: None
+            ),
+        ),
+    ],
+)
+def test_cli_exits_on_flakeref_eval_failure_without_store_fallback(
+    monkeypatch, module, args, prep
+):
+    """Flakeref eval failures should not be misreported as invalid store paths."""
+    artifact_checks = []
+
+    def raise_resolution_error(*_args, **_kwargs):
+        raise FlakeRefResolutionError(".#broken", "attribute missing")
+
+    prep(monkeypatch)
+    monkeypatch.setattr(module, "getargs", lambda: args)
+    monkeypatch.setattr(module, "set_log_verbosity", lambda _verbosity: None)
+    monkeypatch.setattr(module, "try_resolve_flakeref", raise_resolution_error)
+    monkeypatch.setattr(
+        module,
+        "exit_unless_nix_artifact",
+        lambda path, force_realise=False: artifact_checks.append((path, force_realise)),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        module.main()
+
+    assert excinfo.value.code == 1
+    assert not artifact_checks
 
 
 def test_vulnxscan_cleans_generated_tempfiles_on_failure(tmp_path, monkeypatch):

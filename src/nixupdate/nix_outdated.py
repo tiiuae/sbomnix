@@ -18,7 +18,7 @@ import repology.repology_cli
 from common.utils import (
     LOG,
     LOG_SPAM,
-    FlakeRefRealisationError,
+    FlakeRefResolutionError,
     df_from_csv_file,
     df_log,
     df_to_csv_file,
@@ -257,7 +257,7 @@ def main():
     runtime = args.buildtime is False
     try:
         target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
-    except FlakeRefRealisationError as error:
+    except FlakeRefResolutionError as error:
         LOG.fatal("%s", error)
         raise SystemExit(1) from error
     if not target_path:

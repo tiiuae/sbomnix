@@ -143,9 +143,8 @@ def _get_flake_metadata(flakeref):
     """
     # Strip possible nixpkgs= prefix to support cases where flakeref is
     # given the NIX_PATH environment variable
-    m_nixpkgs = re.match(r"nixpkgs=([^:\s]+)", flakeref)
-    if m_nixpkgs:
-        flakeref = m_nixpkgs.group(1)
+    if flakeref.startswith("nixpkgs="):
+        flakeref = flakeref.removeprefix("nixpkgs=")
     # Read nix flake metadata as json
     cmd = nix_cmd("flake", "metadata", flakeref, "--json")
     ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
