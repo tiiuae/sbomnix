@@ -13,7 +13,13 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from common.utils import LOG, exec_cmd, nix_cmd, set_log_verbosity
+from common.utils import (
+    LOG,
+    exec_cmd,
+    nix_cmd,
+    parse_nix_derivation_show,
+    set_log_verbosity,
+)
 
 
 @dataclass
@@ -52,19 +58,24 @@ def get_env_metadata():
     return BuildMeta(*values)
 
 
-def get_subjects(outputs: dict) -> list[dict]:
+def get_subjects(outputs: dict, env: dict | None = None) -> list[dict]:
     """Parse derivation outputs into in-toto subjects"""
 
     LOG.info("Parsing derivation outputs")
 
+    env = env or {}
     subjects = []
     for name, data in outputs.items():
+        output_path = _output_path(name, data, env)
+        if not output_path:
+            LOG.warning("Cannot determine path for derivation output '%s'", name)
+            continue
         subject = {
             "name": name,
-            "uri": data["path"],
+            "uri": output_path,
         }
         store_hash = exec_cmd(
-            ["nix-store", "--query", "--hash", data["path"]],
+            ["nix-store", "--query", "--hash", output_path],
             raise_on_error=False,
         )
         if store_hash is None:
@@ -98,6 +109,14 @@ def query_store_hashes(paths: list[str]) -> list[str]:
         )
 
 
+def _output_path(name: str, output: dict | None, env: dict | None = None) -> str | None:
+    """Return the resolved absolute output path from outputs or env."""
+    if isinstance(output, dict) and output.get("path"):
+        return output["path"]
+    env = env or {}
+    return env.get(name)
+
+
 def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     """Get dependencies of derivation and parse them into ResourceDescriptors"""
 
@@ -109,7 +128,10 @@ def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
         ["nix-store", "--query", depth, "--include-outputs", drv_path]
     ).stdout.split()
     hashes = query_store_hashes(references)
-    infos = json.loads(exec_cmd(["nix", "derivation", "show", "-r", drv_path]).stdout)
+    infos = parse_nix_derivation_show(
+        exec_cmd(["nix", "derivation", "show", "-r", drv_path]).stdout,
+        store_path_hint=drv_path,
+    )
 
     dependencies = []
     for drv, output_hash in zip(references, hashes):
@@ -171,7 +193,7 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
     LOG.info("Generating provenance file for '%s'", target)
 
     cmd = nix_cmd("derivation", "show", target)
-    drv_json = json.loads(exec_cmd(cmd).stdout)
+    drv_json = parse_nix_derivation_show(exec_cmd(cmd).stdout, store_path_hint=target)
     drv_path = next(iter(drv_json))
     drv_json = drv_json[drv_path]
 
@@ -179,7 +201,7 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
 
     return {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": get_subjects(drv_json["outputs"]),
+        "subject": get_subjects(drv_json["outputs"], env=drv_json.get("env")),
         "predicateType": "https://slsa.dev/provenance/v1",
         "predicate": {
             "buildDefinition": {
