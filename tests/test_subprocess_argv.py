@@ -14,6 +14,7 @@ import pytest
 from common import utils
 from nixmeta import scanner
 from nixupdate import nix_outdated
+from provenance import main as provenance_main
 from sbomnix import nix as sbomnix_nix
 from sbomnix.meta import Meta
 from vulnxscan.vulnscan import VulnScan
@@ -288,6 +289,77 @@ def test_parse_nix_derivation_show_infers_store_dir_from_path_like_env_values():
     drv_path = f"/custom/store/{drv_basename}"
     assert list(parsed) == [drv_path]
     assert parsed[drv_path]["env"]["out"] == f"/custom/store/{out_basename}"
+
+
+def test_get_dependencies_supports_nix_2_33_wrapped_json(monkeypatch):
+    drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+    dep_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dependency.drv"
+    dep_path = f"/nix/store/{dep_basename}"
+    output_hash = "1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+
+    def fake_exec_cmd(cmd, **kwargs):
+        if cmd == [
+            "nix-store",
+            "--query",
+            "--references",
+            "--include-outputs",
+            drv_path,
+        ]:
+            return SimpleNamespace(stdout=f"{dep_path}\n")
+        if cmd[:4] == ["nix", "derivation", "show", "-r"]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "derivations": {
+                            dep_basename: {
+                                "name": "dependency",
+                                "env": {"version": "1.2.3"},
+                            }
+                        },
+                        "version": 4,
+                    }
+                )
+            )
+        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
+
+    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(
+        provenance_main,
+        "query_store_hashes",
+        lambda paths: [f"sha256:{output_hash}"],
+    )
+
+    assert provenance_main.get_dependencies(drv_path) == [
+        {
+            "name": "dependency",
+            "uri": dep_path,
+            "digest": {"sha256": output_hash},
+            "annotations": {"version": "1.2.3"},
+        }
+    ]
+
+
+def test_get_subjects_falls_back_to_env_output_paths(monkeypatch):
+    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+    output_hash = "1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd == ["nix-store", "--query", "--hash", output_path]:
+            return SimpleNamespace(stdout=f"sha256:{output_hash}\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
+
+    assert provenance_main.get_subjects(
+        {"out": {"method": "nar"}},
+        env={"out": output_path},
+    ) == [
+        {
+            "name": "out",
+            "uri": output_path,
+            "digest": {"sha256": output_hash},
+        }
+    ]
 
 
 def test_get_flake_metadata_uses_argv_list(monkeypatch):
