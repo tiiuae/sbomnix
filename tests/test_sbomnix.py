@@ -56,17 +56,17 @@ TEST_NIX_RESULT = None
 ################################################################################
 
 
-@pytest.fixture(scope="session")
-def test_work_dir(tmp_path_factory):
-    """Fixture for session-scope tempdir"""
-    tempdir = tmp_path_factory.mktemp("testdata")
-    return Path(tempdir)
+@pytest.fixture()
+def test_work_dir(tmp_path):
+    """Fixture for per-test tempdir"""
+    return Path(tmp_path)
 
 
 @pytest.fixture(autouse=True)
 def set_up_test_data(test_work_dir):
     """Fixture to set up the test data"""
     print("setup")
+    old_cwd = Path.cwd()
     global TEST_WORK_DIR
     TEST_WORK_DIR = test_work_dir
     print(f"using TEST_WORK_DIR: {TEST_WORK_DIR}")
@@ -80,6 +80,7 @@ def set_up_test_data(test_work_dir):
     os.chdir(TEST_WORK_DIR)
     yield "resource"
     print("clean up")
+    os.chdir(old_cwd if old_cwd.exists() else REPOROOT)
     shutil.rmtree(TEST_WORK_DIR)
 
 
