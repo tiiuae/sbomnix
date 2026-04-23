@@ -6,12 +6,11 @@
 
 """Nix store, originally from https://github.com/flyingcircusio/vulnix"""
 
-import json
 import os
 
 import pandas as pd
 
-from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd
+from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd, parse_nix_derivation_show
 from sbomnix.cpe import CPE
 from sbomnix.derivation import load
 
@@ -99,7 +98,9 @@ def find_deriver(path):
     if not ret:
         LOG.log(LOG_SPAM, "Deriver not found for '%s'", path)
         return None
-    qvd_json_keys = list(json.loads(ret.stdout).keys())
+    qvd_json_keys = list(
+        parse_nix_derivation_show(ret.stdout, store_path_hint=path).keys()
+    )
     if not qvd_json_keys or len(qvd_json_keys) < 1:
         LOG.log(LOG_SPAM, "Not qvd_deriver for '%s'", path)
         return None

@@ -185,6 +185,111 @@ def test_find_deriver_uses_argv_list(monkeypatch):
     ]
 
 
+def test_find_deriver_supports_nix_2_33_wrapped_json(monkeypatch):
+    path = "/nix/store/my output"
+    drv_basename = "4rpn9q86mj9sxrfavhz1qgx7a8sdbndw-nghttp2-1.68.1.drv"
+    drv_path = f"/nix/store/{drv_basename}"
+    stale_qpi_deriver = "/nix/store/stale-nghttp2-1.68.1.drv"
+
+    def fake_exec_cmd(cmd, **kwargs):
+        if cmd[:3] == ["nix", "derivation", "show"]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "derivations": {drv_basename: {}},
+                        "version": 4,
+                    }
+                )
+            )
+        if cmd == ["nix-store", "-qd", path]:
+            return SimpleNamespace(stdout=f"{stale_qpi_deriver}\n")
+        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
+
+    monkeypatch.setattr(sbomnix_nix, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(
+        sbomnix_nix.os.path,
+        "exists",
+        lambda candidate: candidate == drv_path,
+    )
+
+    assert sbomnix_nix.find_deriver(path) == drv_path
+
+
+def test_parse_nix_derivation_show_normalizes_nix_2_33_store_paths():
+    drv_basename = "4rpn9q86mj9sxrfavhz1qgx7a8sdbndw-nghttp2-1.68.1.drv"
+    out_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+    src_basename = "2ccccccccccccccccccccccccccccccc-source"
+    dep_basename = "3ddddddddddddddddddddddddddddddd-zlib-1.3.1.drv"
+
+    parsed = utils.parse_nix_derivation_show(
+        json.dumps(
+            {
+                "version": 4,
+                "derivations": {
+                    drv_basename: {
+                        "name": "nghttp2",
+                        "builder": "/custom/store/4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bash/bin/bash",
+                        "outputs": {"out": {"path": out_basename}},
+                        "inputs": {
+                            "srcs": [src_basename],
+                            "drvs": {dep_basename: ["out"]},
+                        },
+                        "env": {"out": out_basename, "name": "nghttp2-1.68.1"},
+                    }
+                },
+            }
+        )
+    )
+
+    drv_path = f"/custom/store/{drv_basename}"
+    assert list(parsed) == [drv_path]
+    assert parsed[drv_path]["outputs"]["out"]["path"] == f"/custom/store/{out_basename}"
+    assert parsed[drv_path]["inputs"]["srcs"] == [f"/custom/store/{src_basename}"]
+    assert list(parsed[drv_path]["inputs"]["drvs"]) == [f"/custom/store/{dep_basename}"]
+    assert parsed[drv_path]["env"]["out"] == f"/custom/store/{out_basename}"
+
+
+def test_get_nix_store_dir_ignores_colon_separated_env_paths():
+    value = (
+        "--prefix PATH : "
+        "/custom/store/4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-git/bin:"
+        "/custom/store/5fffffffffffffffffffffffffffffff-graphviz/bin"
+    )
+
+    assert utils.get_nix_store_dir(value, default=None) == "/custom/store"
+
+
+def test_parse_nix_derivation_show_infers_store_dir_from_path_like_env_values():
+    drv_basename = "4rpn9q86mj9sxrfavhz1qgx7a8sdbndw-nghttp2-1.68.1.drv"
+    out_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+
+    parsed = utils.parse_nix_derivation_show(
+        json.dumps(
+            {
+                "version": 4,
+                "derivations": {
+                    drv_basename: {
+                        "name": "nghttp2",
+                        "outputs": {"out": {"method": "nar"}},
+                        "env": {
+                            "out": out_basename,
+                            "makeWrapperArgs": (
+                                "--prefix PATH : "
+                                "/custom/store/4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-git/bin:"
+                                "/custom/store/5fffffffffffffffffffffffffffffff-graphviz/bin"
+                            ),
+                        },
+                    }
+                },
+            }
+        )
+    )
+
+    drv_path = f"/custom/store/{drv_basename}"
+    assert list(parsed) == [drv_path]
+    assert parsed[drv_path]["env"]["out"] == f"/custom/store/{out_basename}"
+
+
 def test_get_flake_metadata_uses_argv_list(monkeypatch):
     calls = []
 
