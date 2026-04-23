@@ -7,9 +7,12 @@
 """Python script that generates SLSA v1.0 provenance file for a nix target"""
 
 import argparse
+import base64
+import binascii
 import errno
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -20,6 +23,16 @@ from common.utils import (
     parse_nix_derivation_show,
     set_log_verbosity,
 )
+
+HASH_SIZE_BYTES = {
+    "blake3": 32,
+    "md5": 16,
+    "sha1": 20,
+    "sha256": 32,
+    "sha512": 64,
+}
+NIX32_ALPHABET = "0123456789abcdfghijklmnpqrsvwxyz"
+NIX32_INDEX = {char: index for index, char in enumerate(NIX32_ALPHABET)}
 
 
 @dataclass
@@ -33,6 +46,114 @@ class BuildMeta:
     build_finished_ts: str
     external_parameters: str
     internal_parameters: str
+
+
+def _canonical_hash_algo(hash_algo: str | None) -> str | None:
+    """Normalize legacy hash algorithm labels to plain algorithm names."""
+    if not hash_algo:
+        return None
+    return str(hash_algo).removeprefix("r:")
+
+
+def _hash_size_bytes(hash_algo: str | None) -> int | None:
+    """Return expected digest size for the given algorithm."""
+    return HASH_SIZE_BYTES.get(_canonical_hash_algo(hash_algo))
+
+
+def _decode_nix32(hash_value: str, size_bytes: int) -> bytes | None:
+    """Decode nix base32 digest strings into raw bytes."""
+    try:
+        value = 0
+        for char in hash_value:
+            value = value * 32 + NIX32_INDEX[char]
+    except KeyError:
+        return None
+
+    if value.bit_length() > size_bytes * 8:
+        return None
+
+    encoded_size = (len(hash_value) * 5 + 7) // 8
+    raw = value.to_bytes(encoded_size, "little")
+    return raw[:size_bytes].ljust(size_bytes, b"\0")
+
+
+def _decode_hash_bytes(hash_value: str, hash_algo: str) -> bytes | None:
+    """Decode known Nix hash encodings into raw bytes."""
+    size_bytes = _hash_size_bytes(hash_algo)
+    if size_bytes is None:
+        return None
+
+    if re.fullmatch(rf"[0-9a-f]{{{size_bytes * 2}}}", hash_value):
+        return bytes.fromhex(hash_value)
+
+    if len(hash_value) == (size_bytes * 8 + 4) // 5:
+        decoded = _decode_nix32(hash_value, size_bytes)
+        if decoded is not None:
+            return decoded
+
+    padding = "=" * (-len(hash_value) % 4)
+    try:
+        decoded = base64.b64decode(hash_value + padding, validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    if len(decoded) != size_bytes:
+        return None
+    return decoded
+
+
+def _split_hash_value(
+    hash_value: str, hash_algo: str | None = None
+) -> tuple[str | None, str]:
+    """Split a typed hash string into canonical algorithm and raw value."""
+    hash_algo = _canonical_hash_algo(hash_algo)
+    hash_value = str(hash_value).strip()
+
+    if hash_algo:
+        for separator in (":", "-"):
+            legacy_prefix = f"r:{hash_algo}{separator}"
+            if hash_value.startswith(legacy_prefix):
+                return hash_algo, hash_value.removeprefix(legacy_prefix)
+            prefix = f"{hash_algo}{separator}"
+            if hash_value.startswith(prefix):
+                return hash_algo, hash_value.removeprefix(prefix)
+
+    match = re.match(
+        r"^(?P<algo>(?:r:)?[A-Za-z0-9]+)(?P<sep>[:-])(?P<rest>.+)$", hash_value
+    )
+    if match:
+        return _canonical_hash_algo(match.group("algo")), match.group("rest")
+
+    return hash_algo, hash_value
+
+
+def _normalize_digest(
+    hash_value: str | None, hash_algo: str | None = None
+) -> dict | None:
+    """Return digest in a canonical base16 representation."""
+    if not hash_value:
+        return None
+    hash_value = str(hash_value).strip()
+    if not hash_value:
+        return None
+
+    hash_algo, raw_hash_value = _split_hash_value(hash_value, hash_algo=hash_algo)
+    if not hash_algo:
+        return None
+
+    decoded = _decode_hash_bytes(raw_hash_value, hash_algo)
+    if decoded is None:
+        return None
+    return {hash_algo: decoded.hex()}
+
+
+def _output_digest(data: dict | None) -> dict | None:
+    """Return digest from derivation output metadata when available."""
+    if not isinstance(data, dict):
+        return None
+    hash_value = data.get("hash")
+    if not hash_value:
+        return None
+    return _normalize_digest(hash_value, hash_algo=data.get("hashAlgo"))
 
 
 def get_env_metadata():
@@ -67,27 +188,41 @@ def get_subjects(outputs: dict, env: dict | None = None) -> list[dict]:
     subjects = []
     for name, data in outputs.items():
         output_path = _output_path(name, data, env)
-        if not output_path:
-            LOG.warning("Cannot determine path for derivation output '%s'", name)
-            continue
-        subject = {
-            "name": name,
-            "uri": output_path,
-        }
-        store_hash = exec_cmd(
-            ["nix-store", "--query", "--hash", output_path],
-            raise_on_error=False,
-        )
-        if store_hash is None:
-            LOG.warning(
-                "Derivation output '%s' was not found in the nix store, "
-                "assuming it was not built.",
-                name,
+        subject = {"name": name}
+        output_digest = _output_digest(data)
+        if output_path:
+            subject["uri"] = output_path
+        if output_digest is not None:
+            subject["digest"] = output_digest
+            LOG.info(
+                "Using derivation metadata hash for fixed-output output '%s'", name
             )
+        elif output_path:
+            store_hash = exec_cmd(
+                ["nix-store", "--query", "--hash", output_path],
+                raise_on_error=False,
+            )
+            if store_hash is None:
+                LOG.warning(
+                    "Derivation output '%s' was not found in the nix store, "
+                    "assuming it was not built.",
+                    name,
+                )
+                continue
+            digest = _normalize_digest(store_hash.stdout.strip())
+            if digest is None:
+                LOG.warning(
+                    "Cannot normalize nix-store hash for derivation output '%s'", name
+                )
+                continue
+            subject["digest"] = digest
         else:
-            hash_type, hash_value = store_hash.stdout.strip().split(":")
-            subject["digest"] = {hash_type: hash_value}
-            subjects.append(subject)
+            LOG.warning(
+                "Cannot determine path or digest for derivation output '%s'", name
+            )
+            continue
+
+        subjects.append(subject)
 
     return subjects
 
@@ -117,6 +252,59 @@ def _output_path(name: str, output: dict | None, env: dict | None = None) -> str
     return env.get(name)
 
 
+def _derivation_outputs_by_path(infos: dict) -> dict[str, tuple[dict, dict]]:
+    """Index derivation info by absolute output path."""
+    outputs_by_path = {}
+    for info in infos.values():
+        if not isinstance(info, dict):
+            continue
+        outputs = info.get("outputs")
+        if not isinstance(outputs, dict):
+            continue
+        env = info.get("env")
+        for name, output in outputs.items():
+            output_path = _output_path(name, output, env)
+            if output_path:
+                outputs_by_path[output_path] = (info, output)
+    return outputs_by_path
+
+
+def _dependency_package(
+    drv: str, output_hash: str, infos: dict, outputs_by_path: dict
+) -> dict | None:
+    """Create a dependency package entry with a normalized digest."""
+    info = infos.get(drv)
+    output_info = outputs_by_path.get(drv)
+    if output_info:
+        info = output_info[0]
+    digest = _output_digest(output_info[1]) if output_info else None
+    if digest is None:
+        digest = _normalize_digest(output_hash)
+    if digest is None and ":" in output_hash:
+        hash_type, hash_value = output_hash.split(":", 1)
+        LOG.warning(
+            "Falling back to non-normalized digest for dependency '%s': %s",
+            drv,
+            output_hash,
+        )
+        digest = {hash_type: hash_value}
+    if digest is None:
+        LOG.warning("Cannot determine digest for dependency '%s'", drv)
+        return None
+
+    package = {
+        "name": drv.split("-", 1)[-1].removesuffix(".drv"),
+        "uri": drv,
+        "digest": digest,
+    }
+
+    if info:
+        package["name"] = info["name"]
+        if version := info["env"].get("version"):
+            package["annotations"] = {"version": version}
+    return package
+
+
 def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
     """Get dependencies of derivation and parse them into ResourceDescriptors"""
 
@@ -132,25 +320,14 @@ def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
         exec_cmd(["nix", "derivation", "show", "-r", drv_path]).stdout,
         store_path_hint=drv_path,
     )
+    outputs_by_path = _derivation_outputs_by_path(infos)
 
     dependencies = []
     for drv, output_hash in zip(references, hashes):
         LOG.debug("Creating dependency entry for %s", drv)
-        hash_type, hash_value = output_hash.split(":")
-
-        package = {
-            "name": drv.split("-", 1)[-1].removesuffix(".drv"),
-            "uri": drv,
-            "digest": {hash_type: hash_value},
-        }
-
-        info = infos.get(drv)
-        if info:
-            package["name"] = info["name"]
-            if version := info["env"].get("version"):
-                package["annotations"] = {"version": version}
-
-        dependencies.append(package)
+        package = _dependency_package(drv, output_hash, infos, outputs_by_path)
+        if package is not None:
+            dependencies.append(package)
 
     return dependencies
 
