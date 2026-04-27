@@ -19,14 +19,8 @@ from bs4 import BeautifulSoup
 from tabulate import tabulate
 
 import repology.exceptions
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    CachedLimiterSession,
-    df_to_csv_file,
-    parse_version,
-    set_log_verbosity,
-)
+from common.utils import LOG, LOG_SPAM, df_to_csv_file, parse_version, set_log_verbosity
+from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
 
 ###############################################################################
 
@@ -176,21 +170,20 @@ def _report(df):
     return True
 
 
-def query_cve(pkg_name, pkg_version):
+def query_cve(
+    pkg_name, pkg_version, session=None, request_timeout=REPOLOGY_REQUEST_TIMEOUT
+):
     """
     Return vulnerabilities known to repology that impact the given package name
     and version. Results are returned in pandas dataframe.
     """
-    # Cache all responses locally for 6 hours
-    session = CachedLimiterSession(per_second=1, expire_after=6 * 60 * 60)
-    ua_product = "repology_cli/0"
-    ua_comment = "(https://github.com/tiiuae/sbomnix/)"
-    headers = {"User-Agent": f"{ua_product} {ua_comment}"}
+    if session is None:
+        session = DEFAULT_REPOLOGY_SESSION
     pkg = urllib.parse.quote(pkg_name)
     ver = urllib.parse.quote(pkg_version)
     query = f"https://repology.org/project/{pkg}/cves?version={ver}"
     LOG.debug("GET: %s", query)
-    resp = session.get(query, headers=headers)
+    resp = session.get(query, timeout=request_timeout)
     LOG.debug("resp.status_code: %s", resp.status_code)
     if resp.status_code == 404:
         LOG.warning("Repology package '%s' not found", pkg_name)

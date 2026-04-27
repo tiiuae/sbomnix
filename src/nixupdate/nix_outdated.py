@@ -14,7 +14,6 @@ from tempfile import NamedTemporaryFile
 
 from tabulate import tabulate
 
-import repology.repology_cli
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -26,6 +25,7 @@ from common.utils import (
     nix_to_repology_pkg_name,
     set_log_verbosity,
 )
+from repology.adapter import RepologyAdapter, RepologyQuery
 from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 
 ###############################################################################
@@ -77,16 +77,13 @@ def getargs():
 ################################################################################
 
 
-def _run_repology_cli(sbompath):
-    LOG.info("Running repology_cli")
-    repology_cli = repology.repology_cli.Repology()
-    args = []
-    args.append("--repository=nix_unstable")
-    args.append(f"--sbom_cdx={sbompath}")
-    return repology_cli.query(
-        repology.repology_cli.getargs(args),
-        stdout_report=False,
-        file_report=False,
+def _query_repology(sbompath):
+    LOG.info("Querying repology")
+    return RepologyAdapter().query(
+        RepologyQuery(
+            repository="nix_unstable",
+            sbom_cdx=sbompath,
+        )
     )
 
 
@@ -264,7 +261,7 @@ def _run(args):
     sbom_path = sbom_artifact.cdx_path
     LOG.debug("Using SBOM '%s'", sbom_path)
 
-    df_repology = _run_repology_cli(sbom_path)
+    df_repology = _query_repology(sbom_path)
     if LOG.level > logging.DEBUG:
         sbom_artifact.cleanup()
     df_log(df_repology, LOG_SPAM)
