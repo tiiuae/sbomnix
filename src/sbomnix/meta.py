@@ -14,7 +14,7 @@ from getpass import getuser
 
 from filelock import FileLock
 
-from common.utils import LOG
+from common.log import LOG
 from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
 from sbomnix.dfcache import LockedDfCache
 

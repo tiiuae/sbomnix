@@ -8,8 +8,8 @@
 
 import re
 
+from common.log import LOG, LOG_SPAM
 from common.spdx import canonicalize_spdx_license_id
-from common.utils import LOG, LOG_SPAM
 from vulnxscan.utils import _vuln_source, _vuln_url
 
 

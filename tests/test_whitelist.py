@@ -5,7 +5,7 @@
 
 """Offline tests for whitelist handling."""
 
-from common.utils import df_from_csv_file
+from common.df import df_from_csv_file
 from tests.testpaths import RESOURCES_DIR
 from tests.testutils import df_difference, df_to_string
 from vulnxscan.whitelist import df_apply_whitelist, load_whitelist

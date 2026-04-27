@@ -17,14 +17,9 @@ import sys
 
 import pandas as pd
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    df_from_csv_file,
-    df_to_csv_file,
-    regex_match,
-    set_log_verbosity,
-)
+from common.df import df_from_csv_file, df_to_csv_file
+from common.log import LOG, LOG_SPAM, set_log_verbosity
+from common.regex import regex_match
 
 ###############################################################################
 

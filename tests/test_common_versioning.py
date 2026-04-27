@@ -9,21 +9,17 @@
 from packaging.version import Version
 
 from common.package_names import nix_to_repology_pkg_name
-from common.utils import parse_version as compat_parse_version
-from common.utils import version_distance as compat_version_distance
 from common.versioning import parse_version, version_distance
 
 
-def test_parse_version_normalizes_suffixes_and_keeps_compat_reexport():
+def test_parse_version_normalizes_suffixes():
     parsed = parse_version("openssl-3.0p1")
 
     assert parsed == Version("3.0+1")
-    assert compat_parse_version("openssl-3.0p1") == parsed
 
 
-def test_version_distance_keeps_compat_reexport():
+def test_version_distance_handles_identical_and_invalid_versions():
     assert version_distance("1.2.3", "1.2.3") == 1.0
-    assert compat_version_distance("1.2.3", "1.2.3") == 1.0
     assert version_distance("release", "1.2.3") == 0.0
 
 

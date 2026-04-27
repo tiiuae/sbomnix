@@ -41,27 +41,31 @@ def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdou
         return None
 
 
-def exit_unless_command_exists(name):
+def exit_unless_command_exists(name, *, which_fn=None):
     """Raise if `name` is not an executable in PATH."""
-    name_is_in_path = which(name) is not None
+    which_fn = which if which_fn is None else which_fn
+    name_is_in_path = which_fn(name) is not None
     if not name_is_in_path:
         raise CommandNotFoundError(name)
 
 
-def exit_unless_nix_artifact(path, force_realise=False):
+def exit_unless_nix_artifact(path, force_realise=False, *, exec_cmd_fn=None, log=None):
     """
     Raise if `path` is not a nix artifact. If `force_realise` is True, run the
     nix-store-query command with `--force-realise` realising the `path`
     argument before running query.
     """
-    LOG.debug("force_realize: %s", force_realise)
+    exec_cmd_fn = exec_cmd if exec_cmd_fn is None else exec_cmd_fn
+    log = LOG if log is None else log
+
+    log.debug("force_realize: %s", force_realise)
     if force_realise:
-        LOG.info("Try force-realising store-path '%s'", path)
+        log.info("Try force-realising store-path '%s'", path)
         cmd = ["nix-store", "-qf", path]
     else:
         cmd = ["nix-store", "-q", path]
     try:
-        exec_cmd(cmd)
+        exec_cmd_fn(cmd)
         return
     except subprocess.CalledProcessError:
         raise InvalidNixArtifactError(path) from None

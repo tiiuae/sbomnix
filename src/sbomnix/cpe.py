@@ -8,13 +8,9 @@
 
 import string
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    InvalidCpeDictionaryError,
-    df_from_csv_file,
-    df_log,
-)
+from common.df import df_from_csv_file, df_log
+from common.errors import InvalidCpeDictionaryError
+from common.log import LOG, LOG_SPAM
 from sbomnix.dfcache import LockedDfCache
 
 ###############################################################################

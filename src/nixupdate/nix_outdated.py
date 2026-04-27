@@ -14,17 +14,11 @@ from tempfile import NamedTemporaryFile
 
 from tabulate import tabulate
 
+from common.df import df_from_csv_file, df_log, df_to_csv_file
+from common.errors import SbomnixError
+from common.log import LOG, LOG_SPAM, set_log_verbosity
 from common.package_names import nix_to_repology_pkg_name
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    SbomnixError,
-    df_from_csv_file,
-    df_log,
-    df_to_csv_file,
-    exec_cmd,
-    set_log_verbosity,
-)
+from common.proc import exec_cmd
 from repology.adapter import RepologyAdapter, RepologyQuery
 from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 
