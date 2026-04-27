@@ -10,7 +10,7 @@
 
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
-from common.utils import parse_version
+from common.versioning import parse_version
 from vulnxscan.github_prs import GitHubPrLookup
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
 

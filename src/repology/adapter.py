@@ -22,7 +22,8 @@ from bs4 import BeautifulSoup
 import repology.exceptions
 from common.df import df_regex_filter
 from common.log import LOG, LOG_SPAM
-from common.utils import nix_to_repology_pkg_name, parse_version
+from common.package_names import nix_to_repology_pkg_name
+from common.versioning import parse_version
 from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
 
 REPOLOGY_PROJECTS_URL = "https://repology.org/projects/"

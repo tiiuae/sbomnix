@@ -10,7 +10,8 @@ import pandas as pd
 
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
-from common.utils import nix_to_repology_pkg_name, version_distance
+from common.package_names import nix_to_repology_pkg_name
+from common.versioning import version_distance
 from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.exceptions import RepologyNoMatchingPackages
 from repology.repology_cve import query_cve
