@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sbomnix"
+dynamic = ["version"]
+description = "Utility that generates SBOMs from nix packages"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "TII", email = "henri.rosten@unikie.com" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [
+  "beautifulsoup4",
+  "colorlog",
+  "df-diskcache",
+  "filelock",
+  "graphviz",
+  "license-expression",
+  "numpy",
+  "packageurl-python",
+  "packaging",
+  "pandas",
+  "reuse",
+  "requests",
+  "requests-cache",
+  "requests-ratelimiter",
+  "tabulate",
+]
+
+[project.urls]
+Homepage = "https://github.com/tiiuae/sbomnix"
+
+[project.scripts]
+sbomnix = "sbomnix.main:main"
+nixgraph = "nixgraph.main:main"
+nixmeta = "nixmeta.main:main"
+nix_outdated = "nixupdate.nix_outdated:main"
+vulnxscan = "vulnxscan.vulnxscan_cli:main"
+repology_cli = "repology.repology_cli:main"
+repology_cve = "repology.repology_cve:main"
+provenance = "provenance.main:main"
+
+[tool.setuptools]
+license-files = ["LICENSES/Apache-2.0.txt"]
+
+[tool.setuptools.dynamic]
+version = { file = ["VERSION"] }
+
+[tool.setuptools.packages.find]
+where = ["src"]

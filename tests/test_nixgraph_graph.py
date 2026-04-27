@@ -14,6 +14,7 @@ from nixgraph.render import NixDependencyGraph, NixGraphFilter
 
 
 def test_parse_nix_query_out_extracts_dependency_edges():
+    """Parse nix-store graph output into structured dependency edges."""
     nix_query_out = "\n".join(
         [
             '"11111111111111111111111111111111-bash-5.1"'
@@ -47,6 +48,7 @@ def test_parse_nix_query_out_extracts_dependency_edges():
 
 
 def test_nixgraph_filter_get_query_str_joins_fields():
+    """Render a stable pandas query string from the active filter fields."""
     nixfilter = NixGraphFilter(
         src_path="/nix/store/source",
         target_path="/nix/store/target",
@@ -59,6 +61,7 @@ def test_nixgraph_filter_get_query_str_joins_fields():
 
 
 def test_dependency_graph_returns_dataframe_for_csv_output():
+    """Return the traversed graph rows directly when CSV mode is requested."""
     df_dependencies = pd.DataFrame.from_records(
         [
             {
