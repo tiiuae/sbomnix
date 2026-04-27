@@ -8,6 +8,7 @@
 import argparse
 import pathlib
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
 from common.proc import exit_unless_command_exists
@@ -16,7 +17,7 @@ from nixmeta.scanner import NixMetaScanner
 ################################################################################
 
 
-def _getargs():
+def _getargs(args=None):
     """Parse command line arguments"""
     desc = (
         "Summarize nixpkgs meta-attributes from the given nixpkgs version "
@@ -60,9 +61,9 @@ def _getargs():
         help=helps,
         action="store_true",
     )
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)."
-    parser.add_argument("-v", "--verbose", help=helps, type=int, default=1)
-    return parser.parse_args()
+    add_version_argument(parser)
+    add_verbose_argument(parser)
+    return parser.parse_args(args)
 
 
 ###############################################################################

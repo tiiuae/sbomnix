@@ -9,6 +9,7 @@
 import os
 from argparse import ArgumentParser, ArgumentTypeError
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.df import df_to_csv_file
 from common.log import set_log_verbosity
 from repology.adapter import RepologyAdapter
@@ -24,7 +25,7 @@ def _pkg_str(str_obj):
     raise ArgumentTypeError("Value must be a non-empty string")
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments."""
     desc = (
         "Query repology.org for CVEs that impact package PKG_NAME version PKG_VERSION."
@@ -35,11 +36,13 @@ def getargs():
     parser.add_argument("PKG_NAME", help=helps, type=_pkg_str)
     helps = "Target package version"
     parser.add_argument("PKG_VERSION", help=helps, type=str)
-    helps = "Set the debug verbosity level between 0-2 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser, max_level=2)
     helps = "Path to output file (default: ./repology_cves.csv)"
-    parser.add_argument("--out", nargs="?", help=helps, default="repology_cves.csv")
-    return parser.parse_args()
+    parser.add_argument(
+        "-o", "--out", nargs="?", help=helps, default="repology_cves.csv"
+    )
+    add_version_argument(parser)
+    return parser.parse_args(args)
 
 
 ################################################################################

@@ -13,6 +13,7 @@ import pathlib
 from argparse import SUPPRESS, ArgumentParser, ArgumentTypeError
 
 import repology.exceptions
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.log import LOG, set_log_verbosity
 from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.reporting import write_query_report
@@ -65,17 +66,17 @@ def getargs(args=None):
     helps = "Filter reported results based on package name"
     filtergr.add_argument("-p", "--re_package", help=helps, type=str, default=None)
     helps = "Filter reported results based on version string"
-    filtergr.add_argument("-v", "--re_version", help=helps, type=str, default=None)
+    filtergr.add_argument("-V", "--re_version", help=helps, type=str, default=None)
     helps = "Filter reported results based on status string"
     filtergr.add_argument("-s", "--re_status", help=helps, type=str, default=None)
     helps = "Filter reported results based on vulnerability status"
     filtergr.add_argument("-c", "--re_vuln", help=helps, type=str, default=None)
     helps = "Summarize output result statistics"
     optional.add_argument("--stats", help=helps, action="store_true")
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    optional.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(optional)
     helps = "Path to output report file (default: ./repology_report.csv)"
-    optional.add_argument("--out", help=helps, default="repology_report.csv")
+    optional.add_argument("-o", "--out", help=helps, default="repology_report.csv")
+    add_version_argument(optional)
     if args:
         return parser.parse_args(args)
     return parser.parse_args()

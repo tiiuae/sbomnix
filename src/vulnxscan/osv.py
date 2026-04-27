@@ -10,6 +10,7 @@ import argparse
 import os
 import pathlib
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.df import df_to_csv_file
 from common.errors import InvalidSbomError, SbomnixError
 from common.log import LOG, set_log_verbosity
@@ -18,23 +19,23 @@ from vulnxscan.osv_client import OSV
 ###############################################################################
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
     desc = "Scan CycloneDX SBOM components for OSV vulnerabilities"
     epil = f"Example: ./{os.path.basename(__file__)} /path/to/sbom.json"
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser)
     helps = "Path to CycloneDX SBOM json file"
     parser.add_argument("SBOM", help=helps, type=pathlib.Path)
     helps = "Path to output file (default: ./osv.csv)"
-    parser.add_argument("--out", nargs="?", help=helps, default="osv.csv")
+    parser.add_argument("-o", "--out", nargs="?", help=helps, default="osv.csv")
     helps = (
         'List of ecosystems to query (default: "GIT,OSS-Fuzz"). '
         "For more details, see https://osv.dev"
     )
     parser.add_argument("--ecosystems", type=str, help=helps, default="GIT,OSS-Fuzz")
-    return parser.parse_args()
+    add_version_argument(parser)
+    return parser.parse_args(args)
 
 
 def _run(args):
