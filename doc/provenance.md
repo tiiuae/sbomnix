@@ -13,7 +13,7 @@ As an example, to run the [`provenance`](../src/provenance/main.py) tool from th
 ```bash
 # '--' signifies the end of argument list for `nix`.
 # '--help' is the first argument to `provenance`
-nix run github:tiiuae/sbomnix#provenance -- --help
+$ nix run github:tiiuae/sbomnix#provenance -- --help
 ```
 
 # provenance
@@ -32,16 +32,16 @@ To generate provenance file for `curl-8.6.0` in your nix store:
 provenance /nix/store/fh7vxc5xgiwl6z7vwq5c3lj84mpcs4br-curl-8.6.0-bin
 ```
 
-By default the dependencies are resolved only at the top level. ie. only direct dependencies.
+By default the dependencies are resolved only at the top level, i.e. only direct dependencies.
 To get all dependencies recursively, you can use the `--recursive` option.
-Note the this will result in a very long provenance file.
+Note that this will result in a very long provenance file.
 
 The dependencies listed are the nix buildtime dependencies of the derivation.
 
 Example recursive provenance which is saved into a file:
 
 ```bash
-provenance nixpkgs#hello --recursive -out ./provenance.json
+provenance nixpkgs#hello --recursive --out ./provenance.json
 ```
 
 ## Build metadata

@@ -36,25 +36,20 @@ $ nix run .#vulnxscan -- --help
 ```
 
 ## Example Target
-In the below examples, we use `git` as an example target for `vulnxscan`.
-To print `git` drv-path on your local system, try:
-```bash
-$ nix eval -f '<nixpkgs>' 'git.drvPath'
-"/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv"
-```
+In the below examples, we use `git` as an example target for `vulnxscan`, referred to by flakeref `github:NixOS/nixpkgs/nixos-unstable#git`.
 
 ## Supported Scanners
 ### Nix and OSV Vulnerability Database
 [OSV](https://osv.dev/) is a vulnerability database for open-source projects [initiated by Google](https://security.googleblog.com/2021/02/launching-osv-better-vulnerability.html).
 
-[OSV database](https://osv.dev/list?ecosystem=) currently [does not support Nix ecosystem](https://ossf.github.io/osv-schema/#affectedpackage-field), so queries that specify Nix as ecosystem would not return any matches. For this reason `vulnxscan` currently does not use Google's official [OSV-Scanner](https://security.googleblog.com/2022/12/announcing-osv-scanner-vulnerability.html) front-end, but implements it's own OSV client demo in [osv.py](../src/vulnxscan/osv.py).
+[OSV database](https://osv.dev/list?ecosystem=) currently [does not support Nix ecosystem](https://ossf.github.io/osv-schema/#affectedpackage-field), so queries that specify Nix as ecosystem would not return any matches. For this reason `vulnxscan` currently does not use Google's official [OSV-Scanner](https://security.googleblog.com/2022/12/announcing-osv-scanner-vulnerability.html) front-end, but implements its own OSV client demo in [osv.py](../src/vulnxscan/osv.py).
 
 `osv.py` sends queries to [OSV API](https://osv.dev/docs/) without specifying the ecosystem, only the target package name and version. At the time of writing, such queries to OSV API return vulnerabilities that match the given package and version across all ecosystems. As a result, the OSV vulnerabilities for Nix ecosystem will include false positives.
 
 Also, it is worth mentioning that OSV queries without ecosystem are undocumented in the [API specification](https://osv.dev/docs/#tag/api/operation/OSV_QueryAffected) currently.
 
 ### Nix and Grype
-[Grype](https://github.com/anchore/grype) is a vulnerability scanner targeted for container images. It uses the vulnerability data from [variety of publicly available data sources](https://github.com/anchore/grype#grypes-database). Grype also [supports input from CycloneDX SBOM](https://github.com/anchore/grype#supported-sources) which makes it possible to use Grype with SBOM input from `sbomnix`, thus, allowing Grype scans against Nix targets.
+[Grype](https://github.com/anchore/grype) is a vulnerability scanner targeted for container images. It uses the vulnerability data from [a variety of publicly available data sources](https://github.com/anchore/grype#grypes-database). Grype also [supports input from CycloneDX SBOM](https://github.com/anchore/grype#supported-sources) which makes it possible to use Grype with SBOM input from `sbomnix`, thus, allowing Grype scans against Nix targets.
 
 ### Vulnix
 [Vulnix](https://github.com/nix-community/vulnix) is a vulnerability scanner intended for Nix targets. It uses [NIST NVD](https://nvd.nist.gov/vuln) vulnerability database.
@@ -64,30 +59,23 @@ Vulnix matches vulnerabilities based on [heuristic](https://github.com/nix-commu
 ## Vulnxscan Usage Examples
 
 ### Find Vulnerabilities Impacting Runtime Dependencies
-This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies.
+This example shows how to use `vulnxscan` to summarize vulnerabilities impacting the given target or any of its runtime dependencies. The captured output is illustrative; exact versions and findings will differ depending on the package versions resolved at run time.
 
 ```bash
-# Target can be specified with flakeref too, e.g.:
+# Target can be specified as a flakeref or a nix store path, e.g.:
 # vulnxscan .
 # vulnxscan github:tiiuae/sbomnix
 # vulnxscan nixpkgs#git
+# vulnxscan /nix/store/...
 # Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
-$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
+$ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git
 
-INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
-INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
-INFO     Using cdx SBOM '/tmp/vulnxscan_nmpi4h8_.json'
-INFO     Using csv SBOM '/tmp/vulnxscan_9vuvdabq.csv'
-INFO     Running vulnix scan
-INFO     Running grype scan
-INFO     Running OSV scan
-INFO     Querying vulnerabilities
-INFO     Filtering patched vulnerabilities
+INFO     Generating SBOM for target '/nix/store/...-git-<version>'
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
 INFO     Console report
 
-Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv' or some of its runtime dependencies:
+Potential vulnerabilities impacting version_local:
 
 | vuln_id          | url                                               | package   | version | severity | grype | osv | vulnix | sum |
 |------------------+---------------------------------------------------+-----------+---------+----------+-------+-----+--------+-----|
@@ -110,7 +98,7 @@ Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q
 INFO     Wrote: vulns.csv
 ```
 
-As printed in the console output, `vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/nix-community/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](../src/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file `vulns.csv` to allow easier post-processing of the output.
+`vulnxscan` first creates an SBOM, then feeds the SBOM (or target path) as input to different vulnerability scanners: [vulnix](https://github.com/nix-community/vulnix), [grype](https://github.com/anchore/grype), and [osv.py](../src/vulnxscan/osv.py) and creates a summary report. The summary report lists the newest vulnerabilities on top, with the `sum` column indicating how many scanners agreed with the exact same finding. In addition to the console output, `vulnxscan` writes the report to csv-file `vulns.csv` to allow easier post-processing of the output.
 
 It is worth mentioning that `vulnxscan` filters out vulnerabilities that it detects are patched, as printed out in the console output on lines like '`CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']`'.
 This patch auto-detection works in the similar way as the [patch auto-detection on vulnix](https://github.com/nix-community/vulnix#cve-patch-auto-detection), that is, it is based on detecting vulnerability identifiers from the patch filenames.
@@ -133,7 +121,7 @@ $ csvlook whitelist.csv
 
 In case many rules match a vulnerability, rules on top of the whitelist are given higher priority.
 
-To be able to verify which vulnerabilities are whitelisted, `vulnxscan` csv output `vulns.csv` includes both whitelisted and non-whitelisted vulnerabilities implied with boolean column `whitelist`. `vulns.csv` also incluces the `comment` section from the whitelist to be able to verify the reason for whitelisting each vulnerability. Below example shows applying the above example whitelist against the `git` vulnxscan output from the earlier example.
+To be able to verify which vulnerabilities are whitelisted, `vulnxscan` csv output `vulns.csv` includes both whitelisted and non-whitelisted vulnerabilities implied with boolean column `whitelist`. `vulns.csv` also includes the `comment` section from the whitelist to be able to verify the reason for whitelisting each vulnerability. Below example shows applying the above example whitelist against the `git` vulnxscan output from the earlier example.
 
 ```bash
 # Given the whitelist.csv contents:
@@ -144,23 +132,14 @@ $ cat whitelist.csv
 "CVE-20.* ","git","Incorrect package: Impacts Jenkins git plugin, not git."
 
 # Apply the whitelist to git vulnxscan output
-$ vulnxscan /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv --whitelist=whitelist.csv
+$ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git --whitelist=whitelist.csv
 
-INFO     Generating SBOM for target '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
-INFO     Loading runtime dependencies referenced by '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv'
-INFO     Using cdx SBOM '/tmp/vulnxscan_8tezlf17.json'
-INFO     Using csv SBOM '/tmp/vulnxscan_lcj18a88.csv'
-INFO     Running vulnix scan
-INFO     Running grype scan
-INFO     Running OSV scan
-INFO     Querying vulnerabilities
-INFO     Filtering patched vulnerabilities
+INFO     Generating SBOM for target '/nix/store/...-git-<version>'
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
-INFO     Applying whitelist 'whitelist.csv'
 INFO     Console report
 
-Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv' or some of its runtime dependencies:
+Potential vulnerabilities impacting version_local:
 
 # Note: the console output now includes only non-whitelisted entries:
 
@@ -171,7 +150,7 @@ Potential vulnerabilities impacting '/nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q
 INFO     Wrote: vulns.csv
 
 # In addition to the console report, vulnxscan writes a detailed report in a csv file,
-# by default 'vulns.csv', which includes the full details also from  the whitelisted vulnerabilities:
+# by default 'vulns.csv', which includes the full details also from the whitelisted vulnerabilities:
 $ csvlook vulns.csv
 
 | vuln_id          | url                                               | package   | version | severity | grype |   osv | vulnix | sum | sortcol         | whitelist | whitelist_comment                                                       |
@@ -200,7 +179,7 @@ This example shows how to use `vulnxscan` to summarize vulnerabilities impacting
 
 First, we use `sbomnix` to generate SBOM for the example target:
 ```bash
-$ nix run .#sbomnix /nix/store/ay9sn71cssl4wd7s6bd8xah0zcwqiq2q-git-2.41.0.drv
+$ nix run .#sbomnix -- github:NixOS/nixpkgs/nixos-unstable#git
 ..
 INFO     Wrote: sbom.cdx.json
 ```
@@ -209,12 +188,9 @@ Then, give the generated SBOM as input to `vulnxscan`:
 ```bash
 $ vulnxscan --sbom sbom.cdx.json
 
-INFO     Running grype scan
-INFO     Running OSV scan
-INFO     Querying vulnerabilities
 INFO     Console report
 
-Potential vulnerabilities impacting components in 'sbom.cdx.json':
+Potential vulnerabilities impacting version_local:
 
 | vuln_id       | url                                            | package   | version | severity | grype | osv | sum |
 |---------------+------------------------------------------------+-----------+---------+----------+-------+-----+-----|
@@ -265,12 +241,6 @@ With command line option `--triage`, `vulnxscan` queries repology.org for nix-un
 Consider the following example, using [ghaf](https://github.com/tiiuae/ghaf) as target:
 
 ```bash
-# In devshell
-
-# Get the target drv path for a specific flake target:
-$ nix eval github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release.drvPath
-"/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv"
-
 # Run vulnxscan:
 #  --buildtime: Scan buildtime dependencies. Scanning buildtime dependencies does not
 #               require building the target, which allows relatively quick scan also for
@@ -278,16 +248,8 @@ $ nix eval github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-rele
 #               superset of runtime dependencies.
 #  --whitelist: Use 'manual_analysis.csv' as a whitelist file.
 #  --triage   : Help manual analysis by querying version info from repology.org.
-$ vulnxscan /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage
-INFO     Generating SBOM for target '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
-INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
-INFO     Using cdx SBOM '/tmp/vulnxscan_wt98z5yu.json'
-INFO     Using csv SBOM '/tmp/vulnxscan_9ijk42ar.csv'
-INFO     Running vulnix scan
-INFO     Running grype scan
-INFO     Running OSV scan
-INFO     Querying vulnerabilities
-INFO     Filtering patched vulnerabilities
+$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage
+INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
 INFO     CVE-2023-27371 for 'libmicrohttpd' is patched with: ['/nix/store/l53sq07v6hghm7cchcjbrwyvjyjag06r-CVE-2023-27371.patch']
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
@@ -336,9 +298,8 @@ Consider the following example, using the same Ghaf target as earlier:
 
 ```bash
 # Run vulnscan with --triage and --nixprs
-$ vulnxscan /nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv --buildtime --whitelist=manual_analysis.csv --triage --nixprs
-INFO     Generating SBOM for target '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
-INFO     Loading buildtime dependencies referenced by '/nix/store/5fjfirqjsxggkx4k8ylrrrjar1c54zxp-nixos-disk-image.drv'
+$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage --nixprs
+INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
 ...
 Potential vulnerabilities impacting version_local:
 
