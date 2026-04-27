@@ -80,12 +80,8 @@ class SbomDb:
 
     def _init_dependencies(self, nix_path):
         """Initialize dependencies (df_deps)"""
-        if self.buildtime:
-            buildtime_dependencies = NixDependencies(nix_path, buildtime=True)
-            self.df_deps = self._get_dependencies_df(buildtime_dependencies)
-        else:
-            runtime_dependencies = NixDependencies(nix_path, buildtime=False)
-            self.df_deps = self._get_dependencies_df(runtime_dependencies)
+        nix_dependencies = NixDependencies(nix_path, buildtime=self.buildtime)
+        self.df_deps = self._get_dependencies_df(nix_dependencies)
 
     def _get_dependencies_df(self, nix_dependencies):
         if self.depth:
@@ -136,10 +132,7 @@ class SbomDb:
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
         self.meta = Meta()
-        if self.flakeref:
-            df_meta = self.meta.get_nixpkgs_meta(self.flakeref)
-        else:
-            df_meta = self.meta.get_nixpkgs_meta()
+        df_meta = self.meta.get_nixpkgs_meta(self.flakeref)
         if df_meta is None or df_meta.empty:
             LOG.warning(
                 "Failed reading nix meta information: "
@@ -169,10 +162,6 @@ class SbomDb:
         if dependency_index is None:
             return None
         return dependency_index.lookup(drv, uid=uid)
-
-    def _lookup_dependencies(self, drv, uid="store_path"):
-        """Backward-compatible alias for lookup_dependencies."""
-        return self.lookup_dependencies(drv, uid=uid)
 
     def to_cdx_data(self):
         """Return the SBOM as a CycloneDX document."""
