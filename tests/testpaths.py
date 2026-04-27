@@ -14,6 +14,7 @@ SRCDIR = REPOROOT / "src"
 
 COMPARE_DEPS = TESTS_DIR / "compare_deps.py"
 COMPARE_SBOMS = TESTS_DIR / "compare_sboms.py"
+SAMPLE_CDX_SBOM = RESOURCES_DIR / "sample_cdx_sbom.json"
 
 SBOMNIX = SRCDIR / "sbomnix" / "main.py"
 NIXGRAPH = SRCDIR / "nixgraph" / "main.py"

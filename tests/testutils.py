@@ -6,29 +6,62 @@
 """Shared helper utilities for the test suite."""
 
 import json
+from pathlib import Path
+from urllib.parse import urldefrag, urlparse
 
 import jsonschema
 import referencing
 import referencing.retrieval
-import requests
+
+LOCAL_SCHEMA_ALIASES = {
+    "spdx.schema.json": "spdx.schema.json",
+    "http://cyclonedx.org/schema/spdx.schema.json": "spdx.schema.json",
+    "jsf-0.82.schema.json": "jsf-0.82.schema.json",
+    "http://cyclonedx.org/schema/jsf-0.82.schema.json": "jsf-0.82.schema.json",
+}
 
 
-@referencing.retrieval.to_cached_resource()
-def retrieve_schema_via_requests(uri):
-    """Retrieve and cache remote JSON schema resources."""
-    print(f"retrieving schema: {uri}")
-    return requests.get(uri, timeout=10).text
+def resolve_local_schema_path(uri, schema_dir):
+    """Resolve a schema reference to a local file under ``schema_dir``."""
+    schema_dir = Path(schema_dir)
+    base_uri, _fragment = urldefrag(uri)
+    if base_uri in LOCAL_SCHEMA_ALIASES:
+        filename = LOCAL_SCHEMA_ALIASES[base_uri]
+    else:
+        parsed = urlparse(base_uri)
+        filename = Path(parsed.path or base_uri).name
+        filename = LOCAL_SCHEMA_ALIASES.get(filename, filename)
+    path = schema_dir / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Local schema not found for '{uri}': {path}")
+    return path
+
+
+def create_local_schema_retriever(schema_dir):
+    """Create a cached local schema retriever for ``referencing``."""
+
+    @referencing.retrieval.to_cached_resource()
+    def _retrieve(uri):
+        return resolve_local_schema_path(uri, schema_dir).read_text(encoding="utf-8")
+
+    return _retrieve
 
 
 def validate_json(file_path, schema_path):
     """Validate json file matches schema."""
-    with open(file_path, encoding="utf-8") as json_file, open(
-        schema_path,
-        encoding="utf-8",
-    ) as schema_file:
+    schema_path = Path(schema_path)
+    with (
+        open(file_path, encoding="utf-8") as json_file,
+        open(
+            schema_path,
+            encoding="utf-8",
+        ) as schema_file,
+    ):
         json_obj = json.load(json_file)
         schema_obj = json.load(schema_file)
-        registry = referencing.Registry(retrieve=retrieve_schema_via_requests)
+        registry = referencing.Registry(
+            retrieve=create_local_schema_retriever(schema_path.parent)
+        )
         jsonschema.validate(json_obj, schema_obj, registry=registry)
 
 

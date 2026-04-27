@@ -21,7 +21,22 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 - spdx_bom-2.3.schema.json
 - <https://github.com/spdx/spdx-spec/blob/214f23d34ee287cb1db5b31c3d571af291e836f3/schemas/spdx-schema.json>
 
+## CycloneDX SPDX companion schema
+
+- spdx.schema.json
+- Local minimal schema shim used by offline CycloneDX jsonschema validation
+
+## JSON Signature Format 0.82 schema
+
+- jsf-0.82.schema.json
+- Local minimal schema shim used by offline CycloneDX schema validation
+
 ## SLSA v1.0 provenance schema
 
 - provenance-1.0.schema.json
 - <https://slsa.dev/spec/v1.0/provenance#schema> translated and rewritten into jsonschema format.
+
+## Sample CycloneDX SBOM
+
+- sample_cdx_sbom.json
+- Small static SBOM fixture for offline SBOM-input tests

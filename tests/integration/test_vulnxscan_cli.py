@@ -7,7 +7,7 @@
 
 import pytest
 
-from tests.testpaths import RESOURCES_DIR, SBOMNIX, VULNXSCAN
+from tests.testpaths import RESOURCES_DIR, VULNXSCAN
 
 
 def test_vulnxscan_help(_run_python_script):
@@ -30,25 +30,14 @@ def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_wor
 
 
 @pytest.mark.network
-def test_vulnxscan_scan_sbom(_run_python_script, test_nix_result, test_work_dir):
+def test_vulnxscan_scan_sbom(_run_python_script, test_cdx_sbom, test_work_dir):
     """Test vulnxscan scan with SBOM as input."""
-    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
-    _run_python_script(
-        [
-            SBOMNIX,
-            test_nix_result,
-            "--cdx",
-            out_path_cdx,
-        ]
-    )
-    assert out_path_cdx.exists()
-
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     _run_python_script(
         [
             VULNXSCAN,
             "--sbom",
-            out_path_cdx.as_posix(),
+            test_cdx_sbom.as_posix(),
             "--out",
             out_path_vulns.as_posix(),
         ]

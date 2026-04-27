@@ -15,6 +15,7 @@ import pytest
 
 REPOROOT = Path(__file__).resolve().parent.parent
 INTEGRATION_DIR = REPOROOT / "tests" / "integration"
+RESOURCES_DIR = REPOROOT / "tests" / "resources"
 
 
 def _output_mentions_repology_host(output):
@@ -44,15 +45,37 @@ def fixture_test_work_dir(tmp_path):
     return Path(tmp_path)
 
 
+@pytest.fixture(name="test_nix_drv", scope="session")
+def fixture_test_nix_drv():
+    """Instantiate nixpkgs.hello once per test session without building it."""
+    ret = subprocess.run(
+        ["nix-instantiate", "<nixpkgs>", "-A", "hello"],
+        capture_output=True,
+        encoding="utf-8",
+        check=True,
+    )
+    drv = Path(ret.stdout.strip())
+    assert drv.exists()
+    return drv
+
+
 @pytest.fixture(name="test_nix_result", scope="session")
-def fixture_test_nix_result(tmp_path_factory):
+def fixture_test_nix_result(test_nix_drv, tmp_path_factory):
     """Build nixpkgs.hello once per test session."""
     build_dir = tmp_path_factory.mktemp("nix-build")
     result = build_dir / "result"
-    cmd = ["nix-build", "<nixpkgs>", "-A", "hello", "-o", result.as_posix()]
+    cmd = ["nix-build", test_nix_drv.as_posix(), "-o", result.as_posix()]
     subprocess.run(cmd, check=True)
     assert result.exists()
     return result
+
+
+@pytest.fixture(name="test_cdx_sbom", scope="session")
+def fixture_test_cdx_sbom():
+    """Return a static CycloneDX SBOM fixture for offline SBOM-input tests."""
+    sbom = RESOURCES_DIR / "sample_cdx_sbom.json"
+    assert sbom.exists()
+    return sbom
 
 
 @pytest.fixture(name="_run_python_script")

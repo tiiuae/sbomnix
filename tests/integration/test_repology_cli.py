@@ -7,7 +7,7 @@
 
 import pytest
 
-from tests.testpaths import REPOLOGY_CLI, SBOMNIX
+from tests.testpaths import REPOLOGY_CLI
 
 
 def test_repology_cli_help(_run_python_script):
@@ -18,29 +18,17 @@ def test_repology_cli_help(_run_python_script):
 @pytest.mark.network
 @pytest.mark.slow
 def test_repology_cli_sbom(
-    _run_python_script,
     _run_python_script_retry_on_repology_network_error,
-    test_nix_result,
+    test_cdx_sbom,
     test_work_dir,
 ):
     """Test repology_cli with SBOM as input."""
-    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
-    _run_python_script(
-        [
-            SBOMNIX,
-            test_nix_result,
-            "--cdx",
-            out_path_cdx,
-        ]
-    )
-    assert out_path_cdx.exists()
-
     out_path_repology = test_work_dir / "repology.csv"
     _run_python_script_retry_on_repology_network_error(
         [
             REPOLOGY_CLI,
             "--sbom_cdx",
-            out_path_cdx.as_posix(),
+            test_cdx_sbom.as_posix(),
             "--repository",
             "nix_unstable",
             "--out",

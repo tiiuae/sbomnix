@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://cyclonedx.org/schema/jsf-0.82.schema.json",
+  "type": "object",
+  "title": "JSON Signature Format (JSF) standard",
+  "definitions": {
+    "signature": {
+      "type": "object"
+    }
+  }
+}

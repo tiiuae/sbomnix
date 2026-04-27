@@ -14,13 +14,13 @@ def test_provenance_help(_run_python_script):
     _run_python_script([PROVENANCE, "-h"])
 
 
-def test_provenance_schema(_run_python_script, test_nix_result, test_work_dir):
+def test_provenance_schema(_run_python_script, test_nix_drv, test_work_dir):
     """Test provenance generates valid schema."""
     out_path = test_work_dir / "provenance_test.json"
     _run_python_script(
         [
             PROVENANCE,
-            test_nix_result,
+            test_nix_drv,
             "--out",
             out_path.as_posix(),
         ]
@@ -31,15 +31,13 @@ def test_provenance_schema(_run_python_script, test_nix_result, test_work_dir):
     validate_json(out_path.as_posix(), schema_path)
 
 
-def test_provenance_schema_recursive(
-    _run_python_script, test_nix_result, test_work_dir
-):
+def test_provenance_schema_recursive(_run_python_script, test_nix_drv, test_work_dir):
     """Test provenance generates valid schema with recursive option."""
     out_path = test_work_dir / "recursive_provenance_test.json"
     _run_python_script(
         [
             PROVENANCE,
-            test_nix_result,
+            test_nix_drv,
             "--recursive",
             "--out",
             out_path.as_posix(),
