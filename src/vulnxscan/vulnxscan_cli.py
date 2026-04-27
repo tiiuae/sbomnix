@@ -12,18 +12,15 @@ open-source vulnerability scanners.
 import argparse
 import logging
 import pathlib
-from tempfile import NamedTemporaryFile
 
 from common.utils import (
     LOG,
     InvalidSbomError,
     SbomnixError,
     exit_unless_command_exists,
-    exit_unless_nix_artifact,
     set_log_verbosity,
-    try_resolve_flakeref,
 )
-from sbomnix.sbomdb import SbomDb
+from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 from vulnxscan.utils import _is_json
 from vulnxscan.vulnscan import VulnScan
 
@@ -98,38 +95,6 @@ def getargs():
 ################################################################################
 
 
-def _generate_sbom(target_path, buildtime=False):
-    LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
-    prefix = "vulnxscan_"
-    cdx_suffix = ".json"
-    csv_suffix = ".csv"
-    sbom_cdx_path = None
-    sbom_csv_path = None
-    try:
-        with NamedTemporaryFile(delete=False, prefix=prefix, suffix=cdx_suffix) as fcdx:
-            sbom_cdx_path = pathlib.Path(fcdx.name)
-            with NamedTemporaryFile(
-                delete=False, prefix=prefix, suffix=csv_suffix
-            ) as fcsv:
-                sbom_csv_path = pathlib.Path(fcsv.name)
-                sbomdb.to_cdx(sbom_cdx_path, printinfo=False)
-                sbomdb.to_csv(sbom_csv_path, loglevel=logging.DEBUG)
-        return sbom_cdx_path, sbom_csv_path
-    except Exception:
-        if sbom_cdx_path is not None:
-            sbom_cdx_path.unlink(missing_ok=True)
-        if sbom_csv_path is not None:
-            sbom_csv_path.unlink(missing_ok=True)
-        raise
-
-
-################################################################################
-
-
-# Main
-
-
 def main():
     """main entry point"""
     args = getargs()
@@ -148,20 +113,25 @@ def _run(args):
     exit_unless_command_exists("vulnix")
 
     scanner = VulnScan()
-    sbom_cdx_path = None
-    sbom_csv_path = None
+    sbom_artifact = None
     if args.sbom:
         target_path = pathlib.Path(args.TARGET).resolve().as_posix()
         if not _is_json(target_path):
             raise InvalidSbomError(args.TARGET)
         sbom_cdx_path = target_path
+        sbom_csv_path = None
     else:
-        runtime = args.buildtime is False
-        target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
-        if not target_path:
-            target_path = pathlib.Path(args.TARGET).resolve().as_posix()
-            exit_unless_nix_artifact(args.TARGET, force_realise=runtime)
-        sbom_cdx_path, sbom_csv_path = _generate_sbom(target_path, args.buildtime)
+        target = resolve_nix_target(args.TARGET, buildtime=args.buildtime)
+        target_path = target.path
+        sbom_artifact = generate_temp_sbom(
+            target_path,
+            args.buildtime,
+            prefix="vulnxscan_",
+            cdx_suffix=".json",
+            include_csv=True,
+        )
+        sbom_cdx_path = sbom_artifact.cdx_path
+        sbom_csv_path = sbom_artifact.csv_path
         LOG.debug("Using cdx SBOM '%s'", sbom_cdx_path)
         LOG.debug("Using csv SBOM '%s'", sbom_csv_path)
     try:
@@ -171,10 +141,9 @@ def _run(args):
         scanner.scan_osv(sbom_cdx_path)
         scanner.report(args, sbom_csv_path)
     finally:
-        if not args.sbom and LOG.level > logging.DEBUG:
+        if not args.sbom and LOG.level > logging.DEBUG and sbom_artifact is not None:
             # Remove generated temp files unless verbosity is DEBUG or more verbose
-            sbom_cdx_path.unlink(missing_ok=True)
-            sbom_csv_path.unlink(missing_ok=True)
+            sbom_artifact.cleanup()
 
 
 if __name__ == "__main__":
