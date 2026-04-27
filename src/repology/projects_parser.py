@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 import repology.exceptions
+from common import columns as cols
 from common.log import LOG, LOG_SPAM
 
 
@@ -48,13 +49,13 @@ def parse_projects_search_html(html, repository, processed_ids=None, pkg_stop=No
     rows = 0
     stop_query = False
     for row in projects_table.tbody.find_all("tr"):
-        cols = row.find_all("td")
-        if not cols:
+        cells = row.find_all("td")
+        if not cells:
             LOG.log(LOG_SPAM, "No columns on row: %s", row)
             continue
         rows += 1
-        LOG.log(LOG_SPAM, "cols: %s", cols)
-        pkg = cols[headers["Project"]]
+        LOG.log(LOG_SPAM, "cols: %s", cells)
+        pkg = cells[headers["Project"]]
         pkg_links = pkg.find_all("a")
         if not pkg_links:
             LOG.fatal("Unexpected response, missing project link")
@@ -69,12 +70,12 @@ def parse_projects_search_html(html, repository, processed_ids=None, pkg_stop=No
             continue
         LOG.debug("Adding package '%s' to processed_ids", pkg_name)
         processed_ids.add(pkg_id)
-        newest = cols[headers["Newest"]]
+        newest = cells[headers["Newest"]]
         newest_releases = []
         for nspan in newest.find_all("span", {"class": "version-newest"}):
             rel_version = re.sub(r"[^\x00-\x7f]+", "", nspan.text)
             newest_releases.append(rel_version)
-        sel = cols[headers["Selected"]]
+        sel = cells[headers["Selected"]]
         statuses = re.findall(r'version-([^"]+)"', str(sel))
         vspans = sel.find_all("span", {"class": "version"})
         for idx, vspan in enumerate(vspans):
@@ -83,12 +84,12 @@ def parse_projects_search_html(html, repository, processed_ids=None, pkg_stop=No
             status = statuses[idx]
             package_rows.append(
                 {
-                    "repo": repository,
-                    "package": pkg_name,
-                    "version": ver,
-                    "status": status,
-                    "potentially_vulnerable": str(int(vulnerable)),
-                    "newest_upstream_release": ";".join(newest_releases),
+                    cols.REPO: repository,
+                    cols.PACKAGE: pkg_name,
+                    cols.VERSION: ver,
+                    cols.STATUS: status,
+                    cols.POTENTIALLY_VULNERABLE: str(int(vulnerable)),
+                    cols.NEWEST_UPSTREAM_RELEASE: ";".join(newest_releases),
                 }
             )
             LOG.log(LOG_SPAM, "Added: %s:%s:%s", pkg_name, ver, status)

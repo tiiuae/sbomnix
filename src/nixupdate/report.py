@@ -8,6 +8,7 @@ import logging
 
 from tabulate import tabulate
 
+from common import columns as cols
 from common.df import df_log, df_to_csv_file
 from common.log import LOG, LOG_SPAM, LOG_VERBOSE
 
@@ -16,14 +17,17 @@ def generate_report_df(df_nix_visualize, df_repology, *, log=LOG, log_spam=LOG_S
     """Merge Repology and ``nix-visualize`` data into a reporting dataframe."""
     if df_nix_visualize is None:
         df_repology = df_repology.copy(deep=True)
-        df_repology["level"] = "0"
-        df_repology.rename(columns={"version": "version_repology"}, inplace=True)
+        df_repology[cols.LEVEL] = "0"
+        df_repology.rename(
+            columns={cols.VERSION: cols.VERSION_REPOLOGY},
+            inplace=True,
+        )
         return df_repology
     df = df_nix_visualize.merge(
         df_repology,
         how="left",
-        left_on=["package", "version"],
-        right_on=["package", "version_sbom"],
+        left_on=[cols.PACKAGE, cols.VERSION],
+        right_on=[cols.PACKAGE, cols.VERSION_SBOM],
         suffixes=["", "_repology"],
     )
     log.log(log_spam, "Merged nix-visualize and repology data:")
@@ -35,8 +39,8 @@ def drop_newest_duplicates(df_console, df_compare, *, log=LOG):
     """Drop outdated rows when a corresponding ``newest`` row also exists."""
     df_ret = df_console.copy(deep=True)
     for row in df_console.itertuples():
-        df_pkgs = df_compare[df_compare["package"] == row.nix_package]
-        df_newest = df_pkgs[df_pkgs["status"] == "newest"]
+        df_pkgs = df_compare[df_compare[cols.PACKAGE] == row.nix_package]
+        df_newest = df_pkgs[df_pkgs[cols.STATUS] == "newest"]
         if not df_newest.empty:
             log.debug(
                 "Ignoring outdated package '%s' since newest version is also available",
@@ -72,14 +76,14 @@ def write_report(df, args, *, log=LOG):
         return
     log.log(LOG_VERBOSE, "Writing console report")
     select_cols = {
-        "level": "priority",
-        "package": "nix_package",
-        "version_sbom": "version_local",
-        "version_repology": "version_nixpkgs",
-        "newest_upstream_release": "version_upstream",
+        cols.LEVEL: "priority",
+        cols.PACKAGE: "nix_package",
+        cols.VERSION_SBOM: cols.VERSION_LOCAL,
+        cols.VERSION_REPOLOGY: cols.VERSION_NIXPKGS,
+        cols.NEWEST_UPSTREAM_RELEASE: cols.VERSION_UPSTREAM,
     }
     if args.local:
-        df_console = df[df["sbom_version_classify"] == "sbom_pkg_needs_update"]
+        df_console = df[df[cols.SBOM_VERSION_CLASSIFY] == "sbom_pkg_needs_update"]
         df_console = df_console.rename(columns=select_cols)[select_cols.values()]
         df_console.drop_duplicates(
             df_console.columns.difference(["priority"]), keep="first", inplace=True
@@ -95,7 +99,7 @@ def write_report(df, args, *, log=LOG):
         )
         console_out_table(table, local=args.local, buildtime=args.buildtime, log=log)
     else:
-        df_console = df[df["repo_version_classify"] == "repo_pkg_needs_update"]
+        df_console = df[df[cols.REPO_VERSION_CLASSIFY] == "repo_pkg_needs_update"]
         df_console = df_console.rename(columns=select_cols)[select_cols.values()]
         df_console.drop_duplicates(
             df_console.columns.difference(["priority"]), keep="first", inplace=True

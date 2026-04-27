@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
+from common import columns as cols
 from sbomnix.cdx import _vuln_to_cdx_vuln
 from vulnxscan.vulnscan import VulnScan
 
@@ -39,18 +40,18 @@ def enrich_cdx_with_vulnerabilities(sbomdb, cdx):
     )
     if df_vulns.empty:
         return cdx
-    if "modified" in df_vulns.columns:
-        df_vulns = df_vulns.drop("modified", axis=1)
+    if cols.MODIFIED in df_vulns.columns:
+        df_vulns = df_vulns.drop(cols.MODIFIED, axis=1)
     vuln_grouped = df_vulns.groupby(
-        ["package", "version", "severity", "vuln_id"],
+        [cols.PACKAGE, cols.VERSION, cols.SEVERITY, cols.VULN_ID],
         as_index=False,
-    ).agg({"scanner": pd.Series.unique})
+    ).agg({cols.SCANNER: pd.Series.unique})
     vuln_components = pd.merge(
         left=vuln_grouped,
         right=sbomdb.df_sbomdb,
         how="inner",
-        left_on=["package", "version"],
-        right_on=["pname", "version"],
+        left_on=[cols.PACKAGE, cols.VERSION],
+        right_on=[cols.PNAME, cols.VERSION],
     )
     for vuln in vuln_components.itertuples():
         cdx["vulnerabilities"].append(_vuln_to_cdx_vuln(vuln))

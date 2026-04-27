@@ -8,6 +8,7 @@ import json
 
 import pandas as pd
 
+from common import columns as cols
 from common.http import create_cached_limited_session
 from common.log import LOG, LOG_SPAM
 
@@ -38,10 +39,10 @@ class OSV:
     def _parse_vulns(self, package, vulns):
         setcol = self.vulns_dict.setdefault
         for vuln in vulns["vulns"]:
-            setcol("vuln_id", []).append(vuln["id"])
-            setcol("modified", []).append(vuln["modified"])
-            setcol("package", []).append(package["package"]["name"])
-            setcol("version", []).append(package["version"])
+            setcol(cols.VULN_ID, []).append(vuln["id"])
+            setcol(cols.MODIFIED, []).append(vuln["modified"])
+            setcol(cols.PACKAGE, []).append(package["package"]["name"])
+            setcol(cols.VERSION, []).append(package["version"])
 
     def _parse_batch_response(self, query, results):
         for package, vulns in zip(query["queries"], results):
@@ -75,12 +76,16 @@ class OSV:
         components_dict = {}
         setcol = components_dict.setdefault
         for component in components:
-            setcol("name", []).append(component["name"])
-            setcol("version", []).append(component["version"])
+            setcol(cols.NAME, []).append(component["name"])
+            setcol(cols.VERSION, []).append(component["version"])
         df_components = pd.DataFrame(components_dict)
         df_components.fillna("", inplace=True)
         df_components = df_components.astype(str)
-        df_components.sort_values("name", inplace=True, key=lambda col: col.str.lower())
+        df_components.sort_values(
+            cols.NAME,
+            inplace=True,
+            key=lambda col: col.str.lower(),
+        )
         df_components.reset_index(drop=True, inplace=True)
         return df_components
 

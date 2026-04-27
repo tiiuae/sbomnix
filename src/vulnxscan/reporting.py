@@ -11,6 +11,7 @@ import pathlib
 import pandas as pd
 from tabulate import tabulate
 
+from common import columns as cols
 from common.df import df_from_csv_file, df_to_csv_file
 from common.log import LOG, LOG_VERBOSE
 from vulnxscan.utils import _is_patched, _reformat_scanner, _vuln_sortcol, _vuln_url
@@ -27,12 +28,18 @@ def build_report_dataframe(df_vulnix, df_grype, df_osv, *, log=LOG):
     if df.empty:
         log.debug("No scanners reported any findings")
         return pd.DataFrame()
-    if "modified" not in df.columns:
-        df["modified"] = pd.NaT
-    df["sortcol"] = df.apply(_vuln_sortcol, axis=1)
-    df["count"] = 1
-    group_cols = ["vuln_id", "package", "severity", "version", "sortcol"]
-    df = df.pivot_table(index=group_cols, columns="scanner", values="count")
+    if cols.MODIFIED not in df.columns:
+        df[cols.MODIFIED] = pd.NaT
+    df[cols.SORTCOL] = df.apply(_vuln_sortcol, axis=1)
+    df[cols.COUNT] = 1
+    group_cols = [
+        cols.VULN_ID,
+        cols.PACKAGE,
+        cols.SEVERITY,
+        cols.VERSION,
+        cols.SORTCOL,
+    ]
+    df = df.pivot_table(index=group_cols, columns=cols.SCANNER, values=cols.COUNT)
     df.reset_index(drop=False, inplace=True)
     scanners = ["grype", "osv"]
     if df_vulnix is not None:
@@ -41,18 +48,18 @@ def build_report_dataframe(df_vulnix, df_grype, df_osv, *, log=LOG):
     for scanner_col in scanners:
         if scanner_col not in df:
             df[scanner_col] = 0
-    df["sum"] = df[scanners].sum(axis=1).astype(int)
+    df[cols.SUM] = df[scanners].sum(axis=1).astype(int)
     df["grype"] = df.apply(lambda row: _reformat_scanner(row.grype), axis=1)
     df["osv"] = df.apply(lambda row: _reformat_scanner(row.osv), axis=1)
     if "vulnix" in scanners:
         df["vulnix"] = df.apply(lambda row: _reformat_scanner(row.vulnix), axis=1)
-    df["url"] = df.apply(_vuln_url, axis=1)
-    sort_cols = ["sortcol", "package", "severity", "version"]
+    df[cols.URL] = df.apply(_vuln_url, axis=1)
+    sort_cols = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION]
     df.sort_values(by=sort_cols, ascending=False, inplace=True)
     report_cols = (
-        ["vuln_id", "url", "package", "version", "severity"]
+        [cols.VULN_ID, cols.URL, cols.PACKAGE, cols.VERSION, cols.SEVERITY]
         + scanners
-        + ["sum", "sortcol"]
+        + [cols.SUM, cols.SORTCOL]
     )
     return df[report_cols]
 
@@ -65,12 +72,12 @@ def filter_patched_report(df_report, sbom_csv, *, log=LOG):
         left=df_report,
         right=df_sbom_csv,
         how="left",
-        left_on=["package", "version"],
-        right_on=["pname", "version"],
+        left_on=[cols.PACKAGE, cols.VERSION],
+        right_on=[cols.PNAME, cols.VERSION],
         suffixes=["", "_sbom_csv"],
     )
-    df["patched"] = df.apply(_is_patched, axis=1)
-    df = df[~df["patched"]]
+    df[cols.PATCHED] = df.apply(_is_patched, axis=1)
+    df = df[~df[cols.PATCHED]]
     df = df[df_report.columns.values]
     return df.drop_duplicates(keep="first")
 
@@ -90,11 +97,11 @@ def render_console_report(df_report, *, df_triaged=None, log=LOG):
     log.debug("")
     if df_triaged is not None:
         df = df_triaged.copy()
-        if "package_repology" in df:
-            df = df.drop("package_repology", axis=1)
+        if cols.PACKAGE_REPOLOGY in df:
+            df = df.drop(cols.PACKAGE_REPOLOGY, axis=1)
     else:
         df = df_report.copy()
-    df = df.drop("sortcol", axis=1)
+    df = df.drop(cols.SORTCOL, axis=1)
     df = df_drop_whitelisted(df)
     if df.empty:
         log.info("Whitelisted all vulnerabilities")

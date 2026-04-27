@@ -13,6 +13,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 import repology.exceptions
+from common import columns as cols
 from common.log import LOG, LOG_SPAM
 from common.versioning import parse_version
 
@@ -90,19 +91,19 @@ def parse_cve_html(html_text, pkg_name, pkg_version, *, log=LOG, log_spam=LOG_SP
         affected_versions = row.find_all("span", {"class": "version version-outdated"})
         if not affected_versions:
             continue
-        cols = row.find_all("td")
-        if not cols:
+        cells = row.find_all("td")
+        if not cells:
             continue
-        cve_row = cols[headers["CVE ID"]]
+        cve_row = cells[headers["CVE ID"]]
         log.log(log_spam, "CVE: %s", cve_row)
-        ver_row = cols[headers["Affected version(s)"]]
+        ver_row = cells[headers["Affected version(s)"]]
         log.log(log_spam, "Versions: %s", ver_row)
         if not is_affected(pkg_version, ver_row.text, log=log, log_spam=log_spam):
             continue
         cve_info = cve_row.text.strip().split("\n")
         log.debug("CVE info: %s", cve_info)
-        cve_dict.setdefault("package", []).append(pkg_name)
-        cve_dict.setdefault("version", []).append(pkg_version)
+        cve_dict.setdefault(cols.PACKAGE, []).append(pkg_name)
+        cve_dict.setdefault(cols.VERSION, []).append(pkg_version)
         cve_dict.setdefault("cve", []).append(cve_info[0])
     df = pd.DataFrame.from_dict(cve_dict)
     df.replace(np.nan, "", regex=True, inplace=True)

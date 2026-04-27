@@ -8,13 +8,14 @@
 
 from tabulate import tabulate
 
+from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG
 
 
 def _stats_sbom(df, *, log=LOG):
     df = df.copy()
-    df = df.drop_duplicates(keep="first", subset=["package", "version"])
+    df = df.drop_duplicates(keep="first", subset=[cols.PACKAGE, cols.VERSION])
     repo_rows_n = df.shape[0]
     repo_skipped_cols = ["NO_VERSION", "IGNORED", "NOT_FOUND"]
     df_skipped = df[df.status.isin(repo_skipped_cols)]
@@ -60,7 +61,7 @@ def _stats_repology(df, *, log=LOG):
     df = df.copy(deep=True)
     base_cols = ["newest", "devel", "unique", "outdated"]
     df = df[df.status.isin(base_cols)]
-    df = df.drop_duplicates(keep="first", subset=["package", "version"])
+    df = df.drop_duplicates(keep="first", subset=[cols.PACKAGE, cols.VERSION])
     base_rows_n = df.shape[0]
     if base_rows_n <= 0:
         log.debug("No base packages, skipping stats")
@@ -122,7 +123,7 @@ def write_query_report(df, args, *, query_url, df_sbom, console_report=True, log
     """Generate result report to console and to csv file."""
     report_df = df.copy(deep=True)
     console_df = report_df.copy(deep=True)
-    col = "newest_upstream_release"
+    col = cols.NEWEST_UPSTREAM_RELEASE
     console_df[col] = console_df[col].str.slice(0, 26)
     console_df = console_df[~console_df.status.isin(["IGNORED", "NO_VERSION"])]
     console_df = console_df.drop_duplicates(keep="first")

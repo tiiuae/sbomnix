@@ -8,6 +8,7 @@
 
 import re
 
+from common import columns as cols
 from common.log import LOG, LOG_SPAM
 from common.spdx import canonicalize_spdx_license_id
 from vulnxscan.utils import _vuln_source, _vuln_url
@@ -83,7 +84,7 @@ def _cdx_component_add_patches(component, drv):
             component["pedigree"] = pedigree
 
 
-def _drv_to_cdx_component(drv, uid="store_path"):
+def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
     """Convert one entry from sbomdb (drv) to cdx component"""
     component = {}
     # Set the cdx component type based on the following heuristic:
@@ -137,7 +138,7 @@ def _drv_to_cdx_component(drv, uid="store_path"):
     return component
 
 
-def _drv_to_cdx_dependency(drv, deps_list, uid="store_path"):
+def _drv_to_cdx_dependency(drv, deps_list, uid=cols.STORE_PATH):
     """Return cdx dependency structure for sbomdb drv"""
     dependency = {}
     dependency["ref"] = getattr(drv, uid)

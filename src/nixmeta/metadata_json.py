@@ -8,6 +8,7 @@ import json
 
 import pandas as pd
 
+from common import columns as cols
 from common.log import LOG
 
 
@@ -31,9 +32,9 @@ def parse_json_metadata(json_filename, *, log=LOG):
     dict_selected = {}
     setcol = dict_selected.setdefault
     for pkg in json_dict.values():
-        setcol("name", []).append(pkg.get("name", ""))
+        setcol(cols.NAME, []).append(pkg.get("name", ""))
         setcol("pname", []).append(pkg.get("pname", ""))
-        setcol("version", []).append(pkg.get("version", ""))
+        setcol(cols.VERSION, []).append(pkg.get("version", ""))
         meta = pkg.get("meta", {})
         setcol("meta_homepage", []).append(parse_meta_entry(meta, key="homepage"))
         setcol("meta_unfree", []).append(meta.get("unfree", ""))

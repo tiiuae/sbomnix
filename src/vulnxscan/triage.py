@@ -8,6 +8,7 @@
 
 """Vulnerability triage helpers."""
 
+from common import columns as cols
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
 from common.versioning import parse_version
@@ -78,11 +79,18 @@ def triage_vulnerabilities(
     )
     LOG.debug("")
     df = df_report.copy()
-    uids = ["vuln_id", "package", "severity", "version", "url", "sortcol"]
-    if "whitelist" in df.columns:
-        uids.append("whitelist")
-        uids.append("whitelist_comment")
-    df_vuln_pkgs = df.groupby(by=uids).size().reset_index(name="count")
+    uids = [
+        cols.VULN_ID,
+        cols.PACKAGE,
+        cols.SEVERITY,
+        cols.VERSION,
+        cols.URL,
+        cols.SORTCOL,
+    ]
+    if cols.WHITELIST in df.columns:
+        uids.append(cols.WHITELIST)
+        uids.append(cols.WHITELIST_COMMENT)
+    df_vuln_pkgs = df.groupby(by=uids).size().reset_index(name=cols.COUNT)
     LOG.debug("Number of vulnerable packages: %s", df_vuln_pkgs.shape[0])
     if df_vuln_pkgs.empty:
         return df_vuln_pkgs
@@ -90,16 +98,16 @@ def triage_vulnerabilities(
     df_vuln_pkgs = repology_lookup.query_repology_versions(df_vuln_pkgs)
     LOG.debug("Vulnerable pkgs with repology version info: %s", df_vuln_pkgs.shape[0])
     df_log(df_vuln_pkgs, LOG_SPAM)
-    df_vuln_pkgs["classify"] = df_vuln_pkgs.apply(
+    df_vuln_pkgs[cols.CLASSIFY] = df_vuln_pkgs.apply(
         lambda row: classify_vulnerability(row, repology_lookup=repology_lookup),
         axis=1,
     )
     if search_nix_prs:
         LOG.verbose("Querying nixpkgs github PRs")
-        df_vuln_pkgs["nixpkgs_pr"] = df_vuln_pkgs.apply(
+        df_vuln_pkgs[cols.NIXPKGS_PR] = df_vuln_pkgs.apply(
             github_lookup.find_nixpkgs_prs,
             axis=1,
         )
-    sort_cols = ["sortcol", "package", "severity", "version_local"]
+    sort_cols = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION_LOCAL]
     df_vuln_pkgs.sort_values(by=sort_cols, ascending=False, inplace=True)
     return df_vuln_pkgs

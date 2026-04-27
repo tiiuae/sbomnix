@@ -11,6 +11,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from common import columns as cols
 from common.log import LOG, LOG_SPAM
 
 
@@ -33,11 +34,11 @@ def parse_vulnix_json(json_str, *, cvss_cache=None, log=LOG):
                 severity = cvss[cve]
                 if cvss_cache is not None:
                     cvss_cache[cve] = severity
-            setcol("package", []).append(package["pname"])
-            setcol("version", []).append(package["version"])
-            setcol("vuln_id", []).append(cve)
-            setcol("severity", []).append(severity)
-            setcol("scanner", []).append("vulnix")
+            setcol(cols.PACKAGE, []).append(package["pname"])
+            setcol(cols.VERSION, []).append(package["version"])
+            setcol(cols.VULN_ID, []).append(cve)
+            setcol(cols.SEVERITY, []).append(severity)
+            setcol(cols.SCANNER, []).append("vulnix")
     df_vulnix = pd.DataFrame.from_dict(vulnix_vulns_dict)
     if not df_vulnix.empty:
         log.debug("Vulnix found vulnerabilities")
@@ -70,11 +71,11 @@ def parse_grype_json(json_str, *, cvss_cache=None, log=LOG, log_spam=LOG_SPAM):
                     if cvss_cache is not None:
                         cvss_cache[vid] = severity
                     break
-        setcol("package", []).append(vuln["artifact"]["name"])
-        setcol("version", []).append(vuln["artifact"]["version"])
-        setcol("vuln_id", []).append(vuln["vulnerability"]["id"])
-        setcol("severity", []).append(severity)
-        setcol("scanner", []).append("grype")
+        setcol(cols.PACKAGE, []).append(vuln["artifact"]["name"])
+        setcol(cols.VERSION, []).append(vuln["artifact"]["version"])
+        setcol(cols.VULN_ID, []).append(vuln["vulnerability"]["id"])
+        setcol(cols.SEVERITY, []).append(severity)
+        setcol(cols.SCANNER, []).append("grype")
     df_grype = pd.DataFrame.from_dict(grype_vulns_dict)
     if not df_grype.empty:
         log.debug("Grype found vulnerabilities")
@@ -89,15 +90,15 @@ def normalize_osv_dataframe(df_osv, *, cvss_cache=None, log=LOG, log_spam=LOG_SP
         return pd.DataFrame()
     df_osv = df_osv.copy(deep=True)
     if not df_osv.empty:
-        df_osv["scanner"] = "osv"
+        df_osv[cols.SCANNER] = "osv"
         df_osv.replace(np.nan, "", regex=True, inplace=True)
         df_osv.drop_duplicates(keep="first", inplace=True)
-        df_osv["modified"] = pd.to_datetime(
-            df_osv["modified"],
+        df_osv[cols.MODIFIED] = pd.to_datetime(
+            df_osv[cols.MODIFIED],
             format="%Y-%m-%d",
             exact=False,
         )
-        df_osv["severity"] = df_osv["vuln_id"].apply(
+        df_osv[cols.SEVERITY] = df_osv[cols.VULN_ID].apply(
             lambda vuln_id: _severity_from_cache(cvss_cache, vuln_id)
         )
         log.log(log_spam, "osv data:\n%s", df_osv.to_markdown())

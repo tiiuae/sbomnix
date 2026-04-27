@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
+from common import columns as cols
+
 
 def _sorted_unique(values):
     return sorted({value for value in values if value})
@@ -28,7 +30,7 @@ def _group_dependency_rows(df, dep_col):
         return {}
     return {
         target_path: _sorted_unique(group[dep_col].tolist())
-        for target_path, group in df.groupby("target_path")
+        for target_path, group in df.groupby(cols.TARGET_PATH)
     }
 
 
@@ -40,12 +42,12 @@ class DependencyIndex:
     component_frame: pd.DataFrame
     _uid_maps: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    def lookup(self, drv, uid="store_path"):
+    def lookup(self, drv, uid=cols.STORE_PATH):
         """Return dependency identifiers for ``drv`` using the requested column."""
         dep_store_paths = self.by_store_path.get(drv.store_path, [])
         if not dep_store_paths:
             return None
-        if uid == "store_path":
+        if uid == cols.STORE_PATH:
             return dep_store_paths
         uid_map = self._get_uid_map(uid)
         if uid_map is None:
@@ -68,7 +70,7 @@ class DependencyIndex:
         if uid not in self.component_frame.columns:
             return None
         uid_map = dict(
-            self.component_frame.loc[:, ["store_path", uid]].itertuples(
+            self.component_frame.loc[:, [cols.STORE_PATH, uid]].itertuples(
                 index=False,
                 name=None,
             )
@@ -86,26 +88,26 @@ def build_dependency_index(df_deps, df_sbomdb, df_sbomdb_outputs_exploded, uid):
     if df_deps is None or df_deps.empty:
         return DependencyIndex(by_store_path=by_store_path, component_frame=df_sbomdb)
 
-    runtime_sources = df_sbomdb_outputs_exploded.loc[:, ["outputs", uid]].rename(
-        columns={uid: "dependency_uid"}
+    runtime_sources = df_sbomdb_outputs_exploded.loc[:, [cols.OUTPUTS, uid]].rename(
+        columns={uid: cols.DEPENDENCY_UID}
     )
     runtime_edges = df_deps.merge(
         runtime_sources,
         how="inner",
-        left_on=["src_path"],
-        right_on=["outputs"],
+        left_on=[cols.SRC_PATH],
+        right_on=[cols.OUTPUTS],
     )
-    runtime_by_target = _group_dependency_rows(runtime_edges, "dependency_uid")
+    runtime_by_target = _group_dependency_rows(runtime_edges, cols.DEPENDENCY_UID)
 
-    buildtime_sources = df_sbomdb.loc[:, ["store_path"]].copy()
-    buildtime_sources["dependency_uid"] = df_sbomdb[uid]
+    buildtime_sources = df_sbomdb.loc[:, [cols.STORE_PATH]].copy()
+    buildtime_sources[cols.DEPENDENCY_UID] = df_sbomdb[uid]
     buildtime_edges = df_deps.merge(
         buildtime_sources,
         how="inner",
-        left_on=["src_path"],
-        right_on=["store_path"],
+        left_on=[cols.SRC_PATH],
+        right_on=[cols.STORE_PATH],
     )
-    buildtime_by_target = _group_dependency_rows(buildtime_edges, "dependency_uid")
+    buildtime_by_target = _group_dependency_rows(buildtime_edges, cols.DEPENDENCY_UID)
 
     for drv in df_sbomdb.itertuples():
         deps = set(buildtime_by_target.get(drv.store_path, ()))

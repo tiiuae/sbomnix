@@ -12,6 +12,7 @@ Utility functions when dealing with whitelists
 
 # Whitelist
 
+from common import columns as cols
 from common.df import df_from_csv_file, df_log
 from common.errors import WhitelistApplicationError
 from common.log import LOG, LOG_SPAM
@@ -27,17 +28,17 @@ def load_whitelist(whitelist_csv_path):
     if df is None:
         return None
     # Whitelist must have the following columns
-    if not set(["vuln_id", "comment"]).issubset(df.columns):
+    if not set([cols.VULN_ID, cols.COMMENT]).issubset(df.columns):
         LOG.warning("Whitelist csv missing required columns")
         return None
-    if "whitelist" in df.columns:
+    if cols.WHITELIST in df.columns:
         # Interpret possible string values in "whitelist" column
         # to boolean as follows:
-        df["whitelist"] = df["whitelist"].replace({"": True})
-        df["whitelist"] = (
-            df["whitelist"].astype(str).replace({"False": False, "0": False})
+        df[cols.WHITELIST] = df[cols.WHITELIST].replace({"": True})
+        df[cols.WHITELIST] = (
+            df[cols.WHITELIST].astype(str).replace({"False": False, "0": False})
         )
-        df["whitelist"] = df["whitelist"].astype("bool")
+        df[cols.WHITELIST] = df[cols.WHITELIST].astype("bool")
     return df
 
 
@@ -54,18 +55,18 @@ def df_apply_whitelist(df_whitelist, df_vulns):
     "whitelist_comment" to matching entries.
     """
     # Add default values to whitelist columns
-    df_vulns["whitelist"] = False
-    df_vulns["whitelist_comment"] = ""
-    if "vuln_id" not in df_vulns:
+    df_vulns[cols.WHITELIST] = False
+    df_vulns[cols.WHITELIST_COMMENT] = ""
+    if cols.VULN_ID not in df_vulns:
         raise WhitelistApplicationError("Missing 'vuln_id' column from df_vulns")
-    if "vuln_id" not in df_whitelist:
+    if cols.VULN_ID not in df_whitelist:
         LOG.warning("Whitelist ignored: missing 'vuln_id' column from whitelist")
         return
     check_pkg_name = False
-    if "package" in df_whitelist.columns and "package" in df_vulns.columns:
+    if cols.PACKAGE in df_whitelist.columns and cols.PACKAGE in df_vulns.columns:
         check_pkg_name = True
     check_whitelist = False
-    if "whitelist" in df_whitelist.columns:
+    if cols.WHITELIST in df_whitelist.columns:
         check_whitelist = True
     # Iterate rows in df_whitelist in reverse order so the whitelist rules
     # on top of the file get higher priority
@@ -74,15 +75,17 @@ def df_apply_whitelist(df_whitelist, df_vulns):
         LOG.log(LOG_SPAM, "whitelist_entry: %s", whitelist_entry)
         regex = str(whitelist_entry.vuln_id).strip()
         LOG.log(LOG_SPAM, "whitelist regex: %s", regex)
-        df_matches = df_vulns["vuln_id"].str.fullmatch(regex)
+        df_matches = df_vulns[cols.VULN_ID].str.fullmatch(regex)
         if check_pkg_name and whitelist_entry.package:
             LOG.log(LOG_SPAM, "filtering by package name: %s", whitelist_entry.package)
-            df_matches = df_matches & (df_vulns["package"] == whitelist_entry.package)
-        df_vulns.loc[df_matches, "whitelist"] = True
+            df_matches = df_matches & (
+                df_vulns[cols.PACKAGE] == whitelist_entry.package
+            )
+        df_vulns.loc[df_matches, cols.WHITELIST] = True
         if check_whitelist:
             LOG.log(LOG_SPAM, "entry[whitelist]=%s", bool(whitelist_entry.whitelist))
-            df_vulns.loc[df_matches, "whitelist"] = bool(whitelist_entry.whitelist)
-        df_vulns.loc[df_matches, "whitelist_comment"] = whitelist_entry.comment
+            df_vulns.loc[df_matches, cols.WHITELIST] = bool(whitelist_entry.whitelist)
+        df_vulns.loc[df_matches, cols.WHITELIST_COMMENT] = whitelist_entry.comment
         LOG.log(LOG_SPAM, "matches %s vulns", len(df_vulns[df_matches]))
         df_log(df_vulns[df_matches], LOG_SPAM)
 
@@ -92,10 +95,10 @@ def df_drop_whitelisted(df):
     Drop whitelisted vulnerabilities from `df` as well as
     the related columns.
     """
-    if "whitelist" in df.columns:
+    if cols.WHITELIST in df.columns:
         # Convert possible string to boolean
-        df = df[~df["whitelist"]]
-        df = df.drop("whitelist", axis=1)
-    if "whitelist_comment" in df.columns:
-        df = df.drop("whitelist_comment", axis=1)
+        df = df[~df[cols.WHITELIST]]
+        df = df.drop(cols.WHITELIST, axis=1)
+    if cols.WHITELIST_COMMENT in df.columns:
+        df = df.drop(cols.WHITELIST_COMMENT, axis=1)
     return df
