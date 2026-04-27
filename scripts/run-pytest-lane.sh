@@ -28,6 +28,9 @@ pytest_args=(
   -n auto
   -vx
   --durations=20
+  --cov=src
+  --cov-report=term-missing
+  --cov-report=xml
 )
 
 if [ -n "$marker_expr" ]; then
