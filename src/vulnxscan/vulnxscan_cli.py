@@ -12,12 +12,12 @@ open-source vulnerability scanners.
 import argparse
 import logging
 import pathlib
-import sys
 from tempfile import NamedTemporaryFile
 
 from common.utils import (
     LOG,
-    FlakeRefResolutionError,
+    InvalidSbomError,
+    SbomnixError,
     exit_unless_command_exists,
     exit_unless_nix_artifact,
     set_log_verbosity,
@@ -134,6 +134,14 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
+    try:
+        _run(args)
+    except SbomnixError as error:
+        LOG.fatal("%s", error)
+        raise SystemExit(1) from error
+
+
+def _run(args):
 
     # Fail early if following commands are not in path
     exit_unless_command_exists("grype")
@@ -145,18 +153,11 @@ def main():
     if args.sbom:
         target_path = pathlib.Path(args.TARGET).resolve().as_posix()
         if not _is_json(target_path):
-            LOG.fatal(
-                "Specified sbom target is not a json file: '%s'", str(args.TARGET)
-            )
-            sys.exit(1)
+            raise InvalidSbomError(args.TARGET)
         sbom_cdx_path = target_path
     else:
         runtime = args.buildtime is False
-        try:
-            target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
-        except FlakeRefResolutionError as error:
-            LOG.fatal("%s", error)
-            raise SystemExit(1) from error
+        target_path = try_resolve_flakeref(args.TARGET, force_realise=runtime)
         if not target_path:
             target_path = pathlib.Path(args.TARGET).resolve().as_posix()
             exit_unless_nix_artifact(args.TARGET, force_realise=runtime)

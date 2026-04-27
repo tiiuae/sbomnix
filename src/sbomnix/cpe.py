@@ -7,9 +7,14 @@
 """Generate CPE (Common Platform Enumeration) identifiers"""
 
 import string
-import sys
 
-from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_log
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    InvalidCpeDictionaryError,
+    df_from_csv_file,
+    df_log,
+)
 from sbomnix.dfcache import LockedDfCache
 
 ###############################################################################
@@ -52,11 +57,7 @@ class CPE:
             # Verify the loaded cpedict contains at least the following columns
             required_cols = {"vendor", "product"}
             if not required_cols.issubset(self.df_cpedict):
-                LOG.fatal(
-                    "Missing required columns %s from cpedict",
-                    required_cols,
-                )
-                sys.exit(1)
+                raise InvalidCpeDictionaryError(required_cols)
 
     def _cpedict_vendor(self, product):
         if not product or len(product) == 1:

@@ -13,7 +13,6 @@ import html
 import logging
 import os
 import re
-import sys
 from dataclasses import dataclass
 
 import graphviz as gv
@@ -22,6 +21,8 @@ import pandas as pd
 from common.utils import (
     LOG,
     LOG_SPAM,
+    MissingNixDeriverError,
+    MissingNixOutPathError,
     df_regex_filter,
     df_to_csv_file,
     exec_cmd,
@@ -342,8 +343,7 @@ def _get_nix_store_path(nix_path):
 def _find_deriver(nix_path):
     drv_path = find_deriver(nix_path)
     if not drv_path:
-        LOG.fatal("No deriver found for: '%s", nix_path)
-        sys.exit(1)
+        raise MissingNixDeriverError(nix_path)
     LOG.debug("nix_drv: %s", drv_path)
     return drv_path
 
@@ -359,8 +359,7 @@ def _find_outpath(nix_path):
         ]
     ).stdout.strip()
     if not out_path:
-        LOG.fatal("No outpath found for: '%s'", nix_path)
-        sys.exit(1)
+        raise MissingNixOutPathError(nix_path)
     LOG.debug("out_path: %s", out_path)
     return out_path
 
