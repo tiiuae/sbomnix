@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=too-many-instance-attributes
+
 """Helpers for assembling provenance documents."""
 
 import json
