@@ -30,7 +30,7 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixpkgs-unstable
       - name: Build release asset
-        run: nix develop --command make release-asset
+        run: ./scripts/release-asset.sh
       - name: Upload release asset
         uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
         with:
