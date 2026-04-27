@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-function-docstring,protected-access
+# pylint: disable=missing-function-docstring
 
 """Focused tests for provenance digest and subject handling."""
 
@@ -10,15 +10,45 @@ import json
 import logging
 from types import SimpleNamespace
 
+from common.log import LOG
+from common.nix_utils import parse_nix_derivation_show
 from provenance import main as provenance_main
+from provenance.dependencies import (
+    DependencyHooks,
+    dependency_package,
+    get_dependencies,
+)
+from provenance.digests import normalize_digest, output_digest
+from provenance.subjects import SubjectHooks, get_subjects, output_path
 
 
-def test_get_dependencies_supports_nix_2_33_wrapped_json(monkeypatch):
+def _dependency_hooks(*, exec_cmd_fn, query_store_hashes_fn=None):
+    return DependencyHooks(
+        exec_cmd_fn=exec_cmd_fn,
+        query_store_hashes_fn=query_store_hashes_fn,
+        parse_nix_derivation_show_fn=parse_nix_derivation_show,
+        normalize_digest_fn=normalize_digest,
+        output_digest_fn=output_digest,
+        output_path_fn=output_path,
+        log=LOG,
+    )
+
+
+def _subject_hooks(exec_cmd_fn):
+    return SubjectHooks(
+        exec_cmd_fn=exec_cmd_fn,
+        normalize_digest_fn=normalize_digest,
+        output_digest_fn=output_digest,
+        output_path_fn=output_path,
+        log=LOG,
+    )
+
+
+def test_get_dependencies_supports_nix_2_33_wrapped_json():
     drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
     dep_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dependency.drv"
     dep_path = f"/nix/store/{dep_basename}"
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
         if cmd == [
@@ -43,18 +73,17 @@ def test_get_dependencies_supports_nix_2_33_wrapped_json(monkeypatch):
                     }
                 )
             )
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr(
-        provenance_main,
-        "query_store_hashes",
-        lambda paths: ["sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"],
-    )
-
-    assert provenance_main.get_dependencies(drv_path) == [
+    assert get_dependencies(
+        drv_path,
+        hooks=_dependency_hooks(
+            exec_cmd_fn=fake_exec_cmd,
+            query_store_hashes_fn=lambda _paths: [
+                "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+            ],
+        ),
+    ) == [
         {
             "name": "dependency",
             "uri": dep_path,
@@ -64,38 +93,38 @@ def test_get_dependencies_supports_nix_2_33_wrapped_json(monkeypatch):
     ]
 
 
-def test_normalize_digest_does_not_shell_out(monkeypatch):
-    def fail_exec_cmd(cmd, **kwargs):
-        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
-
-    monkeypatch.setattr(provenance_main, "exec_cmd", fail_exec_cmd)
-
-    assert provenance_main._normalize_digest(
+def test_normalize_digest_does_not_shell_out():
+    assert normalize_digest(
         "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
     ) == {"sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"}
-    assert provenance_main._normalize_digest(
-        "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="
-    ) == {"sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"}
-    assert provenance_main._normalize_digest(
+    assert normalize_digest("sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=") == {
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    }
+    assert normalize_digest(
         "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce",
         "r:sha256",
     ) == {"sha256": "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"}
 
 
-def test_normalize_digest_rejects_overflowing_nix32_values(monkeypatch):
-    def fail_exec_cmd(cmd, **kwargs):
-        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
-
-    monkeypatch.setattr(provenance_main, "exec_cmd", fail_exec_cmd)
-
-    assert provenance_main._normalize_digest("sha256:" + ("z" * 52)) is None
+def test_normalize_digest_rejects_overflowing_nix32_values():
+    assert normalize_digest("sha256:" + ("z" * 52)) is None
 
 
 def test_dependency_package_logs_non_normalized_digest_fallback(caplog):
     drv_path = "/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dependency.drv"
 
-    with caplog.at_level(logging.WARNING, logger=provenance_main.LOG.name):
-        package = provenance_main._dependency_package(drv_path, "sha999:abc", {}, {})
+    with caplog.at_level(logging.WARNING, logger=LOG.name):
+        package = dependency_package(
+            drv_path,
+            "sha999:abc",
+            {},
+            {},
+            hooks=DependencyHooks(
+                normalize_digest_fn=normalize_digest,
+                output_digest_fn=output_digest,
+                log=LOG,
+            ),
+        )
 
     assert package == {
         "name": "dependency",
@@ -105,13 +134,12 @@ def test_dependency_package_logs_non_normalized_digest_fallback(caplog):
     assert "Falling back to non-normalized digest" in caplog.text
 
 
-def test_get_dependencies_prefers_fixed_output_digest_for_output_paths(monkeypatch):
+def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
     drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
     dep_drv_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-source.drv"
     dep_out_basename = "2ccccccccccccccccccccccccccccccc-source"
     dep_out_path = f"/nix/store/{dep_out_basename}"
     metadata_digest = "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
         if cmd == [
@@ -143,18 +171,17 @@ def test_get_dependencies_prefers_fixed_output_digest_for_output_paths(monkeypat
                     }
                 )
             )
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr(
-        provenance_main,
-        "query_store_hashes",
-        lambda paths: ["sha256:09i0w2qz3i5yp7m3yziq4z2n2r2v9s6d3n8j4x1q8k0m5a6b7c8d"],
-    )
-
-    assert provenance_main.get_dependencies(drv_path) == [
+    assert get_dependencies(
+        drv_path,
+        hooks=_dependency_hooks(
+            exec_cmd_fn=fake_exec_cmd,
+            query_store_hashes_fn=lambda _paths: [
+                "sha256:09i0w2qz3i5yp7m3yziq4z2n2r2v9s6d3n8j4x1q8k0m5a6b7c8d"
+            ],
+        ),
+    ) == [
         {
             "name": "source",
             "uri": dep_out_path,
@@ -164,7 +191,7 @@ def test_get_dependencies_prefers_fixed_output_digest_for_output_paths(monkeypat
     ]
 
 
-def test_get_dependencies_maps_env_only_output_paths_back_to_derivations(monkeypatch):
+def test_get_dependencies_maps_env_only_output_paths_back_to_derivations():
     drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
     dep_out_basename = "2ccccccccccccccccccccccccccccccc-source"
     dep_out_path = f"/nix/store/{dep_out_basename}"
@@ -199,14 +226,15 @@ def test_get_dependencies_maps_env_only_output_paths_back_to_derivations(monkeyp
             )
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr(
-        provenance_main,
-        "query_store_hashes",
-        lambda paths: ["sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"],
-    )
-
-    assert provenance_main.get_dependencies(drv_path) == [
+    assert get_dependencies(
+        drv_path,
+        hooks=_dependency_hooks(
+            exec_cmd_fn=fake_exec_cmd,
+            query_store_hashes_fn=lambda _paths: [
+                "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+            ],
+        ),
+    ) == [
         {
             "name": "special-source",
             "uri": dep_out_path,
@@ -216,152 +244,129 @@ def test_get_dependencies_maps_env_only_output_paths_back_to_derivations(monkeyp
     ]
 
 
-def test_get_subjects_falls_back_to_env_output_paths(monkeypatch):
-    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+def test_get_subjects_falls_back_to_env_output_paths():
+    output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     output_hash = "1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == ["nix-store", "--query", "--hash", output_path]:
+        if cmd == ["nix-store", "--query", "--hash", output_path_value]:
             return SimpleNamespace(stdout=f"sha256:{output_hash}\n")
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert provenance_main.get_subjects(
+    assert get_subjects(
         {"out": {"method": "nar"}},
-        env={"out": output_path},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fake_exec_cmd),
     ) == [
         {
             "name": "out",
-            "uri": output_path,
+            "uri": output_path_value,
             "digest": {"sha256": digest},
         }
     ]
 
 
-def test_get_subjects_prefers_derivation_hash_for_realized_flat_outputs(monkeypatch):
-    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+def test_get_subjects_prefers_derivation_hash_for_realized_flat_outputs():
+    output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     output_hash = "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
-    def fake_exec_cmd(cmd, **kwargs):
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
+    def fail_exec_cmd(cmd, **kwargs):
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert provenance_main.get_subjects(
+    assert get_subjects(
         {"out": {"method": "flat", "hash": output_hash}},
-        env={"out": output_path},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fail_exec_cmd),
     ) == [
         {
             "name": "out",
-            "uri": output_path,
+            "uri": output_path_value,
             "digest": {"sha256": digest},
         }
     ]
 
 
-def test_get_subjects_uses_derivation_hash_when_output_is_not_realized(monkeypatch):
-    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+def test_get_subjects_uses_derivation_hash_when_output_is_not_realized():
+    output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     output_hash = "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
-    def fake_exec_cmd(cmd, **kwargs):
-        if cmd == ["nix-store", "--query", "--hash", output_path]:
-            return None
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
+    def fail_exec_cmd(cmd, **kwargs):
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert provenance_main.get_subjects(
+    assert get_subjects(
         {"out": {"method": "nar", "hash": output_hash}},
-        env={"out": output_path},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fail_exec_cmd),
     ) == [
         {
             "name": "out",
-            "uri": output_path,
+            "uri": output_path_value,
             "digest": {"sha256": digest},
         }
     ]
 
 
-def test_get_subjects_supports_legacy_r_sha256_metadata(monkeypatch):
-    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+def test_get_subjects_supports_legacy_r_sha256_metadata():
+    output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     digest = "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"
-    real_exec_cmd = provenance_main.exec_cmd
 
-    def fake_exec_cmd(cmd, **kwargs):
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
+    def fail_exec_cmd(cmd, **kwargs):
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert provenance_main.get_subjects(
+    assert get_subjects(
         {
             "out": {
                 "hash": digest,
                 "hashAlgo": "r:sha256",
             }
         },
-        env={"out": output_path},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fail_exec_cmd),
     ) == [
         {
             "name": "out",
-            "uri": output_path,
+            "uri": output_path_value,
             "digest": {"sha256": digest},
         }
     ]
 
 
-def test_get_subjects_skips_unrealized_outputs_without_digest(monkeypatch):
-    output_path = "/custom/store/2ccccccccccccccccccccccccccccccc-nghttp2-doc"
+def test_get_subjects_skips_unrealized_outputs_without_digest():
+    output_path_value = "/custom/store/2ccccccccccccccccccccccccccccccc-nghttp2-doc"
 
     def fake_exec_cmd(cmd, **_kwargs):
-        assert cmd == ["nix-store", "--query", "--hash", output_path]
+        assert cmd == ["nix-store", "--query", "--hash", output_path_value]
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert not provenance_main.get_subjects(
+    assert not get_subjects(
         {"out": {"method": "nar"}},
-        env={"out": output_path},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fake_exec_cmd),
     )
 
 
-def test_get_subjects_skip_only_missing_unrealized_outputs(monkeypatch):
-    output_path = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
+def test_get_subjects_skip_only_missing_unrealized_outputs():
+    output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     missing_path = "/custom/store/2ccccccccccccccccccccccccccccccc-nghttp2-doc"
     output_hash = "1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == ["nix-store", "--query", "--hash", output_path]:
+        if cmd == ["nix-store", "--query", "--hash", output_path_value]:
             return SimpleNamespace(stdout=f"sha256:{output_hash}\n")
         if cmd == ["nix-store", "--query", "--hash", missing_path]:
             return None
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    assert provenance_main.get_subjects(
-        {"out": {"path": output_path}, "doc": {"path": missing_path}},
+    assert get_subjects(
+        {"out": {"path": output_path_value}, "doc": {"path": missing_path}},
+        hooks=_subject_hooks(fake_exec_cmd),
     ) == [
         {
             "name": "out",
-            "uri": output_path,
+            "uri": output_path_value,
             "digest": {"sha256": digest},
         }
     ]
@@ -373,7 +378,6 @@ def test_provenance_uses_store_path_hint_for_nix_2_33_outputs_without_path(monke
     out_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-root"
     output_hash = "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
         if cmd[:3] == ["nix", "derivation", "show"]:
@@ -397,8 +401,6 @@ def test_provenance_uses_store_path_hint_for_nix_2_33_outputs_without_path(monke
                     }
                 )
             )
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
     monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
@@ -426,7 +428,6 @@ def test_provenance_keeps_fixed_output_subjects_when_output_is_not_realized(
     out_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-root"
     output_hash = "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0="
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    real_exec_cmd = provenance_main.exec_cmd
 
     def fake_exec_cmd(cmd, **kwargs):
         if cmd[:3] == ["nix", "derivation", "show"]:
@@ -447,10 +448,6 @@ def test_provenance_keeps_fixed_output_subjects_when_output_is_not_realized(
                     }
                 )
             )
-        if cmd == ["nix-store", "--query", "--hash", f"/custom/store/{out_basename}"]:
-            return None
-        if cmd[:3] == ["nix", "hash", "convert"]:
-            return real_exec_cmd(cmd, **kwargs)
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
     monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)

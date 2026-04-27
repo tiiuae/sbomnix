@@ -23,7 +23,7 @@ from common.errors import (
     MissingNixOutPathError,
     WhitelistApplicationError,
 )
-from nixgraph import graph as nixgraph_graph
+from nixgraph import store as nixgraph_store
 from repology import repology_cve
 from sbomnix import cpe
 from vulnxscan import whitelist
@@ -59,22 +59,21 @@ def test_exit_unless_nix_artifact_raises_typed_error(monkeypatch):
         common_proc.exit_unless_nix_artifact("missing", exec_cmd_fn=fail_exec_cmd)
 
 
-def test_find_deriver_raises_typed_error(monkeypatch):
-    monkeypatch.setattr(nixgraph_graph, "find_deriver", lambda _path: None)
+def test_find_deriver_raises_typed_error():
+    with pytest.raises(
+        MissingNixDeriverError, match="No deriver found for: 'missing'"
+    ):
+        nixgraph_store.find_deriver_path("missing", find_deriver_fn=lambda _path: None)
 
-    with pytest.raises(MissingNixDeriverError, match="No deriver found for: 'missing'"):
-        nixgraph_graph._find_deriver("missing")
 
-
-def test_find_outpath_raises_typed_error(monkeypatch):
-    monkeypatch.setattr(
-        nixgraph_graph, "exec_cmd", lambda *_args, **_kwargs: SimpleNamespace(stdout="")
-    )
-
+def test_find_outpath_raises_typed_error():
     with pytest.raises(
         MissingNixOutPathError, match="No outpath found for: 'missing.drv'"
     ):
-        nixgraph_graph._find_outpath("missing.drv")
+        nixgraph_store.find_output_path(
+            "missing.drv",
+            exec_cmd_fn=lambda *_args, **_kwargs: SimpleNamespace(stdout=""),
+        )
 
 
 def test_cpe_raises_typed_error_when_required_columns_are_missing(monkeypatch):

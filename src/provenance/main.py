@@ -10,16 +10,20 @@ import argparse
 import json
 import os
 from dataclasses import dataclass
-from importlib import import_module
 
 from common.log import LOG, set_log_verbosity
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
-
-provenance_dependencies = import_module("provenance.dependencies")
-provenance_digests = import_module("provenance.digests")
-provenance_schema = import_module("provenance.schema")
-provenance_subjects = import_module("provenance.subjects")
+from provenance.dependencies import DependencyHooks, get_dependencies
+from provenance.digests import normalize_digest, output_digest
+from provenance.schema import (
+    SchemaHooks,
+    get_external_parameters,
+    get_internal_parameters,
+    provenance_document,
+    timestamp,
+)
+from provenance.subjects import SubjectHooks, get_subjects, output_path
 
 
 @dataclass
@@ -33,25 +37,6 @@ class BuildMeta:
     build_finished_ts: str
     external_parameters: str
     internal_parameters: str
-
-
-_canonical_hash_algo = provenance_digests.canonical_hash_algo
-_hash_size_bytes = provenance_digests.hash_size_bytes
-_decode_nix32 = provenance_digests.decode_nix32
-_decode_hash_bytes = provenance_digests.decode_hash_bytes
-_split_hash_value = provenance_digests.split_hash_value
-
-
-def _normalize_digest(
-    hash_value: str | None, hash_algo: str | None = None
-) -> dict | None:
-    """Return digest in a canonical base16 representation."""
-    return provenance_digests.normalize_digest(hash_value, hash_algo=hash_algo)
-
-
-def _output_digest(data: dict | None) -> dict | None:
-    """Return digest from derivation output metadata when available."""
-    return provenance_digests.output_digest(data, normalize_digest_fn=_normalize_digest)
 
 
 def get_env_metadata():
@@ -77,107 +62,39 @@ def get_env_metadata():
     return BuildMeta(*values)
 
 
-def get_subjects(outputs: dict, env: dict | None = None) -> list[dict]:
-    """Parse derivation outputs into in-toto subjects"""
-    return provenance_subjects.get_subjects(
-        outputs,
-        env=env,
-        hooks=provenance_subjects.SubjectHooks(
-            exec_cmd_fn=exec_cmd,
-            normalize_digest_fn=_normalize_digest,
-            output_digest_fn=_output_digest,
-            output_path_fn=_output_path,
-            log=LOG,
-        ),
-    )
-
-
-def query_store_hashes(paths: list[str]) -> list[str]:
-    """Query store hashes, splitting the request when argv would exceed OS limits."""
-    return provenance_dependencies.query_store_hashes(
-        paths,
-        hooks=provenance_dependencies.DependencyHooks(
-            exec_cmd_fn=exec_cmd,
-        ),
-    )
-
-
-def _output_path(name: str, output: dict | None, env: dict | None = None) -> str | None:
-    """Return the resolved absolute output path from outputs or env."""
-    return provenance_subjects.output_path(name, output, env=env)
-
-
-def _derivation_outputs_by_path(infos: dict) -> dict[str, tuple[dict, dict]]:
-    """Index derivation info by absolute output path."""
-    return provenance_dependencies.derivation_outputs_by_path(
-        infos,
-        hooks=provenance_dependencies.DependencyHooks(
-            output_path_fn=_output_path,
-        ),
-    )
-
-
-def _dependency_package(
-    drv: str, output_hash: str, infos: dict, outputs_by_path: dict
-) -> dict | None:
-    """Create a dependency package entry with a normalized digest."""
-    return provenance_dependencies.dependency_package(
-        drv,
-        output_hash,
-        infos,
-        outputs_by_path,
-        hooks=provenance_dependencies.DependencyHooks(
-            normalize_digest_fn=_normalize_digest,
-            output_digest_fn=_output_digest,
-            log=LOG,
-        ),
-    )
-
-
-def get_dependencies(drv_path: str, recursive: bool = False) -> list[dict]:
-    """Get dependencies of derivation and parse them into ResourceDescriptors"""
-    return provenance_dependencies.get_dependencies(
-        drv_path,
-        recursive=recursive,
-        hooks=provenance_dependencies.DependencyHooks(
-            exec_cmd_fn=exec_cmd,
-            query_store_hashes_fn=query_store_hashes,
-            parse_nix_derivation_show_fn=parse_nix_derivation_show,
-            normalize_digest_fn=_normalize_digest,
-            output_digest_fn=_output_digest,
-            output_path_fn=_output_path,
-            log=LOG,
-        ),
-    )
-
-
-def get_external_parameters(metadata: BuildMeta) -> dict:
-    """Get externalParameters from env variable"""
-    return provenance_schema.get_external_parameters(metadata)
-
-
-def get_internal_parameters(metadata: BuildMeta) -> dict:
-    """Get internalParameters from env variable"""
-    return provenance_schema.get_internal_parameters(metadata)
-
-
-def timestamp(unix_time: int | str | None) -> str:
-    """Turn unix timestamp into RFC 3339 format"""
-    return provenance_schema.timestamp(unix_time)
-
-
 def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dict:
     """Create the provenance file"""
-    return provenance_schema.provenance_document(
+    return provenance_document(
         target,
         metadata,
         recursive=recursive,
-        hooks=provenance_schema.SchemaHooks(
+        hooks=SchemaHooks(
             exec_cmd_fn=exec_cmd,
             nix_cmd_fn=nix_cmd,
             parse_nix_derivation_show_fn=parse_nix_derivation_show,
-            get_subjects_fn=get_subjects,
-            get_dependencies_fn=get_dependencies,
+            get_subjects_fn=lambda outputs, env=None: get_subjects(
+                outputs,
+                env=env,
+                hooks=SubjectHooks(
+                    exec_cmd_fn=exec_cmd,
+                    normalize_digest_fn=normalize_digest,
+                    output_digest_fn=output_digest,
+                    output_path_fn=output_path,
+                    log=LOG,
+                ),
+            ),
+            get_dependencies_fn=lambda drv_path, recursive=False: get_dependencies(
+                drv_path,
+                recursive=recursive,
+                hooks=DependencyHooks(
+                    exec_cmd_fn=exec_cmd,
+                    parse_nix_derivation_show_fn=parse_nix_derivation_show,
+                    normalize_digest_fn=normalize_digest,
+                    output_digest_fn=output_digest,
+                    output_path_fn=output_path,
+                    log=LOG,
+                ),
+            ),
             get_external_parameters_fn=get_external_parameters,
             get_internal_parameters_fn=get_internal_parameters,
             timestamp_fn=timestamp,

@@ -8,10 +8,10 @@
 import errno
 import subprocess
 
-from provenance import main as provenance_main
+from provenance.dependencies import DependencyHooks, query_store_hashes
 
 
-def test_provenance_hash_query_batches_on_e2big(monkeypatch):
+def test_provenance_hash_query_batches_on_e2big():
     """Test provenance splits oversized nix-store hash queries and preserves order."""
     references = [f"/nix/store/hash-{idx}" for idx in range(5)]
     calls = []
@@ -28,9 +28,10 @@ def test_provenance_hash_query_batches_on_e2big(monkeypatch):
             return subprocess.CompletedProcess(cmd, 0, stdout=f"{hashes}\n", stderr="")
         raise AssertionError(f"unexpected command: {cmd}")
 
-    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
-
-    hashes = provenance_main.query_store_hashes(references)
+    hashes = query_store_hashes(
+        references,
+        hooks=DependencyHooks(exec_cmd_fn=fake_exec_cmd),
+    )
 
     assert hashes == [f"sha256:hash-{idx}" for idx in range(5)]
     assert calls == [
