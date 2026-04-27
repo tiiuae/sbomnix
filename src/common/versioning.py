@@ -11,7 +11,7 @@ import packaging.version
 from common.log import LOG, LOG_SPAM
 
 
-def number_distance(n1, n2):
+def number_distance(n1: object, n2: object) -> float:
     """
     Return float value between [0.0,1.0] indicating the distance
     between two non-negative numbers.
@@ -35,7 +35,7 @@ def number_distance(n1, n2):
     return min_n / max_n
 
 
-def version_distance(v1, v2):
+def version_distance(v1: object, v2: object) -> float:
     """
     Return float value between [0.0,1.0] indicating the closeness
     of the given two version number strings.
@@ -62,7 +62,7 @@ def version_distance(v1, v2):
     return number_distance(v1_float, v2_float)
 
 
-def parse_version(ver_str):
+def parse_version(ver_str: object) -> packaging.version.Version | None:
     """
     Return comparable version object from the given version string.
     Returns None if the version string can not be converted to version object.
@@ -89,4 +89,8 @@ def parse_version(ver_str):
     if not ver:
         LOG.debug("Invalid version '%s'", ver_str)
         return None
-    return packaging.version.parse(ver)
+    try:
+        return packaging.version.parse(ver)
+    except packaging.version.InvalidVersion:
+        LOG.debug("Invalid version '%s'", ver_str)
+        return None

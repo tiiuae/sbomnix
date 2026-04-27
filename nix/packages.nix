@@ -20,8 +20,10 @@
         vulnix
       ];
       check_inputs = with pp; [
+        hypothesis
         jsonschema
         pytest
+        pytest-cov
         pytest-xdist
       ];
       build_system = with pp; [ setuptools ];
@@ -65,6 +67,7 @@
         name = "sbomnix-devshell";
         packages = [
           pkgs.python3.pkgs.pylint # for running pylint manually in devshell
+          pkgs.pyright # for running pyright manually in devshell
           pkgs.ruff # for running ruff manually in devshell
           pkgs.isort # for running isort manually in devshell
         ]

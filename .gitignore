@@ -8,6 +8,10 @@ build/
 *.egg-info/
 .eggs/
 __pycache__/
+.coverage
+.hypothesis/
+coverage.xml
+htmlcov/
 sbomnix_test_data/
 result
 *.py[cod]
@@ -15,6 +19,7 @@ result
 *.csv
 /*.log
 /*.json
+!/pyrightconfig.json
 /*.png
 /*.jpg
 /*.pdf
