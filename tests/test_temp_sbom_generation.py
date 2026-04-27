@@ -23,7 +23,7 @@ def test_vulnxscan_cleans_generated_tempfiles_on_failure(tmp_path, monkeypatch):
 
     args = SimpleNamespace(
         TARGET="target",
-        verbose=1,
+        verbose=0,
         out="vulns.csv",
         buildtime=False,
         sbom=False,

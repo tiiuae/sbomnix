@@ -86,6 +86,7 @@ def _run(args):
     target = resolve_nix_target(
         args.NIXREF, buildtime=args.buildtime, impure=args.impure
     )
+    LOG.info("Generating SBOM for target '%s'", target.path)
     sbomdb = SbomDb(
         nix_path=target.path,
         buildtime=args.buildtime,

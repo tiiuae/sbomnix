@@ -85,6 +85,7 @@ def _run(args):
     exit_unless_command_exists("nix")
     exit_unless_command_exists("nix-env")
     # Scan metadata from the flakeref pinned nixpkgs
+    LOG.info("Scanning nixpkgs metadata for '%s'", args.flakeref)
     scanner = NixMetaScanner()
     scanner.scan(args.flakeref)
     # Output to csv file

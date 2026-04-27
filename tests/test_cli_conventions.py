@@ -27,6 +27,22 @@ def _stringify(value):
     return str(value)
 
 
+CLI_ARG_CASES = [
+    (sbomnix_main.getargs, [".#pkg"]),
+    (nixgraph_main.getargs, [".#pkg"]),
+    (nixmeta_main._getargs, []),
+    (nix_outdated.getargs, [".#pkg"]),
+    (vulnxscan_cli.getargs, [".#pkg"]),
+    (osv_cli.getargs, ["sbom.json"]),
+    (
+        repology_cli.getargs,
+        ["--pkg_exact", "openssl", "--repository", "nix_unstable"],
+    ),
+    (repology_cve.getargs, ["openssl", "3.1.0"]),
+    (provenance_main.getargs, [".#pkg"]),
+]
+
+
 @pytest.mark.parametrize(
     "getargs",
     [
@@ -51,20 +67,31 @@ def test_cli_version_flags_exit_zero(getargs, capsys):
 
 @pytest.mark.parametrize(
     ("getargs", "base_argv"),
+    CLI_ARG_CASES,
+)
+def test_cli_verbose_default_is_normal_info(getargs, base_argv):
+    assert getargs(base_argv).verbose == 0
+
+
+@pytest.mark.parametrize(
+    ("getargs", "base_argv"),
+    CLI_ARG_CASES,
+)
+@pytest.mark.parametrize(
+    "verbose_argv",
     [
-        (sbomnix_main.getargs, [".#pkg"]),
-        (nixgraph_main.getargs, [".#pkg"]),
-        (nixmeta_main._getargs, []),
-        (nix_outdated.getargs, [".#pkg"]),
-        (vulnxscan_cli.getargs, [".#pkg"]),
-        (osv_cli.getargs, ["sbom.json"]),
-        (
-            repology_cli.getargs,
-            ["--pkg_exact", "openssl", "--repository", "nix_unstable"],
-        ),
-        (repology_cve.getargs, ["openssl", "3.1.0"]),
-        (provenance_main.getargs, [".#pkg"]),
+        ["-v"],
+        ["--verbose=1"],
+        ["--verbose", "1"],
     ],
+)
+def test_cli_verbose_level_one_forms_match(getargs, base_argv, verbose_argv):
+    assert getargs([*verbose_argv, *base_argv]).verbose == 1
+
+
+@pytest.mark.parametrize(
+    ("getargs", "base_argv"),
+    CLI_ARG_CASES,
 )
 @pytest.mark.parametrize(
     "verbose_argv",

@@ -10,7 +10,7 @@ import subprocess
 from shutil import which
 
 from common.errors import CommandNotFoundError, InvalidNixArtifactError
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 
 
 def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdout=None):
@@ -60,7 +60,7 @@ def exit_unless_nix_artifact(path, force_realise=False, *, exec_cmd_fn=None, log
 
     log.debug("force_realize: %s", force_realise)
     if force_realise:
-        log.info("Try force-realising store-path '%s'", path)
+        log.log(LOG_VERBOSE, "Try force-realising store-path '%s'", path)
         cmd = ["nix-store", "-qf", path]
     else:
         cmd = ["nix-store", "-q", path]

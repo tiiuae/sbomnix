@@ -56,9 +56,9 @@ def get_env_metadata():
 
     values = [os.environ.get(name, "") for name in env_vars]
 
-    LOG.info("Reading metadata from environment:")
+    LOG.verbose("Reading metadata from environment:")
     for name, value in zip(env_vars, values):
-        LOG.info("| %s = %s", name, value)
+        LOG.verbose("| %s = %s", name, value)
 
     return BuildMeta(*values)
 

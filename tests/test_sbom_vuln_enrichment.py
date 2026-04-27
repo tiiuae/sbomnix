@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # pylint: disable=missing-class-docstring,missing-function-docstring
+# pylint: disable=protected-access,too-few-public-methods
 
 """Focused tests for SBOM vulnerability enrichment boundaries."""
 
@@ -19,12 +20,23 @@ from sbomnix import vuln_enrichment as sbomnix_vuln_enrichment
 from sbomnix.sbomdb import SbomDb
 
 
+class CapturingLogger:
+    def __init__(self):
+        self.records = []
+
+    def info(self, msg, *args):
+        self.records.append(("info", msg, args))
+
+    def fatal(self, msg, *args):
+        self.records.append(("fatal", msg, args))
+
+
 def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypatch):
     args = SimpleNamespace(
         NIXREF=".#target",
         buildtime=False,
         depth=None,
-        verbose=1,
+        verbose=0,
         include_vulns=True,
         exclude_meta=False,
         exclude_cpe_matching=False,
@@ -91,6 +103,59 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
             {"bomFormat": "CycloneDX", "vulnerabilities": []},
             True,
         ),
+    ]
+
+
+def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
+    args = SimpleNamespace(
+        NIXREF=".#target",
+        buildtime=False,
+        depth=None,
+        verbose=0,
+        include_vulns=False,
+        exclude_meta=False,
+        exclude_cpe_matching=False,
+        csv=None,
+        cdx=None,
+        spdx=None,
+        impure=False,
+    )
+    logger = CapturingLogger()
+    events = []
+
+    class FakeSbomDb:
+        def __init__(self, **kwargs):
+            events.append(("init", kwargs))
+
+    monkeypatch.setattr(sbomnix_main, "LOG", logger)
+    monkeypatch.setattr(
+        sbomnix_main,
+        "resolve_nix_target",
+        lambda *_args, **_kwargs: sbomnix_cli_utils.ResolvedNixTarget(
+            path="/nix/store/target",
+            flakeref=".#target",
+        ),
+    )
+    monkeypatch.setattr(sbomnix_main, "SbomDb", FakeSbomDb)
+
+    sbomnix_main._run(args)
+
+    assert logger.records == [
+        ("info", "Generating SBOM for target '%s'", ("/nix/store/target",))
+    ]
+    assert events == [
+        (
+            "init",
+            {
+                "nix_path": "/nix/store/target",
+                "buildtime": False,
+                "depth": None,
+                "flakeref": ".#target",
+                "include_meta": True,
+                "include_vulns": False,
+                "include_cpe": True,
+            },
+        )
     ]
 
 

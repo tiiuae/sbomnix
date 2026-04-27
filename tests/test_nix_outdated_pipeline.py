@@ -7,12 +7,13 @@
 
 """Offline tests for nix_outdated pipeline and reporting behavior."""
 
-import logging
+from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pandas as pd
 
 from common.df import df_from_csv_file
+from common.log import LOG, LOG_LEVELS, set_log_verbosity
 from nixupdate import pipeline
 from nixupdate.report import generate_report_df, write_report
 
@@ -42,10 +43,20 @@ def _repology_df():
     )
 
 
-def test_collect_outdated_scan_data_runtime_uses_hooks_and_cleans_outputs(
-    tmp_path, monkeypatch
-):
-    monkeypatch.setattr(pipeline.LOG, "level", logging.INFO)
+@contextmanager
+def _log_verbosity(verbosity):
+    previous_level = LOG.level
+    set_log_verbosity(verbosity)
+    try:
+        yield
+    finally:
+        if previous_level in LOG_LEVELS:
+            set_log_verbosity(LOG_LEVELS.index(previous_level))
+        else:
+            LOG.setLevel(previous_level)
+
+
+def test_collect_outdated_scan_data_runtime_uses_hooks_and_cleans_outputs(tmp_path):
     artifact = FakeSbomArtifact(tmp_path / "deps.cdx.json")
     graph_csv = tmp_path / "graph.csv"
     calls = []
@@ -75,16 +86,17 @@ def test_collect_outdated_scan_data_runtime_uses_hooks_and_cleans_outputs(
             ]
         )
 
-    data = pipeline.collect_outdated_scan_data(
-        "/nix/store/root",
-        buildtime=False,
-        hooks=pipeline.OutdatedScanHooks(
-            query_repology=query_repology,
-            generate_temp_sbom=generate_temp_sbom,
-            run_nix_visualize=run_nix_visualize,
-            parse_nix_visualize=parse_nix_visualize,
-        ),
-    )
+    with _log_verbosity(0):
+        data = pipeline.collect_outdated_scan_data(
+            "/nix/store/root",
+            buildtime=False,
+            hooks=pipeline.OutdatedScanHooks(
+                query_repology=query_repology,
+                generate_temp_sbom=generate_temp_sbom,
+                run_nix_visualize=run_nix_visualize,
+                parse_nix_visualize=parse_nix_visualize,
+            ),
+        )
 
     assert calls == [
         ("generate_temp_sbom", "/nix/store/root", False, "nixdeps_", ".cdx.json"),
@@ -107,28 +119,54 @@ def test_collect_outdated_scan_data_runtime_uses_hooks_and_cleans_outputs(
     ]
 
 
-def test_collect_outdated_scan_data_buildtime_skips_nix_visualize(
-    tmp_path, monkeypatch
-):
-    monkeypatch.setattr(pipeline.LOG, "level", logging.INFO)
+def test_collect_outdated_scan_data_buildtime_skips_nix_visualize(tmp_path):
     artifact = FakeSbomArtifact(tmp_path / "deps.cdx.json")
 
-    data = pipeline.collect_outdated_scan_data(
-        "/nix/store/root.drv",
-        buildtime=True,
-        hooks=pipeline.OutdatedScanHooks(
-            query_repology=lambda _sbom_path: _repology_df(),
-            generate_temp_sbom=lambda *_args, **_kwargs: artifact,
-            run_nix_visualize=lambda _target_path: (_ for _ in ()).throw(
-                AssertionError("nix-visualize should not run for buildtime scans")
+    with _log_verbosity(0):
+        data = pipeline.collect_outdated_scan_data(
+            "/nix/store/root.drv",
+            buildtime=True,
+            hooks=pipeline.OutdatedScanHooks(
+                query_repology=lambda _sbom_path: _repology_df(),
+                generate_temp_sbom=lambda *_args, **_kwargs: artifact,
+                run_nix_visualize=lambda _target_path: (_ for _ in ()).throw(
+                    AssertionError("nix-visualize should not run for buildtime scans")
+                ),
+                parse_nix_visualize=lambda _csv_path: (_ for _ in ()).throw(
+                    AssertionError("nix-visualize output should not be parsed")
+                ),
             ),
-            parse_nix_visualize=lambda _csv_path: (_ for _ in ()).throw(
-                AssertionError("nix-visualize output should not be parsed")
-            ),
-        ),
-    )
+        )
 
     assert artifact.cleaned
+    assert data.nix_visualize is None
+    assert data.repology.to_dict(orient="records") == _repology_df().to_dict(
+        orient="records"
+    )
+
+
+def test_collect_outdated_scan_data_buildtime_debug_keeps_nix_visualize_optional(
+    tmp_path,
+):
+    artifact = FakeSbomArtifact(tmp_path / "deps.cdx.json")
+
+    with _log_verbosity(2):
+        data = pipeline.collect_outdated_scan_data(
+            "/nix/store/root.drv",
+            buildtime=True,
+            hooks=pipeline.OutdatedScanHooks(
+                query_repology=lambda _sbom_path: _repology_df(),
+                generate_temp_sbom=lambda *_args, **_kwargs: artifact,
+                run_nix_visualize=lambda _target_path: (_ for _ in ()).throw(
+                    AssertionError("nix-visualize should not run for buildtime scans")
+                ),
+                parse_nix_visualize=lambda _csv_path: (_ for _ in ()).throw(
+                    AssertionError("nix-visualize output should not be parsed")
+                ),
+            ),
+        )
+
+    assert not artifact.cleaned
     assert data.nix_visualize is None
     assert data.repology.to_dict(orient="records") == _repology_df().to_dict(
         orient="records"

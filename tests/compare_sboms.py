@@ -8,15 +8,15 @@
 
 import argparse
 import json
-import logging
 import os
 import pathlib
 import sys
 
 import pandas as pd
 
+from common.cli_args import add_verbose_argument
 from common.df import df_to_csv_file
-from common.log import LOG, set_log_verbosity
+from common.log import LOG, is_debug_enabled, set_log_verbosity
 
 ###############################################################################
 
@@ -29,8 +29,7 @@ def getargs():
         "/path/to/sbom.cdx.json /path/to/sbom.cdx.json"
     )
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser)
     helps = "Path to first sbom json file"
     parser.add_argument("FILE1", help=helps, type=pathlib.Path)
     helps = "Path to second sbom json file"
@@ -98,7 +97,7 @@ def _log_rows(df, name):
 
 def _compare_sboms(args, df1, df2):
     """Describe diff of sboms df1 and df2, return True if they are equal"""
-    if LOG.level <= logging.DEBUG:
+    if is_debug_enabled():
         df_to_csv_file(df1, "df_sbom_file1.csv")
         df_to_csv_file(df2, "df_sbom_file2.csv")
 

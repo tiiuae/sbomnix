@@ -26,7 +26,7 @@ def test_repology_cve_main_writes_output_csv(tmp_path, monkeypatch):
             PKG_NAME="openssl",
             PKG_VERSION="3.1.0",
             out=out_path.as_posix(),
-            verbose=1,
+            verbose=0,
         ),
     )
     monkeypatch.setattr(repology_cve, "set_log_verbosity", lambda _verbosity: None)
@@ -96,7 +96,7 @@ def test_osv_main_writes_output_csv_with_requested_ecosystems(tmp_path, monkeypa
             SBOM=sbom_path,
             ecosystems="GIT, OSS-Fuzz",
             out=out_path.as_posix(),
-            verbose=1,
+            verbose=0,
         ),
     )
     monkeypatch.setattr(osv_cli, "set_log_verbosity", lambda _verbosity: None)

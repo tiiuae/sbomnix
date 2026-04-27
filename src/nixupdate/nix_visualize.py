@@ -8,7 +8,7 @@ import pathlib
 from tempfile import NamedTemporaryFile
 
 from common.df import df_from_csv_file
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.package_names import nix_to_repology_pkg_name
 from common.proc import exec_cmd
 
@@ -21,7 +21,7 @@ def run_nix_visualize(
     log=LOG,
 ):
     """Run ``nix-visualize`` and return the generated CSV path."""
-    log.info("Running nix-visualize")
+    log.log(LOG_VERBOSE, "Running nix-visualize")
     with tempfile_factory(
         delete=False,
         prefix="nix-visualize_",

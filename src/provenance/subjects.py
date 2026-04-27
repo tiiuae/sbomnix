@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.proc import exec_cmd
 from provenance.digests import normalize_digest, output_digest
 
@@ -44,7 +44,7 @@ def get_subjects(outputs, env=None, hooks=None):
     """Parse derivation outputs into in-toto subjects."""
     hooks = SubjectHooks() if hooks is None else hooks
 
-    hooks.log.info("Parsing derivation outputs")
+    hooks.log.log(LOG_VERBOSE, "Parsing derivation outputs")
 
     env = env or {}
     subjects = []
@@ -56,7 +56,8 @@ def get_subjects(outputs, env=None, hooks=None):
             subject["uri"] = resolved_output_path
         if resolved_output_digest is not None:
             subject["digest"] = resolved_output_digest
-            hooks.log.info(
+            hooks.log.log(
+                LOG_VERBOSE,
                 "Using derivation metadata hash for fixed-output output '%s'",
                 name,
             )

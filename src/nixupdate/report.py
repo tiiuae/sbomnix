@@ -9,7 +9,7 @@ import logging
 from tabulate import tabulate
 
 from common.df import df_log, df_to_csv_file
-from common.log import LOG, LOG_SPAM
+from common.log import LOG, LOG_SPAM, LOG_VERBOSE
 
 
 def generate_report_df(df_nix_visualize, df_repology, *, log=LOG, log_spam=LOG_SPAM):
@@ -70,7 +70,7 @@ def write_report(df, args, *, log=LOG):
     if df is None or df.empty:
         log.info("No outdated dependencies found")
         return
-    log.info("Writing console report")
+    log.log(LOG_VERBOSE, "Writing console report")
     select_cols = {
         "level": "priority",
         "package": "nix_package",
@@ -112,6 +112,6 @@ def write_report(df, args, *, log=LOG):
         )
         console_out_table(table, local=args.local, buildtime=args.buildtime, log=log)
 
-    if log.level <= logging.DEBUG:
+    if log.isEnabledFor(logging.DEBUG):
         df_to_csv_file(df, "df_nixoutdated_merged.csv")
     df_to_csv_file(df_console, args.out)

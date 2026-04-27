@@ -7,7 +7,7 @@
 import errno
 from dataclasses import dataclass
 
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd
 from provenance.digests import normalize_digest, output_digest
@@ -118,7 +118,8 @@ def get_dependencies(drv_path, recursive=False, hooks=None):
     """Get dependencies of derivation and parse them into ResourceDescriptors."""
     hooks = DependencyHooks() if hooks is None else hooks
 
-    hooks.log.info(
+    hooks.log.log(
+        LOG_VERBOSE,
         "Querying derivation dependencies %s",
         "recursively" if recursive else "",
     )
