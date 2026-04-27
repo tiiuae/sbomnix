@@ -6,20 +6,23 @@
 
 """Command-line tool to list outdated nix dependencies in priority order"""
 
-import logging
 import os
-import pathlib
 from argparse import ArgumentParser
 from tempfile import NamedTemporaryFile
 
-from tabulate import tabulate
-
-from common.df import df_from_csv_file, df_log, df_to_csv_file
 from common.errors import SbomnixError
-from common.log import LOG, LOG_SPAM, set_log_verbosity
-from common.package_names import nix_to_repology_pkg_name
+from common.log import LOG, set_log_verbosity
 from common.proc import exec_cmd
-from repology.adapter import RepologyAdapter, RepologyQuery
+from nixupdate.nix_visualize import (
+    nix_visualize_csv_to_df as _nix_visualize_csv_to_df_impl,
+)
+from nixupdate.nix_visualize import run_nix_visualize as _run_nix_visualize_impl
+from nixupdate.pipeline import OutdatedScanHooks, collect_outdated_scan_data
+from nixupdate.pipeline import query_repology as _query_repology_impl
+from nixupdate.report import console_out_table as _console_out_table_impl
+from nixupdate.report import drop_newest_duplicates as _drop_newest_dups_impl
+from nixupdate.report import generate_report_df as _generate_report_df_impl
+from nixupdate.report import write_report as _write_report_impl
 from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 
 ###############################################################################
@@ -72,158 +75,37 @@ def getargs():
 
 
 def _query_repology(sbompath):
-    LOG.info("Querying repology")
-    return RepologyAdapter().query(
-        RepologyQuery(
-            repository="nix_unstable",
-            sbom_cdx=sbompath,
-        )
-    )
+    return _query_repology_impl(sbompath)
 
 
 def _run_nix_visualize(target_path):
-    LOG.info("Running nix-visualize")
-    prefix = "nix-visualize_"
-    suffix = ".csv"
-    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        cmd = ["nix-visualize", f"--output={f.name}", target_path]
-        exec_cmd(cmd)
-        return pathlib.Path(f.name)
+    return _run_nix_visualize_impl(
+        target_path,
+        exec_cmd_fn=exec_cmd,
+        tempfile_factory=NamedTemporaryFile,
+        log=LOG,
+    )
 
 
 def _nix_visualize_csv_to_df(csvpath):
     LOG.debug("Transforming nix-visualize csv to dataframe")
-    df = df_from_csv_file(csvpath)
-    # Split column 'raw_name' to columns 'package' and 'version'
-    re_split = (
-        # Match anything (non '-') from the start of line up to and including
-        # the first '-'
-        r"^[^-]+?-"
-        # Followed by the package name, which is anything up to next '-'
-        r"(.+?)-"
-        # Followed by the version string
-        r"(\d[-_.0-9pf]*g?b?(?:pre[0-9])*(?:\+git[0-9]*)?)"
-        # Optionally followed by any of the following strings
-        r"(?:-lib|-bin|-env|-man|-su|-dev|-doc|-info|-nc|-host|-p[0-9]+|\.drv|)"
-        # Followed by the end of line
-        r"$"
-    )
-    df[["package", "version"]] = df["raw_name"].str.extract(re_split, expand=True)
-    # Fix package name so it matches repology package name
-    df["package"] = df.apply(lambda row: nix_to_repology_pkg_name(row.package), axis=1)
-    return df
+    return _nix_visualize_csv_to_df_impl(csvpath)
 
 
 def _generate_report_df(df_nv, df_repo):
-    if df_nv is None:
-        df_repo["level"] = "0"
-        df_repo.rename(columns={"version": "version_repology"}, inplace=True)
-        return df_repo
-    df = df_nv.merge(
-        df_repo,
-        how="left",
-        left_on=["package", "version"],
-        right_on=["package", "version_sbom"],
-        suffixes=["", "_repology"],
-    )
-    LOG.log(LOG_SPAM, "Merged nix-visualize and repology data:")
-    df_log(df, LOG_SPAM)
-    return df
+    return _generate_report_df_impl(df_nv, df_repo, log=LOG)
 
 
 def _drop_newest_dups(df_con, df_cmp):
-    # Drop outdated package from df_con if a version 'newest' is available
-    # in df_cmp
-    df_ret = df_con.copy(deep=True)
-    for row in df_con.itertuples():
-        df_pkgs = df_cmp[df_cmp["package"] == row.nix_package]
-        df_newest = df_pkgs[df_pkgs["status"] == "newest"]
-        if not df_newest.empty:
-            LOG.debug(
-                "Ignoring outdated package '%s' since newest version is also available",
-                row.nix_package,
-            )
-            df_ret = df_ret[df_ret.nix_package != row.nix_package]
-    return df_ret
+    return _drop_newest_dups_impl(df_con, df_cmp, log=LOG)
 
 
 def _report(df, args):
-    if df is None or df.empty:
-        LOG.info("No outdated dependencies found")
-        return
-    LOG.info("Writing console report")
-    # Rename and select the following columns to the output report
-    select_cols = {
-        "level": "priority",
-        "package": "nix_package",
-        "version_sbom": "version_local",
-        "version_repology": "version_nixpkgs",
-        "newest_upstream_release": "version_upstream",
-    }
-    if args.local:
-        # Select pkgs that need update locally
-        col = "sbom_version_classify"
-        re_val = "sbom_pkg_needs_update"
-        df_console = df[df[col] == re_val]
-        df_console = df_console.rename(columns=select_cols)[select_cols.values()]
-        df_console.drop_duplicates(
-            df_console.columns.difference(["priority"]), keep="first", inplace=True
-        )
-        if args.buildtime:
-            df_console = df_console.drop(["priority"], axis=1)
-        table = tabulate(
-            df_console,
-            headers="keys",
-            tablefmt="orgtbl",
-            numalign="center",
-            showindex=False,
-        )
-        _console_out_table(table, args.local, args.buildtime)
-    else:
-        # Select pkgs that need update in nixpkgs
-        col = "repo_version_classify"
-        re_val = "repo_pkg_needs_update"
-        df_console = df[df[col] == re_val]
-        df_console = df_console.rename(columns=select_cols)[select_cols.values()]
-        df_console.drop_duplicates(
-            df_console.columns.difference(["priority"]), keep="first", inplace=True
-        )
-        df_console = _drop_newest_dups(df_console, df)
-        if args.buildtime:
-            df_console = df_console.drop(["priority"], axis=1)
-        table = tabulate(
-            df_console,
-            headers="keys",
-            tablefmt="orgtbl",
-            numalign="center",
-            showindex=False,
-        )
-        _console_out_table(table, args.local, args.buildtime)
-
-    if LOG.level <= logging.DEBUG:
-        # Write the full merged df for debugging
-        df_to_csv_file(df, "df_nixoutdated_merged.csv")
-
-    # File report
-    df_to_csv_file(df_console, args.out)
+    _write_report_impl(df, args, log=LOG)
 
 
 def _console_out_table(table, local=False, buildtime=False):
-    update_target = "in nixpkgs"
-    if local:
-        update_target = "locally"
-    priority = ":"
-    if not buildtime:
-        priority = (
-            " (in priority order based on how many other "
-            "packages depend on the potentially outdated package):"
-        )
-    LOG.info(
-        "Dependencies that need update %s%s\n\n%s\n\n",
-        update_target,
-        priority,
-        table,
-    )
+    _console_out_table_impl(table, local=local, buildtime=buildtime, log=LOG)
 
 
 ################################################################################
@@ -241,40 +123,18 @@ def main():
 
 
 def _run(args):
-    runtime = not args.buildtime
     target = resolve_nix_target(args.NIXREF, buildtime=args.buildtime)
-    target_path = target.path
-    dtype = "runtime" if runtime else "buildtime"
-    LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path)
-    sbom_artifact = generate_temp_sbom(
-        target_path,
+    scan_data = collect_outdated_scan_data(
+        target.path,
         args.buildtime,
-        prefix="nixdeps_",
-        cdx_suffix=".cdx.json",
+        hooks=OutdatedScanHooks(
+            query_repology=_query_repology,
+            generate_temp_sbom=generate_temp_sbom,
+            run_nix_visualize=_run_nix_visualize,
+            parse_nix_visualize=_nix_visualize_csv_to_df,
+        ),
     )
-    sbom_path = sbom_artifact.cdx_path
-    LOG.debug("Using SBOM '%s'", sbom_path)
-
-    df_repology = _query_repology(sbom_path)
-    if LOG.level > logging.DEBUG:
-        sbom_artifact.cleanup()
-    df_log(df_repology, LOG_SPAM)
-
-    if not args.buildtime:
-        nix_visualize_out = _run_nix_visualize(target_path)
-        LOG.debug("Using nix-visualize out: '%s'", nix_visualize_out)
-        df_nix_visualize = _nix_visualize_csv_to_df(nix_visualize_out)
-        df_log(df_nix_visualize, LOG_SPAM)
-        if LOG.level > logging.DEBUG:
-            # Remove temp file unless verbosity is DEBUG or more verbose
-            nix_visualize_out.unlink(missing_ok=True)
-    else:
-        LOG.info("Not running nix-visualize due to '--buildtime' argument")
-        df_nix_visualize = None
-
-    df_log(df_repology, logging.DEBUG)
-    df_log(df_nix_visualize, logging.DEBUG)
-    df_report = _generate_report_df(df_nix_visualize, df_repology)
+    df_report = _generate_report_df(scan_data.nix_visualize, scan_data.repology)
     _report(df_report, args)
 
 
