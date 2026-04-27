@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-class-docstring,missing-function-docstring,protected-access
+# pylint: disable=missing-class-docstring,missing-function-docstring
 
 """Unit tests for typed library exceptions."""
 
@@ -24,7 +24,7 @@ from common.errors import (
     WhitelistApplicationError,
 )
 from nixgraph import store as nixgraph_store
-from repology import repology_cve
+from repology.reporting import report_cves
 from sbomnix import cpe
 from vulnxscan import whitelist
 
@@ -102,5 +102,5 @@ def test_df_apply_whitelist_raises_typed_error_without_vuln_id_column():
 
 
 def test_repology_cve_report_returns_false_on_empty_results():
-    assert repology_cve._report(None) is False
-    assert repology_cve._report(pd.DataFrame()) is False
+    assert report_cves(None) is False
+    assert report_cves(pd.DataFrame()) is False
