@@ -2,244 +2,52 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=abstract-method
-
 """sbomnix utils"""
 
 import argparse
-import csv
 import importlib.metadata
-import logging
-import os
 import pathlib
 import re
-import shlex
 import subprocess
-import urllib.error
-from shutil import which
 
 import packaging.version
 import pandas as pd
-from colorlog import ColoredFormatter, default_log_colors
-from requests import Session
-from requests_cache import CacheMixin
-from requests_ratelimiter import LimiterMixin
-from tabulate import tabulate
 
+from common import df as _df
+from common import errors as _errors
+from common import http as _http
+from common import log as _log
 from common import nix_utils as _nix_utils
+from common import proc as _proc
 
 ###############################################################################
 
-LOG_SPAM = logging.DEBUG - 1
-LOG = logging.getLogger(os.path.abspath(__file__))
-
 # Backward-compatible re-exports for older call sites.
+CsvLoadError = _errors.CsvLoadError
+CommandNotFoundError = _errors.CommandNotFoundError
+FlakeRefRealisationError = _errors.FlakeRefRealisationError
+FlakeRefResolutionError = _errors.FlakeRefResolutionError
+InvalidCpeDictionaryError = _errors.InvalidCpeDictionaryError
+InvalidNixArtifactError = _errors.InvalidNixArtifactError
+InvalidSbomError = _errors.InvalidSbomError
+MissingNixDeriverError = _errors.MissingNixDeriverError
+MissingNixOutPathError = _errors.MissingNixOutPathError
+SbomnixError = _errors.SbomnixError
+WhitelistApplicationError = _errors.WhitelistApplicationError
+LOG = _log.LOG
+LOG_SPAM = _log.LOG_SPAM
+set_log_verbosity = _log.set_log_verbosity
+CachedLimiterSession = _http.CachedLimiterSession
+df_from_csv_file = _df.df_from_csv_file
+df_log = _df.df_log
+df_regex_filter = _df.df_regex_filter
+df_to_csv_file = _df.df_to_csv_file
+exec_cmd = _proc.exec_cmd
+nix_cmd = _proc.nix_cmd
+which = _proc.which
 get_nix_store_dir = _nix_utils.get_nix_store_dir
 normalize_nix_store_path = _nix_utils.normalize_nix_store_path
 parse_nix_derivation_show = _nix_utils.parse_nix_derivation_show
-
-
-class SbomnixError(RuntimeError):
-    """Base class for expected user-facing errors."""
-
-
-class FlakeRefResolutionError(SbomnixError):
-    """Raised when an input looks like a flakeref but cannot be resolved."""
-
-    def __init__(self, flakeref, stderr="", action="evaluating"):
-        self.flakeref = flakeref
-        self.stderr = "" if stderr is None else str(stderr)
-        message = f"Failed {action} flakeref '{flakeref}'"
-        stderr_summary = self.stderr.strip()
-        if stderr_summary:
-            message += f": {stderr_summary}"
-        super().__init__(message)
-
-
-class FlakeRefRealisationError(FlakeRefResolutionError):
-    """Raised when a flakeref resolves but cannot be force-realised."""
-
-    def __init__(self, flakeref, stderr=""):
-        super().__init__(flakeref, stderr=stderr, action="force-realising")
-
-
-class CsvLoadError(SbomnixError):
-    """Raised when a CSV input cannot be read."""
-
-    def __init__(self, name, error):
-        self.name = name
-        self.error = error
-        super().__init__(f"Error reading csv file '{name}':\n{error}")
-
-
-class CommandNotFoundError(SbomnixError):
-    """Raised when a required executable is not available in PATH."""
-
-    def __init__(self, name):
-        self.name = name
-        super().__init__(f"command '{name}' is not in PATH")
-
-
-class InvalidNixArtifactError(SbomnixError):
-    """Raised when a CLI target is not a valid nix artifact."""
-
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"Specified target is not a nix artifact: '{path}'")
-
-
-class MissingNixDeriverError(SbomnixError):
-    """Raised when a nix artifact cannot be mapped back to a derivation."""
-
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"No deriver found for: '{path}'")
-
-
-class MissingNixOutPathError(SbomnixError):
-    """Raised when a derivation does not expose an out path."""
-
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"No outpath found for: '{path}'")
-
-
-class InvalidCpeDictionaryError(SbomnixError):
-    """Raised when the downloaded CPE dictionary has invalid columns."""
-
-    def __init__(self, required_cols):
-        self.required_cols = tuple(sorted(required_cols))
-        super().__init__(
-            f"Missing required columns {list(self.required_cols)} from cpedict"
-        )
-
-
-class WhitelistApplicationError(SbomnixError):
-    """Raised when vulnerability whitelist application cannot proceed."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class InvalidSbomError(SbomnixError):
-    """Raised when a supplied SBOM path is invalid."""
-
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"Specified sbom target is not a json file: '{path}'")
-
-
-def set_log_verbosity(verbosity=1):
-    """Set logging verbosity"""
-    log_levels = [logging.NOTSET, logging.INFO, logging.DEBUG, LOG_SPAM]
-    verbosity = min(len(log_levels) - 1, max(verbosity, 0))
-    _init_logging(verbosity)
-
-
-def _init_logging(verbosity=1):
-    """Initialize logging"""
-    if verbosity == 0:
-        level = logging.NOTSET
-    elif verbosity == 1:
-        level = logging.INFO
-    elif verbosity == 2:
-        level = logging.DEBUG
-    else:
-        level = LOG_SPAM
-    if level <= logging.DEBUG:
-        logformat = (
-            "%(log_color)s%(levelname)-8s%(reset)s "
-            "%(filename)s:%(funcName)s():%(lineno)d "
-            "%(message)s"
-        )
-    else:
-        logformat = "%(log_color)s%(levelname)-8s%(reset)s %(message)s"
-    logging.addLevelName(LOG_SPAM, "SPAM")
-    default_log_colors["INFO"] = "fg_bold_white"
-    default_log_colors["DEBUG"] = "fg_bold_white"
-    default_log_colors["SPAM"] = "fg_bold_white"
-    formatter = ColoredFormatter(logformat, log_colors=default_log_colors)
-    if LOG.hasHandlers() and len(LOG.handlers) > 0:
-        stream = LOG.handlers[0]
-    else:
-        stream = logging.StreamHandler()
-    stream.setFormatter(formatter)
-    if not LOG.hasHandlers():
-        LOG.addHandler(stream)
-    LOG.setLevel(level)
-
-
-def df_to_csv_file(df, name, loglevel=logging.INFO):
-    """Write dataframe to csv file"""
-    df.to_csv(
-        path_or_buf=name, quoting=csv.QUOTE_ALL, sep=",", index=False, encoding="utf-8"
-    )
-    LOG.log(loglevel, "Wrote: %s", name)
-
-
-def df_from_csv_file(name, exit_on_error=True):
-    """Read csv file into dataframe"""
-    LOG.debug("Reading: %s", name)
-    try:
-        df = pd.read_csv(name, keep_default_na=False, dtype=str)
-        df.reset_index(drop=True, inplace=True)
-        return df
-    except (
-        pd.errors.EmptyDataError,
-        pd.errors.ParserError,
-        urllib.error.HTTPError,
-        urllib.error.URLError,
-    ) as error:
-        if exit_on_error:
-            raise CsvLoadError(name, error) from error
-        LOG.debug("Error reading csv file '%s':\n%s", name, error)
-        return None
-
-
-def df_regex_filter(df, column, regex):
-    """Return rows where column 'column' values match the given regex"""
-    LOG.debug("column:'%s', regex:'%s'", column, regex)
-    return df[df[column].str.contains(regex, regex=True, na=False)]
-
-
-def df_log(df, loglevel, tablefmt="presto"):
-    """Log dataframe with given loglevel and tablefmt"""
-    if LOG.level <= loglevel:
-        if df.empty:
-            return
-        df = df.fillna("")
-        table = tabulate(
-            df, headers="keys", tablefmt=tablefmt, stralign="left", showindex=False
-        )
-        LOG.log(loglevel, "\n%s\n", table)
-
-
-def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdout=None):
-    """Run shell command cmd"""
-    if isinstance(cmd, (str, bytes, os.PathLike)):
-        raise TypeError("cmd must be an argv sequence, not a string-like value")
-    cmd = [os.fspath(part) for part in cmd]
-    command_str = shlex.join(cmd)
-    LOG.debug("Running: %s", command_str)
-    try:
-        if stdout:
-            ret = subprocess.run(cmd, encoding="utf-8", check=True, stdout=stdout)
-        else:
-            ret = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
-        return ret
-    except subprocess.CalledProcessError as error:
-        if log_error:
-            LOG.error(
-                "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",
-                command_str,
-                error.stdout,
-                error.stderr,
-            )
-        if raise_on_error:
-            raise error
-        if return_error:
-            return error
-        return None
 
 
 def exit_unless_command_exists(name):
@@ -294,21 +102,6 @@ def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
     if ret is None or ret.returncode != 0:
         raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
     return nixpath
-
-
-def nix_cmd(*args, impure=False):
-    """Build argv for nix commands that require flakes + nix-command support."""
-    cmd = [
-        "nix",
-        *args,
-        "--extra-experimental-features",
-        "flakes",
-        "--extra-experimental-features",
-        "nix-command",
-    ]
-    if impure:
-        cmd.append("--impure")
-    return cmd
 
 
 def _looks_like_flakeref(flakeref):
@@ -461,17 +254,3 @@ def check_positive(val):
     if intval <= 0:
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
     return intval
-
-
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
-    """
-    Session class with caching and rate-limiting
-    https://requests-cache.readthedocs.io/en/stable/user_guide/compatibility.html
-    """
-
-
-################################################################################
-
-set_log_verbosity(1)
-
-################################################################################

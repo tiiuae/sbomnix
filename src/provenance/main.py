@@ -16,8 +16,9 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from common.log import LOG, set_log_verbosity
 from common.nix_utils import parse_nix_derivation_show
-from common.utils import LOG, exec_cmd, nix_cmd, set_log_verbosity
+from common.proc import exec_cmd, nix_cmd
 
 HASH_SIZE_BYTES = {
     "blake3": 32,

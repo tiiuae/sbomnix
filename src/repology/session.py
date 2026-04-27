@@ -7,7 +7,7 @@
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from common.utils import CachedLimiterSession
+from common.http import CachedLimiterSession
 
 REPOLOGY_CACHE_SECONDS = 6 * 60 * 60
 REPOLOGY_REQUEST_TIMEOUT = 60

@@ -21,7 +21,9 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_to_csv_file, exec_cmd
+from common.df import df_from_csv_file, df_to_csv_file
+from common.log import LOG, LOG_SPAM
+from common.proc import exec_cmd
 from vulnxscan.osv import OSV
 from vulnxscan.utils import (
     _is_patched,

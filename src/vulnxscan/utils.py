@@ -17,15 +17,10 @@ import urllib.parse
 
 import pandas as pd
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    CachedLimiterSession,
-    df_log,
-    nix_to_repology_pkg_name,
-    parse_version,
-    version_distance,
-)
+from common.df import df_log
+from common.http import CachedLimiterSession
+from common.log import LOG, LOG_SPAM
+from common.utils import nix_to_repology_pkg_name, parse_version, version_distance
 from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.exceptions import RepologyNoMatchingPackages
 from repology.repology_cve import query_cve
