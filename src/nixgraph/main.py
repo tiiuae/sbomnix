@@ -8,13 +8,10 @@
 
 import argparse
 
-from common.utils import (
-    LOG,
-    SbomnixError,
-    check_positive,
-    get_py_pkg_version,
-    set_log_verbosity,
-)
+from common.cli_args import check_positive
+from common.errors import SbomnixError
+from common.log import LOG, set_log_verbosity
+from common.pkgmeta import get_py_pkg_version
 from nixgraph.graph import NixDependencies
 from sbomnix.cli_utils import resolve_nix_target
 

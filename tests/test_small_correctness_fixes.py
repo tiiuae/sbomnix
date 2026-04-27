@@ -13,7 +13,11 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from common.utils import FlakeRefRealisationError, FlakeRefResolutionError, SbomnixError
+from common.errors import (
+    FlakeRefRealisationError,
+    FlakeRefResolutionError,
+    SbomnixError,
+)
 from nixgraph import main as nixgraph_main
 from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated

@@ -15,7 +15,8 @@ import sys
 import pandas as pd
 import requests
 
-from common.utils import LOG, LOG_SPAM, df_to_csv_file, set_log_verbosity
+from common.df import df_to_csv_file
+from common.log import LOG, LOG_SPAM, set_log_verbosity
 
 ###############################################################################
 

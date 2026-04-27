@@ -14,8 +14,9 @@ from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
+from common.log import LOG
+from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
-from common.utils import LOG, get_py_pkg_version
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
 from vulnxscan.vulnscan import VulnScan
 

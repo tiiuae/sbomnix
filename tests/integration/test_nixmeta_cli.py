@@ -7,7 +7,7 @@
 
 import pytest
 
-from common.utils import df_from_csv_file
+from common.df import df_from_csv_file
 from tests.testpaths import NIXMETA, REPOROOT
 
 

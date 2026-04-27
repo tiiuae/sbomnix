@@ -8,12 +8,9 @@
 import argparse
 import pathlib
 
-from common.utils import (
-    LOG,
-    SbomnixError,
-    exit_unless_command_exists,
-    set_log_verbosity,
-)
+from common.errors import SbomnixError
+from common.log import LOG, set_log_verbosity
+from common.proc import exit_unless_command_exists
 from nixmeta.scanner import NixMetaScanner
 
 ################################################################################

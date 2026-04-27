@@ -12,7 +12,17 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from common import utils
+from common import df as common_df
+from common import proc as common_proc
+from common.errors import (
+    CommandNotFoundError,
+    CsvLoadError,
+    InvalidCpeDictionaryError,
+    InvalidNixArtifactError,
+    MissingNixDeriverError,
+    MissingNixOutPathError,
+    WhitelistApplicationError,
+)
 from nixgraph import graph as nixgraph_graph
 from repology import repology_cve
 from sbomnix import cpe
@@ -23,40 +33,36 @@ def test_df_from_csv_file_raises_csv_load_error(monkeypatch):
     def fail_read_csv(*_args, **_kwargs):
         raise pd.errors.ParserError("bad csv")
 
-    monkeypatch.setattr(utils.pd, "read_csv", fail_read_csv)
+    monkeypatch.setattr(common_df.pd, "read_csv", fail_read_csv)
 
-    with pytest.raises(utils.CsvLoadError, match="Error reading csv file 'broken.csv'"):
-        utils.df_from_csv_file("broken.csv")
+    with pytest.raises(CsvLoadError, match="Error reading csv file 'broken.csv'"):
+        common_df.df_from_csv_file("broken.csv")
 
 
-def test_exit_unless_command_exists_raises_typed_error(monkeypatch):
-    monkeypatch.setattr(utils, "which", lambda _name: None)
+def test_df_log_ignores_none():
+    common_df.df_log(None, 0)
 
-    with pytest.raises(
-        utils.CommandNotFoundError, match="command 'nix' is not in PATH"
-    ):
-        utils.exit_unless_command_exists("nix")
+
+def test_exit_unless_command_exists_raises_typed_error():
+    with pytest.raises(CommandNotFoundError, match="command 'nix' is not in PATH"):
+        common_proc.exit_unless_command_exists("nix", which_fn=lambda _name: None)
 
 
 def test_exit_unless_nix_artifact_raises_typed_error(monkeypatch):
     def fail_exec_cmd(*_args, **_kwargs):
         raise subprocess.CalledProcessError(1, ["nix-store", "-q", "missing"])
 
-    monkeypatch.setattr(utils, "exec_cmd", fail_exec_cmd)
-
     with pytest.raises(
-        utils.InvalidNixArtifactError,
+        InvalidNixArtifactError,
         match="Specified target is not a nix artifact: 'missing'",
     ):
-        utils.exit_unless_nix_artifact("missing")
+        common_proc.exit_unless_nix_artifact("missing", exec_cmd_fn=fail_exec_cmd)
 
 
 def test_find_deriver_raises_typed_error(monkeypatch):
     monkeypatch.setattr(nixgraph_graph, "find_deriver", lambda _path: None)
 
-    with pytest.raises(
-        utils.MissingNixDeriverError, match="No deriver found for: 'missing'"
-    ):
+    with pytest.raises(MissingNixDeriverError, match="No deriver found for: 'missing'"):
         nixgraph_graph._find_deriver("missing")
 
 
@@ -66,7 +72,7 @@ def test_find_outpath_raises_typed_error(monkeypatch):
     )
 
     with pytest.raises(
-        utils.MissingNixOutPathError, match="No outpath found for: 'missing.drv'"
+        MissingNixOutPathError, match="No outpath found for: 'missing.drv'"
     ):
         nixgraph_graph._find_outpath("missing.drv")
 
@@ -81,7 +87,7 @@ def test_cpe_raises_typed_error_when_required_columns_are_missing(monkeypatch):
 
     monkeypatch.setattr(cpe, "LockedDfCache", FakeCache)
 
-    with pytest.raises(utils.InvalidCpeDictionaryError, match="cpedict"):
+    with pytest.raises(InvalidCpeDictionaryError, match="cpedict"):
         cpe.CPE()
 
 
@@ -90,7 +96,7 @@ def test_df_apply_whitelist_raises_typed_error_without_vuln_id_column():
     df_vulns = pd.DataFrame({"package": ["openssl"]})
 
     with pytest.raises(
-        utils.WhitelistApplicationError,
+        WhitelistApplicationError,
         match="Missing 'vuln_id' column from df_vulns",
     ):
         whitelist.df_apply_whitelist(df_whitelist, df_vulns)

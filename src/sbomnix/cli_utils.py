@@ -11,7 +11,9 @@ import pathlib
 from dataclasses import dataclass
 from tempfile import NamedTemporaryFile
 
-from common.utils import LOG, exit_unless_nix_artifact, try_resolve_flakeref
+from common.flakeref import try_resolve_flakeref
+from common.log import LOG
+from common.proc import exit_unless_nix_artifact
 from sbomnix.sbomdb import SbomDb
 
 

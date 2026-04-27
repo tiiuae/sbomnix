@@ -12,14 +12,9 @@ from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    df_from_csv_file,
-    df_to_csv_file,
-    exec_cmd,
-    nix_cmd,
-)
+from common.df import df_from_csv_file, df_to_csv_file
+from common.log import LOG, LOG_SPAM
+from common.proc import exec_cmd, nix_cmd
 
 ###############################################################################
 

@@ -18,16 +18,11 @@ from dataclasses import dataclass
 import graphviz as gv
 import pandas as pd
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    MissingNixDeriverError,
-    MissingNixOutPathError,
-    df_regex_filter,
-    df_to_csv_file,
-    exec_cmd,
-    regex_match,
-)
+from common.df import df_regex_filter, df_to_csv_file
+from common.errors import MissingNixDeriverError, MissingNixOutPathError
+from common.log import LOG, LOG_SPAM
+from common.proc import exec_cmd
+from common.regex import regex_match
 from sbomnix.nix import find_deriver
 
 ###############################################################################

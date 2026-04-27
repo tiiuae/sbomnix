@@ -12,13 +12,9 @@ Utility functions when dealing with whitelists
 
 # Whitelist
 
-from common.utils import (
-    LOG,
-    LOG_SPAM,
-    WhitelistApplicationError,
-    df_from_csv_file,
-    df_log,
-)
+from common.df import df_from_csv_file, df_log
+from common.errors import WhitelistApplicationError
+from common.log import LOG, LOG_SPAM
 
 
 def load_whitelist(whitelist_csv_path):

@@ -13,13 +13,9 @@ import argparse
 import logging
 import pathlib
 
-from common.utils import (
-    LOG,
-    InvalidSbomError,
-    SbomnixError,
-    exit_unless_command_exists,
-    set_log_verbosity,
-)
+from common.errors import InvalidSbomError, SbomnixError
+from common.log import LOG, set_log_verbosity
+from common.proc import exit_unless_command_exists
 from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 from vulnxscan.utils import _is_json
 from vulnxscan.vulnscan import VulnScan

@@ -12,7 +12,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from common import utils
+from common import flakeref as common_flakeref
+from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
+from common.nix_utils import get_nix_store_dir, parse_nix_derivation_show
+from common.proc import exec_cmd
 from nixmeta import scanner
 from nixupdate import nix_outdated
 from provenance import main as provenance_main
@@ -30,9 +33,9 @@ def test_try_resolve_flakeref_uses_argv_lists(monkeypatch):
             return SimpleNamespace(stdout="/nix/store/resolved\n", returncode=0)
         return SimpleNamespace(stdout="", stderr="", returncode=0)
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    resolved = utils.try_resolve_flakeref(
+    resolved = common_flakeref.try_resolve_flakeref(
         "/tmp/my flake#pkg", force_realise=True, impure=True
     )
 
@@ -75,20 +78,20 @@ def test_try_resolve_flakeref_raises_on_failed_force_realise(monkeypatch):
             return SimpleNamespace(stdout="/nix/store/resolved\n", returncode=0)
         return SimpleNamespace(stdout="", stderr="build failed", returncode=1)
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    with pytest.raises(utils.FlakeRefRealisationError, match="build failed"):
-        utils.try_resolve_flakeref("/tmp/my flake#pkg", force_realise=True)
+    with pytest.raises(FlakeRefRealisationError, match="build failed"):
+        common_flakeref.try_resolve_flakeref("/tmp/my flake#pkg", force_realise=True)
 
 
 def test_try_resolve_flakeref_raises_on_failed_eval_for_flakeref(monkeypatch):
     def fake_exec_cmd(_cmd, **_kwargs):
         return SimpleNamespace(stdout="", stderr="attribute missing", returncode=1)
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    with pytest.raises(utils.FlakeRefResolutionError, match="attribute missing"):
-        utils.try_resolve_flakeref(".#missing")
+    with pytest.raises(FlakeRefResolutionError, match="attribute missing"):
+        common_flakeref.try_resolve_flakeref(".#missing")
 
 
 def test_try_resolve_flakeref_returns_none_for_non_flake_path(monkeypatch):
@@ -99,9 +102,9 @@ def test_try_resolve_flakeref_returns_none_for_non_flake_path(monkeypatch):
             returncode=1,
         )
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    resolved = utils.try_resolve_flakeref("/nix/store/not-a-flake-output")
+    resolved = common_flakeref.try_resolve_flakeref("/nix/store/not-a-flake-output")
 
     assert resolved is None
 
@@ -113,9 +116,9 @@ def test_try_resolve_flakeref_returns_none_for_missing_relative_paths(
     def fake_exec_cmd(_cmd, **_kwargs):
         return SimpleNamespace(stdout="", stderr="dummy eval failure", returncode=1)
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    resolved = utils.try_resolve_flakeref(path)
+    resolved = common_flakeref.try_resolve_flakeref(path)
 
     assert resolved is None
 
@@ -130,22 +133,22 @@ def test_try_resolve_flakeref_returns_none_for_existing_non_flake_path_with_frag
     def fake_exec_cmd(_cmd, **_kwargs):
         return SimpleNamespace(stdout="", stderr="attribute missing", returncode=1)
 
-    monkeypatch.setattr(utils, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(common_flakeref, "exec_cmd", fake_exec_cmd)
 
-    resolved = utils.try_resolve_flakeref(artifact.as_posix())
+    resolved = common_flakeref.try_resolve_flakeref(artifact.as_posix())
 
     assert resolved is None
 
 
 def test_flakeref_realisation_error_accepts_none_stderr():
-    error = utils.FlakeRefRealisationError("/tmp/my flake#pkg", None)
+    error = FlakeRefRealisationError("/tmp/my flake#pkg", None)
 
     assert error.stderr == ""
     assert str(error) == "Failed force-realising flakeref '/tmp/my flake#pkg'"
 
 
 def test_flake_ref_resolution_error_preserves_stderr_verbatim():
-    error = utils.FlakeRefResolutionError(".#missing", "attribute missing\n")
+    error = FlakeRefResolutionError(".#missing", "attribute missing\n")
 
     assert error.stderr == "attribute missing\n"
     assert str(error) == "Failed evaluating flakeref '.#missing': attribute missing"
@@ -153,7 +156,7 @@ def test_flake_ref_resolution_error_preserves_stderr_verbatim():
 
 def test_exec_cmd_rejects_string_commands():
     with pytest.raises(TypeError, match="argv sequence"):
-        utils.exec_cmd("nix build .#sbomnix")
+        exec_cmd("nix build .#sbomnix")
 
 
 def test_find_deriver_uses_argv_list(monkeypatch):
@@ -223,7 +226,7 @@ def test_parse_nix_derivation_show_normalizes_nix_2_33_store_paths():
     src_basename = "2ccccccccccccccccccccccccccccccc-source"
     dep_basename = "3ddddddddddddddddddddddddddddddd-zlib-1.3.1.drv"
 
-    parsed = utils.parse_nix_derivation_show(
+    parsed = parse_nix_derivation_show(
         json.dumps(
             {
                 "version": 4,
@@ -258,14 +261,14 @@ def test_get_nix_store_dir_ignores_colon_separated_env_paths():
         "/custom/store/5fffffffffffffffffffffffffffffff-graphviz/bin"
     )
 
-    assert utils.get_nix_store_dir(value, default=None) == "/custom/store"
+    assert get_nix_store_dir(value, default=None) == "/custom/store"
 
 
 def test_parse_nix_derivation_show_infers_store_dir_from_path_like_env_values():
     drv_basename = "4rpn9q86mj9sxrfavhz1qgx7a8sdbndw-nghttp2-1.68.1.drv"
     out_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
 
-    parsed = utils.parse_nix_derivation_show(
+    parsed = parse_nix_derivation_show(
         json.dumps(
             {
                 "version": 4,
