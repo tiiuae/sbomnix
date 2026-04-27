@@ -7,17 +7,15 @@
 """Python script that generates SBOMs from nix packages"""
 
 import argparse
-import pathlib
 
 from common.utils import (
     LOG,
     SbomnixError,
     check_positive,
-    exit_unless_nix_artifact,
     get_py_pkg_version,
     set_log_verbosity,
-    try_resolve_flakeref,
 )
+from sbomnix.cli_utils import resolve_nix_target
 from sbomnix.sbomdb import SbomDb
 
 ###############################################################################
@@ -90,21 +88,14 @@ def main():
 
 
 def _run(args):
-    runtime = args.buildtime is False
-    flakeref = None
-    target_path = try_resolve_flakeref(
-        args.NIXREF, force_realise=runtime, impure=args.impure
+    target = resolve_nix_target(
+        args.NIXREF, buildtime=args.buildtime, impure=args.impure
     )
-    if target_path:
-        flakeref = args.NIXREF
-    else:
-        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
-        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
     sbomdb = SbomDb(
-        nix_path=target_path,
+        nix_path=target.path,
         buildtime=args.buildtime,
         depth=args.depth,
-        flakeref=flakeref,
+        flakeref=target.flakeref,
         include_meta=not args.exclude_meta,
         include_vulns=args.include_vulns,
         include_cpe=not args.exclude_cpe_matching,

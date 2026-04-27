@@ -7,18 +7,16 @@
 """Python script to query and visualize nix package dependencies"""
 
 import argparse
-import pathlib
 
 from common.utils import (
     LOG,
     SbomnixError,
     check_positive,
-    exit_unless_nix_artifact,
     get_py_pkg_version,
     set_log_verbosity,
-    try_resolve_flakeref,
 )
 from nixgraph.graph import NixDependencies
+from sbomnix.cli_utils import resolve_nix_target
 
 ###############################################################################
 
@@ -96,12 +94,8 @@ def main():
 
 
 def _run(args):
-    runtime = args.buildtime is False
-    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
-    if not target_path:
-        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
-        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
-    deps = NixDependencies(target_path, args.buildtime)
+    target = resolve_nix_target(args.NIXREF, buildtime=args.buildtime)
+    deps = NixDependencies(target.path, args.buildtime)
     deps.graph(args)
 
 

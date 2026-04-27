@@ -23,12 +23,10 @@ from common.utils import (
     df_log,
     df_to_csv_file,
     exec_cmd,
-    exit_unless_nix_artifact,
     nix_to_repology_pkg_name,
     set_log_verbosity,
-    try_resolve_flakeref,
 )
-from sbomnix.sbomdb import SbomDb
+from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 
 ###############################################################################
 
@@ -77,16 +75,6 @@ def getargs():
 
 
 ################################################################################
-
-
-def _generate_sbom(target_path, buildtime=False):
-    LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
-    prefix = "nixdeps_"
-    suffix = ".cdx.json"
-    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as f:
-        sbomdb.to_cdx(f.name, printinfo=False)
-        return pathlib.Path(f.name)
 
 
 def _run_repology_cli(sbompath):
@@ -262,19 +250,23 @@ def main():
 
 
 def _run(args):
-    runtime = args.buildtime is False
-    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
-    if not target_path:
-        target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
-        exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)
+    runtime = not args.buildtime
+    target = resolve_nix_target(args.NIXREF, buildtime=args.buildtime)
+    target_path = target.path
     dtype = "runtime" if runtime else "buildtime"
     LOG.info("Checking %s dependencies referenced by '%s'", dtype, target_path)
-    sbom_path = _generate_sbom(target_path, args.buildtime)
+    sbom_artifact = generate_temp_sbom(
+        target_path,
+        args.buildtime,
+        prefix="nixdeps_",
+        cdx_suffix=".cdx.json",
+    )
+    sbom_path = sbom_artifact.cdx_path
     LOG.debug("Using SBOM '%s'", sbom_path)
 
     df_repology = _run_repology_cli(sbom_path)
     if LOG.level > logging.DEBUG:
-        sbom_path.unlink(missing_ok=True)
+        sbom_artifact.cleanup()
     df_log(df_repology, LOG_SPAM)
 
     if not args.buildtime:
