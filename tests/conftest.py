@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 REPOROOT = Path(__file__).resolve().parent.parent
+INTEGRATION_DIR = REPOROOT / "tests" / "integration"
 
 
 def _output_mentions_repology_host(output):
@@ -106,3 +107,11 @@ def fixture_run_python_script_retry_on_repology_network_error(_run_python_script
         return last_ret
 
     return _run
+
+
+def pytest_collection_modifyitems(items):
+    """Mark integration tests based on their path."""
+    for item in items:
+        path = Path(str(item.fspath)).resolve()
+        if INTEGRATION_DIR in path.parents:
+            item.add_marker(pytest.mark.integration)

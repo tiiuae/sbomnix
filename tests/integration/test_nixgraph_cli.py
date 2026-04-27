@@ -116,7 +116,6 @@ def test_compare_deps_runtime(_run_python_script, test_nix_result, test_work_dir
 
 
 @pytest.mark.slow
-@pytest.mark.skip_in_ci
 def test_compare_deps_buildtime(_run_python_script, test_nix_result, test_work_dir):
     """Compare nixgraph vs sbom buildtime dependencies."""
     graph_csv_out = test_work_dir / "graph.csv"
