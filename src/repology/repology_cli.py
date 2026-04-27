@@ -73,7 +73,7 @@ def getargs(args=None):
     filtergr.add_argument("-c", "--re_vuln", help=helps, type=str, default=None)
     helps = "Summarize output result statistics"
     optional.add_argument("--stats", help=helps, action="store_true")
-    add_verbose_argument(optional)
+    add_verbose_argument(optional, root_parser=parser)
     helps = "Path to output report file (default: ./repology_report.csv)"
     optional.add_argument("-o", "--out", help=helps, default="repology_report.csv")
     add_version_argument(optional)
