@@ -18,6 +18,7 @@ from nixgraph import main as nixgraph_main
 from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated
 from sbomnix import cli_utils as sbomnix_cli_utils
+from sbomnix import exporters as sbomnix_exporters
 from sbomnix import main as sbomnix_main
 from sbomnix.sbomdb import SbomDb
 from vulnxscan import vulnxscan_cli
@@ -261,6 +262,82 @@ def test_cli_translates_sbomnix_errors_to_exit_code_1(
     assert excinfo.value.code == 1
 
 
+def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypatch):
+    """CycloneDX vuln enrichment should be a separate explicit step."""
+    args = SimpleNamespace(
+        NIXREF=".#target",
+        buildtime=False,
+        depth=None,
+        verbose=1,
+        include_vulns=True,
+        exclude_meta=False,
+        exclude_cpe_matching=False,
+        csv=None,
+        cdx="sbom.cdx.json",
+        spdx=None,
+        impure=False,
+    )
+    events = []
+
+    class FakeSbomDb:
+        def __init__(self, **kwargs):
+            events.append(("init", kwargs))
+
+        def to_cdx_data(self):
+            events.append(("to_cdx_data",))
+            return {"bomFormat": "CycloneDX"}
+
+        def enrich_cdx_with_vulnerabilities(self, cdx):
+            events.append(("enrich", dict(cdx)))
+            cdx["vulnerabilities"] = []
+
+        def write_json(self, path, data, printinfo=False):
+            events.append(("write_json", path, dict(data), printinfo))
+
+        def to_spdx(self, _path):
+            raise AssertionError("to_spdx should not run in this test")
+
+        def to_csv(self, _path):
+            raise AssertionError("to_csv should not run in this test")
+
+    monkeypatch.setattr(sbomnix_main, "getargs", lambda: args)
+    monkeypatch.setattr(sbomnix_main, "set_log_verbosity", lambda _verbosity: None)
+    monkeypatch.setattr(
+        sbomnix_main,
+        "resolve_nix_target",
+        lambda *_args, **_kwargs: sbomnix_cli_utils.ResolvedNixTarget(
+            path="/nix/store/target",
+            flakeref=".#target",
+        ),
+    )
+    monkeypatch.setattr(sbomnix_main, "SbomDb", FakeSbomDb)
+
+    sbomnix_main.main()
+
+    assert events == [
+        (
+            "init",
+            {
+                "nix_path": "/nix/store/target",
+                "buildtime": False,
+                "depth": None,
+                "flakeref": ".#target",
+                "include_meta": True,
+                "include_vulns": True,
+                "include_cpe": True,
+            },
+        ),
+        ("to_cdx_data",),
+        ("enrich", {"bomFormat": "CycloneDX"}),
+        (
+            "write_json",
+            "sbom.cdx.json",
+            {"bomFormat": "CycloneDX", "vulnerabilities": []},
+            True,
+        ),
+    ]
+
+
 def test_vulnxscan_cleans_generated_tempfiles_on_failure(tmp_path, monkeypatch):
     """Generated SBOM temp files should be removed even when scanning fails"""
     sbom_cdx_path = tmp_path / "generated.cdx.json"
@@ -474,8 +551,63 @@ def test_generate_temp_sbom_cleans_first_tempfile_if_second_creation_fails(
     assert not sbom_cdx_path.exists()
 
 
+def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
+    """Plain CycloneDX export should not perform vulnerability scanning."""
+    seen_calls = []
+
+    def no_dependencies(_self, _drv, **_kwargs):
+        return None
+
+    class FailIfCalledScanner:
+        def __init__(self):
+            seen_calls.append("init")
+
+        def scan_vulnix(self, _target_path, _buildtime):
+            raise AssertionError("scan_vulnix should not run during plain export")
+
+        def scan_grype(self, _sbom_path):
+            raise AssertionError("scan_grype should not run during plain export")
+
+        def scan_osv(self, _sbom_path):
+            raise AssertionError("scan_osv should not run during plain export")
+
+    sbomdb = object.__new__(SbomDb)
+    sbomdb.uid = "store_path"
+    sbomdb.buildtime = False
+    sbomdb.target_deriver = "/nix/store/target.drv"
+    sbomdb.depth = None
+    sbomdb.uuid = uuid.uuid4()
+    sbomdb.include_vulns = True
+    sbomdb.sbom_type = "runtime_only"
+    sbomdb.df_sbomdb = pd.DataFrame(
+        [
+            {
+                "store_path": "/nix/store/target.drv",
+                "pname": "target",
+                "name": "target",
+                "version": "1.0",
+                "outputs": ["/nix/store/target"],
+                "out": "/nix/store/target",
+                "purl": "",
+                "cpe": "",
+                "urls": "",
+                "patches": "",
+            }
+        ]
+    )
+
+    monkeypatch.setattr("sbomnix.exporters.VulnScan", FailIfCalledScanner)
+    monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
+
+    out_path = tmp_path / "out.cdx.json"
+    sbomdb.to_cdx(out_path, printinfo=False)
+
+    assert out_path.exists()
+    assert not seen_calls
+
+
 def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
-    """Temporary SBOM used for vulnerability enrichment should not leak"""
+    """Temporary SBOM used for explicit vulnerability enrichment should not leak."""
     temp_cdx_path = tmp_path / "vulnscan_temp.json"
     seen_paths = []
 
@@ -538,14 +670,17 @@ def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "sbomnix.sbomdb.NamedTemporaryFile",
+        sbomnix_exporters,
+        "NamedTemporaryFile",
         lambda **_kwargs: FakeTempFile(temp_cdx_path),
     )
-    monkeypatch.setattr("sbomnix.sbomdb.VulnScan", FailingScanner)
-    monkeypatch.setattr(SbomDb, "_lookup_dependencies", no_dependencies)
+    monkeypatch.setattr(sbomnix_exporters, "VulnScan", FailingScanner)
+    monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
+
+    cdx = sbomdb.to_cdx_data()
 
     with pytest.raises(RuntimeError, match="osv scan failed"):
-        sbomdb.to_cdx(tmp_path / "out.cdx.json", printinfo=False)
+        sbomdb.enrich_cdx_with_vulnerabilities(cdx)
 
     assert seen_paths == [temp_cdx_path, temp_cdx_path]
     assert not temp_cdx_path.exists()
