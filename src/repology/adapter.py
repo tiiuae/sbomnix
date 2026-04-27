@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=attribute-defined-outside-init,too-many-instance-attributes
 
 """Repology query adapter."""
 
@@ -78,11 +78,6 @@ class RepologyAdapter:
         self.session = DEFAULT_REPOLOGY_SESSION if session is None else session
         self.request_timeout = request_timeout
         self.url_projects = REPOLOGY_PROJECTS_URL
-        self.processed = set()
-        self.pkgs_dict = {}
-        self.df = pd.DataFrame()
-        self.urlq = None
-        self.df_sbom = None
         self._reset_state()
 
     def _reset_state(self):

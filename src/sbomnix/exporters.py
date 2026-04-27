@@ -14,7 +14,6 @@ from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency
-from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities as _enrich_cdx
 
 
 def write_json(pathname, data, printinfo=False):
@@ -63,11 +62,6 @@ def build_cdx_document(sbomdb):
         dependency = _drv_to_cdx_dependency(drv, deps, uid=sbomdb.uid)
         cdx["dependencies"].append(dependency)
     return cdx
-
-
-def enrich_cdx_with_vulnerabilities(sbomdb, cdx):
-    """Compatibility wrapper for moved vulnerability enrichment logic."""
-    return _enrich_cdx(sbomdb, cdx)
 
 
 def _str_to_spdxid(strval):
