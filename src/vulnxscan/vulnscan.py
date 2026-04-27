@@ -11,6 +11,7 @@ from grype, vulnix, and osv databases
 
 import pandas as pd
 
+from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, LOG_SPAM, is_debug_enabled
 from common.proc import exec_cmd
@@ -116,7 +117,10 @@ class VulnScan:
                 ignore_index=True,
             )
             if not df_report_raw.empty:
-                df_report_raw["sortcol"] = df_report_raw.apply(_vuln_sortcol, axis=1)
+                df_report_raw[cols.SORTCOL] = df_report_raw.apply(
+                    _vuln_sortcol,
+                    axis=1,
+                )
                 df_to_csv_file(df_report_raw, "df_report_raw.csv")
 
     def _filter_patched(self, sbom_csv):
@@ -151,7 +155,7 @@ class VulnScan:
             LOG.verbose("Running vulnerability triage")
             self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
         # Rename 'version' to 'version_local'
-        self.df_report.rename(columns={"version": "version_local"}, inplace=True)
+        self.df_report.rename(columns={cols.VERSION: cols.VERSION_LOCAL}, inplace=True)
 
         LOG.debug("Writing reports")
         # Console report

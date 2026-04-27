@@ -8,6 +8,7 @@
 
 import pandas as pd
 
+from common import columns as cols
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
 from common.package_names import nix_to_repology_pkg_name
@@ -20,11 +21,11 @@ from repology.repology_cve import query_cve
 def select_newest(df):
     """Return the newest rows per package."""
     selected = []
-    for pkg_name in df["package"].unique():
-        df_pkg = df[df["package"] == str(pkg_name)]
-        df_newest = df_pkg[df_pkg["status"] == "newest"]
+    for pkg_name in df[cols.PACKAGE].unique():
+        df_pkg = df[df[cols.PACKAGE] == str(pkg_name)]
+        df_newest = df_pkg[df_pkg[cols.STATUS] == "newest"]
         if df_newest.empty:
-            df_newest = df_pkg.sort_values(by=["version"]).iloc[[-1]]
+            df_newest = df_pkg.sort_values(by=[cols.VERSION]).iloc[[-1]]
         selected.append(df_newest)
     if not selected:
         return pd.DataFrame()
@@ -33,36 +34,40 @@ def select_newest(df):
 
 def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
     if df_repo is None:
-        out_dict.setdefault("vuln_id", []).append(vuln.vuln_id)
-        out_dict.setdefault("url", []).append(vuln.url)
-        out_dict.setdefault("package", []).append(vuln.package)
-        out_dict.setdefault("severity", []).append(vuln.severity)
-        out_dict.setdefault("version_local", []).append(vuln.version)
-        out_dict.setdefault("version_nixpkgs", []).append("")
-        out_dict.setdefault("version_upstream", []).append("")
-        out_dict.setdefault("package_repology", []).append("")
-        out_dict.setdefault("sortcol", []).append(vuln.sortcol)
+        out_dict.setdefault(cols.VULN_ID, []).append(vuln.vuln_id)
+        out_dict.setdefault(cols.URL, []).append(vuln.url)
+        out_dict.setdefault(cols.PACKAGE, []).append(vuln.package)
+        out_dict.setdefault(cols.SEVERITY, []).append(vuln.severity)
+        out_dict.setdefault(cols.VERSION_LOCAL, []).append(vuln.version)
+        out_dict.setdefault(cols.VERSION_NIXPKGS, []).append("")
+        out_dict.setdefault(cols.VERSION_UPSTREAM, []).append("")
+        out_dict.setdefault(cols.PACKAGE_REPOLOGY, []).append("")
+        out_dict.setdefault(cols.SORTCOL, []).append(vuln.sortcol)
         if whitelist_cols:
-            out_dict.setdefault("whitelist", []).append(vuln.whitelist)
-            out_dict.setdefault("whitelist_comment", []).append(vuln.whitelist_comment)
+            out_dict.setdefault(cols.WHITELIST, []).append(vuln.whitelist)
+            out_dict.setdefault(cols.WHITELIST_COMMENT, []).append(
+                vuln.whitelist_comment
+            )
         return
     for item in df_repo.itertuples():
-        out_dict.setdefault("vuln_id", []).append(vuln.vuln_id)
-        out_dict.setdefault("url", []).append(vuln.url)
-        out_dict.setdefault("package", []).append(vuln.package)
-        out_dict.setdefault("severity", []).append(vuln.severity)
-        out_dict.setdefault("version_local", []).append(vuln.version)
-        out_dict.setdefault("version_nixpkgs", []).append(item.version)
+        out_dict.setdefault(cols.VULN_ID, []).append(vuln.vuln_id)
+        out_dict.setdefault(cols.URL, []).append(vuln.url)
+        out_dict.setdefault(cols.PACKAGE, []).append(vuln.package)
+        out_dict.setdefault(cols.SEVERITY, []).append(vuln.severity)
+        out_dict.setdefault(cols.VERSION_LOCAL, []).append(vuln.version)
+        out_dict.setdefault(cols.VERSION_NIXPKGS, []).append(item.version)
         if item.newest_upstream_release and ";" in item.newest_upstream_release:
             version_upstream_str = item.newest_upstream_release.split(";")[0]
         else:
             version_upstream_str = item.newest_upstream_release
-        out_dict.setdefault("version_upstream", []).append(version_upstream_str)
-        out_dict.setdefault("package_repology", []).append(item.package)
-        out_dict.setdefault("sortcol", []).append(vuln.sortcol)
+        out_dict.setdefault(cols.VERSION_UPSTREAM, []).append(version_upstream_str)
+        out_dict.setdefault(cols.PACKAGE_REPOLOGY, []).append(item.package)
+        out_dict.setdefault(cols.SORTCOL, []).append(vuln.sortcol)
         if whitelist_cols:
-            out_dict.setdefault("whitelist", []).append(vuln.whitelist)
-            out_dict.setdefault("whitelist_comment", []).append(vuln.whitelist_comment)
+            out_dict.setdefault(cols.WHITELIST, []).append(vuln.whitelist)
+            out_dict.setdefault(cols.WHITELIST_COMMENT, []).append(
+                vuln.whitelist_comment
+            )
 
 
 def _version_similarity(row):
@@ -134,7 +139,7 @@ class RepologyVulnerabilityLookup:
         """Augment vulnerable package rows with Repology version data."""
         LOG.verbose("Querying repology")
         result_dict = {}
-        whitelist_cols = "whitelist" in df_vuln_pkgs.columns
+        whitelist_cols = cols.WHITELIST in df_vuln_pkgs.columns
         for vuln in df_vuln_pkgs.itertuples():
             if whitelist_cols and vuln.whitelist:
                 LOG.log(LOG_SPAM, "Whitelisted, skipping repology query: %s", vuln)
@@ -150,19 +155,22 @@ class RepologyVulnerabilityLookup:
                 LOG.log(LOG_SPAM, "One repology package matches")
                 _add_triage_item(result_dict, vuln, whitelist_cols, df_repology)
                 continue
-            df_exact = df_repology[df_repology["version"] == vuln.version]
+            df_exact = df_repology[df_repology[cols.VERSION] == vuln.version]
             if not df_exact.empty:
                 LOG.log(LOG_SPAM, "Exact version match '%s'", vuln.version)
                 _add_triage_item(result_dict, vuln, whitelist_cols, df_exact)
                 continue
             df_repology = df_repology.copy(deep=True)
-            df_repology["version_cmp"] = vuln.version
-            df_repology["similarity"] = df_repology.apply(_version_similarity, axis=1)
-            df_similar = df_repology[df_repology["similarity"] >= 0.7]
+            df_repology[cols.VERSION_CMP] = vuln.version
+            df_repology[cols.SIMILARITY] = df_repology.apply(
+                _version_similarity,
+                axis=1,
+            )
+            df_similar = df_repology[df_repology[cols.SIMILARITY] >= 0.7]
             if not df_similar.empty:
                 LOG.log(LOG_SPAM, "Version similarity match:\n%s", df_similar)
-                best_match = df_similar["similarity"].max()
-                df_similar = df_similar[df_similar["similarity"] == best_match]
+                best_match = df_similar[cols.SIMILARITY].max()
+                df_similar = df_similar[df_similar[cols.SIMILARITY] == best_match]
                 LOG.log(
                     LOG_SPAM,
                     "Selecting best match based on version:\n%s",

@@ -7,6 +7,7 @@
 import pathlib
 from tempfile import NamedTemporaryFile
 
+from common import columns as cols
 from common.df import df_from_csv_file
 from common.log import LOG, LOG_VERBOSE
 from common.package_names import nix_to_repology_pkg_name
@@ -42,6 +43,12 @@ def nix_visualize_csv_to_df(csvpath):
         r"(?:-lib|-bin|-env|-man|-su|-dev|-doc|-info|-nc|-host|-p[0-9]+|\.drv|)"
         r"$"
     )
-    df[["package", "version"]] = df["raw_name"].str.extract(re_split, expand=True)
-    df["package"] = df.apply(lambda row: nix_to_repology_pkg_name(row.package), axis=1)
+    df[[cols.PACKAGE, cols.VERSION]] = df[cols.RAW_NAME].str.extract(
+        re_split,
+        expand=True,
+    )
+    df[cols.PACKAGE] = df.apply(
+        lambda row: nix_to_repology_pkg_name(row.package),
+        axis=1,
+    )
     return df

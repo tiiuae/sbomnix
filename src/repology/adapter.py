@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 import repology.exceptions
+from common import columns as cols
 from common.df import df_regex_filter
 from common.log import LOG
 from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
@@ -90,22 +91,22 @@ class RepologyAdapter:
     def _packages_to_df(self, query, re_pkg_internal=None):
         if not self.pkgs_dict:
             return
-        LOG.debug("packages in pkgs_dict: %s", len(self.pkgs_dict["package"]))
+        LOG.debug("packages in pkgs_dict: %s", len(self.pkgs_dict[cols.PACKAGE]))
         df = pd.DataFrame.from_dict(self.pkgs_dict)
         df_cols = df.columns.values.tolist()
-        if query.repository and "repo" in df_cols:
-            df = df_regex_filter(df, "repo", re.escape(query.repository))
-        if re_pkg_internal and "package" in df_cols:
+        if query.repository and cols.REPO in df_cols:
+            df = df_regex_filter(df, cols.REPO, re.escape(query.repository))
+        if re_pkg_internal and cols.PACKAGE in df_cols:
             re_pkg_internal = f"^(?:[a-z0-9]+:)?{re.escape(re_pkg_internal)}$"
-            df = df_regex_filter(df, "package", re_pkg_internal)
-        if query.re_package and "package" in df_cols:
-            df = df_regex_filter(df, "package", query.re_package)
-        if query.re_version and "version" in df_cols:
-            df = df_regex_filter(df, "version", query.re_version)
-        if query.re_status and "status" in df_cols:
-            df = df_regex_filter(df, "status", query.re_status)
-        if query.re_vuln and "potentially_vulnerable" in df_cols:
-            df = df_regex_filter(df, "potentially_vulnerable", query.re_vuln)
+            df = df_regex_filter(df, cols.PACKAGE, re_pkg_internal)
+        if query.re_package and cols.PACKAGE in df_cols:
+            df = df_regex_filter(df, cols.PACKAGE, query.re_package)
+        if query.re_version and cols.VERSION in df_cols:
+            df = df_regex_filter(df, cols.VERSION, query.re_version)
+        if query.re_status and cols.STATUS in df_cols:
+            df = df_regex_filter(df, cols.STATUS, query.re_status)
+        if query.re_vuln and cols.POTENTIALLY_VULNERABLE in df_cols:
+            df = df_regex_filter(df, cols.POTENTIALLY_VULNERABLE, query.re_vuln)
         self.df = pd.concat([self.df, df])
         self.df.replace(np.nan, "", regex=True, inplace=True)
         self.df.drop_duplicates(keep="first", inplace=True)
@@ -242,8 +243,11 @@ class RepologyAdapter:
             raise repology.exceptions.RepologyNoMatchingPackages
         if self.df_sbom is not None:
             self.df = merge_sbom_fields(self.df_sbom, self.df)
-            self.df["sbom_version_classify"] = self.df.apply(sbom_row_classify, axis=1)
-        self.df["repo_version_classify"] = self.df.apply(repo_row_classify, axis=1)
+            self.df[cols.SBOM_VERSION_CLASSIFY] = self.df.apply(
+                sbom_row_classify,
+                axis=1,
+            )
+        self.df[cols.REPO_VERSION_CLASSIFY] = self.df.apply(repo_row_classify, axis=1)
         self.df.replace(np.nan, "", regex=True, inplace=True)
         self.df.drop_duplicates(keep="first", inplace=True)
         self.df.sort_values(by=self.df.columns.values.tolist(), inplace=True)

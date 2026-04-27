@@ -15,6 +15,7 @@ import uuid
 
 import numpy as np
 
+from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, is_debug_enabled
 from nixgraph.graph import NixDependencies
@@ -49,7 +50,7 @@ class SbomDb:
         # self.uid specifies the attribute that SbomDb uses as unique
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
-        self.uid = "store_path"
+        self.uid = cols.STORE_PATH
         self.nix_path = nix_path
         self.buildtime = buildtime
         self.target_deriver = find_deriver(nix_path)
@@ -103,8 +104,8 @@ class SbomDb:
             paths = set([self.target_deriver])
         else:
             # Get unique src_paths and target_paths
-            src_paths = self.df_deps["src_path"].unique().tolist()
-            target_paths = self.df_deps["target_path"].unique().tolist()
+            src_paths = self.df_deps[cols.SRC_PATH].unique().tolist()
+            target_paths = self.df_deps[cols.TARGET_PATH].unique().tolist()
             paths = set(src_paths + target_paths)
         # Populate store based on the dependencies
         store = Store(self.buildtime, include_cpe=self.include_cpe)
@@ -116,8 +117,8 @@ class SbomDb:
         # Clean, drop duplicates, sort
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
-        self.df_sbomdb.sort_values(by=["name", self.uid], inplace=True)
-        self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode("outputs")
+        self.df_sbomdb.sort_values(by=[cols.NAME, self.uid], inplace=True)
+        self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode(cols.OUTPUTS)
         self._init_dependency_index()
 
     def _init_dependency_index(self):
@@ -145,12 +146,12 @@ class SbomDb:
         self.df_sbomdb = self.df_sbomdb.merge(
             df_meta,
             how="left",
-            left_on=["name"],
-            right_on=["name"],
+            left_on=[cols.NAME],
+            right_on=[cols.NAME],
             suffixes=["", "_meta"],
         )
 
-    def lookup_dependencies(self, drv, uid="store_path"):
+    def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
         """
         Lookup the runtime and buildtime dependencies for `drv`.
         Returns a list of unique dependencies as specified by the

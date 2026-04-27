@@ -10,6 +10,7 @@ import json
 import re
 from datetime import datetime, timezone
 
+from common import columns as cols
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
@@ -108,7 +109,7 @@ def _drv_to_spdx_extrefs(drv):
     return extrefs
 
 
-def _drv_to_spdx_package(drv, uid="store_path"):
+def _drv_to_spdx_package(drv, uid=cols.STORE_PATH):
     """Convert one entry from sbomdb (drv) to an SPDX package."""
     pkg = {}
     pkg["name"] = drv.pname
@@ -134,7 +135,7 @@ def _drv_to_spdx_package(drv, uid="store_path"):
     return pkg
 
 
-def _drv_to_spdx_relationships(drv, deps_list, uid="store_path"):
+def _drv_to_spdx_relationships(drv, deps_list, uid=cols.STORE_PATH):
     """Return list of SPDX relationships for one sbomdb row."""
     relationships = []
     if not deps_list:
