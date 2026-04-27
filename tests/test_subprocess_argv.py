@@ -14,8 +14,8 @@ import pytest
 from common import flakeref as common_flakeref
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.nix_utils import get_nix_store_dir, parse_nix_derivation_show
-from common.proc import exec_cmd
-from nixmeta import scanner
+from common.proc import exec_cmd, nix_cmd
+from nixmeta import flake_metadata
 from nixupdate import nix_outdated
 from sbomnix import nix as sbomnix_nix
 from sbomnix.meta import Meta
@@ -308,16 +308,18 @@ def test_parse_nix_derivation_show_infers_store_dir_from_path_like_env_values():
     assert parsed[drv_path]["env"]["out"] == f"/custom/store/{out_basename}"
 
 
-def test_get_flake_metadata_uses_argv_list(monkeypatch):
+def test_get_flake_metadata_uses_argv_list():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
         return SimpleNamespace(stdout='{"path": "/nix/store/nixpkgs"}', returncode=0)
 
-    monkeypatch.setattr(scanner, "exec_cmd", fake_exec_cmd)
-
-    meta = scanner._get_flake_metadata("/tmp/my flake")
+    meta = flake_metadata.get_flake_metadata(
+        "/tmp/my flake",
+        exec_cmd_fn=fake_exec_cmd,
+        nix_cmd_fn=nix_cmd,
+    )
 
     assert meta == {"path": "/nix/store/nixpkgs"}
     assert calls == [
@@ -378,16 +380,18 @@ def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
     ]
 
 
-def test_get_flake_metadata_strips_nixpkgs_prefix_without_splitting_spaces(monkeypatch):
+def test_get_flake_metadata_strips_nixpkgs_prefix_without_splitting_spaces():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
         return SimpleNamespace(stdout='{"path": "/nix/store/nixpkgs"}', returncode=0)
 
-    monkeypatch.setattr(scanner, "exec_cmd", fake_exec_cmd)
-
-    scanner._get_flake_metadata("nixpkgs=/tmp/my flake")
+    flake_metadata.get_flake_metadata(
+        "nixpkgs=/tmp/my flake",
+        exec_cmd_fn=fake_exec_cmd,
+        nix_cmd_fn=nix_cmd,
+    )
 
     assert calls[0][0][3] == "/tmp/my flake"
 

@@ -13,13 +13,8 @@ import pandas as pd
 from common.df import df_from_csv_file, df_to_csv_file
 from common.log import LOG, LOG_SPAM
 from common.proc import exec_cmd, nix_cmd
-from nixmeta.flake_metadata import get_flake_metadata as _get_flake_metadata_impl
-from nixmeta.flake_metadata import is_nixpkgs_metadata as _is_nixpkgs_metadata_impl
-from nixmeta.flake_metadata import (
-    nixref_to_nixpkgs_path as _nixref_to_nixpkgs_path_impl,
-)
-from nixmeta.metadata_json import parse_json_metadata as _parse_json_metadata_impl
-from nixmeta.metadata_json import parse_meta_entry as _parse_meta_entry_impl
+from nixmeta.flake_metadata import get_flake_metadata, nixref_to_nixpkgs_path
+from nixmeta.metadata_json import parse_json_metadata
 
 ###############################################################################
 
@@ -35,7 +30,17 @@ class NixMetaScanner:
         Scan nixpkgs meta-info using nixpkgs version pinned in nixref;
         nixref can be a nix store path, flakeref or dynamical attribute set.
         """
-        nixpkgs_path = nixref_to_nixpkgs_path(nixref)
+        nixpkgs_path = nixref_to_nixpkgs_path(
+            nixref,
+            get_flake_metadata_fn=lambda flakeref: get_flake_metadata(
+                flakeref,
+                exec_cmd_fn=exec_cmd,
+                nix_cmd_fn=nix_cmd,
+                log=LOG,
+            ),
+            log=LOG,
+            log_spam=LOG_SPAM,
+        )
         if not nixpkgs_path:
             # try format which is understood by nix-env:
             #   https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
@@ -89,7 +94,7 @@ class NixMetaScanner:
             ]
             exec_cmd(cmd, stdout=f)
             LOG.debug("Generated meta.json: %s", f.name)
-            self.df_meta = _parse_json_metadata(f.name)
+            self.df_meta = parse_json_metadata(f.name, log=LOG)
             self._drop_duplicates()
 
     def _drop_duplicates(self):
@@ -104,44 +109,6 @@ class NixMetaScanner:
         ]
         self.df_meta.sort_values(by=uids, inplace=True)
         self.df_meta.drop_duplicates(subset=uids, keep="last", inplace=True)
-
-
-###############################################################################
-
-
-def nixref_to_nixpkgs_path(flakeref):
-    """Return the store path of the nixpkgs pinned by flakeref"""
-    return _nixref_to_nixpkgs_path_impl(
-        flakeref,
-        get_flake_metadata_fn=_get_flake_metadata,
-        log=LOG,
-        log_spam=LOG_SPAM,
-    )
-
-
-def _get_flake_metadata(flakeref):
-    """Compatibility wrapper around flake metadata loading."""
-    return _get_flake_metadata_impl(
-        flakeref,
-        exec_cmd_fn=exec_cmd,
-        nix_cmd_fn=nix_cmd,
-        log=LOG,
-    )
-
-
-def _is_nixpkgs_metadata(meta_json):
-    """Return true if meta_json describes nixpkgs flakeref"""
-    return _is_nixpkgs_metadata_impl(meta_json)
-
-
-def _parse_meta_entry(meta, key):
-    """Parse the given key from the metadata entry"""
-    return _parse_meta_entry_impl(meta, key)
-
-
-def _parse_json_metadata(json_filename):
-    """Parse package metadata from the specified json file"""
-    return _parse_json_metadata_impl(json_filename, log=LOG)
 
 
 ###############################################################################
