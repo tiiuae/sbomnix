@@ -4,17 +4,30 @@
 
 """Helpers for deriving in-toto subjects from nix outputs."""
 
+import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any, Callable
 
 from common.log import LOG, LOG_VERBOSE
-from common.proc import exec_cmd
+from common.proc import ExecCmdFn, exec_cmd
 from provenance.digests import normalize_digest, output_digest
 
+Digest = dict[str, str]
+Subject = dict[str, Any]
+OutputPathFn = Callable[[str, Any, Mapping[str, str] | None], str | None]
+OutputDigestFn = Callable[[Any], Digest | None]
+NormalizeDigestFn = Callable[..., Digest | None]
 
-def output_path(name, output, env=None):
+
+def output_path(
+    name: str,
+    output: Any,
+    env: Mapping[str, str] | None = None,
+) -> str | None:
     """Return the resolved absolute output path from outputs or env."""
     if isinstance(output, dict) and output.get("path"):
-        return output["path"]
+        return str(output["path"])
     env = env or {}
     return env.get(name)
 
@@ -23,34 +36,28 @@ def output_path(name, output, env=None):
 class SubjectHooks:
     """Injectable helpers used by ``get_subjects``."""
 
-    exec_cmd_fn: object = None
-    normalize_digest_fn: object = None
-    output_digest_fn: object = None
-    output_path_fn: object = None
-    log: object = LOG
-
-    def __post_init__(self):
-        if self.exec_cmd_fn is None:
-            self.exec_cmd_fn = exec_cmd
-        if self.normalize_digest_fn is None:
-            self.normalize_digest_fn = normalize_digest
-        if self.output_digest_fn is None:
-            self.output_digest_fn = output_digest
-        if self.output_path_fn is None:
-            self.output_path_fn = output_path
+    exec_cmd_fn: ExecCmdFn = exec_cmd
+    normalize_digest_fn: NormalizeDigestFn = normalize_digest
+    output_digest_fn: OutputDigestFn = output_digest
+    output_path_fn: OutputPathFn = output_path
+    log: logging.Logger = LOG
 
 
-def get_subjects(outputs, env=None, hooks=None):
+def get_subjects(
+    outputs: Mapping[str, Any],
+    env: Mapping[str, str] | None = None,
+    hooks: SubjectHooks | None = None,
+) -> list[Subject]:
     """Parse derivation outputs into in-toto subjects."""
     hooks = SubjectHooks() if hooks is None else hooks
 
     hooks.log.log(LOG_VERBOSE, "Parsing derivation outputs")
 
     env = env or {}
-    subjects = []
+    subjects: list[Subject] = []
     for name, data in outputs.items():
         resolved_output_path = hooks.output_path_fn(name, data, env)
-        subject = {"name": name}
+        subject: Subject = {"name": name}
         resolved_output_digest = hooks.output_digest_fn(data)
         if resolved_output_path:
             subject["uri"] = resolved_output_path

@@ -15,6 +15,17 @@
     }:
     {
       checks = {
+        pyright =
+          pkgs.runCommandLocal "pyright"
+            {
+              nativeBuildInputs = [ self'.devShells.default.nativeBuildInputs ];
+            }
+            ''
+              cd ${self.outPath}
+              export HOME=/tmp
+              pyright
+              touch $out
+            '';
         pylint =
           pkgs.runCommandLocal "pylint"
             {
