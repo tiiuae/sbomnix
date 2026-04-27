@@ -15,6 +15,7 @@ def test_repology_cli_help(_run_python_script):
     _run_python_script([REPOLOGY_CLI, "-h"])
 
 
+@pytest.mark.network
 @pytest.mark.slow
 def test_repology_cli_sbom(
     _run_python_script,

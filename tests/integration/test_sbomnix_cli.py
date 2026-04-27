@@ -71,6 +71,7 @@ def test_sbomnix_type_buildtime(_run_python_script, test_nix_result, test_work_d
     validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
+@pytest.mark.slow
 def test_sbomnix_depth(_run_python_script, test_nix_result, test_work_dir):
     """Test sbomnix '--depth' option."""
     out_path_csv_1 = test_work_dir / "sbom_csv_test_1.csv"

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 SHELL := bash
-PYTHON_TARGETS := $(shell find . -name "*.py" ! -path "*venv*" ! -path "*eggs*")
+NIX := nix --extra-experimental-features 'flakes nix-command'
 
 define target_success
 	@printf "\033[32m==> Target \"$(1)\" passed\033[0m\n\n"
@@ -17,31 +17,42 @@ TARGET: ## DESCRIPTION
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##.*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}'
 
-pre-push: test check  ## Run tests and flake checks
+pre-push: check-fast  ## Run fast local formatter, flake, and test checks
 	$(call target_success,$@)
 
-test-ci: check  ## Run CI tests
-	pytest -n auto -vx -k "not skip_in_ci" tests/
+check-fast:  ## Run fast local formatter, eval, and test checks
+	./scripts/check-fast.sh
 	$(call target_success,$@)
 
-check: clean
-	nix --extra-experimental-features 'flakes nix-command' flake check
-
-test-smoke: ## Run smoke tests
-	pytest -n auto -vx -k "not slow" tests/
+check-ci:  ## Run CI-aligned eval and test checks
+	./scripts/check-ci.sh
 	$(call target_success,$@)
 
-test: ## Run tests
-	pytest -n auto -vx tests/
+check-full:  ## Run full flake and pytest checks
+	./scripts/check-full.sh
+	$(call target_success,$@)
+
+test-ci:  ## Run CI test lane
+	./scripts/run-pytest-lane.sh ci
+	$(call target_success,$@)
+
+check: check-full  ## Run full flake and pytest checks
+
+test-smoke: ## Run fast non-network test lane
+	./scripts/run-pytest-lane.sh fast
+	$(call target_success,$@)
+
+test: ## Run full test lane
+	./scripts/run-pytest-lane.sh full
 	$(call target_success,$@)
 
 release-asset: clean ## Build release asset
 	mkdir -p build/
-	nix run --extra-experimental-features 'flakes nix-command' .#sbomnix -- . \
+	$(NIX) run .#sbomnix -- . \
         --cdx=./build/sbom.runtime.cdx.json \
         --spdx=./build/sbom.runtime.spdx.json \
         --csv=./build/sbom.runtime.csv
-	nix run --extra-experimental-features 'flakes nix-command' .#sbomnix -- --buildtime . \
+	$(NIX) run .#sbomnix -- --buildtime . \
         --cdx=./build/sbom.buildtime.cdx.json \
         --spdx=./build/sbom.buildtime.spdx.json \
         --csv=./build/sbom.buildtime.csv
