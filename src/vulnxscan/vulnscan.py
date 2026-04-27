@@ -25,13 +25,8 @@ from common.df import df_from_csv_file, df_to_csv_file
 from common.log import LOG, LOG_SPAM
 from common.proc import exec_cmd
 from vulnxscan.osv import OSV
-from vulnxscan.utils import (
-    _is_patched,
-    _reformat_scanner,
-    _triage,
-    _vuln_sortcol,
-    _vuln_url,
-)
+from vulnxscan.triage import triage_vulnerabilities
+from vulnxscan.utils import _is_patched, _reformat_scanner, _vuln_sortcol, _vuln_url
 from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist
 
 
@@ -285,7 +280,7 @@ class VulnScan:
             self._apply_whitelist(args.whitelist)
         if args.triage:
             LOG.info("Running vulnerability triage")
-            self.df_triaged = _triage(self.df_report, args.nixprs)
+            self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
         # Rename 'version' to 'version_local'
         self.df_report.rename(columns={"version": "version_local"}, inplace=True)
 
