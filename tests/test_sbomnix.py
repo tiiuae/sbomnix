@@ -3,18 +3,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=global-statement, redefined-outer-name
 # pylint: disable=too-few-public-methods
 
 """Tests for sbomnix"""
 
 import errno
 import json
-import os
-import re
-import shutil
 import subprocess
-import time
 from pathlib import Path
 
 import jsonschema
@@ -28,7 +23,7 @@ from common.utils import df_from_csv_file
 from provenance import main as provenance_main
 from vulnxscan.whitelist import df_apply_whitelist, load_whitelist
 
-MYDIR = Path(os.path.dirname(os.path.realpath(__file__)))
+MYDIR = Path(__file__).resolve().parent
 
 # These two tools are executed as scripts from this file,
 # but don't contain any tests themselves
@@ -50,114 +45,20 @@ VULNXSCAN = SRCDIR / "vulnxscan" / "vulnxscan_cli.py"
 REPOLOGY_CLI = SRCDIR / "repology" / "repology_cli.py"
 REPOLOGY_CVE = SRCDIR / "repology" / "repology_cve.py"
 
-TEST_WORK_DIR = None
-TEST_NIX_RESULT = None
 
-################################################################################
-
-
-@pytest.fixture()
-def test_work_dir(tmp_path):
-    """Fixture for per-test tempdir"""
-    return Path(tmp_path)
-
-
-@pytest.fixture(autouse=True)
-def set_up_test_data(test_work_dir):
-    """Fixture to set up the test data"""
-    print("setup")
-    old_cwd = Path.cwd()
-    global TEST_WORK_DIR
-    TEST_WORK_DIR = test_work_dir
-    print(f"using TEST_WORK_DIR: {TEST_WORK_DIR}")
-    global TEST_NIX_RESULT
-    TEST_NIX_RESULT = TEST_WORK_DIR / "result"
-    # Build nixpkgs.hello, output symlink to TEST_NIX_RESULT
-    # (assumes nix-build is available in $PATH)
-    cmd = ["nix-build", "<nixpkgs>", "-A", "hello", "-o", TEST_NIX_RESULT]
-    assert subprocess.run(cmd, check=True).returncode == 0
-    assert Path(TEST_NIX_RESULT).exists()
-    os.chdir(TEST_WORK_DIR)
-    yield "resource"
-    print("clean up")
-    os.chdir(old_cwd if old_cwd.exists() else REPOROOT)
-    shutil.rmtree(TEST_WORK_DIR)
-
-
-################################################################################
-
-
-def _run_python_script(args, **kwargs):
-    """small helper function invoking the python script and args, ensuring 0 return code
-
-    This also sets PYTHONPATH to the repo root, so these scripts can import
-    sbomnix or scripts on their own.
-    """
-    # copy, so we don't mutate env for this process, only for the spawned one.
-    env = os.environ.copy()
-    env["PYTHONPATH"] = f"{env['PYTHONPATH']}:{REPOROOT}"
-    check = kwargs.pop("check", True)
-    return subprocess.run(args, check=check, env=env, **kwargs)
-
-
-def _output_mentions_repology_host(output):
-    patterns = (
-        r"https://repology\.org(?:/|$)",
-        r"host=['\"]repology\.org['\"]",
-        r"HTTPSConnectionPool\(host=['\"]repology\.org['\"]",
-    )
-    return any(re.search(pattern, output) for pattern in patterns)
-
-
-def _run_python_script_retry_on_repology_network_error(args):
-    """Retry transient repology.org connectivity failures before failing"""
-    markers = [
-        "requests.exceptions.ConnectTimeout",
-        "requests.exceptions.ConnectionError",
-        "requests.exceptions.ReadTimeout",
-        "urllib3.exceptions.ConnectTimeoutError",
-        "urllib3.exceptions.ReadTimeoutError",
-        "Max retries exceeded",
-        "Connection timed out",
-        "Temporary failure in name resolution",
-        "Name or service not known",
-    ]
-    retry_delays = [15, 45]
-    last_ret = None
-    for attempt in range(len(retry_delays) + 1):
-        ret = _run_python_script(args, check=False, capture_output=True, text=True)
-        if ret.returncode == 0:
-            return ret
-        last_ret = ret
-        output = "\n".join(filter(None, [ret.stdout, ret.stderr]))
-        is_repology_network_error = _output_mentions_repology_host(output) and any(
-            marker in output for marker in markers
-        )
-        if not is_repology_network_error or attempt >= len(retry_delays):
-            ret.check_returncode()
-        delay = retry_delays[attempt]
-        print(
-            f"repology.org request failed with a transient network error; "
-            f"retrying in {delay}s (attempt {attempt + 2}/{len(retry_delays) + 1})"
-        )
-        time.sleep(delay)
-    last_ret.check_returncode()
-    return last_ret
-
-
-def test_sbomnix_help():
+def test_sbomnix_help(_run_python_script):
     """Test sbomnix command line argument: '-h'"""
     _run_python_script([SBOMNIX, "-h"])
 
 
-def test_sbomnix_type_runtime():
+def test_sbomnix_type_runtime(_run_python_script, test_nix_result, test_work_dir):
     """Test sbomnix generates valid CycloneDX json with runtime dependencies"""
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
-    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
+    out_path_spdx = test_work_dir / "sbom_spdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx.as_posix(),
             "--spdx",
@@ -175,14 +76,14 @@ def test_sbomnix_type_runtime():
 
 
 @pytest.mark.slow
-def test_sbomnix_type_buildtime():
+def test_sbomnix_type_buildtime(_run_python_script, test_nix_result, test_work_dir):
     """Test sbomnix generates valid CycloneDX json with buildtime dependencies"""
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
-    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
+    out_path_spdx = test_work_dir / "sbom_spdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx.as_posix(),
             "--spdx",
@@ -200,14 +101,14 @@ def test_sbomnix_type_buildtime():
     validate_json(out_path_spdx.as_posix(), spdx_schema_path)
 
 
-def test_sbomnix_depth():
+def test_sbomnix_depth(_run_python_script, test_nix_result, test_work_dir):
     """Test sbomnix '--depth' option"""
-    out_path_csv_1 = TEST_WORK_DIR / "sbom_csv_test_1.csv"
-    out_path_csv_2 = TEST_WORK_DIR / "sbom_csv_test_2.csv"
+    out_path_csv_1 = test_work_dir / "sbom_csv_test_1.csv"
+    out_path_csv_2 = test_work_dir / "sbom_csv_test_2.csv"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--buildtime",
             "--csv",
             out_path_csv_1.as_posix(),
@@ -221,7 +122,7 @@ def test_sbomnix_depth():
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--buildtime",
             "--csv",
             out_path_csv_2.as_posix(),
@@ -242,45 +143,45 @@ def test_sbomnix_depth():
 ################################################################################
 
 
-def test_nixgraph_help():
+def test_nixgraph_help(_run_python_script):
     """Test nixgraph command line argument: '-h'"""
     _run_python_script([NIXGRAPH, "-h"])
 
 
-def test_nixgraph_png():
+def test_nixgraph_png(_run_python_script, test_nix_result, test_work_dir):
     """Test nixgraph with png output generates valid png image"""
-    png_out = TEST_WORK_DIR / "graph.png"
-    _run_python_script([NIXGRAPH, TEST_NIX_RESULT, "--out", png_out, "--depth", "3"])
+    png_out = test_work_dir / "graph.png"
+    _run_python_script([NIXGRAPH, test_nix_result, "--out", png_out, "--depth", "3"])
     assert Path(png_out).exists()
 
 
-def test_nixgraph_csv():
+def test_nixgraph_csv(_run_python_script, test_nix_result, test_work_dir):
     """Test nixgraph with csv output generates valid csv"""
-    csv_out = TEST_WORK_DIR / "graph.csv"
-    _run_python_script([NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--depth", "3"])
+    csv_out = test_work_dir / "graph.csv"
+    _run_python_script([NIXGRAPH, test_nix_result, "--out", csv_out, "--depth", "3"])
     assert Path(csv_out).exists()
     # Check the output is valid csv file
     df_out = pd.read_csv(csv_out)
     assert not df_out.empty
 
 
-def test_nixgraph_csv_buildtime():
+def test_nixgraph_csv_buildtime(_run_python_script, test_nix_result, test_work_dir):
     """Test nixgraph with buildtime csv output generates valid csv"""
-    csv_out = TEST_WORK_DIR / "graph_buildtime.csv"
-    _run_python_script([NIXGRAPH, TEST_NIX_RESULT, "--out", csv_out, "--buildtime"])
+    csv_out = test_work_dir / "graph_buildtime.csv"
+    _run_python_script([NIXGRAPH, test_nix_result, "--out", csv_out, "--buildtime"])
     assert Path(csv_out).exists()
     # Check the output is valid csv file
     df_out = pd.read_csv(csv_out)
     assert not df_out.empty
 
 
-def test_nixgraph_csv_graph_inverse():
+def test_nixgraph_csv_graph_inverse(_run_python_script, test_nix_result, test_work_dir):
     """Test nixgraph with '--inverse' argument"""
-    csv_out = TEST_WORK_DIR / "graph.csv"
+    csv_out = test_work_dir / "graph.csv"
     _run_python_script(
         [
             NIXGRAPH,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--out",
             csv_out,
             "--depth=100",
@@ -290,11 +191,11 @@ def test_nixgraph_csv_graph_inverse():
     df_out = pd.read_csv(csv_out)
     assert not df_out.empty
 
-    csv_out_inv = TEST_WORK_DIR / "graph_inverse.csv"
+    csv_out_inv = test_work_dir / "graph_inverse.csv"
     _run_python_script(
         [
             NIXGRAPH,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--out",
             csv_out_inv,
             "--depth=100",
@@ -320,13 +221,13 @@ def test_nixgraph_csv_graph_inverse():
 ################################################################################
 
 
-def test_compare_deps_runtime():
+def test_compare_deps_runtime(_run_python_script, test_nix_result, test_work_dir):
     """Compare nixgraph vs sbom runtime dependencies"""
-    graph_csv_out = TEST_WORK_DIR / "graph.csv"
+    graph_csv_out = test_work_dir / "graph.csv"
     _run_python_script(
         [
             NIXGRAPH,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--out",
             graph_csv_out,
             "--depth=100",
@@ -334,11 +235,11 @@ def test_compare_deps_runtime():
     )
     assert Path(graph_csv_out).exists()
 
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx.as_posix(),
         ]
@@ -358,13 +259,13 @@ def test_compare_deps_runtime():
 
 @pytest.mark.slow
 @pytest.mark.skip_in_ci
-def test_compare_deps_buildtime():
+def test_compare_deps_buildtime(_run_python_script, test_nix_result, test_work_dir):
     """Compare nixgraph vs sbom buildtime dependencies"""
-    graph_csv_out = TEST_WORK_DIR / "graph.csv"
+    graph_csv_out = test_work_dir / "graph.csv"
     _run_python_script(
         [
             NIXGRAPH,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--out",
             graph_csv_out,
             "--depth=100",
@@ -373,11 +274,11 @@ def test_compare_deps_buildtime():
     )
     assert Path(graph_csv_out).exists()
 
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx.as_posix(),
             "--buildtime",
@@ -397,13 +298,15 @@ def test_compare_deps_buildtime():
 
 
 @pytest.mark.slow
-def test_compare_subsequent_cdx_sboms():
+def test_compare_subsequent_cdx_sboms(
+    _run_python_script, test_nix_result, test_work_dir
+):
     """Compare two sbomnix runs with same target produce the same cdx sbom"""
-    out_path_cdx_1 = TEST_WORK_DIR / "sbom_cdx_test_1.json"
+    out_path_cdx_1 = test_work_dir / "sbom_cdx_test_1.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx_1.as_posix(),
             "--buildtime",
@@ -411,11 +314,11 @@ def test_compare_subsequent_cdx_sboms():
     )
     assert out_path_cdx_1.exists()
 
-    out_path_cdx_2 = TEST_WORK_DIR / "sbom_cdx_test_2.json"
+    out_path_cdx_2 = test_work_dir / "sbom_cdx_test_2.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx_2.as_posix(),
             "--buildtime",
@@ -433,13 +336,15 @@ def test_compare_subsequent_cdx_sboms():
 
 
 @pytest.mark.slow
-def test_compare_subsequent_spdx_sboms():
+def test_compare_subsequent_spdx_sboms(
+    _run_python_script, test_nix_result, test_work_dir
+):
     """Compare two sbomnix runs with same target produce the same spdx sbom"""
-    out_path_spdx_1 = TEST_WORK_DIR / "sbom_spdx_test_1.json"
+    out_path_spdx_1 = test_work_dir / "sbom_spdx_test_1.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--spdx",
             out_path_spdx_1.as_posix(),
             "--buildtime",
@@ -447,11 +352,11 @@ def test_compare_subsequent_spdx_sboms():
     )
     assert out_path_spdx_1.exists()
 
-    out_path_spdx_2 = TEST_WORK_DIR / "sbom_spdx_test_2.json"
+    out_path_spdx_2 = test_work_dir / "sbom_spdx_test_2.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--spdx",
             out_path_spdx_2.as_posix(),
             "--buildtime",
@@ -469,14 +374,14 @@ def test_compare_subsequent_spdx_sboms():
 
 
 @pytest.mark.slow
-def test_compare_spdx_and_cdx_sboms():
+def test_compare_spdx_and_cdx_sboms(_run_python_script, test_nix_result, test_work_dir):
     """Compare spdx and cdx sboms from the same sbomnix invocation"""
-    out_path_spdx = TEST_WORK_DIR / "sbom_spdx_test.json"
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_spdx = test_work_dir / "sbom_spdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx.as_posix(),
             "--spdx",
@@ -499,19 +404,19 @@ def test_compare_spdx_and_cdx_sboms():
 ################################################################################
 
 
-def test_vulnxscan_help():
+def test_vulnxscan_help(_run_python_script):
     """Test vulnxscan command line argument: '-h'"""
     _run_python_script([VULNXSCAN, "--help"])
 
 
 @pytest.mark.skip_in_ci
-def test_vulnxscan_scan_nix_result():
+def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with TEST_NIX_RESULT as input"""
-    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     _run_python_script(
         [
             VULNXSCAN,
-            TEST_NIX_RESULT.as_posix(),
+            test_nix_result.as_posix(),
             "--out",
             out_path_vulns.as_posix(),
         ]
@@ -519,20 +424,20 @@ def test_vulnxscan_scan_nix_result():
 
 
 @pytest.mark.skip_in_ci
-def test_vulnxscan_scan_sbom():
+def test_vulnxscan_scan_sbom(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with SBOM as input"""
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx,
         ]
     )
     assert out_path_cdx.exists()
 
-    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     _run_python_script(
         [
             VULNXSCAN,
@@ -544,24 +449,24 @@ def test_vulnxscan_scan_sbom():
     )
 
 
-def test_vulnxscan_triage():
+def test_vulnxscan_triage(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with --triage"""
-    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     _run_python_script(
         [
             VULNXSCAN,
             "--triage",
             "--out",
             out_path_vulns.as_posix(),
-            TEST_NIX_RESULT.as_posix(),
+            test_nix_result.as_posix(),
         ]
     )
 
 
 @pytest.mark.skip_in_ci
-def test_vulnxscan_triage_whitelist():
+def test_vulnxscan_triage_whitelist(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with --triage and --whitelist"""
-    out_path_vulns = TEST_WORK_DIR / "vulnxscan_test.csv"
+    out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     whitelist_csv = MYDIR / "resources" / "whitelist_all.csv"
     assert whitelist_csv.exists()
     ret = _run_python_script(
@@ -572,7 +477,7 @@ def test_vulnxscan_triage_whitelist():
             whitelist_csv.as_posix(),
             "--out",
             out_path_vulns.as_posix(),
-            TEST_NIX_RESULT.as_posix(),
+            test_nix_result.as_posix(),
         ],
         capture_output=True,
         text=True,
@@ -585,7 +490,7 @@ def test_vulnxscan_triage_whitelist():
 ################################################################################
 
 
-def test_repology_cli_help():
+def test_repology_cli_help(_run_python_script):
     """
     Test repology_cli command line argument: '-h'
     """
@@ -593,20 +498,25 @@ def test_repology_cli_help():
 
 
 @pytest.mark.slow
-def test_repology_cli_sbom():
+def test_repology_cli_sbom(
+    _run_python_script,
+    _run_python_script_retry_on_repology_network_error,
+    test_nix_result,
+    test_work_dir,
+):
     """Test repology_cli with SBOM as input"""
-    out_path_cdx = TEST_WORK_DIR / "sbom_cdx_test.json"
+    out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--cdx",
             out_path_cdx,
         ]
     )
     assert out_path_cdx.exists()
 
-    out_path_repology = TEST_WORK_DIR / "repology.csv"
+    out_path_repology = test_work_dir / "repology.csv"
     _run_python_script_retry_on_repology_network_error(
         [
             REPOLOGY_CLI,
@@ -624,7 +534,7 @@ def test_repology_cli_sbom():
 ################################################################################
 
 
-def test_nix_outdated_help():
+def test_nix_outdated_help(_run_python_script):
     """
     Test nix_outdated command line argument: '-h'
     """
@@ -632,15 +542,17 @@ def test_nix_outdated_help():
 
 
 @pytest.mark.slow
-def test_nix_outdated_result():
+def test_nix_outdated_result(
+    _run_python_script_retry_on_repology_network_error, test_nix_result, test_work_dir
+):
     """Test nix_outdated with TEST_NIX_RESULT as input"""
-    out_path_nix_outdated = TEST_WORK_DIR / "nix_outdated.csv"
+    out_path_nix_outdated = test_work_dir / "nix_outdated.csv"
     _run_python_script_retry_on_repology_network_error(
         [
             NIX_OUTDATED,
             "--out",
             out_path_nix_outdated.as_posix(),
-            TEST_NIX_RESULT,
+            test_nix_result,
         ]
     )
     assert out_path_nix_outdated.exists()
@@ -649,7 +561,7 @@ def test_nix_outdated_result():
 ################################################################################
 
 
-def test_nixmeta_help():
+def test_nixmeta_help(_run_python_script):
     """
     Test nixmeta command line argument: '-h'
     """
@@ -657,9 +569,9 @@ def test_nixmeta_help():
 
 
 @pytest.mark.slow
-def test_nixmeta_sbomnix_flakeref():
+def test_nixmeta_sbomnix_flakeref(_run_python_script, test_work_dir):
     """Test nixmeta with sbomnix flakeref"""
-    out_path = TEST_WORK_DIR / "nixmeta.csv"
+    out_path = test_work_dir / "nixmeta.csv"
     _run_python_script(
         [
             NIXMETA,
@@ -716,18 +628,18 @@ def test_whitelist():
 ################################################################################
 
 
-def test_provenance_help():
+def test_provenance_help(_run_python_script):
     """Test provenance command line argument: '-h'"""
     _run_python_script([PROVENANCE, "-h"])
 
 
-def test_provenance_schema():
+def test_provenance_schema(_run_python_script, test_nix_result, test_work_dir):
     """Test provenance generates valid schema"""
-    out_path = TEST_WORK_DIR / "provenance_test.json"
+    out_path = test_work_dir / "provenance_test.json"
     _run_python_script(
         [
             PROVENANCE,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--out",
             out_path.as_posix(),
         ]
@@ -738,13 +650,15 @@ def test_provenance_schema():
     validate_json(out_path.as_posix(), schema_path)
 
 
-def test_provenance_schema_recursive():
+def test_provenance_schema_recursive(
+    _run_python_script, test_nix_result, test_work_dir
+):
     """Test provenance generates valid schema with recursive option"""
-    out_path = TEST_WORK_DIR / "recursive_provenance_test.json"
+    out_path = test_work_dir / "recursive_provenance_test.json"
     _run_python_script(
         [
             PROVENANCE,
-            TEST_NIX_RESULT,
+            test_nix_result,
             "--recursive",
             "--out",
             out_path.as_posix(),
