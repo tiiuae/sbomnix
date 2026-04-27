@@ -196,7 +196,11 @@ $ cd sbomnix/
 $ nix develop
 ```
 Run `make help` to see the list of supported make targets.
-Prior to sending any pull requests, make sure at least the `make pre-push` runs without failures.
+Before opening a pull request, run:
+```bash
+$ nix fmt
+$ nix flake check
+```
 
 To deactivate the Nix devshell, run `exit` in your shell.
 To see other Nix flake targets, run `nix flake show`.

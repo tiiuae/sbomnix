@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 TII (SSRC) and the Ghaf contributors
+# SPDX-FileCopyrightText: 2025-2026 TII (SSRC) and the Ghaf contributors
 # SPDX-License-Identifier: Apache-2.0
 { inputs, ... }:
 {
@@ -30,7 +30,23 @@
             "^tests/resources/.*"
           ];
         };
+        actionlint.enable = true;
+        deadnix.enable = true;
+        isort = {
+          enable = true;
+          settings.profile = "black";
+        };
+        nixfmt.enable = true;
+        ruff.enable = true;
+        ruff-format.enable = true;
         reuse.enable = true;
+        shellcheck.enable = true;
+        statix = {
+          enable = true;
+          args = [
+            "fix"
+          ];
+        };
       };
     };
   };
