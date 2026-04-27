@@ -10,7 +10,6 @@
 
 import os
 import re
-import sys
 import urllib.parse
 from argparse import ArgumentParser, ArgumentTypeError
 
@@ -164,7 +163,7 @@ def _is_affected(version, affected_ver_str):
 def _report(df):
     if df is None or df.empty:
         LOG.warning("No matching vulnerabilities found")
-        sys.exit(0)
+        return False
     # Write the console report
     table = tabulate(
         df,
@@ -174,6 +173,7 @@ def _report(df):
         showindex=False,
     )
     LOG.info("Repology affected CVE(s)\n\n%s\n\n", table)
+    return True
 
 
 def query_cve(pkg_name, pkg_version):
@@ -207,7 +207,8 @@ def main():
     args = getargs()
     set_log_verbosity(args.verbose)
     df = query_cve(args.PKG_NAME, args.PKG_VERSION)
-    _report(df)
+    if not _report(df):
+        return
     df_to_csv_file(df, args.out)
 
 

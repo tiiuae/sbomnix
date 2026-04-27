@@ -12,9 +12,13 @@ Utility functions when dealing with whitelists
 
 # Whitelist
 
-import sys
-
-from common.utils import LOG, LOG_SPAM, df_from_csv_file, df_log
+from common.utils import (
+    LOG,
+    LOG_SPAM,
+    WhitelistApplicationError,
+    df_from_csv_file,
+    df_log,
+)
 
 
 def load_whitelist(whitelist_csv_path):
@@ -57,8 +61,7 @@ def df_apply_whitelist(df_whitelist, df_vulns):
     df_vulns["whitelist"] = False
     df_vulns["whitelist_comment"] = ""
     if "vuln_id" not in df_vulns:
-        LOG.fatal("Missing 'vuln_id' column from df_vulns")
-        sys.exit(1)
+        raise WhitelistApplicationError("Missing 'vuln_id' column from df_vulns")
     if "vuln_id" not in df_whitelist:
         LOG.warning("Whitelist ignored: missing 'vuln_id' column from whitelist")
         return

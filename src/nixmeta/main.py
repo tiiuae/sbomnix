@@ -8,7 +8,12 @@
 import argparse
 import pathlib
 
-from common.utils import exit_unless_command_exists, set_log_verbosity
+from common.utils import (
+    LOG,
+    SbomnixError,
+    exit_unless_command_exists,
+    set_log_verbosity,
+)
 from nixmeta.scanner import NixMetaScanner
 
 ################################################################################
@@ -70,6 +75,14 @@ def main():
     """main entry point"""
     args = _getargs()
     set_log_verbosity(args.verbose)
+    try:
+        _run(args)
+    except SbomnixError as error:
+        LOG.fatal("%s", error)
+        raise SystemExit(1) from error
+
+
+def _run(args):
     # Fail early if the following commands are not in PATH
     exit_unless_command_exists("nix")
     exit_unless_command_exists("nix-env")

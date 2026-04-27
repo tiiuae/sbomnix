@@ -18,7 +18,7 @@ import repology.repology_cli
 from common.utils import (
     LOG,
     LOG_SPAM,
-    FlakeRefResolutionError,
+    SbomnixError,
     df_from_csv_file,
     df_log,
     df_to_csv_file,
@@ -254,12 +254,16 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    runtime = args.buildtime is False
     try:
-        target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
-    except FlakeRefResolutionError as error:
+        _run(args)
+    except SbomnixError as error:
         LOG.fatal("%s", error)
         raise SystemExit(1) from error
+
+
+def _run(args):
+    runtime = args.buildtime is False
+    target_path = try_resolve_flakeref(args.NIXREF, force_realise=runtime)
     if not target_path:
         target_path = pathlib.Path(args.NIXREF).resolve().as_posix()
         exit_unless_nix_artifact(args.NIXREF, force_realise=runtime)

@@ -11,7 +11,7 @@ import pathlib
 
 from common.utils import (
     LOG,
-    FlakeRefResolutionError,
+    SbomnixError,
     check_positive,
     exit_unless_nix_artifact,
     get_py_pkg_version,
@@ -82,15 +82,19 @@ def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    runtime = args.buildtime is False
-    flakeref = None
     try:
-        target_path = try_resolve_flakeref(
-            args.NIXREF, force_realise=runtime, impure=args.impure
-        )
-    except FlakeRefResolutionError as error:
+        _run(args)
+    except SbomnixError as error:
         LOG.fatal("%s", error)
         raise SystemExit(1) from error
+
+
+def _run(args):
+    runtime = args.buildtime is False
+    flakeref = None
+    target_path = try_resolve_flakeref(
+        args.NIXREF, force_realise=runtime, impure=args.impure
+    )
     if target_path:
         flakeref = args.NIXREF
     else:

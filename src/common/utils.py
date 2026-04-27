@@ -16,7 +16,6 @@ import pathlib
 import re
 import shlex
 import subprocess
-import sys
 import urllib.error
 from shutil import which
 
@@ -36,7 +35,11 @@ RE_NIX_STORE_PATH_BASENAME = re.compile(r"^[0-9a-z]{32}-.+")
 RE_NIX_STORE_PATH = re.compile(r"(?P<store_path>/(?:[^/\s:]+/)+[0-9a-z]{32}-[^/\s:]+)")
 
 
-class FlakeRefResolutionError(RuntimeError):
+class SbomnixError(RuntimeError):
+    """Base class for expected user-facing errors."""
+
+
+class FlakeRefResolutionError(SbomnixError):
     """Raised when an input looks like a flakeref but cannot be resolved."""
 
     def __init__(self, flakeref, stderr="", action="evaluating"):
@@ -54,6 +57,72 @@ class FlakeRefRealisationError(FlakeRefResolutionError):
 
     def __init__(self, flakeref, stderr=""):
         super().__init__(flakeref, stderr=stderr, action="force-realising")
+
+
+class CsvLoadError(SbomnixError):
+    """Raised when a CSV input cannot be read."""
+
+    def __init__(self, name, error):
+        self.name = name
+        self.error = error
+        super().__init__(f"Error reading csv file '{name}':\n{error}")
+
+
+class CommandNotFoundError(SbomnixError):
+    """Raised when a required executable is not available in PATH."""
+
+    def __init__(self, name):
+        self.name = name
+        super().__init__(f"command '{name}' is not in PATH")
+
+
+class InvalidNixArtifactError(SbomnixError):
+    """Raised when a CLI target is not a valid nix artifact."""
+
+    def __init__(self, path):
+        self.path = path
+        super().__init__(f"Specified target is not a nix artifact: '{path}'")
+
+
+class MissingNixDeriverError(SbomnixError):
+    """Raised when a nix artifact cannot be mapped back to a derivation."""
+
+    def __init__(self, path):
+        self.path = path
+        super().__init__(f"No deriver found for: '{path}'")
+
+
+class MissingNixOutPathError(SbomnixError):
+    """Raised when a derivation does not expose an out path."""
+
+    def __init__(self, path):
+        self.path = path
+        super().__init__(f"No outpath found for: '{path}'")
+
+
+class InvalidCpeDictionaryError(SbomnixError):
+    """Raised when the downloaded CPE dictionary has invalid columns."""
+
+    def __init__(self, required_cols):
+        self.required_cols = tuple(sorted(required_cols))
+        super().__init__(
+            f"Missing required columns {list(self.required_cols)} from cpedict"
+        )
+
+
+class WhitelistApplicationError(SbomnixError):
+    """Raised when vulnerability whitelist application cannot proceed."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class InvalidSbomError(SbomnixError):
+    """Raised when a supplied SBOM path is invalid."""
+
+    def __init__(self, path):
+        self.path = path
+        super().__init__(f"Specified sbom target is not a json file: '{path}'")
 
 
 def set_log_verbosity(verbosity=1):
@@ -118,8 +187,7 @@ def df_from_csv_file(name, exit_on_error=True):
         urllib.error.URLError,
     ) as error:
         if exit_on_error:
-            LOG.fatal("Error reading csv file '%s':\n%s", name, error)
-            sys.exit(1)
+            raise CsvLoadError(name, error) from error
         LOG.debug("Error reading csv file '%s':\n%s", name, error)
         return None
 
@@ -171,17 +239,16 @@ def exec_cmd(cmd, raise_on_error=True, return_error=False, log_error=True, stdou
 
 
 def exit_unless_command_exists(name):
-    """Check if `name` is an executable in PATH"""
+    """Raise if `name` is not an executable in PATH."""
     name_is_in_path = which(name) is not None
     if not name_is_in_path:
-        LOG.fatal("command '%s' is not in PATH", name)
-        sys.exit(1)
+        raise CommandNotFoundError(name)
 
 
 def exit_unless_nix_artifact(path, force_realise=False):
     """
-    Exit with error if `path` is not a nix artifact. If `force_realise` is True,
-    run the nix-store-query command with `--force-realise` realising the `path`
+    Raise if `path` is not a nix artifact. If `force_realise` is True, run the
+    nix-store-query command with `--force-realise` realising the `path`
     argument before running query.
     """
     LOG.debug("force_realize: %s", force_realise)
@@ -194,8 +261,7 @@ def exit_unless_nix_artifact(path, force_realise=False):
         exec_cmd(cmd)
         return
     except subprocess.CalledProcessError:
-        LOG.fatal("Specified target is not a nix artifact: '%s'", path)
-        sys.exit(1)
+        raise InvalidNixArtifactError(path) from None
 
 
 def try_resolve_flakeref(flakeref, force_realise=False, impure=False):
