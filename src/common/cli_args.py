@@ -5,8 +5,27 @@
 """Common argparse helper functions."""
 
 import argparse
+import sys
+from weakref import WeakSet
 
 from common.pkgmeta import get_py_pkg_version
+
+_VERBOSE_COUNT_DEST = "_verbose_count"
+_VERBOSE_WRAPPED_PARSERS = WeakSet()
+
+
+class _VerboseCountAction(argparse.Action):
+    """Count repeated short verbose flags without using parser defaults."""
+
+    def __init__(self, option_strings, dest, nargs=0, **kwargs):
+        if nargs != 0:
+            raise ValueError("nargs must be 0")
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, _parser, namespace, _values, _option_string=None):
+        count = getattr(namespace, _VERBOSE_COUNT_DEST, 0) + 1
+        setattr(namespace, _VERBOSE_COUNT_DEST, count)
+        setattr(namespace, self.dest, count)
 
 
 def check_positive(val):
@@ -17,13 +36,88 @@ def check_positive(val):
     return intval
 
 
-def add_verbose_argument(parser, default=1, max_level=3):
+def _is_integer(value):
+    """Return True if value can be parsed as an integer."""
+    try:
+        int(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _normalize_verbose_args(args):
+    """Normalize legacy short verbose values before argparse sees positionals."""
+    normalized = []
+    args = list(sys.argv[1:] if args is None else args)
+    idx = 0
+    while idx < len(args):
+        arg = args[idx]
+        if arg == "-v" and idx + 1 < len(args) and _is_integer(args[idx + 1]):
+            normalized.append(f"--verbose={args[idx + 1]}")
+            idx += 2
+            continue
+        if arg.startswith("-v") and arg != "-v":
+            value = arg[2:]
+            if value.startswith("="):
+                value = value[1:]
+            if value and _is_integer(value):
+                normalized.append(f"--verbose={value}")
+                idx += 1
+                continue
+        normalized.append(arg)
+        idx += 1
+    return normalized
+
+
+def _finalize_verbose_namespace(namespace):
+    """Remove internal argparse bookkeeping from the parsed namespace."""
+    if hasattr(namespace, _VERBOSE_COUNT_DEST):
+        delattr(namespace, _VERBOSE_COUNT_DEST)
+    return namespace
+
+
+def _wrap_verbose_parser(parser):
+    """Teach parse_known_args to normalize legacy short verbose values."""
+    if parser in _VERBOSE_WRAPPED_PARSERS:
+        return
+
+    parse_known_args = parser.parse_known_args
+
+    def parse_known_args_with_verbose(args=None, namespace=None):
+        namespace, extras = parse_known_args(
+            _normalize_verbose_args(args),
+            namespace,
+        )
+        return _finalize_verbose_namespace(namespace), extras
+
+    parser.parse_known_args = parse_known_args_with_verbose
+    _VERBOSE_WRAPPED_PARSERS.add(parser)
+
+
+def add_verbose_argument(parser, default=1, max_level=3, root_parser=None):
     """Add a standard verbose flag to an argparse parser."""
-    helps = (
-        f"Set the debug verbosity level between 0-{max_level} "
+    _wrap_verbose_parser(root_parser or parser)
+    parser.set_defaults(verbose=default, **{_VERBOSE_COUNT_DEST: 0})
+    short_help = (
+        f"Increase verbosity; repeat as -vv for level 2 (default: --verbose={default})"
+    )
+    long_help = (
+        f"Set the debug verbosity level between 0-{max_level} explicitly "
         f"(default: --verbose={default})"
     )
-    parser.add_argument("-v", "--verbose", help=helps, type=int, default=default)
+    parser.add_argument(
+        "-v",
+        action=_VerboseCountAction,
+        dest="verbose",
+        help=short_help,
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        dest="verbose",
+        metavar="N",
+        help=long_help,
+    )
 
 
 def add_version_argument(parser, package="sbomnix"):

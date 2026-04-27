@@ -50,24 +50,34 @@ def test_cli_version_flags_exit_zero(getargs, capsys):
 
 
 @pytest.mark.parametrize(
-    ("getargs", "argv"),
+    ("getargs", "base_argv"),
     [
-        (sbomnix_main.getargs, ["-v", "2", ".#pkg"]),
-        (nixgraph_main.getargs, ["-v", "2", ".#pkg"]),
-        (nixmeta_main._getargs, ["-v", "2"]),
-        (nix_outdated.getargs, ["-v", "2", ".#pkg"]),
-        (vulnxscan_cli.getargs, ["-v", "2", ".#pkg"]),
-        (osv_cli.getargs, ["-v", "2", "sbom.json"]),
+        (sbomnix_main.getargs, [".#pkg"]),
+        (nixgraph_main.getargs, [".#pkg"]),
+        (nixmeta_main._getargs, []),
+        (nix_outdated.getargs, [".#pkg"]),
+        (vulnxscan_cli.getargs, [".#pkg"]),
+        (osv_cli.getargs, ["sbom.json"]),
         (
             repology_cli.getargs,
-            ["-v", "2", "--pkg_exact", "openssl", "--repository", "nix_unstable"],
+            ["--pkg_exact", "openssl", "--repository", "nix_unstable"],
         ),
-        (repology_cve.getargs, ["-v", "2", "openssl", "3.1.0"]),
-        (provenance_main.getargs, ["-v", "2", ".#pkg"]),
+        (repology_cve.getargs, ["openssl", "3.1.0"]),
+        (provenance_main.getargs, [".#pkg"]),
     ],
 )
-def test_cli_verbose_short_flag_sets_verbosity(getargs, argv):
-    assert getargs(argv).verbose == 2
+@pytest.mark.parametrize(
+    "verbose_argv",
+    [
+        ["-v", "-v"],
+        ["-vv"],
+        ["-v", "2"],
+        ["--verbose=2"],
+        ["--verbose", "2"],
+    ],
+)
+def test_cli_verbose_level_two_forms_match(getargs, base_argv, verbose_argv):
+    assert getargs([*verbose_argv, *base_argv]).verbose == 2
 
 
 @pytest.mark.parametrize(
