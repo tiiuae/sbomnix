@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 
 # nixgraph
 
-[`nixgraph`](../src/nixgraph/main.py) is a python library and command line utility for querying and visualizing dependency graphs for [Nix](https://nixos.org/) packages.
+[`nixgraph`](../src/nixgraph/main.py) is a Python library and command line utility for querying and visualizing dependency graphs for [Nix](https://nixos.org/) packages.
 
 
 Table of Contents
@@ -28,28 +28,23 @@ To get started, follow the [Getting Started](../README.md#getting-started) secti
 As an example, to run the [`nixgraph`](../src/nixgraph/main.py) from your local clone of the `tiiuae/sbomnix` repository:
 ```bash
 # '--' signifies the end of argument list for `nix`.
-# '--help' is the first argument to `repology_cli`
+# '--help' is the first argument to `nixgraph`
 $ nix run .#nixgraph -- --help
 ```
 
 ## Usage examples
-In the below examples, we use nix package `wget` as an example target.
-To print `wget` out-path on your local system, try something like:
-```bash
-$ nix eval -f '<nixpkgs>' 'wget.outPath'
-"/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
-```
+In the below examples, we use nix package `wget` as an example target, referred to by flakeref `github:NixOS/nixpkgs/nixos-unstable#wget`. The example graphs below are illustrative; the actual graph generated will reflect the dependency versions resolved at run time.
 
 #### Example: package runtime dependencies
 ```bash
-# Target can be specified with flakeref too, e.g.:
+# Target can be specified as a flakeref or a nix store path, e.g.:
 # nixgraph .
 # nixgraph github:tiiuae/sbomnix
 # nixgraph nixpkgs#wget
+# nixgraph /nix/store/...
 # Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget
 
-INFO     Loading runtime dependencies referenced by '/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3'
 INFO     Wrote: graph.png
 ```
 By default `nixgraph` scans the given target and generates a graph that shows the direct runtime dependencies.
@@ -61,7 +56,7 @@ The default output is a png image `graph.png`:
 
 #### Example: depth
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=2
 ```
 
 By default, when `--depth` argument is not specified, `nixgraph` shows the direct dependencies. Increasing the `--depth` makes `nixgraph` walk the dependency chain deeper. For instance, with `--depth=2`, the output graph for `wget` becomes:
@@ -73,7 +68,7 @@ The value of `--depth` indicates the maximum depth between any two nodes in the 
 
 #### Example: colorize
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --colorize='openssl|libidn'
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=2 --colorize='openssl|libidn'
 ```
 
 `--colorize` allows highlighting nodes that match the specified regular expression:
@@ -84,7 +79,7 @@ $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --c
 
 #### Example: inverse
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --inverse='glibc'
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=2 --inverse='glibc'
 ```
 
 `--inverse` makes it possible to draw the graph backwards starting from nodes that match the specified regular expression. For instance, the above command would show all the dependency paths from `wget` that lead to `glibc`:
@@ -95,7 +90,7 @@ $ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2 --i
 `--inverse` is especially useful when working with larger graphs.
 
 As an example, consider the following graph for `git`:
-(`nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=3 --colorize="openssl-3|sqlite-3"`)
+(`nixgraph github:NixOS/nixpkgs/nixos-unstable#git --depth=3 --colorize="openssl-3|sqlite-3"`)
 
 <img src="img/git_r2_col.svg" width="900">
 <br /><br />
@@ -106,7 +101,7 @@ To find out what are all the runtime dependency paths from `git` to the highligh
 # --inverse="openssl-3|sqlite-3": draw the graph backwards starting from nodes that
 #                                 match the specified regular expression
 # --colorize="openssl-3|sqlite-3": colorize the matching nodes
-nixgraph /nix/store/sb0fay7ihrqibk325qyx0377ywrfdnxp-git-2.38.1 --depth=100 --colorize="openssl-3|sqlite-3" --inverse="openssl-3|sqlite-3"
+nixgraph github:NixOS/nixpkgs/nixos-unstable#git --depth=100 --colorize="openssl-3|sqlite-3" --inverse="openssl-3|sqlite-3"
 ```
 The output now becomes:
 
@@ -117,7 +112,7 @@ The output graph shows that there are three dependency paths from `git` to `open
 
 #### Example: package buildtime dependencies
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --buildtime
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --buildtime
 ```
 
 Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies instead of runtime dependencies:
@@ -128,14 +123,14 @@ Specifying `--buildtime` makes `nixgraph` visualize the buildtime dependencies i
 
 #### Example: output format
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --out="graph.dot"
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --out="graph.dot"
 ```
-By default `nixgraph` outputs the graph in png image `graph.png`. To change the output file name and format, use the `--out` argument. The output filename extension determines the output format.  As an example, the above command would output the graph in `dot` format. For a full list of supported output formats, see: https://graphviz.org/doc/info/output.html. In addition to graphviz supported output formats, the tool supports output in csv to allow post-processing the output data.
+By default `nixgraph` outputs the graph in png image `graph.png`. To change the output file name and format, use the `--out` argument. The output filename extension determines the output format. As an example, the above command would output the graph in `dot` format. For a full list of supported output formats, see: https://graphviz.org/doc/info/output.html. In addition to graphviz supported output formats, the tool supports output in csv to allow post-processing the output data.
 
 
 #### Example: pathnames
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=1 --pathnames
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=1 --pathnames
 ```
 
 `--pathnames` argument allows adding store path to node label in the output graph:

@@ -11,7 +11,7 @@ This repository is home to various command line tools and Python libraries that 
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) derivation or out path.
 - [`nixmeta`](./doc/nixmeta.md) summarizes nixpkgs meta-attributes from the given nixpkgs version.
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
-- [`repology_cli`](./doc/replogoy_cli.md) and [`repology_cve`](./doc/replogoy_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
+- [`repology_cli`](./doc/repology_cli.md) and [`repology_cve`](./doc/repology_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 - [`provenance`](./doc/provenance.md) is a command line tool to generate SLSA v1.0 compliant [provenance](https://slsa.dev/spec/v1.0/provenance) attestation files in json format for any nix flake or derivation.
 
@@ -32,7 +32,6 @@ Table of Contents
    * [Runtime Dependencies](#runtime-dependencies)
 * [Usage Examples](#usage-examples)
    * [Generate SBOM Based on Derivation File or Out-path](#generate-sbom-based-on-derivation-file-or-out-path)
-   * [Generate SBOM Including Meta Information](#generate-sbom-including-meta-information)
    * [Generate SBOM Including Buildtime Dependencies](#generate-sbom-including-buildtime-dependencies)
    * [Generate SBOM Based on Result Symlink](#generate-sbom-based-on-result-symlink)
    * [Generate SBOM Based on Flake Reference](#generate-sbom-based-on-flake-reference)
@@ -108,11 +107,17 @@ $ src/nixupdate/nix_outdated.py --help
 $ src/provenance/main.py --help
 ```
 
+All tools support a consistent verbosity flag: no flag or `--verbose=0`
+shows INFO output, `-v` or `--verbose=1` enables VERBOSE progress
+details, `-vv` or `--verbose=2` enables DEBUG details, and `-vvv` or
+`--verbose=3` enables SPAM output. Repeated short flags are counted, so
+`-v -v`, `-vv`, and `--verbose=2` are equivalent.
+
 ## Buildtime vs Runtime Dependencies
 #### Buildtime Dependencies
-[Closure](https://nixos.org/manual/nix/stable/glossary.html#gloss-closure) of a nix store path is a list of all the dependent store paths, recursively, referenced by the target store path. For a package, the closure of it's derivation lists all the buildtime dependencies. As an example, for a simple C program, the buildtime dependencies include packages to bootstrap gcc, stdenv, glibc, bash, etc. on the target architecture. Even a simple hello-world C program typically includes over 150 packages in its list of buildtime dependencies. It's important to note that generating buildtime dependencies in Nix does not require building the target.
+[Closure](https://nixos.org/manual/nix/stable/glossary.html#gloss-closure) of a nix store path is a list of all the dependent store paths, recursively, referenced by the target store path. For a package, the closure of its derivation lists all the buildtime dependencies. As an example, for a simple C program, the buildtime dependencies include packages to bootstrap gcc, stdenv, glibc, bash, etc. on the target architecture. Even a simple hello-world C program typically includes over 150 packages in its list of buildtime dependencies. It's important to note that generating buildtime dependencies in Nix does not require building the target.
 
-For reference, following is a link to graph from an example hello-world C program that includes the first two layers of buildtime dependencies: direct dependencies and the first level of transitive dependencies: [C hello-world buildtime, depth=2](doc/img/c_hello_world_buildtime_d2.svg).
+For reference, following is a link to a graph from an example hello-world C program that includes the first two layers of buildtime dependencies: direct dependencies and the first level of transitive dependencies: [C hello-world buildtime, depth=2](doc/img/c_hello_world_buildtime_d2.svg).
 
 #### Runtime Dependencies
 [Runtime dependencies](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-why-depends.html#description) are a subset of buildtime dependencies. Nix automatically determines the runtime dependencies by scanning the generated output paths (i.e. build output) for the buildtime dependencies' store paths. This means nix needs to build the target output first, before runtime dependencies can be determined. For reference, below is a complete runtime dependency graph of an example hello-world C program:
@@ -120,7 +125,7 @@ For reference, following is a link to graph from an example hello-world C progra
 <img src="doc/img/c_hello_world_runtime.svg" width="700">
 
 
-By default, where applicable, the tools in this repository assume runtime dependencies. This means, for instance, that unless specified otherwise, `sbomnix` will output an SBOM including runtime-only dependencies, `nixgraph` outputs runtime dependency graph, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since Nix needs to build the target output to determine the runtime dependencies, all the tools in this repository will also build (force-realise) the target output as part of each tool's invocation when determining the runtime dependencies. All the mentioned tools in this repository also support working with buildtime dependencies instead of runtime dependencies with the help of `--buildtime` command line argument. As mentioned earlier, generating buildtime dependencies in Nix does not require building the target. Similarly, when `--buildtime` is specified, the tools in this repository do not need to be build the given target.
+By default, where applicable, the tools in this repository assume runtime dependencies. This means, for instance, that unless specified otherwise, `sbomnix` will output an SBOM including runtime-only dependencies, `nixgraph` outputs runtime dependency graph, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since Nix needs to build the target output to determine the runtime dependencies, all the tools in this repository will also build (force-realise) the target output as part of each tool's invocation when determining the runtime dependencies. All the mentioned tools in this repository also support working with buildtime dependencies instead of runtime dependencies with the help of `--buildtime` command line argument. As mentioned earlier, generating buildtime dependencies in Nix does not require building the target. Similarly, when `--buildtime` is specified, the tools in this repository do not need to build the given target.
 
 
 ## Usage Examples
@@ -129,23 +134,19 @@ The usage examples work for both the built package, as well as inside the devshe
 Keep in mind inside the devshell, calls to `sbomnix` need to be replaced with
 `src/sbomnix/main.py` (and similar for other entrypoints).
 
-In the below examples, we use Nix package `wget` as an example target.
-To print `wget` out-path on your local system, try:
-```bash
-$ nix eval -f '<nixpkgs>' 'wget.outPath'
-"/nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3"
-```
+In the below examples, we use Nix package `wget` as an example target, referred to by flakeref `github:NixOS/nixpkgs/nixos-unstable#wget`.
 
 #### Generate SBOM Based on Derivation File or Out-path
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
 Notice: determining the target runtime dependencies in Nix requires building the target.
 ```bash
-# Target can be specified with flakeref too, e.g.:
+# Target can be specified as a flakeref or a nix store path, e.g.:
 # sbomnix .
 # sbomnix github:tiiuae/sbomnix
 # sbomnix nixpkgs#wget
+# sbomnix /nix/store/...
 # Ref: https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references
-$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3
+$ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget
 ...
 INFO     Wrote: sbom.cdx.json
 INFO     Wrote: sbom.spdx.json
@@ -158,7 +159,7 @@ By default `sbomnix` scans the given target for runtime dependencies. You can te
 Below example generates SBOM including buildtime dependencies.
 Notice: as opposed to runtime dependencies, determining the buildtime dependencies does not require building the target.
 ```bash
-$ sbomnix /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --buildtime
+$ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget --buildtime
 ```
 
 #### Generate SBOM Based on Result Symlink
@@ -178,7 +179,7 @@ $ sbomnix github:NixOS/nixpkgs?ref=nixos-unstable#wget --buildtime
 Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
 Below, we show an example of visualizing package `wget` runtime dependencies:
 ```bash
-$ nixgraph /nix/store/8nbv1drmvh588pwiwsxa47iprzlgwx6j-wget-1.21.3 --depth=2
+$ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=2
 ```
 
 Which outputs the dependency graph as an image (with maxdepth 2):

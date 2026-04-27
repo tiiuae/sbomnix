@@ -37,7 +37,6 @@ Following query finds package name 'firefox' versions in 'nix_unstable' reposito
 ```bash
 $ repology_cli --pkg_exact "firefox" --repository nix_unstable
 
-INFO     GET: https://repology.org/projects/?search=firefox&inrepo=nix_unstable
 INFO     Repology package info, packages:5
 
 | repo         | package | version               | status   | potentially_vulnerable | newest_upstream_release | repo_version_classify |
@@ -68,7 +67,6 @@ Full list of repositories available in repology are available in https://repolog
 ```bash
 $ repology_cli --pkg_exact "firefox" --repository debian_12
 
-INFO     GET: https://repology.org/projects/?search=firefox&inrepo=debian_12
 INFO     Repology package info, packages:1
 
 | repo      | package   | version   | status   |  potentially_vulnerable  | newest_upstream_release   | repo_version_classify   |
@@ -86,7 +84,6 @@ Following query finds 'debian_12' packages that include 'firefox' anywhere in th
 ```bash
 $ repology_cli --pkg_search "firefox" --repository debian_12
 
-INFO     GET: https://repology.org/projects/?search=firefox&inrepo=debian_12
 INFO     Repology package info, packages:5
 
 | repo      | package                     | version | status   | potentially_vulnerable | newest_upstream_release | repo_version_classify |
@@ -106,14 +103,6 @@ Following query finds 'nix_unstable' packages that match the packages in the Cyc
 ```bash
 $ repology_cli --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable
 
-INFO     GET: https://repology.org/projects/?search=glibc&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=libidn2&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=libunistring&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=openssl&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=pcre&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=util-linux-minimal&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=wget&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=zlib&inrepo=nix_unstable
 INFO     Repology package info, packages:9
 
 | repo         | package      | version  | status   | potentially_vulnerable | newest_upstream_release | version_sbom | sbom_version_classify | repo_version_classify |
@@ -136,14 +125,6 @@ Following is the same query as above, but adds the command-line argument `--stat
 
 ```bash
 $ repology_cli --sbom_cdx  wget.runtime.sbom.cdx.json --repository nix_unstable --stats
-INFO     GET: https://repology.org/projects/?search=glibc&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=libidn2&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=libunistring&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=openssl&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=pcre&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=util-linux-minimal&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=wget&inrepo=nix_unstable
-INFO     GET: https://repology.org/projects/?search=zlib&inrepo=nix_unstable
 INFO     Repology package info, packages:9
 
 | repo         | package      | version   | status   |  potentially_vulnerable  | newest_upstream_release   | version_sbom   | sbom_version_classify   | repo_version_classify   |
