@@ -112,8 +112,7 @@ class SbomDb:
             paths = set(src_paths + target_paths)
         # Populate store based on the dependencies
         store = Store(self.buildtime, include_cpe=self.include_cpe)
-        for path in paths:
-            store.add_path(path)
+        store.add_paths(paths)
         self.df_sbomdb = store.to_dataframe()
         # Join with meta information
         if include_meta:
