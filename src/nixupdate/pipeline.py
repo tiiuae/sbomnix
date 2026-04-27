@@ -7,6 +7,8 @@
 import logging
 from dataclasses import dataclass
 
+import pandas as pd
+
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
 from nixupdate.nix_visualize import nix_visualize_csv_to_df, run_nix_visualize
@@ -18,8 +20,8 @@ from sbomnix.cli_utils import generate_temp_sbom
 class OutdatedScanData:
     """Collected intermediate dataframes used by ``nix_outdated``."""
 
-    repology: object
-    nix_visualize: object = None
+    repology: pd.DataFrame
+    nix_visualize: pd.DataFrame | None = None
 
 
 def query_repology(sbompath, *, adapter=None, log=LOG):
