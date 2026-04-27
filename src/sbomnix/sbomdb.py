@@ -14,11 +14,11 @@ import logging
 import uuid
 
 import numpy as np
-import pandas as pd
 
 from common.df import df_to_csv_file
 from common.log import LOG
 from nixgraph.graph import NixDependencies
+from sbomnix.dependency_index import build_dependency_index
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta
 from sbomnix.nix import Store, find_deriver
@@ -58,6 +58,7 @@ class SbomDb:
         self._init_dependencies(nix_path)
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
+        self.dependency_index = None
         self.flakeref = flakeref
         self.meta = None
         self.include_cpe = include_cpe
@@ -122,6 +123,16 @@ class SbomDb:
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
         self.df_sbomdb.sort_values(by=["name", self.uid], inplace=True)
         self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode("outputs")
+        self._init_dependency_index()
+
+    def _init_dependency_index(self):
+        """Build indexed dependency lookups used during export."""
+        self.dependency_index = build_dependency_index(
+            self.df_deps,
+            self.df_sbomdb,
+            self.df_sbomdb_outputs_exploded,
+            uid=self.uid,
+        )
 
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
@@ -155,33 +166,10 @@ class SbomDb:
         By default, returns the list of unique `store_path` values
         which includes the build and runtime dependencies of `drv`.
         """
-        # Find runtime dependencies
-        # Runtime dependencies: drv.outputs matches with target_path
-        dfr = None
-        if self.df_deps is not None and not self.df_deps.empty:
-            df = self.df_deps[self.df_deps["target_path"].isin(drv.outputs)]
-            # Find the requested 'uid' values for the dependencies (df.src_path)
-            dfr = self.df_sbomdb_outputs_exploded.merge(
-                df, how="inner", left_on=["outputs"], right_on=["src_path"]
-            ).loc[:, [uid]]
-        # Find buildtime dependencies
-        dfb = None
-        if self.df_deps is not None and not self.df_deps.empty:
-            # Buildtime dependencies: drv.store_path matches with target_path
-            df = self.df_deps[self.df_deps["target_path"] == drv.store_path]
-            # Find the requested 'uid' values for the dependencies (df.src_path)
-            dfb = self.df_sbomdb.merge(
-                df, how="inner", left_on=["store_path"], right_on=["src_path"]
-            ).loc[:, [uid]]
-        # Return list of unique dependencies including both build and runtime
-        # dependencies as specified by the requested values (uid)
-        if dfr is not None or dfb is not None:
-            df = pd.concat([dfr, dfb], ignore_index=True)
-            dep_uids = sorted(df[uid].unique().tolist())
-            # Filter out dependencies to drv itself
-            self_uid = getattr(drv, uid)
-            return [uid for uid in dep_uids if uid != self_uid]
-        return None
+        dependency_index = getattr(self, "dependency_index", None)
+        if dependency_index is None:
+            return None
+        return dependency_index.lookup(drv, uid=uid)
 
     def _lookup_dependencies(self, drv, uid="store_path"):
         """Backward-compatible alias for lookup_dependencies."""
