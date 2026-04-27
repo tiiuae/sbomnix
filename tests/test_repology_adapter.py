@@ -141,3 +141,19 @@ def test_repology_adapter_sbom_query_marks_special_statuses(tmp_path):
     assert df[df["package"] == "archive.tar.gz"].iloc[0]["status"] == "IGNORED"
     assert df[df["package"] == "missingver"].iloc[0]["status"] == "NO_VERSION"
     assert df[df["package"] == "missingpkg"].iloc[0]["status"] == "NOT_FOUND"
+
+
+def test_repology_adapter_query_cves_parses_fixture_and_uses_timeout():
+    url = "https://repology.org/project/openssl/cves?version=3.1.0"
+    session = MappingSession(
+        {
+            url: FakeResponse(_fixture_text("cves_openssl.html")),
+        }
+    )
+
+    df = RepologyAdapter(session=session).query_cves("openssl", "3.1.0")
+
+    assert session.calls == [(url, REPOLOGY_REQUEST_TIMEOUT)]
+    assert list(df["package"]) == ["openssl"]
+    assert list(df["version"]) == ["3.1.0"]
+    assert list(df["cve"]) == ["CVE-2024-1111"]

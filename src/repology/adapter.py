@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-few-public-methods,too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 
 """Repology query adapter."""
 
@@ -18,17 +18,20 @@ import pandas as pd
 import repology.exceptions
 from common.df import df_regex_filter
 from common.log import LOG
-from repology.projects_parser import parse_projects_search_html
-from repology.sbom import (
+from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
+
+from .cves import parse_cve_html
+from .projects_parser import parse_projects_search_html
+from .sbom import (
     is_ignored_sbom_package,
     make_sbom_status_row,
     merge_sbom_fields,
     parse_cdx_sbom,
     sbom_row_classify,
 )
-from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
 
 REPOLOGY_PROJECTS_URL = "https://repology.org/projects/"
+REPOLOGY_PROJECT_URL = "https://repology.org/project/"
 
 
 @dataclass
@@ -128,6 +131,20 @@ class RepologyAdapter:
             raise repology.exceptions.RepologyNoMatchingPackages
         resp.raise_for_status()
         return resp
+
+    def query_cves(self, pkg_name, pkg_version):
+        """Query vulnerabilities for a single package/version pair."""
+        pkg = urllib.parse.quote(pkg_name)
+        ver = urllib.parse.quote(pkg_version)
+        query = f"{REPOLOGY_PROJECT_URL}{pkg}/cves?version={ver}"
+        LOG.debug("GET: %s", query)
+        resp = self.session.get(query, timeout=self.request_timeout)
+        LOG.debug("resp.status_code: %s", resp.status_code)
+        if resp.status_code == 404:
+            LOG.warning("Repology package '%s' not found", pkg_name)
+            return None
+        resp.raise_for_status()
+        return parse_cve_html(resp.text, pkg_name, pkg_version)
 
     def _query_pkg_search(self, pkg_search, repository, stop_pkg=None):
         pkg = urllib.parse.quote(pkg_search)
