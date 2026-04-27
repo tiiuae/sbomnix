@@ -13,6 +13,7 @@ import argparse
 import logging
 import pathlib
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.errors import InvalidSbomError, SbomnixError
 from common.log import LOG, set_log_verbosity
 from common.proc import exit_unless_command_exists
@@ -23,7 +24,7 @@ from vulnxscan.vulnscan import VulnScan
 ###############################################################################
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
     desc = (
         "Scan nix artifact or CycloneDX SBOM for vulnerabilities with "
@@ -35,10 +36,9 @@ def getargs():
         "Target nix store path (e.g. derivation file or nix output path) or flakeref"
     )
     parser.add_argument("TARGET", help=helps, type=str)
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser)
     helps = "Path to output file (default: ./vulns.csv)"
-    parser.add_argument("--out", nargs="?", help=helps, default="vulns.csv")
+    parser.add_argument("-o", "--out", nargs="?", help=helps, default="vulns.csv")
     helps = (
         "Scan target buildtime instead of runtime dependencies. This option "
         "has no impact if the scan target is SBOM (ref: --sbom)."
@@ -85,7 +85,8 @@ def getargs():
         "is also specified."
     )
     triagegr.add_argument("--nixprs", help=helps, action="store_true")
-    return parser.parse_args()
+    add_version_argument(parser)
+    return parser.parse_args(args)
 
 
 ################################################################################

@@ -8,17 +8,16 @@
 
 import argparse
 
-from common.cli_args import check_positive
+from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
-from common.pkgmeta import get_py_pkg_version
 from sbomnix.cli_utils import resolve_nix_target
 from sbomnix.sbomdb import SbomDb
 
 ###############################################################################
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
     desc = (
         "This tool finds dependencies of the specified nix store path "
@@ -43,9 +42,8 @@ def getargs():
         "all dependencies all the way to the root of the dependency tree."
     )
     parser.add_argument("--depth", help=helps, type=check_positive)
-    parser.add_argument("--version", action="version", version=get_py_pkg_version())
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_version_argument(parser)
+    add_verbose_argument(parser)
     helps = "Include vulnerabilities in the output of CyloneDX SBOM"
     parser.add_argument("--include-vulns", help=helps, action="store_true")
     helps = "Exclude Nixpkgs metadata information in the output"
@@ -67,7 +65,7 @@ def getargs():
     helps = "Run nix command with --impure"
     parser.add_argument("--impure", help=helps, action="store_true")
 
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 ################################################################################

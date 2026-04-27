@@ -123,6 +123,8 @@ def test_store_add_paths_loads_each_deriver_once(monkeypatch):
     load_calls = []
 
     class FakeDrv:
+        """Minimal derivation double for store batching tests."""
+
         def __init__(self, store_path):
             self.store_path = store_path
             self.outputs = []
@@ -137,17 +139,17 @@ def test_store_add_paths_loads_each_deriver_once(monkeypatch):
         def to_dict(self):
             return {"store_path": self.store_path, "outputs": self.outputs}
 
-    def fake_find_derivers(paths, batch_size=500):
+    def fake_find_derivers(_paths, batch_size=500):
         assert batch_size == 500
         return {
             "/nix/store/first-out": "/nix/store/shared.drv",
             "/nix/store/second-out": "/nix/store/shared.drv",
         }
 
-    def fake_load_many(paths, output_paths_by_drv=None, batch_size=200):
+    def fake_load_many(_paths, output_paths_by_drv=None, batch_size=200):
         load_calls.append(
             (
-                list(paths),
+                list(_paths),
                 {key: sorted(value) for key, value in output_paths_by_drv.items()},
                 batch_size,
             )

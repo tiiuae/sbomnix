@@ -8,17 +8,16 @@
 
 import argparse
 
-from common.cli_args import check_positive
+from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
-from common.pkgmeta import get_py_pkg_version
 from nixgraph.graph import NixDependencies
 from sbomnix.cli_utils import resolve_nix_target
 
 ###############################################################################
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
     desc = "Visualize nix artifact dependencies"
     epil = "Example: nixgraph /path/to/derivation.drv "
@@ -29,7 +28,7 @@ def getargs():
     )
     parser.add_argument("NIXREF", help=helps, type=str)
 
-    parser.add_argument("--version", action="version", version=get_py_pkg_version())
+    add_version_argument(parser)
 
     helps = "Scan buildtime dependencies instead of runtime dependencies"
     parser.add_argument("--buildtime", help=helps, action="store_true")
@@ -53,7 +52,7 @@ def getargs():
         "allow post-processing the output data. Specify output file with "
         ".csv extension to output the query result in textual csv format."
     )
-    parser.add_argument("--out", nargs="?", help=helps, default="graph.png")
+    parser.add_argument("-o", "--out", nargs="?", help=helps, default="graph.png")
 
     helps = "Colorize nodes that match the specified regular expression"
     parser.add_argument("--colorize", help=helps)
@@ -70,10 +69,9 @@ def getargs():
     helps = "Show nix store path in node label, together with package name"
     parser.add_argument("--pathnames", help=helps, action="store_true")
 
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser)
 
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 ################################################################################

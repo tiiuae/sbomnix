@@ -11,6 +11,7 @@ import json
 import os
 from dataclasses import dataclass
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.log import LOG, set_log_verbosity
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
@@ -103,7 +104,7 @@ def provenance(target: str, metadata: BuildMeta, recursive: bool = False) -> dic
     )
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
@@ -120,19 +121,15 @@ def getargs():
         help="Resolve every dependency recursively",
     )
     parser.add_argument(
+        "-o",
         "--out",
         help="Path to file where provenance should be saved",
         default=os.environ.get("PROVENANCE_OUTPUT_FILE"),
     )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        help="Set the debug verbosity level between 0-3 (default: --verbose=1).",
-        type=int,
-        default=1,
-    )
+    add_verbose_argument(parser)
+    add_version_argument(parser)
 
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def main():

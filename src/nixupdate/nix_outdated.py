@@ -10,6 +10,7 @@ import os
 from argparse import ArgumentParser
 from tempfile import NamedTemporaryFile
 
+from common.cli_args import add_verbose_argument, add_version_argument
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
 from common.proc import exec_cmd
@@ -28,7 +29,7 @@ from sbomnix.cli_utils import generate_temp_sbom, resolve_nix_target
 ###############################################################################
 
 
-def getargs():
+def getargs(args=None):
     """Parse command line arguments"""
     desc = (
         "Command line tool to list outdated nix dependencies for NIXREF. "
@@ -65,10 +66,12 @@ def getargs():
     helps = "Scan target buildtime instead of runtime dependencies."
     parser.add_argument("--buildtime", help=helps, action="store_true")
     helps = "Path to output file (default: ./nix_outdated.csv)"
-    parser.add_argument("--out", nargs="?", help=helps, default="nix_outdated.csv")
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
-    return parser.parse_args()
+    parser.add_argument(
+        "-o", "--out", nargs="?", help=helps, default="nix_outdated.csv"
+    )
+    add_version_argument(parser)
+    add_verbose_argument(parser)
+    return parser.parse_args(args)
 
 
 ################################################################################
