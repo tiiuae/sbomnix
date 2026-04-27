@@ -195,12 +195,13 @@ $ git clone https://github.com/tiiuae/sbomnix
 $ cd sbomnix/
 $ nix develop
 ```
-Run `make help` to see the list of supported make targets.
-Before opening a pull request, run:
+Run `./scripts/help.sh` to see the supported local helper scripts.
+Before opening a pull request, run at minimum:
 ```bash
-$ nix fmt
-$ nix flake check
+$ ./scripts/check-fast.sh
 ```
+This runs the formatter, a fast flake eval, and the fast test lane.
+CI runs `./scripts/check-full.sh`.
 
 To deactivate the Nix devshell, run `exit` in your shell.
 To see other Nix flake targets, run `nix flake show`.
