@@ -7,6 +7,7 @@
 """Nix store, originally from https://github.com/flyingcircusio/vulnix"""
 
 import os
+from collections import defaultdict
 
 import pandas as pd
 
@@ -14,7 +15,7 @@ from common.log import LOG, LOG_SPAM
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
 from sbomnix.cpe import CPE
-from sbomnix.derivation import load
+from sbomnix.derivation import load, load_many
 
 ###############################################################################
 
@@ -34,7 +35,7 @@ class Store:
     def _is_cached(self, path):
         cached = path in self.derivations
         LOG.log(LOG_SPAM, "is cached %s:%s", path, cached)
-        return path in self.derivations
+        return cached
 
     def _get_cached(self, path):
         LOG.log(LOG_SPAM, "get cached: %s", path)
@@ -64,21 +65,65 @@ class Store:
 
     def add_path(self, nixpath):
         """Add the derivation referenced by a store path (nixpath)"""
-        LOG.log(LOG_SPAM, nixpath)
-        if self._is_cached(nixpath):
-            LOG.log(LOG_SPAM, "Skipping redundant path '%s'", nixpath)
-            return
-        if not os.path.exists(nixpath):
-            raise RuntimeError(
-                f"path `{nixpath}` does not exist - cannot load "
-                "derivations referenced from it"
-            )
-        drv_path = find_deriver(nixpath)
-        if not drv_path:
-            LOG.log(LOG_SPAM, "No deriver found for: '%s", nixpath)
-            self._add_cached(nixpath, drv=None)
-            return
-        self._update(drv_path, nixpath)
+        self.add_paths([nixpath])
+
+    def _collect_pending_paths(self, nixpaths):
+        """Split inputs into derivation paths and output paths needing lookup."""
+        drv_output_paths = defaultdict(set)
+        pending_output_paths = []
+        for nixpath in nixpaths:
+            LOG.log(LOG_SPAM, nixpath)
+            if self._is_cached(nixpath):
+                LOG.log(LOG_SPAM, "Skipping redundant path '%s'", nixpath)
+                continue
+            if not os.path.exists(nixpath):
+                raise RuntimeError(
+                    f"path `{nixpath}` does not exist - cannot load "
+                    "derivations referenced from it"
+                )
+            if nixpath.endswith(".drv"):
+                drv_output_paths.setdefault(nixpath, set())
+                continue
+            pending_output_paths.append(nixpath)
+        return drv_output_paths, pending_output_paths
+
+    def add_paths(self, nixpaths):
+        """Add derivations referenced by the given store paths."""
+        drv_output_paths, pending_output_paths = self._collect_pending_paths(nixpaths)
+
+        for nixpath, drv_path in find_derivers(pending_output_paths).items():
+            if not drv_path:
+                LOG.log(LOG_SPAM, "No deriver found for: '%s", nixpath)
+                self._add_cached(nixpath, drv=None)
+                continue
+            drv_output_paths[drv_path].add(nixpath)
+
+        uncached_drv_paths = {
+            drv_path for drv_path in drv_output_paths if not self._is_cached(drv_path)
+        }
+        if uncached_drv_paths:
+            for drv_path, drv_obj in load_many(
+                list(uncached_drv_paths),
+                output_paths_by_drv=drv_output_paths,
+            ).items():
+                drv_obj.set_cpe(self.cpe_generator)
+                self._add_cached(drv_path, drv=drv_obj)
+                for output_path in drv_output_paths.get(drv_path, ()):
+                    self._add_cached(output_path, drv=drv_obj)
+
+        # Associate newly-seen output paths with derivations that were already
+        # cached before this call (load_many handles the uncached ones above).
+        for drv_path, output_paths in drv_output_paths.items():
+            if drv_path in uncached_drv_paths:
+                continue
+            drv_obj = self._get_cached(drv_path)
+            if not drv_obj:
+                self._update(drv_path)
+                drv_obj = self._get_cached(drv_path)
+            for output_path in output_paths:
+                if drv_obj:
+                    drv_obj.add_output_path(output_path)
+                self._add_cached(output_path, drv=drv_obj)
 
     def to_dataframe(self):
         """Return store derivations as pandas dataframe"""
@@ -127,6 +172,45 @@ def find_deriver(path):
         "Cannot determine deriver. Is this really a path into the nix store?",
         path,
     )
+
+
+def find_derivers(paths, batch_size=500):
+    """Return drv paths for many store artifacts, batching `nix-store -qd`."""
+    resolved = {}
+    non_drv_paths = []
+    for path in paths:
+        if path.endswith(".drv"):
+            resolved[path] = path
+        else:
+            non_drv_paths.append(path)
+    if not non_drv_paths:
+        return resolved
+    for start in range(0, len(non_drv_paths), batch_size):
+        batch = non_drv_paths[start : start + batch_size]
+        ret = exec_cmd(
+            ["nix-store", "-qd", *batch], raise_on_error=False, log_error=False
+        )
+        if ret:
+            lines = ret.stdout.splitlines()
+            if len(lines) == len(batch):
+                for path, drv_path in zip(batch, lines):
+                    if (
+                        drv_path
+                        and drv_path != "unknown-deriver"
+                        and os.path.exists(drv_path)
+                    ):
+                        resolved[path] = drv_path
+                        continue
+                    resolved[path] = find_deriver(path)
+                continue
+            LOG.debug(
+                "nix-store -qd returned %d lines for %d paths; falling back to per-path lookup",
+                len(lines),
+                len(batch),
+            )
+        for path in batch:
+            resolved[path] = find_deriver(path)
+    return resolved
 
 
 ###############################################################################

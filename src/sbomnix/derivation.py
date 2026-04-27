@@ -11,6 +11,7 @@
 
 import bisect
 import json
+from itertools import islice
 
 from packageurl import PackageURL
 
@@ -19,6 +20,12 @@ from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
 
 ###############################################################################
+
+
+def _batched(iterable, size):
+    iterator = iter(iterable)
+    while batch := list(islice(iterator, size)):
+        yield batch
 
 
 def load(path, outpath):
@@ -36,6 +43,38 @@ def load(path, outpath):
     LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
     LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
     return d_obj
+
+
+def load_many(paths, output_paths_by_drv=None, batch_size=200):
+    """Load many derivations with batched `nix derivation show` calls."""
+    if not paths:
+        return {}
+    output_paths_by_drv = {} if output_paths_by_drv is None else output_paths_by_drv
+    loaded = {}
+    for batch in _batched(dict.fromkeys(paths), batch_size):
+        drv_infos = parse_nix_derivation_show(
+            exec_cmd(nix_cmd("derivation", "show", *batch)).stdout
+        )
+        for path in batch:
+            drv_info = drv_infos.get(path)
+            if drv_info is None:
+                loaded[path] = load(
+                    path,
+                    next(iter(output_paths_by_drv.get(path, ())), None),
+                )
+                continue
+            output_paths = list(output_paths_by_drv.get(path, ()))
+            drv = Derive.from_nix_derivation_info(
+                path,
+                drv_info,
+                output_paths[0] if output_paths else None,
+            )
+            for outpath in output_paths[1:]:
+                drv.add_output_path(outpath)
+            LOG.log(LOG_SPAM, "load derivation: %s", drv)
+            LOG.log(LOG_SPAM, "derivation attrs: %s", drv.to_dict())
+            loaded[path] = drv
+    return loaded
 
 
 def destructure(env):
