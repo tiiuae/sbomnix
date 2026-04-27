@@ -13,8 +13,8 @@ from datetime import datetime, timezone
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
-from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
 
+from common.spdx import canonicalize_spdx_license_id
 from common.utils import LOG, get_py_pkg_version
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
 from vulnxscan.vulnscan import VulnScan
@@ -131,9 +131,10 @@ def _drv_to_spdx_license_list(drv):
     license_strings = license_str.split(";")
     licenses = []
     for license_string in license_strings:
-        if license_string not in SPDX_LICENSES:
+        canonical = canonicalize_spdx_license_id(license_string)
+        if not canonical:
             continue
-        licenses.append(license_string)
+        licenses.append(canonical)
     return licenses
 
 

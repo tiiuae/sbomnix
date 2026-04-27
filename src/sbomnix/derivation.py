@@ -4,7 +4,7 @@
 
 # SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
-# pylint: disable=invalid-name, eval-used
+# pylint: disable=invalid-name
 # pylint: disable=too-many-instance-attributes
 
 """Nix derivation, originally from https://github.com/flyingcircusio/vulnix"""
@@ -14,25 +14,34 @@ import json
 
 from packageurl import PackageURL
 
-from common.utils import LOG, LOG_SPAM
+from common.nix_utils import parse_nix_derivation_show
+from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd
 
 ###############################################################################
 
 
 def load(path, outpath):
     """Load derivation from path"""
-    d_obj = None
-    with open(path, encoding="utf-8") as f:
-        d_obj = eval(f.read(), {"__builtins__": {}, "Derive": Derive}, {})
-        d_obj.init(path, outpath)
-        LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
-        LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
+    drv_infos = parse_nix_derivation_show(
+        exec_cmd(nix_cmd("derivation", "show", path)).stdout,
+        store_path_hint=path,
+    )
+    drv_info = drv_infos.get(path)
+    if drv_info is None and drv_infos:
+        drv_info = next(iter(drv_infos.values()))
+    if drv_info is None:
+        raise RuntimeError(f"Failed loading derivation '{path}'")
+    d_obj = Derive.from_nix_derivation_info(path, drv_info, outpath)
+    LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
+    LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
 def destructure(env):
     """Decodes Nix 2.0 __structuredAttrs."""
-    return json.loads(env["__json"])
+    if "__json" in env:
+        return json.loads(env["__json"])
+    return {}
 
 
 class Derive:
@@ -87,11 +96,34 @@ class Derive:
         # for such packages.
         self.cpe = ""
         self.purl = ""
-        if self.pname != "source":
-            self.purl = str(
-                PackageURL(type="nix", name=self.pname, version=self.version)
-            )
+        self._refresh_purl()
         self.urls = envVars.get("urls", "")
+
+    @classmethod
+    def from_nix_derivation_info(cls, path, drv_info, outpath=None):
+        """Create a derivation from normalized `nix derivation show` JSON."""
+        env_vars = dict(drv_info.get("env", {}))
+        name = _coerce_derivation_string(drv_info.get("name")) or env_vars.get("name")
+        if not name:
+            name = destructure(env_vars).get("name")
+        outputs = drv_info.get("outputs", {})
+        if not isinstance(outputs, dict):
+            outputs = {}
+        drv = cls(
+            envVars=env_vars,
+            name=name,
+            patches=env_vars.get("patches", ""),
+        )
+        drv.system = _coerce_derivation_string(drv_info.get("system")) or drv.system
+        drv.version = env_vars.get("version", "")
+        if not drv.version:
+            drv.version = _coerce_derivation_string(drv_info.get("version"))
+        drv.out = drv.out or _derivation_output_path(outputs, "out")
+        drv._refresh_purl()
+        drv.outputs = []
+        _set_derivation_output_paths(drv, outputs, env_vars)
+        drv.init(path, outpath)
+        return drv
 
     def init(self, path, outpath):
         """Initialize self.store_path and self.outputs"""
@@ -115,9 +147,43 @@ class Derive:
             LOG.log(LOG_SPAM, "adding outpath to %s:%s", self, path)
             bisect.insort(self.outputs, path)
 
+    def _refresh_purl(self):
+        self.purl = ""
+        if self.pname != "source":
+            self.purl = str(
+                PackageURL(type="nix", name=self.pname, version=self.version)
+            )
+
     def to_dict(self):
         """Return derivation as dictionary"""
         ret = {}
         for attr in vars(self):
             ret[attr] = getattr(self, attr)
         return ret
+
+
+def _derivation_output_path(outputs, output_name):
+    output = outputs.get(output_name)
+    if isinstance(output, dict):
+        return output.get("path", "")
+    if isinstance(output, str):
+        return output
+    return ""
+
+
+def _coerce_derivation_string(value):
+    if isinstance(value, str):
+        return value
+    return ""
+
+
+def _set_derivation_output_paths(drv, outputs, env_vars):
+    for output in outputs.values():
+        if isinstance(output, dict):
+            drv.add_output_path(output.get("path"))
+        else:
+            drv.add_output_path(output)
+    if drv.outputs:
+        return
+    for output_name in str(env_vars.get("outputs", "")).split():
+        drv.add_output_path(env_vars.get(output_name))
