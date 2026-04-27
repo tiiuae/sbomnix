@@ -14,6 +14,7 @@ from tempfile import NamedTemporaryFile
 
 from tabulate import tabulate
 
+from common.package_names import nix_to_repology_pkg_name
 from common.utils import (
     LOG,
     LOG_SPAM,
@@ -22,7 +23,6 @@ from common.utils import (
     df_log,
     df_to_csv_file,
     exec_cmd,
-    nix_to_repology_pkg_name,
     set_log_verbosity,
 )
 from repology.adapter import RepologyAdapter, RepologyQuery

@@ -21,7 +21,7 @@ from tabulate import tabulate
 import repology.exceptions
 from common.df import df_to_csv_file
 from common.log import LOG, LOG_SPAM, set_log_verbosity
-from common.utils import parse_version
+from common.versioning import parse_version
 from repology.session import DEFAULT_REPOLOGY_SESSION, REPOLOGY_REQUEST_TIMEOUT
 
 ###############################################################################
