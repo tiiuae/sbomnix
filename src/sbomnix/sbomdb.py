@@ -19,14 +19,10 @@ import pandas as pd
 from common.df import df_to_csv_file
 from common.log import LOG
 from nixgraph.graph import NixDependencies
-from sbomnix.exporters import (
-    build_cdx_document,
-    build_spdx_document,
-    enrich_cdx_with_vulnerabilities,
-    write_json,
-)
+from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta
 from sbomnix.nix import Store, find_deriver
+from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 
 ###############################################################################
 
@@ -54,6 +50,7 @@ class SbomDb:
         # identifier for the sbom components. See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
         self.uid = "store_path"
+        self.nix_path = nix_path
         self.buildtime = buildtime
         self.target_deriver = find_deriver(nix_path)
         self.df_deps = None

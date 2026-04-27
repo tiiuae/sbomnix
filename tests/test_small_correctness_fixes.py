@@ -22,9 +22,10 @@ from nixgraph import main as nixgraph_main
 from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated
 from sbomnix import cli_utils as sbomnix_cli_utils
-from sbomnix import exporters as sbomnix_exporters
 from sbomnix import main as sbomnix_main
+from sbomnix import vuln_enrichment as sbomnix_vuln_enrichment
 from sbomnix.sbomdb import SbomDb
+from vulnxscan import osv as osv_cli
 from vulnxscan import vulnxscan_cli
 
 
@@ -51,6 +52,24 @@ def test_vulnxscan_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
 
     with pytest.raises(SystemExit) as excinfo:
         vulnxscan_cli.main()
+
+    assert excinfo.value.code == 1
+
+
+def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
+    """Invalid OSV SBOM input should terminate with a failing exit code."""
+    missing_sbom = tmp_path / "missing.json"
+    args = SimpleNamespace(
+        SBOM=missing_sbom,
+        verbose=1,
+        out="osv.csv",
+        ecosystems="GIT",
+    )
+    monkeypatch.setattr(osv_cli, "getargs", lambda: args)
+    monkeypatch.setattr(osv_cli, "set_log_verbosity", lambda _verbosity: None)
+
+    with pytest.raises(SystemExit) as excinfo:
+        osv_cli.main()
 
     assert excinfo.value.code == 1
 
@@ -600,7 +619,10 @@ def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
         ]
     )
 
-    monkeypatch.setattr("sbomnix.exporters.VulnScan", FailIfCalledScanner)
+    monkeypatch.setattr(
+        "sbomnix.vuln_enrichment.VulnScan",
+        FailIfCalledScanner,
+    )
     monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
 
     out_path = tmp_path / "out.cdx.json"
@@ -674,11 +696,11 @@ def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        sbomnix_exporters,
+        sbomnix_vuln_enrichment,
         "NamedTemporaryFile",
         lambda **_kwargs: FakeTempFile(temp_cdx_path),
     )
-    monkeypatch.setattr(sbomnix_exporters, "VulnScan", FailingScanner)
+    monkeypatch.setattr(sbomnix_vuln_enrichment, "VulnScan", FailingScanner)
     monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
 
     cdx = sbomdb.to_cdx_data()
