@@ -10,8 +10,12 @@ import json
 import time
 import urllib.parse
 
-from common.http import CachedLimiterSession
+from common.http import create_cached_limited_session
 from common.log import LOG, LOG_SPAM
+
+GITHUB_API_CACHE_SECONDS = 6 * 60 * 60
+GITHUB_API_REQUEST_TIMEOUT = 60
+GITHUB_API_USER_AGENT = "sbomnix-github-prs/0 (https://github.com/tiiuae/sbomnix/)"
 
 
 def append_search_results(prs, result, max_results=5):
@@ -32,24 +36,31 @@ def append_search_results(prs, result, max_results=5):
 class GitHubPrLookup:
     """Search likely nixpkgs PRs related to a vulnerability."""
 
-    def __init__(self, session=None, sleeper=None):
+    def __init__(
+        self,
+        session=None,
+        sleeper=None,
+        request_timeout=GITHUB_API_REQUEST_TIMEOUT,
+    ):
         self.session = (
-            CachedLimiterSession(
+            create_cached_limited_session(
                 per_minute=9,
                 per_second=1,
-                expire_after=6 * 60 * 60,
+                expire_after=GITHUB_API_CACHE_SECONDS,
+                user_agent=GITHUB_API_USER_AGENT,
             )
             if session is None
             else session
         )
         self.sleeper = time.sleep if sleeper is None else sleeper
+        self.request_timeout = request_timeout
 
     def query(self, query_str, delay=60):
         """Query the GitHub issues search API."""
         query_str_quoted = urllib.parse.quote(query_str, safe=":/")
         query = f"https://api.github.com/search/issues?q={query_str_quoted}"
         LOG.debug("GET: %s", query)
-        resp = self.session.get(query)
+        resp = self.session.get(query, timeout=self.request_timeout)
         if not resp.ok and "rate limit exceeded" in resp.text:
             max_delay = 60
             if delay > max_delay:

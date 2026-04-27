@@ -24,7 +24,7 @@ from tabulate import tabulate
 from common.df import df_from_csv_file, df_to_csv_file
 from common.log import LOG, LOG_SPAM
 from common.proc import exec_cmd
-from vulnxscan.osv import OSV
+from vulnxscan.osv_client import OSV
 from vulnxscan.triage import triage_vulnerabilities
 from vulnxscan.utils import _is_patched, _reformat_scanner, _vuln_sortcol, _vuln_url
 from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist

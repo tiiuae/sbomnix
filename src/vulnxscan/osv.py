@@ -7,16 +7,13 @@
 """Demonstrate querying OSV db for vulnerabilities based on cdx SBOM"""
 
 import argparse
-import json
 import os
 import pathlib
-import sys
-
-import pandas as pd
-import requests
 
 from common.df import df_to_csv_file
-from common.log import LOG, LOG_SPAM, set_log_verbosity
+from common.errors import InvalidSbomError, SbomnixError
+from common.log import LOG, set_log_verbosity
+from vulnxscan.osv_client import OSV
 
 ###############################################################################
 
@@ -40,111 +37,25 @@ def getargs():
     return parser.parse_args()
 
 
-################################################################################
-
-
-class OSV:
-    """Query and parse OSV vulnerability data"""
-
-    def __init__(self):
-        self.vulns_dict = {}
-
-    def _parse_vulns(self, package, vulns):
-        setcol = self.vulns_dict.setdefault
-        for vuln in vulns["vulns"]:
-            setcol("vuln_id", []).append(vuln["id"])
-            setcol("modified", []).append(vuln["modified"])
-            setcol("package", []).append(package["package"]["name"])
-            setcol("version", []).append(package["version"])
-
-    def _parse_batch_response(self, query, resp):
-        for package, vulns in zip(query["queries"], resp["results"]):
-            if not package or not vulns:
-                continue
-            LOG.debug("package: %s", package)
-            LOG.debug("vulns: %s", vulns)
-            if "vulns" not in vulns:
-                continue
-            self._parse_vulns(package, vulns)
-
-    def _post_batch_query(self, query):
-        LOG.log(LOG_SPAM, "query: %s", query)
-        url = "https://api.osv.dev/v1/querybatch"
-        LOG.log(LOG_SPAM, "sending request to '%s'", url)
-        resp = requests.post(url, json=query, timeout=60)
-        LOG.debug("resp.status_code: %s", resp.status_code)
-        LOG.log(LOG_SPAM, "resp.json: %s", resp.json())
-        resp.raise_for_status()
-        self._parse_batch_response(query, resp.json())
-
-    def _parse_sbom(self, path):
-        LOG.debug("Parsing sbom: %s", path)
-        with open(path, encoding="utf-8") as inf:
-            json_dict = json.loads(inf.read())
-            components = json_dict["components"] + [json_dict["metadata"]["component"]]
-            components_dict = {}
-            setcol = components_dict.setdefault
-            for cmp in components:
-                setcol("name", []).append(cmp["name"])
-                setcol("version", []).append(cmp["version"])
-            df_components = pd.DataFrame(components_dict)
-            df_components.fillna("", inplace=True)
-            df_components = df_components.astype(str)
-            df_components.sort_values(
-                "name", inplace=True, key=lambda col: col.str.lower()
-            )
-            df_components.reset_index(drop=True, inplace=True)
-            return df_components
-
-    def query_vulns(self, sbom_path, ecosystems=None):
-        """Query each package in sbom for OSV vulnerabilities"""
-        LOG.info("Querying vulnerabilities")
-        df_sbom = self._parse_sbom(sbom_path)
-        # See the API description at: https://osv.dev/docs/#tag/api.
-        # The limit of max 1000 packages per single query is stated in the
-        # api documentation at the time of writing.
-        max_queries = 1000
-        batchquery = {}
-        batchquery["queries"] = []
-        if ecosystems is None:
-            ecosystems = ["GIT", "OSS-Fuzz"]
-        for drv in df_sbom.itertuples():
-            if not drv.version:
-                LOG.debug("skipping osv query (unknown version): %s", drv.name)
-                continue
-            for ecosystem in ecosystems:
-                query = {}
-                query["version"] = drv.version
-                query["package"] = {}
-                query["package"]["name"] = drv.name
-                query["package"]["ecosystem"] = ecosystem
-                batchquery["queries"].append(query)
-                if len(batchquery["queries"]) >= max_queries:
-                    self._post_batch_query(batchquery)
-                    batchquery["queries"] = []
-        if batchquery["queries"]:
-            self._post_batch_query(batchquery)
-
-    def to_dataframe(self):
-        """Return found vulnerabilities as pandas dataframe"""
-        return pd.DataFrame.from_dict(self.vulns_dict)
-
-
-################################################################################
+def _run(args):
+    if not args.SBOM.exists():
+        raise InvalidSbomError(args.SBOM)
+    osv = OSV()
+    ecosystems = [str(x).strip() for x in args.ecosystems.split(",")]
+    osv.query_vulns(args.SBOM.as_posix(), ecosystems)
+    df_vulns = osv.to_dataframe()
+    df_to_csv_file(df_vulns, args.out)
 
 
 def main():
     """main entry point"""
     args = getargs()
     set_log_verbosity(args.verbose)
-    if not args.SBOM.exists():
-        LOG.fatal("Invalid path: '%s'", args.SBOM)
-        sys.exit(1)
-    osv = OSV()
-    ecosystems = [str(x).strip() for x in args.ecosystems.split(",")]
-    osv.query_vulns(args.SBOM.as_posix(), ecosystems)
-    df_vulns = osv.to_dataframe()
-    df_to_csv_file(df_vulns, args.out)
+    try:
+        _run(args)
+    except SbomnixError as error:
+        LOG.fatal("%s", error)
+        raise SystemExit(1) from error
 
 
 ################################################################################

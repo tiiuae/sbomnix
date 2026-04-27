@@ -4,21 +4,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""SBOM document exporters and enrichment helpers."""
+"""SBOM document exporters."""
 
 import json
-import pathlib
 import re
 from datetime import datetime, timezone
-from tempfile import NamedTemporaryFile
-
-import pandas as pd
 
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
-from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency, _vuln_to_cdx_vuln
-from vulnxscan.vulnscan import VulnScan
+from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency
+from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities as _enrich_cdx
 
 
 def write_json(pathname, data, printinfo=False):
@@ -70,46 +66,8 @@ def build_cdx_document(sbomdb):
 
 
 def enrich_cdx_with_vulnerabilities(sbomdb, cdx):
-    """Add vulnerability scan results to an existing CycloneDX document."""
-    scanner = VulnScan()
-    scanner.scan_vulnix(sbomdb.target_deriver, sbomdb.buildtime)
-    temp_cdx_path = None
-    try:
-        with NamedTemporaryFile(
-            delete=False, prefix="vulnxscan_", suffix=".json"
-        ) as fcdx:
-            temp_cdx_path = fcdx.name
-            write_json(temp_cdx_path, cdx, printinfo=False)
-        scanner.scan_grype(temp_cdx_path)
-        scanner.scan_osv(temp_cdx_path)
-    finally:
-        if temp_cdx_path is not None:
-            pathlib.Path(temp_cdx_path).unlink(missing_ok=True)
-
-    cdx["vulnerabilities"] = []
-    df_vulns = pd.concat(
-        [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
-        ignore_index=True,
-    )
-    if df_vulns.empty:
-        return cdx
-    if "modified" in df_vulns.columns:
-        df_vulns = df_vulns.drop("modified", axis=1)
-    vuln_grouped = df_vulns.groupby(
-        ["package", "version", "severity", "vuln_id"],
-        as_index=False,
-    ).agg({"scanner": pd.Series.unique})
-    vuln_components = pd.merge(
-        left=vuln_grouped,
-        right=sbomdb.df_sbomdb,
-        how="inner",
-        left_on=["package", "version"],
-        right_on=["pname", "version"],
-    )
-    for vuln in vuln_components.itertuples():
-        cdx_vuln = _vuln_to_cdx_vuln(vuln)
-        cdx["vulnerabilities"].append(cdx_vuln)
-    return cdx
+    """Compatibility wrapper for moved vulnerability enrichment logic."""
+    return _enrich_cdx(sbomdb, cdx)
 
 
 def _str_to_spdxid(strval):
