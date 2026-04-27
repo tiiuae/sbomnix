@@ -13,7 +13,6 @@ import pandas as pd
 import pytest
 
 from common import df as common_df
-from common import proc as common_proc
 from common.errors import (
     CommandNotFoundError,
     CsvLoadError,
@@ -23,6 +22,7 @@ from common.errors import (
     MissingNixOutPathError,
     WhitelistApplicationError,
 )
+from common.proc import exit_unless_command_exists, exit_unless_nix_artifact
 from nixgraph import store as nixgraph_store
 from repology.reporting import report_cves
 from sbomnix import cpe
@@ -45,10 +45,10 @@ def test_df_log_ignores_none():
 
 def test_exit_unless_command_exists_raises_typed_error():
     with pytest.raises(CommandNotFoundError, match="command 'nix' is not in PATH"):
-        common_proc.exit_unless_command_exists("nix", which_fn=lambda _name: None)
+        exit_unless_command_exists("nix", which_fn=lambda _name: None)
 
 
-def test_exit_unless_nix_artifact_raises_typed_error(monkeypatch):
+def test_exit_unless_nix_artifact_raises_typed_error():
     def fail_exec_cmd(*_args, **_kwargs):
         raise subprocess.CalledProcessError(1, ["nix-store", "-q", "missing"])
 
@@ -56,13 +56,11 @@ def test_exit_unless_nix_artifact_raises_typed_error(monkeypatch):
         InvalidNixArtifactError,
         match="Specified target is not a nix artifact: 'missing'",
     ):
-        common_proc.exit_unless_nix_artifact("missing", exec_cmd_fn=fail_exec_cmd)
+        exit_unless_nix_artifact("missing", exec_cmd_fn=fail_exec_cmd)
 
 
 def test_find_deriver_raises_typed_error():
-    with pytest.raises(
-        MissingNixDeriverError, match="No deriver found for: 'missing'"
-    ):
+    with pytest.raises(MissingNixDeriverError, match="No deriver found for: 'missing'"):
         nixgraph_store.find_deriver_path("missing", find_deriver_fn=lambda _path: None)
 
 

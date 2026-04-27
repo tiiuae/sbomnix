@@ -6,11 +6,14 @@
 """Focused tests for vulnxscan parser and reporting helpers."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 from vulnxscan.parsers import parse_grype_json, parse_vulnix_json
 from vulnxscan.reporting import build_report_dataframe, write_reports
+from vulnxscan.vulnscan import VulnScan
 
 
 def test_parse_vulnix_json_updates_cvss_cache():
@@ -124,3 +127,41 @@ def test_write_reports_writes_triage_report(tmp_path):
     assert main_out.exists()
     assert (tmp_path / "vulns.triage.csv").exists()
     assert Path(main_out).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("buildtime", "expected_cmd"),
+    [
+        (False, ["vulnix", "/nix/store/my target", "-C", "--json"]),
+        (True, ["vulnix", "/nix/store/my target", "--json"]),
+    ],
+)
+def test_scan_vulnix_uses_argv_lists(monkeypatch, buildtime, expected_cmd):
+    """Build vulnix subprocess argv without splitting whitespace-containing paths."""
+    calls = []
+    parsed = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return SimpleNamespace(
+            stdout='[{"pname": "hello", "version": "1.0", "affected_by": []}]',
+            stderr="",
+            returncode=0,
+        )
+
+    monkeypatch.setattr("vulnxscan.vulnscan.exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(
+        VulnScan,
+        "_parse_vulnix",
+        lambda self, stdout: parsed.append(stdout),
+    )
+
+    VulnScan().scan_vulnix("/nix/store/my target", buildtime=buildtime)
+
+    assert calls == [
+        (
+            expected_cmd,
+            {"raise_on_error": False, "return_error": True, "log_error": False},
+        )
+    ]
+    assert parsed == ['[{"pname": "hello", "version": "1.0", "affected_by": []}]']
