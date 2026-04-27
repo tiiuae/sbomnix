@@ -21,6 +21,7 @@ path = [
   "**.yml",
   "**.toml",
   "flake.lock",
+  "pyrightconfig.json",
   "VERSION",
   "tests/resources/**",
 ]
