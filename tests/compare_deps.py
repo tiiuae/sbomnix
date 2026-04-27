@@ -213,6 +213,11 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         r".*\.conf$",
         r".*\.crt$",
         r".*\.nix$",
+        r".*\.in$",
+        r".*\.plist$",
+        r".*\.options$",
+        r".*\.build$",
+        r".*\.xcspec$",
         r".*\.toml$",
         r".*\.tmac$",
         r".*\.ds$",
@@ -226,6 +231,8 @@ def compare_dependencies(df_sbom, df_graph, sbom_type, graph_type):
         r".*\.kaem$",
         r".*\.mk$",
         r".*\-nuke-refs$",
+        r".*\-setup-hook$",
+        r".*\-remove-references-to$",
     ]
     deps_only_in_graph = _filter_set(re_no_known_drvs, deps_only_in_graph)
 
