@@ -77,7 +77,7 @@ $ nix-shell
 ```
 
 Keep in mind this doesn't add the various entrypoint binaries to your `PATH`
-directly. They are produced during the setuptools build.
+directly. They are produced when the project is installed as a Python package.
 
 While you're in the devshell, you can run various command line tools via the entrypoint files
 directly:

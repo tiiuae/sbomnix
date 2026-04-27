@@ -24,6 +24,7 @@
         pytest
         pytest-xdist
       ];
+      build_system = with pp; [ setuptools ];
       build_inputs = with pp; [
         beautifulsoup4
         colorlog
@@ -40,7 +41,6 @@
         requests
         requests-cache
         requests-ratelimiter
-        setuptools
         tabulate
       ];
     in
@@ -50,10 +50,11 @@
         sbomnix = pp.buildPythonPackage {
           pname = "sbomnix";
           version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../VERSION);
-          format = "setuptools";
+          pyproject = true;
           src = lib.cleanSource ../.;
+          build-system = build_system;
           nativeCheckInputs = check_inputs;
-          propagatedBuildInputs = build_inputs;
+          dependencies = build_inputs;
           pythonImportsCheck = [ "sbomnix" ];
           makeWrapperArgs = [
             "--prefix PATH : ${lib.makeBinPath prefix_path}"
@@ -66,9 +67,10 @@
           pkgs.python3.pkgs.pylint # for running pylint manually in devshell
           pkgs.ruff # for running ruff manually in devshell
           pkgs.isort # for running isort manually in devshell
-          check_inputs
-          build_inputs
-        ];
+        ]
+        ++ check_inputs
+        ++ build_system
+        ++ build_inputs;
         # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
         # able to find the python packages in the repo) becomes possible.
         # `pytest.ini` already sets this for invoking `pytest`
