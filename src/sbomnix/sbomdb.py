@@ -16,7 +16,8 @@ import uuid
 import numpy as np
 import pandas as pd
 
-from common.utils import LOG, df_to_csv_file
+from common.df import df_to_csv_file
+from common.log import LOG
 from nixgraph.graph import NixDependencies
 from sbomnix.exporters import (
     build_cdx_document,
