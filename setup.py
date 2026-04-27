@@ -27,6 +27,7 @@ requires = [
     "colorlog",
     "filelock",
     "graphviz",
+    "license-expression",
     "numpy",
     "pandas",
     "packageurl-python",

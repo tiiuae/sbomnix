@@ -8,8 +8,7 @@
 
 import re
 
-from reuse._licenses import LICENSE_MAP as SPDX_LICENSES
-
+from common.spdx import canonicalize_spdx_license_id
 from common.utils import LOG, LOG_SPAM
 from vulnxscan.utils import _vuln_source, _vuln_url
 
@@ -29,9 +28,12 @@ def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
     for license_string in license_strings:
         # Give up generating the 'licenses' entry if license id should be
         # spdx but it's not:
-        if "spdxid" in column_name and license_string not in SPDX_LICENSES:
-            LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
-            return []
+        if "spdxid" in column_name:
+            canonical = canonicalize_spdx_license_id(license_string)
+            if not canonical:
+                LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
+                return []
+            license_string = canonical
         license_dict = {"license": {cdx_license_type: license_string}}
         licenses.append(license_dict)
     return licenses

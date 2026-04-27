@@ -30,6 +30,7 @@
         dfdiskcache
         filelock
         graphviz
+        pp."license-expression"
         numpy
         packageurl-python
         packaging

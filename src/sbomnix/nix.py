@@ -10,7 +10,8 @@ import os
 
 import pandas as pd
 
-from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd, parse_nix_derivation_show
+from common.nix_utils import parse_nix_derivation_show
+from common.utils import LOG, LOG_SPAM, exec_cmd, nix_cmd
 from sbomnix.cpe import CPE
 from sbomnix.derivation import load
 
