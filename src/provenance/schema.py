@@ -2,13 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-few-public-methods,too-many-instance-attributes
 
 """Helpers for assembling provenance documents."""
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any, Callable, Protocol
 
 from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
@@ -16,20 +18,35 @@ from common.proc import exec_cmd, nix_cmd
 from provenance.dependencies import get_dependencies
 from provenance.subjects import get_subjects
 
+JsonDict = dict[str, Any]
+HookFn = Callable[..., Any]
 
-def get_external_parameters(metadata):
+
+class ProvenanceMetadata(Protocol):
+    """Build metadata fields consumed by provenance schema assembly."""
+
+    build_type: str
+    builder_id: str
+    invocation_id: str
+    build_begin_ts: str
+    build_finished_ts: str
+    external_parameters: str
+    internal_parameters: str
+
+
+def get_external_parameters(metadata: ProvenanceMetadata) -> JsonDict:
     """Get externalParameters from env variable."""
     params = json.loads(metadata.external_parameters or "{}")
     return {key: value for key, value in params.items() if value}
 
 
-def get_internal_parameters(metadata):
+def get_internal_parameters(metadata: ProvenanceMetadata) -> JsonDict:
     """Get internalParameters from env variable."""
     params = json.loads(metadata.internal_parameters or "{}")
     return {key: value for key, value in params.items() if value}
 
 
-def timestamp(unix_time):
+def timestamp(unix_time: str) -> str:
     """Turn unix timestamp into RFC 3339 format."""
     if not unix_time:
         return ""
@@ -46,36 +63,23 @@ def timestamp(unix_time):
 class SchemaHooks:
     """Injectable helpers used by provenance schema assembly."""
 
-    exec_cmd_fn: object = None
-    nix_cmd_fn: object = None
-    parse_nix_derivation_show_fn: object = None
-    get_subjects_fn: object = None
-    get_dependencies_fn: object = None
-    get_external_parameters_fn: object = None
-    get_internal_parameters_fn: object = None
-    timestamp_fn: object = None
-    log: object = LOG
-
-    def __post_init__(self):
-        if self.exec_cmd_fn is None:
-            self.exec_cmd_fn = exec_cmd
-        if self.nix_cmd_fn is None:
-            self.nix_cmd_fn = nix_cmd
-        if self.parse_nix_derivation_show_fn is None:
-            self.parse_nix_derivation_show_fn = parse_nix_derivation_show
-        if self.get_subjects_fn is None:
-            self.get_subjects_fn = get_subjects
-        if self.get_dependencies_fn is None:
-            self.get_dependencies_fn = get_dependencies
-        if self.get_external_parameters_fn is None:
-            self.get_external_parameters_fn = get_external_parameters
-        if self.get_internal_parameters_fn is None:
-            self.get_internal_parameters_fn = get_internal_parameters
-        if self.timestamp_fn is None:
-            self.timestamp_fn = timestamp
+    exec_cmd_fn: HookFn = exec_cmd
+    nix_cmd_fn: HookFn = nix_cmd
+    parse_nix_derivation_show_fn: HookFn = parse_nix_derivation_show
+    get_subjects_fn: HookFn = get_subjects
+    get_dependencies_fn: HookFn = get_dependencies
+    get_external_parameters_fn: HookFn = get_external_parameters
+    get_internal_parameters_fn: HookFn = get_internal_parameters
+    timestamp_fn: HookFn = timestamp
+    log: logging.Logger = LOG
 
 
-def provenance_document(target, metadata, recursive=False, hooks=None):
+def provenance_document(
+    target: str,
+    metadata: ProvenanceMetadata,
+    recursive: bool = False,
+    hooks: SchemaHooks | None = None,
+) -> JsonDict:
     """Create the provenance file."""
     hooks = SchemaHooks() if hooks is None else hooks
 

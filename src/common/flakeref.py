@@ -4,22 +4,23 @@
 
 """Flakeref resolution helpers."""
 
+import logging
 import pathlib
 import re
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.log import LOG, LOG_VERBOSE
-from common.proc import exec_cmd, nix_cmd
+from common.proc import ExecCmdFn, exec_cmd, nix_cmd
 
 
 def try_resolve_flakeref(
-    flakeref,
-    force_realise=False,
-    impure=False,
+    flakeref: str,
+    force_realise: bool = False,
+    impure: bool = False,
     *,
-    exec_cmd_fn=None,
-    log=None,
-):
+    exec_cmd_fn: ExecCmdFn | None = None,
+    log: logging.Logger | None = None,
+) -> str | None:
     """
     Resolve flakeref to out-path, force-realising the output if
     ``force_realise`` is True.
@@ -51,7 +52,7 @@ def try_resolve_flakeref(
     return nixpath
 
 
-def _looks_like_flakeref(flakeref):
+def _looks_like_flakeref(flakeref: str) -> bool:
     """Return true if the input is likely intended as a flake reference."""
     looks_like = False
     if flakeref:
