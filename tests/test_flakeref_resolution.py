@@ -6,9 +6,12 @@
 
 """Focused tests for flakeref resolution helpers."""
 
+import string
 from types import SimpleNamespace
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.flakeref import try_resolve_flakeref
@@ -27,6 +30,26 @@ class CapturingLogger:
 
     def debug(self, msg, *args):
         self.records.append(("debug", msg, args))
+
+
+SAFE_PATH_CHARS = string.ascii_letters + string.digits + "._-"
+PATH_SEGMENTS = st.text(SAFE_PATH_CHARS, min_size=1, max_size=16).filter(
+    lambda segment: segment not in {".", ".."}
+)
+PLAIN_MISSING_PATHS = st.lists(PATH_SEGMENTS, min_size=1, max_size=3).map(
+    lambda parts: "hypothesis-missing/" + "/".join(parts)
+)
+FLAKE_ATTRS = st.text(SAFE_PATH_CHARS, min_size=1, max_size=24)
+FLAKE_REFS = st.one_of(
+    FLAKE_ATTRS.map(lambda attr: f".#{attr}"),
+    FLAKE_ATTRS.map(lambda attr: f"nixpkgs?ref=nixos-unstable#{attr}"),
+    st.builds(
+        lambda owner, repo, attr: f"github:{owner}/{repo}#{attr}",
+        PATH_SEGMENTS,
+        PATH_SEGMENTS,
+        FLAKE_ATTRS,
+    ),
+)
 
 
 def test_try_resolve_flakeref_uses_argv_lists():
@@ -170,6 +193,16 @@ def test_try_resolve_flakeref_returns_none_for_non_flake_path():
     assert resolved is None
 
 
+@given(PLAIN_MISSING_PATHS)
+def test_try_resolve_flakeref_returns_none_for_generated_plain_paths(path):
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="", stderr="dummy eval failure", returncode=1)
+
+    resolved = try_resolve_flakeref(path, exec_cmd_fn=fake_exec_cmd)
+
+    assert resolved is None
+
+
 @pytest.mark.parametrize("path", ["missing", "./missing", "foo/bar"])
 def test_try_resolve_flakeref_returns_none_for_missing_relative_paths(path):
     def fake_exec_cmd(_cmd, **_kwargs):
@@ -199,6 +232,38 @@ def test_try_resolve_flakeref_returns_none_for_existing_fragment_path_when_eval_
 
     assert resolved is None
     assert calls
+
+
+@given(FLAKE_REFS)
+def test_try_resolve_flakeref_raises_for_generated_flakeref_failures(flakeref):
+    calls = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return SimpleNamespace(stdout="", stderr="attribute missing", returncode=1)
+
+    with pytest.raises(FlakeRefResolutionError, match="attribute missing"):
+        try_resolve_flakeref(flakeref, exec_cmd_fn=fake_exec_cmd)
+
+    assert flakeref in calls[0][0]
+    assert calls[0][1] == {
+        "raise_on_error": False,
+        "return_error": True,
+        "log_error": False,
+    }
+
+
+@given(FLAKE_REFS)
+def test_try_resolve_flakeref_strips_generated_eval_output(flakeref):
+    resolved_path = "/nix/store/00000000000000000000000000000000-package"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert flakeref in cmd
+        return SimpleNamespace(stdout=f"{resolved_path}\n", stderr="", returncode=0)
+
+    resolved = try_resolve_flakeref(flakeref, exec_cmd_fn=fake_exec_cmd)
+
+    assert resolved == resolved_path
 
 
 def test_flakeref_realisation_error_accepts_none_stderr():
