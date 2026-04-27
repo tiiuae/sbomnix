@@ -8,7 +8,7 @@ import pathlib
 import re
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.proc import exec_cmd, nix_cmd
 
 
@@ -27,11 +27,15 @@ def try_resolve_flakeref(
     exec_cmd_fn = exec_cmd if exec_cmd_fn is None else exec_cmd_fn
     log = LOG if log is None else log
 
-    log.info("Evaluating '%s'", flakeref)
+    looks_like_flakeref = _looks_like_flakeref(flakeref)
+    if looks_like_flakeref:
+        log.info("Evaluating flakeref '%s'", flakeref)
+    else:
+        log.log(LOG_VERBOSE, "Evaluating '%s'", flakeref)
     cmd = nix_cmd("eval", "--raw", flakeref, impure=impure)
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
     if ret is None or ret.returncode != 0:
-        if _looks_like_flakeref(flakeref):
+        if looks_like_flakeref:
             raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
         log.debug("not a flakeref: '%s'", flakeref)
         return None
@@ -39,7 +43,7 @@ def try_resolve_flakeref(
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     if not force_realise:
         return nixpath
-    log.info("Try force-realising flakeref '%s'", flakeref)
+    log.info("Realising flakeref '%s'", flakeref)
     cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
     if ret is None or ret.returncode != 0:

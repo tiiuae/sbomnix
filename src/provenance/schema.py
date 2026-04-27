@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
 from provenance.dependencies import get_dependencies
@@ -89,7 +89,7 @@ def provenance_document(target, metadata, recursive=False, hooks=None):
     drv_path = next(iter(drv_json))
     drv_json = drv_json[drv_path]
 
-    hooks.log.info("Resolved derivation path is '%s'", drv_path)
+    hooks.log.log(LOG_VERBOSE, "Resolved derivation path is '%s'", drv_path)
 
     return {
         "_type": "https://in-toto.io/Statement/v1",

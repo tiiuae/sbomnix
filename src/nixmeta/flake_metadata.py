@@ -16,6 +16,7 @@ def get_flake_metadata(flakeref, *, exec_cmd_fn=exec_cmd, nix_cmd_fn=nix_cmd, lo
     """Return ``nix flake metadata`` JSON for the given flakeref."""
     if flakeref.startswith("nixpkgs="):
         flakeref = flakeref.removeprefix("nixpkgs=")
+    log.info("Reading flake metadata for '%s'", flakeref)
     cmd = nix_cmd_fn("flake", "metadata", flakeref, "--json")
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
     if ret is None or ret.returncode != 0:
@@ -125,6 +126,7 @@ def nixref_to_nixpkgs_path(
     """Return the nix store path of the nixpkgs pinned by ``flakeref``."""
     if not flakeref:
         return None
+    log.info("Resolving nixpkgs path for '%s'", flakeref)
     log.debug("Finding meta-info for nixpkgs pinned in nixref: %s", flakeref)
     match = re.match(r"([^#]+)#", flakeref)
     if match:

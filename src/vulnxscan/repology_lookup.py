@@ -132,7 +132,7 @@ class RepologyVulnerabilityLookup:
 
     def query_repology_versions(self, df_vuln_pkgs):
         """Augment vulnerable package rows with Repology version data."""
-        LOG.info("Querying repology")
+        LOG.verbose("Querying repology")
         result_dict = {}
         whitelist_cols = "whitelist" in df_vuln_pkgs.columns
         for vuln in df_vuln_pkgs.itertuples():

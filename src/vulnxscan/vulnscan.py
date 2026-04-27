@@ -9,12 +9,10 @@ VulnScan abstracts over querying and collecting vulnerability information
 from grype, vulnix, and osv databases
 """
 
-import logging
-
 import pandas as pd
 
 from common.df import df_to_csv_file
-from common.log import LOG, LOG_SPAM
+from common.log import LOG, LOG_SPAM, is_debug_enabled
 from common.proc import exec_cmd
 from vulnxscan import parsers as vulnxscan_parsers
 from vulnxscan import reporting as vulnxscan_reporting
@@ -42,7 +40,7 @@ class VulnScan:
             log=LOG,
         )
         if not self.df_vulnix.empty:
-            if LOG.level <= logging.DEBUG:
+            if is_debug_enabled():
                 df_to_csv_file(self.df_vulnix, "df_vulnix.csv")
 
     def scan_vulnix(self, target_path, buildtime=False):
@@ -69,7 +67,7 @@ class VulnScan:
             log_spam=LOG_SPAM,
         )
         if not self.df_grype.empty:
-            if LOG.level <= logging.DEBUG:
+            if is_debug_enabled():
                 df_to_csv_file(self.df_grype, "df_grype.csv")
 
     def scan_grype(self, sbom_path):
@@ -90,7 +88,7 @@ class VulnScan:
             log_spam=LOG_SPAM,
         )
         if not self.df_osv.empty:
-            if LOG.level <= logging.DEBUG:
+            if is_debug_enabled():
                 df_to_csv_file(self.df_osv, "df_osv.csv")
 
     def scan_osv(self, sbom_path):
@@ -108,7 +106,7 @@ class VulnScan:
         if self.df_report.empty:
             self.df_report = None
             return
-        if LOG.level <= logging.DEBUG:
+        if is_debug_enabled():
             df_report_raw = pd.concat(
                 [
                     df
@@ -147,10 +145,10 @@ class VulnScan:
         if sbom_csv:
             self._filter_patched(sbom_csv)
         if args.whitelist:
-            LOG.info("Applying whitelist '%s'", args.whitelist)
+            LOG.verbose("Applying whitelist '%s'", args.whitelist)
             self._apply_whitelist(args.whitelist)
         if args.triage:
-            LOG.info("Running vulnerability triage")
+            LOG.verbose("Running vulnerability triage")
             self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
         # Rename 'version' to 'version_local'
         self.df_report.rename(columns={"version": "version_local"}, inplace=True)

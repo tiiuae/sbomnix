@@ -94,16 +94,17 @@ def _wrap_verbose_parser(parser):
     _VERBOSE_WRAPPED_PARSERS.add(parser)
 
 
-def add_verbose_argument(parser, default=1, max_level=3, root_parser=None):
+def add_verbose_argument(parser, default=0, max_level=3, root_parser=None):
     """Add a standard verbose flag to an argparse parser."""
     _wrap_verbose_parser(root_parser or parser)
     parser.set_defaults(verbose=default, **{_VERBOSE_COUNT_DEST: 0})
+    levels = ["0=INFO", "1=VERBOSE", "2=DEBUG", "3=SPAM"]
+    level_help = ", ".join(levels[: max_level + 1])
     short_help = (
-        f"Increase verbosity; repeat as -vv for level 2 (default: --verbose={default})"
+        f"Increase verbosity; repeat as -vv for DEBUG (default: --verbose={default})"
     )
     long_help = (
-        f"Set the debug verbosity level between 0-{max_level} explicitly "
-        f"(default: --verbose={default})"
+        f"Set verbosity level explicitly ({level_help}) (default: --verbose={default})"
     )
     parser.add_argument(
         "-v",

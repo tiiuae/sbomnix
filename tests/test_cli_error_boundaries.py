@@ -24,7 +24,7 @@ def test_vulnxscan_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
 
     args = SimpleNamespace(
         TARGET=invalid_sbom.as_posix(),
-        verbose=1,
+        verbose=0,
         out="vulns.csv",
         buildtime=False,
         sbom=True,
@@ -48,7 +48,7 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
     missing_sbom = tmp_path / "missing.json"
     args = SimpleNamespace(
         SBOM=missing_sbom,
-        verbose=1,
+        verbose=0,
         out="osv.csv",
         ecosystems="GIT",
     )
@@ -71,7 +71,7 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
                 buildtime=False,
                 local=False,
                 out="nix_outdated.csv",
-                verbose=1,
+                verbose=0,
             ),
             lambda monkeypatch: None,
             "resolve_nix_target",
@@ -87,7 +87,7 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
                 colorize=None,
                 until=None,
                 pathnames=False,
-                verbose=1,
+                verbose=0,
             ),
             lambda monkeypatch: None,
             "resolve_nix_target",
@@ -96,7 +96,7 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
             vulnxscan_cli,
             SimpleNamespace(
                 TARGET=".#broken",
-                verbose=1,
+                verbose=0,
                 out="vulns.csv",
                 buildtime=False,
                 sbom=False,
@@ -115,7 +115,7 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
                 flakeref="github:NixOS/nixpkgs?ref=nixos-unstable",
                 out="nixmeta.csv",
                 append=False,
-                verbose=1,
+                verbose=0,
             ),
             lambda monkeypatch: None,
             "exit_unless_command_exists",

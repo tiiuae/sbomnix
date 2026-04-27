@@ -95,7 +95,7 @@ def triage_vulnerabilities(
         axis=1,
     )
     if search_nix_prs:
-        LOG.info("Querying nixpkgs github PRs")
+        LOG.verbose("Querying nixpkgs github PRs")
         df_vuln_pkgs["nixpkgs_pr"] = df_vuln_pkgs.apply(
             github_lookup.find_nixpkgs_prs,
             axis=1,

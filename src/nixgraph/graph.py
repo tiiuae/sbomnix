@@ -6,12 +6,10 @@
 
 """Python script to query and visualize nix package dependencies."""
 
-import logging
-
 import pandas as pd
 
 from common.df import df_to_csv_file
-from common.log import LOG, LOG_SPAM
+from common.log import LOG, LOG_SPAM, is_debug_enabled
 from common.proc import exec_cmd
 from nixgraph.parsing import parse_nix_query_out
 from nixgraph.render import NixDependencyGraph
@@ -82,7 +80,7 @@ class NixDependencies:
                 by=["src_pname", "src_path", "target_pname", "target_path"],
                 inplace=True,
             )
-        if LOG.level <= logging.DEBUG:
+        if is_debug_enabled():
             df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
         return df
 

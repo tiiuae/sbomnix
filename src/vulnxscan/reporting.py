@@ -12,7 +12,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from common.df import df_from_csv_file, df_to_csv_file
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from vulnxscan.utils import _is_patched, _reformat_scanner, _vuln_sortcol, _vuln_url
 from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist
 
@@ -59,7 +59,7 @@ def build_report_dataframe(df_vulnix, df_grype, df_osv, *, log=LOG):
 
 def filter_patched_report(df_report, sbom_csv, *, log=LOG):
     """Filter out vulnerabilities that are marked as patched in the SBOM CSV."""
-    log.info("Filtering patched vulnerabilities")
+    log.log(LOG_VERBOSE, "Filtering patched vulnerabilities")
     df_sbom_csv = df_from_csv_file(sbom_csv)
     df = pd.merge(
         left=df_report,

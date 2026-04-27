@@ -16,7 +16,7 @@ import uuid
 import numpy as np
 
 from common.df import df_to_csv_file
-from common.log import LOG
+from common.log import LOG, is_debug_enabled
 from nixgraph.graph import NixDependencies
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
@@ -67,10 +67,10 @@ class SbomDb:
         # Use a random UUID as the serial number when any data source that is
         # not strictly coming from the target_deriver is used
         if include_vulns or include_meta or include_cpe:
-            LOG.info("Using random UUIDv4")
+            LOG.verbose("Using random UUIDv4")
             self.uuid = uuid.uuid4()
         else:
-            LOG.info("Using stable UUIDv5 for '%s'", self.target_deriver)
+            LOG.verbose("Using stable UUIDv5 for '%s'", self.target_deriver)
             # This uses a UUIDv5, which uses the deriver's store path as its input,
             # resulting in a stable UUID across runs, depending on the SBOM's subject.
             self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, self.target_deriver)
@@ -139,7 +139,7 @@ class SbomDb:
                 "SBOM will include only minimum set of attributes"
             )
             return
-        if LOG.level <= logging.DEBUG:
+        if is_debug_enabled():
             df_to_csv_file(df_meta, "meta.csv")
         # Join based on package name including the version number
         self.df_sbomdb = self.df_sbomdb.merge(

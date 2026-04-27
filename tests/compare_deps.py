@@ -10,15 +10,15 @@
 
 import argparse
 import json
-import logging
 import os
 import pathlib
 import sys
 
 import pandas as pd
 
+from common.cli_args import add_verbose_argument
 from common.df import df_from_csv_file, df_to_csv_file
-from common.log import LOG, LOG_SPAM, set_log_verbosity
+from common.log import LOG, LOG_SPAM, is_debug_enabled, set_log_verbosity
 from common.regex import regex_match
 
 ###############################################################################
@@ -32,8 +32,7 @@ def getargs():
         "--sbom /path/to/sbom.json --graph /path/to/graph.csv"
     )
     parser = argparse.ArgumentParser(description=desc, epilog=epil)
-    helps = "Set the debug verbosity level between 0-3 (default: --verbose=1)"
-    parser.add_argument("--verbose", help=helps, type=int, default=1)
+    add_verbose_argument(parser)
     helps = "Path to sbom in csv format"
     parser.add_argument("--sbom", help=helps, type=pathlib.Path, required=True)
     helps = "Path to graph in csv format"
@@ -96,7 +95,7 @@ def _parse_sbom(path):
             right_on=["ref"],
         )
         df_parsed.fillna("", inplace=True)
-        if LOG.level <= logging.DEBUG:
+        if is_debug_enabled():
             df_to_csv_file(df_parsed, "df_sbom_parsed.csv")
         return df_parsed, sbom_type
 

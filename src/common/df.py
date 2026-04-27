@@ -50,7 +50,7 @@ def df_regex_filter(df, column, regex):
 
 def df_log(df, loglevel, tablefmt="presto"):
     """Log dataframe with given loglevel and tablefmt."""
-    if LOG.level <= loglevel:
+    if LOG.isEnabledFor(loglevel):
         if df is None or df.empty:
             return
         df = df.fillna("")

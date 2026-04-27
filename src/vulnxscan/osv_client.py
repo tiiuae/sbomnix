@@ -86,7 +86,7 @@ class OSV:
 
     def query_vulns(self, sbom_path, ecosystems=None):
         """Query each package in an SBOM for OSV vulnerabilities."""
-        LOG.info("Querying vulnerabilities")
+        LOG.verbose("Querying vulnerabilities")
         df_sbom = self._parse_sbom(sbom_path)
         max_queries = 1000
         batchquery = {"queries": []}

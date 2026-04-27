@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring,missing-function-docstring
 
 """Focused tests for flakeref resolution helpers."""
 
@@ -12,6 +12,21 @@ import pytest
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.flakeref import try_resolve_flakeref
+from common.log import LOG_VERBOSE
+
+
+class CapturingLogger:
+    def __init__(self):
+        self.records = []
+
+    def info(self, msg, *args):
+        self.records.append(("info", msg, args))
+
+    def log(self, level, msg, *args):
+        self.records.append(("log", level, msg, args))
+
+    def debug(self, msg, *args):
+        self.records.append(("debug", msg, args))
 
 
 def test_try_resolve_flakeref_uses_argv_lists():
@@ -61,6 +76,60 @@ def test_try_resolve_flakeref_uses_argv_lists():
             {"raise_on_error": False, "return_error": True, "log_error": False},
         ),
     ]
+
+
+def test_try_resolve_flakeref_logs_flake_progress_at_info():
+    logger = CapturingLogger()
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1] == "eval":
+            return SimpleNamespace(
+                stdout="/nix/store/resolved\n",
+                stderr="",
+                returncode=0,
+            )
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    resolved = try_resolve_flakeref(
+        ".#hello",
+        force_realise=True,
+        exec_cmd_fn=fake_exec_cmd,
+        log=logger,
+    )
+
+    assert resolved == "/nix/store/resolved"
+    assert (
+        "info",
+        "Evaluating flakeref '%s'",
+        (".#hello",),
+    ) in logger.records
+    assert (
+        "info",
+        "Realising flakeref '%s'",
+        (".#hello",),
+    ) in logger.records
+
+
+def test_try_resolve_flakeref_keeps_plain_path_probe_verbose():
+    logger = CapturingLogger()
+
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="", stderr="dummy eval failure", returncode=1)
+
+    resolved = try_resolve_flakeref(
+        "/nix/store/not-a-flake-output",
+        exec_cmd_fn=fake_exec_cmd,
+        log=logger,
+    )
+
+    assert resolved is None
+    assert (
+        "log",
+        LOG_VERBOSE,
+        "Evaluating '%s'",
+        ("/nix/store/not-a-flake-output",),
+    ) in (logger.records)
+    assert not [record for record in logger.records if record[0] == "info"]
 
 
 def test_try_resolve_flakeref_raises_on_failed_force_realise():

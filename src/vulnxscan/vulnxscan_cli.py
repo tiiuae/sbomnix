@@ -138,7 +138,11 @@ def _run(args):
         scanner.scan_osv(sbom_cdx_path)
         scanner.report(args, sbom_csv_path)
     finally:
-        if not args.sbom and LOG.level > logging.DEBUG and sbom_artifact is not None:
+        if (
+            not args.sbom
+            and not LOG.isEnabledFor(logging.DEBUG)
+            and sbom_artifact is not None
+        ):
             # Remove generated temp files unless verbosity is DEBUG or more verbose
             sbom_artifact.cleanup()
 
