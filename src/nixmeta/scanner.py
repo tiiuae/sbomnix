@@ -5,9 +5,7 @@
 
 """Summarize nixpkgs meta-attributes"""
 
-import json
 import pathlib
-import re
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
@@ -15,6 +13,13 @@ import pandas as pd
 from common.df import df_from_csv_file, df_to_csv_file
 from common.log import LOG, LOG_SPAM
 from common.proc import exec_cmd, nix_cmd
+from nixmeta.flake_metadata import get_flake_metadata as _get_flake_metadata_impl
+from nixmeta.flake_metadata import is_nixpkgs_metadata as _is_nixpkgs_metadata_impl
+from nixmeta.flake_metadata import (
+    nixref_to_nixpkgs_path as _nixref_to_nixpkgs_path_impl,
+)
+from nixmeta.metadata_json import parse_json_metadata as _parse_json_metadata_impl
+from nixmeta.metadata_json import parse_meta_entry as _parse_meta_entry_impl
 
 ###############################################################################
 
@@ -106,187 +111,37 @@ class NixMetaScanner:
 
 def nixref_to_nixpkgs_path(flakeref):
     """Return the store path of the nixpkgs pinned by flakeref"""
-    if not flakeref:
-        return None
-    LOG.debug("Finding meta-info for nixpkgs pinned in nixref: %s", flakeref)
-    # Strip possible target specifier from flakeref (i.e. everything after '#')
-    m_flakeref = re.match(r"([^#]+)#", flakeref)
-    if m_flakeref:
-        flakeref = m_flakeref.group(1)
-        LOG.debug("Stripped target specifier: %s", flakeref)
-    meta_json = _get_flake_metadata(flakeref)
-    if not _is_nixpkgs_metadata(meta_json):
-        # If flakeref is not nixpkgs flake, try finding the nixpkgs
-        # revision pinned by the given flakeref
-        LOG.debug("non-nixpkgs flakeref: %s", flakeref)
-        nixpkgs_flakeref = _get_nixpkgs_flakeref(meta_json)
-        if not nixpkgs_flakeref:
-            LOG.warning("Failed parsing locked nixpkgs: %s", flakeref)
-            return None
-        LOG.log(LOG_SPAM, "using nixpkgs_flakeref: %s", nixpkgs_flakeref)
-        meta_json = _get_flake_metadata(nixpkgs_flakeref)
-        if not _is_nixpkgs_metadata(meta_json):
-            LOG.warning("Failed reading nixpkgs metadata: %s", flakeref)
-            return None
-    return pathlib.Path(meta_json["path"]).absolute()
+    return _nixref_to_nixpkgs_path_impl(
+        flakeref,
+        get_flake_metadata_fn=_get_flake_metadata,
+        log=LOG,
+        log_spam=LOG_SPAM,
+    )
 
 
 def _get_flake_metadata(flakeref):
-    """
-    Return json object detailing the output of nix flake metadata
-    for given flakeref
-    """
-    # Strip possible nixpkgs= prefix to support cases where flakeref is
-    # given the NIX_PATH environment variable
-    if flakeref.startswith("nixpkgs="):
-        flakeref = flakeref.removeprefix("nixpkgs=")
-    # Read nix flake metadata as json
-    cmd = nix_cmd("flake", "metadata", flakeref, "--json")
-    ret = exec_cmd(cmd, raise_on_error=False, return_error=True, log_error=False)
-    if ret is None or ret.returncode != 0:
-        LOG.warning("Failed reading flake metadata: %s", flakeref)
-        return None
-    meta_json = json.loads(ret.stdout)
-    LOG.log(LOG_SPAM, meta_json)
-    return meta_json
+    """Compatibility wrapper around flake metadata loading."""
+    return _get_flake_metadata_impl(
+        flakeref,
+        exec_cmd_fn=exec_cmd,
+        nix_cmd_fn=nix_cmd,
+        log=LOG,
+    )
 
 
 def _is_nixpkgs_metadata(meta_json):
     """Return true if meta_json describes nixpkgs flakeref"""
-    try:
-        # Needed to support cases where flakeref is a nix store path
-        # to nixpkgs-source directory
-        if (
-            "path" in meta_json
-            and "description" in meta_json
-            and meta_json["description"]
-            == "A collection of packages for the Nix package manager"
-        ):
-            return True
-        if (
-            "path" in meta_json
-            and meta_json["locked"]["owner"] == "NixOS"
-            and meta_json["locked"]["repo"] == "nixpkgs"
-        ):
-            return True
-    except (KeyError, TypeError):
-        return False
-    return False
-
-
-def _get_flake_nixpkgs_val(meta_json, key):
-    """Given nixpkgs flake metadata, return the locked key"""
-    try:
-        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"][key]
-    except (KeyError, TypeError):
-        return None
-
-
-def _get_flake_nixpkgs_obj(meta_json):
-    """Given nixpkgs flake metadata, return the locked nixpkgs object"""
-    try:
-        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"]
-    except (KeyError, TypeError):
-        return None
-
-
-def _get_nixpkgs_flakeref_github(meta_json):
-    owner = _get_flake_nixpkgs_val(meta_json, "owner")
-    repo = _get_flake_nixpkgs_val(meta_json, "repo")
-    rev = _get_flake_nixpkgs_val(meta_json, "rev")
-    if None in [owner, repo, rev]:
-        LOG.debug(
-            "owner, repo, or rev not found: %s", _get_flake_nixpkgs_obj(meta_json)
-        )
-        return None
-    return f"github:{owner}/{repo}?rev={rev}"
-
-
-def _get_nixpkgs_flakeref_git(meta_json):
-    url = _get_flake_nixpkgs_val(meta_json, "url")
-    rev = _get_flake_nixpkgs_val(meta_json, "rev")
-    ref = _get_flake_nixpkgs_val(meta_json, "ref")
-    if None in [url, rev, ref]:
-        LOG.debug("url, rev, or ref not found: %s", _get_flake_nixpkgs_obj(meta_json))
-        return None
-    return f"git+{url}?ref={ref}&rev={rev}"
-
-
-def _get_nixpkgs_flakeref_path(meta_json):
-    path = _get_flake_nixpkgs_val(meta_json, "path")
-    if None in [path]:
-        LOG.debug("path not found: %s", _get_flake_nixpkgs_obj(meta_json))
-        return None
-    return f"path:{path}"
-
-
-def _get_nixpkgs_flakeref_tarball(meta_json):
-    url = _get_flake_nixpkgs_val(meta_json, "url")
-    if None in [url]:
-        LOG.debug("url not found: %s", _get_flake_nixpkgs_obj(meta_json))
-        return None
-    return f"{url}"
-
-
-def _get_nixpkgs_flakeref(meta_json):
-    """Given nixpkgs flake metadata, return the locked ref"""
-    _type = _get_flake_nixpkgs_val(meta_json, "type")
-    nixpkgs_flakeref = None
-    if _type == "github":
-        nixpkgs_flakeref = _get_nixpkgs_flakeref_github(meta_json)
-    elif _type == "git":
-        nixpkgs_flakeref = _get_nixpkgs_flakeref_git(meta_json)
-    elif _type == "path":
-        nixpkgs_flakeref = _get_nixpkgs_flakeref_path(meta_json)
-    elif _type == "tarball":
-        nixpkgs_flakeref = _get_nixpkgs_flakeref_tarball(meta_json)
-    else:
-        LOG.debug("Unsupported nixpkgs locked type: %s", _type)
-    return nixpkgs_flakeref
+    return _is_nixpkgs_metadata_impl(meta_json)
 
 
 def _parse_meta_entry(meta, key):
     """Parse the given key from the metadata entry"""
-    items = []
-    if isinstance(meta, dict):
-        items.extend([_parse_meta_entry(meta.get(key, ""), key)])
-    elif isinstance(meta, list):
-        items.extend([_parse_meta_entry(x, key) for x in meta])
-    else:
-        return str(meta)
-    return ";".join(list(filter(None, items)))
+    return _parse_meta_entry_impl(meta, key)
 
 
 def _parse_json_metadata(json_filename):
     """Parse package metadata from the specified json file"""
-    with open(json_filename, "r", encoding="utf-8") as inf:
-        LOG.debug('Loading meta-info from "%s"', json_filename)
-        json_dict = json.loads(inf.read())
-        dict_selected = {}
-        setcol = dict_selected.setdefault
-        for _, pkg in json_dict.items():
-            # generic package info
-            setcol("name", []).append(pkg.get("name", ""))
-            setcol("pname", []).append(pkg.get("pname", ""))
-            setcol("version", []).append(pkg.get("version", ""))
-            # meta
-            meta = pkg.get("meta", {})
-            homepage = _parse_meta_entry(meta, key="homepage")
-            setcol("meta_homepage", []).append(homepage)
-            setcol("meta_unfree", []).append(meta.get("unfree", ""))
-            setcol("meta_description", []).append(meta.get("description", ""))
-            setcol("meta_position", []).append(meta.get("position", ""))
-            # meta.license
-            meta_license = meta.get("license", {})
-            license_short = _parse_meta_entry(meta_license, key="shortName")
-            setcol("meta_license_short", []).append(license_short)
-            license_spdx = _parse_meta_entry(meta_license, key="spdxId")
-            setcol("meta_license_spdxid", []).append(license_spdx)
-            # meta.maintainers
-            meta_maintainers = meta.get("maintainers", {})
-            emails = _parse_meta_entry(meta_maintainers, key="email")
-            setcol("meta_maintainers_email", []).append(emails)
-        return pd.DataFrame(dict_selected).astype(str)
+    return _parse_json_metadata_impl(json_filename, log=LOG)
 
 
 ###############################################################################
