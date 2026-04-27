@@ -101,7 +101,10 @@ def _run(args):
         include_cpe=not args.exclude_cpe_matching,
     )
     if args.cdx:
-        sbomdb.to_cdx(args.cdx)
+        cdx = sbomdb.to_cdx_data()
+        if args.include_vulns:
+            sbomdb.enrich_cdx_with_vulnerabilities(cdx)
+        sbomdb.write_json(args.cdx, cdx, printinfo=True)
     if args.spdx:
         sbomdb.to_spdx(args.spdx)
     if args.csv:
