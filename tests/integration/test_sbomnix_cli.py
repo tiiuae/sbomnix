@@ -44,14 +44,14 @@ def test_sbomnix_type_runtime(_run_python_script, test_nix_result, test_work_dir
 
 
 @pytest.mark.slow
-def test_sbomnix_type_buildtime(_run_python_script, test_nix_result, test_work_dir):
+def test_sbomnix_type_buildtime(_run_python_script, test_nix_drv, test_work_dir):
     """Test sbomnix generates valid CycloneDX json with buildtime dependencies."""
     out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     out_path_spdx = test_work_dir / "sbom_spdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--cdx",
             out_path_cdx.as_posix(),
             "--spdx",
@@ -72,14 +72,14 @@ def test_sbomnix_type_buildtime(_run_python_script, test_nix_result, test_work_d
 
 
 @pytest.mark.slow
-def test_sbomnix_depth(_run_python_script, test_nix_result, test_work_dir):
+def test_sbomnix_depth(_run_python_script, test_nix_drv, test_work_dir):
     """Test sbomnix '--depth' option."""
     out_path_csv_1 = test_work_dir / "sbom_csv_test_1.csv"
     out_path_csv_2 = test_work_dir / "sbom_csv_test_2.csv"
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--buildtime",
             "--csv",
             out_path_csv_1.as_posix(),
@@ -93,7 +93,7 @@ def test_sbomnix_depth(_run_python_script, test_nix_result, test_work_dir):
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--buildtime",
             "--csv",
             out_path_csv_2.as_posix(),
@@ -111,15 +111,13 @@ def test_sbomnix_depth(_run_python_script, test_nix_result, test_work_dir):
 
 
 @pytest.mark.slow
-def test_compare_subsequent_cdx_sboms(
-    _run_python_script, test_nix_result, test_work_dir
-):
+def test_compare_subsequent_cdx_sboms(_run_python_script, test_nix_drv, test_work_dir):
     """Compare two sbomnix runs with same target produce the same cdx sbom."""
     out_path_cdx_1 = test_work_dir / "sbom_cdx_test_1.json"
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--cdx",
             out_path_cdx_1.as_posix(),
             "--buildtime",
@@ -131,7 +129,7 @@ def test_compare_subsequent_cdx_sboms(
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--cdx",
             out_path_cdx_2.as_posix(),
             "--buildtime",
@@ -143,15 +141,13 @@ def test_compare_subsequent_cdx_sboms(
 
 
 @pytest.mark.slow
-def test_compare_subsequent_spdx_sboms(
-    _run_python_script, test_nix_result, test_work_dir
-):
+def test_compare_subsequent_spdx_sboms(_run_python_script, test_nix_drv, test_work_dir):
     """Compare two sbomnix runs with same target produce the same spdx sbom."""
     out_path_spdx_1 = test_work_dir / "sbom_spdx_test_1.json"
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--spdx",
             out_path_spdx_1.as_posix(),
             "--buildtime",
@@ -163,7 +159,7 @@ def test_compare_subsequent_spdx_sboms(
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--spdx",
             out_path_spdx_2.as_posix(),
             "--buildtime",
@@ -175,14 +171,14 @@ def test_compare_subsequent_spdx_sboms(
 
 
 @pytest.mark.slow
-def test_compare_spdx_and_cdx_sboms(_run_python_script, test_nix_result, test_work_dir):
+def test_compare_spdx_and_cdx_sboms(_run_python_script, test_nix_drv, test_work_dir):
     """Compare spdx and cdx sboms from the same sbomnix invocation."""
     out_path_spdx = test_work_dir / "sbom_spdx_test.json"
     out_path_cdx = test_work_dir / "sbom_cdx_test.json"
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--cdx",
             out_path_cdx.as_posix(),
             "--spdx",

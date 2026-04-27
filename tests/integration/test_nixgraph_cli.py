@@ -33,10 +33,10 @@ def test_nixgraph_csv(_run_python_script, test_nix_result, test_work_dir):
     assert not df_out.empty
 
 
-def test_nixgraph_csv_buildtime(_run_python_script, test_nix_result, test_work_dir):
+def test_nixgraph_csv_buildtime(_run_python_script, test_nix_drv, test_work_dir):
     """Test nixgraph with buildtime csv output generates valid csv."""
     csv_out = test_work_dir / "graph_buildtime.csv"
-    _run_python_script([NIXGRAPH, test_nix_result, "--out", csv_out, "--buildtime"])
+    _run_python_script([NIXGRAPH, test_nix_drv, "--out", csv_out, "--buildtime"])
     assert csv_out.exists()
     df_out = pd.read_csv(csv_out)
     assert not df_out.empty
@@ -116,13 +116,13 @@ def test_compare_deps_runtime(_run_python_script, test_nix_result, test_work_dir
 
 
 @pytest.mark.slow
-def test_compare_deps_buildtime(_run_python_script, test_nix_result, test_work_dir):
+def test_compare_deps_buildtime(_run_python_script, test_nix_drv, test_work_dir):
     """Compare nixgraph vs sbom buildtime dependencies."""
     graph_csv_out = test_work_dir / "graph.csv"
     _run_python_script(
         [
             NIXGRAPH,
-            test_nix_result,
+            test_nix_drv,
             "--out",
             graph_csv_out,
             "--depth=100",
@@ -135,7 +135,7 @@ def test_compare_deps_buildtime(_run_python_script, test_nix_result, test_work_d
     _run_python_script(
         [
             SBOMNIX,
-            test_nix_result,
+            test_nix_drv,
             "--cdx",
             out_path_cdx.as_posix(),
             "--buildtime",
