@@ -26,9 +26,8 @@ from common.utils import (
     parse_version,
     version_distance,
 )
+from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.exceptions import RepologyNoMatchingPackages
-from repology.repology_cli import Repology
-from repology.repology_cli import getargs as cli_getargs
 from repology.repology_cve import query_cve
 
 ################################################################################
@@ -230,7 +229,7 @@ def _is_json(path):
 
 
 _repology_cve_dfs = {}
-_repology_cli_dfs = {}
+_repology_dfs = {}
 # Rate-limited and cached session. For github api rate limits, see:
 # https://docs.github.com/en/rest/search?apiVersion=latest#rate-limit
 # (caching all responses locally for 6 hours)
@@ -272,33 +271,34 @@ def _pkg_is_vulnerable(repo_pkg_name, pkg_version, cve_id=None):
     return not df.empty
 
 
-def _run_repology_cli(pname, match_type="--pkg_exact"):
-    LOG.log(LOG_SPAM, "Running repology_cli for '%s'", pname)
-    df_repology_cli = None
-    if pname in _repology_cli_dfs:
-        LOG.log(LOG_SPAM, "Using cached repology_cli results")
-        df_repology_cli = _repology_cli_dfs[pname]
+def _query_repology(pname, match_type="pkg_exact"):
+    LOG.log(LOG_SPAM, "Querying repology for '%s'", pname)
+    cache_key = f"{match_type}:{pname}"
+    df_repology = None
+    if cache_key in _repology_dfs:
+        LOG.log(LOG_SPAM, "Using cached repology results")
+        df_repology = _repology_dfs[cache_key].copy(deep=True)
     else:
-        repology_cli = Repology()
-        args = []
-        args.append("--repository=nix_unstable")
-        args.append("--re_status=outdated|newest|devel|unique")
-        args.append(f"{match_type}={pname}")
+        query_kwargs = {
+            "repository": "nix_unstable",
+            "re_status": "outdated|newest|devel|unique",
+        }
+        query_kwargs[match_type] = pname
         try:
-            df_repology_cli = repology_cli.query(
-                cli_getargs(args),
-                stdout_report=False,
-                file_report=False,
+            df_repology = RepologyAdapter().query(
+                RepologyQuery(
+                    **query_kwargs,
+                )
             )
         except RepologyNoMatchingPackages:
             pass
-        if df_repology_cli is None or df_repology_cli.empty:
-            LOG.debug("No results from repology_cli")
+        if df_repology is None or df_repology.empty:
+            LOG.debug("No results from repology")
             return None
-        df_repology_cli = _select_newest(df_repology_cli)
-        _repology_cli_dfs[pname] = df_repology_cli
-        df_log(df_repology_cli, LOG_SPAM)
-    return df_repology_cli
+        df_repology = _select_newest(df_repology)
+        _repology_dfs[cache_key] = df_repology.copy(deep=True)
+        df_log(df_repology, LOG_SPAM)
+    return df_repology
 
 
 def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
@@ -359,25 +359,23 @@ def _query_repology_versions(df_vuln_pkgs):
             continue
         repo_pkg = nix_to_repology_pkg_name(vuln.package)
         LOG.log(LOG_SPAM, "Package '%s' ==> '%s'", vuln.package, repo_pkg)
-        df_repology_cli = _run_repology_cli(repo_pkg)
-        if df_repology_cli is not None and not df_repology_cli.empty:
+        df_repology = _query_repology(repo_pkg)
+        if df_repology is not None and not df_repology.empty:
             # If there's one match, there's no need to check other details
-            if df_repology_cli.shape[0] == 1:
+            if df_repology.shape[0] == 1:
                 LOG.log(LOG_SPAM, "One repology package matches")
-                _add_triage_item(result_dict, vuln, wcols, df_repology_cli)
+                _add_triage_item(result_dict, vuln, wcols, df_repology)
                 continue
             # Match based on version: exact match
-            df = df_repology_cli[df_repology_cli["version"] == vuln.version]
+            df = df_repology[df_repology["version"] == vuln.version]
             if not df.empty:
                 LOG.log(LOG_SPAM, "Exact version match '%s'", vuln.version)
                 _add_triage_item(result_dict, vuln, wcols, df)
                 continue
             # Match based on version: similarity
-            df_repology_cli["version_cmp"] = vuln.version
-            df_repology_cli["similarity"] = df_repology_cli.apply(
-                _version_similarity, axis=1
-            )
-            df = df_repology_cli[df_repology_cli["similarity"] >= 0.7]
+            df_repology["version_cmp"] = vuln.version
+            df_repology["similarity"] = df_repology.apply(_version_similarity, axis=1)
+            df = df_repology[df_repology["similarity"] >= 0.7]
             if not df.empty:
                 LOG.log(LOG_SPAM, "Version similarity match:\n%s", df)
                 best_match = df["similarity"].max()
@@ -386,10 +384,10 @@ def _query_repology_versions(df_vuln_pkgs):
                 _add_triage_item(result_dict, vuln, wcols, df)
                 continue
             # Otherwise, we need to conclude that we don't know which repology
-            # package (as returned by _run_repology_cli()), the nix package
+            # package (as returned by _query_repology()), the nix package
             # 'vuln.package' maps to.
             # If we end up here, we could improve by doing another search with:
-            # _run_repology_cli(repo_pkg, match_type='--pkg_search')
+            # _query_repology(repo_pkg, match_type='pkg_search')
             LOG.log(LOG_SPAM, "Vague match in repology pkg, adding vuln only")
             _add_triage_item(result_dict, vuln, wcols)
         else:
