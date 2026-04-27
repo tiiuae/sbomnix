@@ -5,8 +5,8 @@
   imports = [
     ./apps.nix
     ./checks.nix
+    ./formatter.nix
     ./packages.nix
-    ./treefmt.nix
     ./git-hooks.nix
   ];
 }
