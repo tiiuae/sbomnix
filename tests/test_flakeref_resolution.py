@@ -14,7 +14,11 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
-from common.flakeref import try_resolve_flakeref
+from common.flakeref import (
+    parse_nixos_configuration_ref,
+    quote_nix_attr_segment,
+    try_resolve_flakeref,
+)
 from common.log import LOG_VERBOSE
 
 
@@ -52,14 +56,31 @@ FLAKE_REFS = st.one_of(
 )
 
 
+@pytest.mark.parametrize(
+    ("name", "quoted"),
+    [
+        ("host${foo}.é", r'"host\${foo}.é"'),
+        ('quote"slash\\tab\tnewline\n', r'"quote\"slash\\tab\tnewline\n"'),
+    ],
+)
+def test_nixos_configuration_attr_segments_use_nix_string_escaping(name, quoted):
+    assert quote_nix_attr_segment(name) == quoted
+    assert parse_nixos_configuration_ref(f"/flake#nixosConfigurations.{quoted}") == (
+        "/flake",
+        name,
+    )
+
+
+def test_nixos_configuration_parser_rejects_unescaped_interpolation():
+    assert parse_nixos_configuration_ref('/flake#nixosConfigurations."${foo}"') is None
+
+
 def test_try_resolve_flakeref_uses_argv_lists():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
-        if cmd[1] == "eval":
-            return SimpleNamespace(stdout="/nix/store/resolved\n", returncode=0)
-        return SimpleNamespace(stdout="", stderr="", returncode=0)
+        return SimpleNamespace(stdout="/nix/store/resolved\n", stderr="", returncode=0)
 
     resolved = try_resolve_flakeref(
         "/tmp/my flake#pkg",
@@ -73,22 +94,9 @@ def test_try_resolve_flakeref_uses_argv_lists():
         (
             [
                 "nix",
-                "eval",
-                "--raw",
-                "/tmp/my flake#pkg",
-                "--extra-experimental-features",
-                "flakes",
-                "--extra-experimental-features",
-                "nix-command",
-                "--impure",
-            ],
-            {"raise_on_error": False, "return_error": True, "log_error": False},
-        ),
-        (
-            [
-                "nix",
                 "build",
                 "--no-link",
+                "--print-out-paths",
                 "/tmp/my flake#pkg",
                 "--extra-experimental-features",
                 "flakes",
@@ -104,14 +112,12 @@ def test_try_resolve_flakeref_uses_argv_lists():
 def test_try_resolve_flakeref_logs_flake_progress_at_info():
     logger = CapturingLogger()
 
-    def fake_exec_cmd(cmd, **_kwargs):
-        if cmd[1] == "eval":
-            return SimpleNamespace(
-                stdout="/nix/store/resolved\n",
-                stderr="",
-                returncode=0,
-            )
-        return SimpleNamespace(stdout="", stderr="", returncode=0)
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(
+            stdout="/nix/store/resolved\n",
+            stderr="",
+            returncode=0,
+        )
 
     resolved = try_resolve_flakeref(
         ".#hello",
@@ -121,11 +127,6 @@ def test_try_resolve_flakeref_logs_flake_progress_at_info():
     )
 
     assert resolved == "/nix/store/resolved"
-    assert (
-        "info",
-        "Evaluating flakeref '%s'",
-        (".#hello",),
-    ) in logger.records
     assert (
         "info",
         "Realising flakeref '%s'",
@@ -156,12 +157,22 @@ def test_try_resolve_flakeref_keeps_plain_path_probe_verbose():
 
 
 def test_try_resolve_flakeref_raises_on_failed_force_realise():
-    def fake_exec_cmd(cmd, **_kwargs):
-        if cmd[1] == "eval":
-            return SimpleNamespace(stdout="/nix/store/resolved\n", returncode=0)
+    def fake_exec_cmd(_cmd, **_kwargs):
         return SimpleNamespace(stdout="", stderr="build failed", returncode=1)
 
     with pytest.raises(FlakeRefRealisationError, match="build failed"):
+        try_resolve_flakeref(
+            "/tmp/my flake#pkg",
+            force_realise=True,
+            exec_cmd_fn=fake_exec_cmd,
+        )
+
+
+def test_try_resolve_flakeref_raises_when_force_realise_prints_no_path():
+    def fake_exec_cmd(_cmd, **_kwargs):
+        return SimpleNamespace(stdout="\n", stderr="", returncode=0)
+
+    with pytest.raises(FlakeRefRealisationError, match="returned no output path"):
         try_resolve_flakeref(
             "/tmp/my flake#pkg",
             force_realise=True,
