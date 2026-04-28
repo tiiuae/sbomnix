@@ -9,12 +9,12 @@ import uuid
 
 import pandas as pd
 
+from sbomnix.builder import SbomBuilder
 from sbomnix.meta import NixpkgsMetaSource
-from sbomnix.sbomdb import SbomDb
 
 
-def _make_minimal_sbomdb():
-    sbomdb = object.__new__(SbomDb)
+def _make_minimal_sbom():
+    sbomdb = object.__new__(SbomBuilder)
     sbomdb.uid = "store_path"
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
@@ -50,8 +50,10 @@ def _make_minimal_sbomdb():
 
 
 def test_cdx_document_records_nixpkgs_metadata_source(monkeypatch):
-    sbomdb = _make_minimal_sbomdb()
-    monkeypatch.setattr(SbomDb, "lookup_dependencies", lambda *_args, **_kwargs: None)
+    sbomdb = _make_minimal_sbom()
+    monkeypatch.setattr(
+        SbomBuilder, "lookup_dependencies", lambda *_args, **_kwargs: None
+    )
 
     cdx = sbomdb.to_cdx_data()
 
@@ -65,8 +67,10 @@ def test_cdx_document_records_nixpkgs_metadata_source(monkeypatch):
 
 
 def test_spdx_document_records_nixpkgs_metadata_source(monkeypatch):
-    sbomdb = _make_minimal_sbomdb()
-    monkeypatch.setattr(SbomDb, "lookup_dependencies", lambda *_args, **_kwargs: None)
+    sbomdb = _make_minimal_sbom()
+    monkeypatch.setattr(
+        SbomBuilder, "lookup_dependencies", lambda *_args, **_kwargs: None
+    )
 
     spdx = sbomdb.to_spdx_data()
 

@@ -87,7 +87,7 @@ def test_generate_temp_sbom_without_csv_returns_only_cdx_path(tmp_path, monkeypa
         def __exit__(self, exc_type, exc, traceback):
             return False
 
-    class DummySbomDb:
+    class DummySbomBuilder:
         def __init__(self, _target_path, _buildtime, include_meta=False):
             assert include_meta is False
 
@@ -103,7 +103,7 @@ def test_generate_temp_sbom_without_csv_returns_only_cdx_path(tmp_path, monkeypa
         "NamedTemporaryFile",
         lambda **_kwargs: FakeTempFile(sbom_cdx_path),
     )
-    monkeypatch.setattr(sbomnix_cli_utils, "SbomDb", DummySbomDb)
+    monkeypatch.setattr(sbomnix_cli_utils, "SbomBuilder", DummySbomBuilder)
 
     generated = sbomnix_cli_utils.generate_temp_sbom(
         "/nix/store/target",
@@ -138,7 +138,7 @@ def test_generate_temp_sbom_cleans_tempfiles_on_generation_failure(
         def __exit__(self, exc_type, exc, traceback):
             return False
 
-    class FailingSbomDb:
+    class FailingSbomBuilder:
         def __init__(self, _target_path, _buildtime, include_meta=False):
             assert include_meta is False
 
@@ -158,7 +158,7 @@ def test_generate_temp_sbom_cleans_tempfiles_on_generation_failure(
             sbom_cdx_path if kwargs["suffix"] == ".json" else sbom_csv_path
         ),
     )
-    monkeypatch.setattr(sbomnix_cli_utils, "SbomDb", FailingSbomDb)
+    monkeypatch.setattr(sbomnix_cli_utils, "SbomBuilder", FailingSbomBuilder)
 
     with pytest.raises(RuntimeError, match="sbom csv generation failed"):
         sbomnix_cli_utils.generate_temp_sbom(
@@ -189,7 +189,7 @@ def test_generate_temp_sbom_cleans_first_tempfile_if_second_creation_fails(
         def __exit__(self, exc_type, exc, traceback):
             return False
 
-    class DummySbomDb:
+    class DummySbomBuilder:
         def __init__(self, _target_path, _buildtime, include_meta=False):
             assert include_meta is False
 
@@ -209,7 +209,7 @@ def test_generate_temp_sbom_cleans_first_tempfile_if_second_creation_fails(
         "NamedTemporaryFile",
         fake_named_temporary_file,
     )
-    monkeypatch.setattr(sbomnix_cli_utils, "SbomDb", DummySbomDb)
+    monkeypatch.setattr(sbomnix_cli_utils, "SbomBuilder", DummySbomBuilder)
 
     with pytest.raises(RuntimeError, match="csv tempfile creation failed"):
         sbomnix_cli_utils.generate_temp_sbom(

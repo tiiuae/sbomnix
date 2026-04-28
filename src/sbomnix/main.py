@@ -11,8 +11,8 @@ import argparse
 from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
+from sbomnix.builder import SbomBuilder
 from sbomnix.cli_utils import resolve_nix_target
-from sbomnix.sbomdb import SbomDb
 
 ###############################################################################
 
@@ -95,7 +95,7 @@ def _run(args):
         args.NIXREF, buildtime=args.buildtime, impure=args.impure
     )
     LOG.info("Generating SBOM for target '%s'", target.path)
-    sbomdb = SbomDb(
+    sbom = SbomBuilder(
         nix_path=target.path,
         buildtime=args.buildtime,
         depth=args.depth,
@@ -108,14 +108,14 @@ def _run(args):
         include_cpe=not args.exclude_cpe_matching,
     )
     if args.cdx:
-        cdx = sbomdb.to_cdx_data()
+        cdx = sbom.to_cdx_data()
         if args.include_vulns:
-            sbomdb.enrich_cdx_with_vulnerabilities(cdx)
-        sbomdb.write_json(args.cdx, cdx, printinfo=True)
+            sbom.enrich_cdx_with_vulnerabilities(cdx)
+        sbom.write_json(args.cdx, cdx, printinfo=True)
     if args.spdx:
-        sbomdb.to_spdx(args.spdx)
+        sbom.to_spdx(args.spdx)
     if args.csv:
-        sbomdb.to_csv(args.csv)
+        sbom.to_csv(args.csv)
 
 
 ################################################################################
