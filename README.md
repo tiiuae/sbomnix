@@ -35,6 +35,7 @@ Table of Contents
    * [Generate SBOM Including Buildtime Dependencies](#generate-sbom-including-buildtime-dependencies)
    * [Generate SBOM Based on Result Symlink](#generate-sbom-based-on-result-symlink)
    * [Generate SBOM Based on Flake Reference](#generate-sbom-based-on-flake-reference)
+   * [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection)
    * [Visualize Package Dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
@@ -173,6 +174,29 @@ $ sbomnix /path/to/result
 ```bash
 $ sbomnix github:NixOS/nixpkgs?ref=nixos-unstable#wget --buildtime
 ```
+
+#### Nixpkgs Metadata Source Selection
+`sbomnix` enriches packages with nixpkgs metadata, such as descriptions,
+licenses, maintainers, and homepage links, when it can select a nixpkgs
+source that is tied to the target.
+
+For flakeref targets, `sbomnix` uses the target flake context. NixOS
+toplevel flakerefs are handled through the selected NixOS package set, so
+overlays, package overrides, nixpkgs config, and system-specific package-set
+changes can be represented.
+
+Store-path targets skip nixpkgs metadata by default; pass `--meta-nixpkgs` to
+choose the source explicitly.
+
+`--meta-nixpkgs <flakeref-or-path>` scans an explicit nixpkgs source.
+`--meta-nixpkgs nix-path` scans the `nixpkgs=` entry from `NIX_PATH` as a
+legacy opt-in source. `--exclude-meta` disables this enrichment and cannot be
+combined with `--meta-nixpkgs`.
+
+CycloneDX and SPDX outputs record the selected metadata source in document
+metadata, including fields such as `nixpkgs:metadata_source_method`,
+`nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:flakeref`, `nixpkgs:version`, and
+`nixpkgs:message`.
 
 #### Visualize Package Dependencies
 `sbomnix` finds the package dependencies using `nixgraph`.
