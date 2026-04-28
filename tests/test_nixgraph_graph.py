@@ -142,3 +142,36 @@ def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
         "Loading %s dependencies referenced by '%s'",
         ("runtime", "/nix/store/target"),
     ) in logger.records
+
+
+def test_nix_dependencies_can_reuse_resolved_drv_without_output_lookup(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "find_deriver_path",
+        lambda *_args, **_kwargs: calls.append("find_deriver_path"),
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "find_output_path",
+        lambda *_args, **_kwargs: calls.append("find_output_path"),
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "get_nix_store_path",
+        lambda *_args, **_kwargs: "/nix/store/",
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "runtime_query_output",
+        lambda *_args, **_kwargs: "",
+    )
+
+    deps = nixgraph_graph.NixDependencies(
+        "/nix/store/target",
+        drv_path="/nix/store/target.drv",
+        resolve_output=False,
+    )
+
+    assert deps.start_path is None
+    assert calls == []

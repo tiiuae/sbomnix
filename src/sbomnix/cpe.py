@@ -5,7 +5,6 @@
 """Generate CPE (Common Platform Enumeration) identifiers"""
 
 import string
-from typing import cast
 
 from common.df import df_from_csv_file, df_log
 from common.errors import InvalidCpeDictionaryError
@@ -29,6 +28,8 @@ class CPE:
         self,
         include_cpe=True,
     ):
+        self._product_vendor = {}
+        self._ambiguous_products = set()
         # Let's initialize the fields anyway.
         if not include_cpe:
             self.df_cpedict = None
@@ -53,6 +54,23 @@ class CPE:
             required_cols = {"vendor", "product"}
             if not required_cols.issubset(self.df_cpedict):
                 raise InvalidCpeDictionaryError(required_cols)
+            self._init_product_vendor_index()
+
+    def _init_product_vendor_index(self):
+        df_cpedict = self.df_cpedict
+        if df_cpedict is None:
+            return
+        product_counts = df_cpedict.groupby("product", sort=False).size()
+        unique_products = [
+            product for product, count in product_counts.items() if count == 1
+        ]
+        self._ambiguous_products = {
+            product for product, count in product_counts.items() if count != 1
+        }
+        df_unique = df_cpedict[df_cpedict["product"].isin(unique_products)]
+        self._product_vendor = dict(
+            zip(df_unique["product"], df_unique["vendor"], strict=False)
+        )
 
     def _cpedict_vendor(self, product):
         if not product or len(product) == 1:
@@ -61,22 +79,22 @@ class CPE:
         if self.df_cpedict is None:
             LOG.log(LOG_SPAM, "missing cpedict")
             return None
-        df = self.df_cpedict[self.df_cpedict["product"] == product]
-        if len(df) == 0:
+        vendor = self._product_vendor.get(product)
+        if vendor:
+            LOG.log(LOG_SPAM, "found vendor for product '%s': '%s'", product, vendor)
+            return vendor
+        if product not in self._ambiguous_products:
             LOG.log(LOG_SPAM, "no matches for product '%s'", product)
             return None
-        if len(df) != 1:
-            # If there is more than one product with the same name,
-            # we cannot determine which vendor name should be used for the CPE.
-            # Therefore, if more than one product names match, treat it the
-            # same way as if there were no matches (returning None).
-            LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
-            df_log(df, LOG_SPAM)
-            return None
 
-        vendor = cast(str, df.loc[df.index[0], "vendor"])
-        LOG.log(LOG_SPAM, "found vendor for product '%s': '%s'", product, vendor)
-        return vendor
+        # If there is more than one product with the same name, we cannot
+        # determine which vendor name should be used for the CPE. Therefore,
+        # treat it the same way as no matches.
+        LOG.log(LOG_SPAM, "more than one match for product '%s':", product)
+        if LOG.isEnabledFor(LOG_SPAM):
+            df = self.df_cpedict[self.df_cpedict["product"] == product]
+            df_log(df, LOG_SPAM)
+        return None
 
     def _candidate_vendor(self, product):
         """

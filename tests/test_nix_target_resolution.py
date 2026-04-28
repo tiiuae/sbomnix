@@ -27,6 +27,34 @@ def test_resolve_nix_target_preserves_flakeref_on_success(monkeypatch):
     )
 
 
+def test_resolve_nix_target_requests_derivation_for_buildtime_flakeref(monkeypatch):
+    calls = []
+
+    def fake_resolve(flakeref, **kwargs):
+        calls.append((flakeref, kwargs))
+        return "/nix/store/resolved.drv"
+
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        fake_resolve,
+    )
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(".#hello", buildtime=True)
+
+    assert resolved.path == "/nix/store/resolved.drv"
+    assert calls == [
+        (
+            ".#hello",
+            {
+                "force_realise": False,
+                "impure": False,
+                "derivation": True,
+            },
+        )
+    ]
+
+
 def test_resolve_nix_target_normalizes_plain_nixos_configuration(monkeypatch):
     calls = []
 

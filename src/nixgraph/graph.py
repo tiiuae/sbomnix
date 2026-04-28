@@ -26,26 +26,29 @@ from sbomnix.nix import find_deriver
 class NixDependencies:
     """Parse nix package dependencies."""
 
-    def __init__(self, nix_path, buildtime=False):
+    def __init__(self, nix_path, buildtime=False, drv_path=None, resolve_output=True):
         LOG.debug("nix_path: %s", nix_path)
         self.dependencies = set()
         self.dtype = "buildtime" if buildtime else "runtime"
         LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
-        drv_path = find_deriver_path(
-            nix_path,
-            find_deriver_fn=find_deriver,
-            log=LOG,
-        )
+        if drv_path is None:
+            drv_path = find_deriver_path(
+                nix_path,
+                find_deriver_fn=find_deriver,
+                log=LOG,
+            )
         self.nix_store_path = get_nix_store_path(drv_path, log=LOG)
         if buildtime:
             self.start_path = drv_path
             self._parse_buildtime_dependencies(drv_path)
         else:
-            self.start_path = find_output_path(
-                drv_path,
-                exec_cmd_fn=exec_cmd,
-                log=LOG,
-            )
+            self.start_path = None
+            if resolve_output:
+                self.start_path = find_output_path(
+                    drv_path,
+                    exec_cmd_fn=exec_cmd,
+                    log=LOG,
+                )
             self._parse_runtime_dependencies(drv_path)
         if len(self.dependencies) <= 0:
             LOG.info("No %s dependencies", self.dtype)

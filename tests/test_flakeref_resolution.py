@@ -108,6 +108,47 @@ def test_try_resolve_flakeref_uses_argv_lists():
     ]
 
 
+def test_try_resolve_flakeref_can_return_derivation_path():
+    calls = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return SimpleNamespace(
+            stdout=(
+                '{"derivations": {'
+                '"11111111111111111111111111111111-package-1.0.drv":'
+                '{"name": "package-1.0"}}, "version": 4}'
+            ),
+            stderr="",
+            returncode=0,
+        )
+
+    resolved = try_resolve_flakeref(
+        "nixpkgs#package",
+        derivation=True,
+        impure=True,
+        exec_cmd_fn=fake_exec_cmd,
+    )
+
+    assert resolved == "/nix/store/11111111111111111111111111111111-package-1.0.drv"
+    assert calls == [
+        (
+            [
+                "nix",
+                "derivation",
+                "show",
+                "nixpkgs#package",
+                "--extra-experimental-features",
+                "flakes",
+                "--extra-experimental-features",
+                "nix-command",
+                "--impure",
+            ],
+            {"raise_on_error": False, "return_error": True, "log_error": False},
+        )
+    ]
+
+
 def test_try_resolve_flakeref_logs_flake_progress_at_info():
     logger = CapturingLogger()
 
