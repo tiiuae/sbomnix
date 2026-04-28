@@ -34,6 +34,7 @@ def runtime_derivations_to_dataframe(paths, output_paths_by_drv, include_cpe=Tru
     derivations = load_many(
         sorted(filtered_outputs_by_drv),
         output_paths_by_drv=filtered_outputs_by_drv,
+        ignore_missing=True,
     ).values()
     return derivations_to_dataframe(derivations, include_cpe=include_cpe)
 
