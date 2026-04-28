@@ -8,12 +8,14 @@ set -euo pipefail
 
 mkdir -p build/
 
-nix run .#sbomnix -- . \
+release_target=".#sbomnix"
+
+nix run .#sbomnix -- "$release_target" \
   --cdx=./build/sbom.runtime.cdx.json \
   --spdx=./build/sbom.runtime.spdx.json \
   --csv=./build/sbom.runtime.csv
 
-nix run .#sbomnix -- --buildtime . \
+nix run .#sbomnix -- --buildtime "$release_target" \
   --cdx=./build/sbom.buildtime.cdx.json \
   --spdx=./build/sbom.buildtime.spdx.json \
   --csv=./build/sbom.buildtime.csv
