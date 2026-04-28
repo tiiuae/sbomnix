@@ -2,8 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-class-docstring,missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 """Focused tests for the reusable OSV client."""
 

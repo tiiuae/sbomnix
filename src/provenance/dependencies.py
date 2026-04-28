@@ -49,7 +49,12 @@ def query_store_hashes(paths, hooks=None):
 
     try:
         return hooks.exec_cmd_fn(
-            ["nix-store", "--query", "--hash", *paths]
+            [
+                "nix-store",
+                "--query",
+                "--hash",
+                *paths,
+            ]
         ).stdout.split()
     except OSError as error:
         if error.errno != errno.E2BIG or len(paths) == 1:
@@ -126,7 +131,13 @@ def get_dependencies(drv_path, recursive=False, hooks=None):
 
     depth = "--requisites" if recursive else "--references"
     references = hooks.exec_cmd_fn(
-        ["nix-store", "--query", depth, "--include-outputs", drv_path]
+        [
+            "nix-store",
+            "--query",
+            depth,
+            "--include-outputs",
+            drv_path,
+        ]
     ).stdout.split()
     hashes = hooks.query_store_hashes_fn(references)
     infos = hooks.parse_nix_derivation_show_fn(
@@ -136,7 +147,7 @@ def get_dependencies(drv_path, recursive=False, hooks=None):
     outputs_by_path = derivation_outputs_by_path(infos, hooks=hooks)
 
     dependencies = []
-    for drv, output_hash in zip(references, hashes):
+    for drv, output_hash in zip(references, hashes, strict=True):
         hooks.log.debug("Creating dependency entry for %s", drv)
         package = dependency_package(
             drv,

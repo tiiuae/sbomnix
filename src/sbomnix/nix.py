@@ -193,7 +193,7 @@ def find_derivers(paths, batch_size=500):
         if ret:
             lines = ret.stdout.splitlines()
             if len(lines) == len(batch):
-                for path, drv_path in zip(batch, lines):
+                for path, drv_path in zip(batch, lines, strict=True):
                     if (
                         drv_path
                         and drv_path != "unknown-deriver"

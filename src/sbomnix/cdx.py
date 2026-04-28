@@ -27,15 +27,16 @@ def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
     # Parse the ";" separated licenses to cdx license format
     license_strings = license_str.split(";")
     for license_string in license_strings:
+        license_value = license_string
         # Give up generating the 'licenses' entry if license id should be
         # spdx but it's not:
         if "spdxid" in column_name:
-            canonical = canonicalize_spdx_license_id(license_string)
+            canonical = canonicalize_spdx_license_id(license_value)
             if not canonical:
                 LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
                 return []
-            license_string = canonical
-        license_dict = {"license": {cdx_license_type: license_string}}
+            license_value = canonical
+        license_dict = {"license": {cdx_license_type: license_value}}
         licenses.append(license_dict)
     return licenses
 

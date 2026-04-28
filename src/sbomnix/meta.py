@@ -41,7 +41,7 @@ __all__ = [
 ]
 
 
-class Meta:  # pylint: disable=too-many-arguments
+class Meta:
     """Cache nixpkgs meta information."""
 
     def __init__(self):

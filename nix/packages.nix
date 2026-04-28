@@ -7,6 +7,7 @@
       pkgs,
       lib,
       config,
+      self',
       ...
     }:
     let
@@ -63,13 +64,14 @@
           ];
         };
       };
+      checks =
+        # Force a build of all packages during a `nix flake check`.
+        with lib; mapAttrs' (n: nameValuePair "package-${n}") self'.packages;
       devShells.default = pkgs.mkShell {
         name = "sbomnix-devshell";
         packages = [
-          pkgs.python3.pkgs.pylint # for running pylint manually in devshell
           pkgs.pyright # for running pyright manually in devshell
           pkgs.ruff # for running ruff manually in devshell
-          pkgs.isort # for running isort manually in devshell
         ]
         ++ check_inputs
         ++ build_system

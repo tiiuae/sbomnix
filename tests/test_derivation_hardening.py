@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-function-docstring,protected-access
 
 """Unit tests for derivation loading and SPDX hardening."""
 

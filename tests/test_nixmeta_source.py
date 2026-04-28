@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-function-docstring
 
 """Focused tests for nixpkgs metadata source selection."""
 
@@ -829,5 +828,5 @@ def test_meta_scan_uses_already_resolved_scanner_path(monkeypatch):
     monkeypatch.setattr(meta.cache, "set", lambda **_kwargs: None)
     monkeypatch.setattr(sbomnix_meta, "NixMetaScanner", FakeScanner)
 
-    assert meta._scan("/nix/store/source") is fake_df  # pylint: disable=protected-access
+    assert meta._scan("/nix/store/source") is fake_df
     assert calls == ["/nix/store/source"]

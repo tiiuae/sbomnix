@@ -58,3 +58,39 @@ version = { file = ["VERSION"] }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+preview = true
+select = [
+  "B",
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "I",
+  "PLE",
+  "PLW",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0914",
+  "PLR0915",
+  "PLR0917",
+  "RUF100",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "common",
+  "nixgraph",
+  "nixmeta",
+  "nixupdate",
+  "provenance",
+  "repology",
+  "sbomnix",
+  "vulnxscan",
+]

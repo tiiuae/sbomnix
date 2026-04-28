@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=abstract-method
-
 """Shared HTTP session primitives."""
 
 from requests import Session

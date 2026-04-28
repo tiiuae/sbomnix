@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-locals
-
 """Helpers for parsing Repology CVE pages."""
 
 import re
@@ -63,8 +61,8 @@ def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
     ver_one = r"(?<= )(?<!\()(?P<version>\d[^ $)]+)(?= )"
     matches = re.findall(ver_one, affected_ver_str)
     log.log(log_spam, "Parsed single version(s): %s", matches)
-    for impacted_version in matches:
-        impacted_version = parse_version(impacted_version)
+    for impacted_version_text in matches:
+        impacted_version = parse_version(impacted_version_text)
         if impacted_version == version_local:
             return True
     return False

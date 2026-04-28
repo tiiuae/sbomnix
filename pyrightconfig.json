@@ -1,16 +1,32 @@
 {
-  "include": [
-    "src/common/proc.py",
-    "src/common/flakeref.py",
-    "src/common/versioning.py",
-    "src/provenance/schema.py",
-    "src/provenance/subjects.py",
-    "src/repology/projects_parser.py"
-  ],
-  "extraPaths": [
-    "src"
-  ],
-  "pythonVersion": "3.10",
-  "typeCheckingMode": "standard",
-  "reportMissingTypeStubs": false
+    "include": ["src"],
+    "exclude": [
+        "src/common/http.py",
+        "src/nixgraph/render.py",
+        "src/nixmeta/flake_metadata.py",
+        "src/nixmeta/scanner.py",
+        "src/nixupdate/nix_visualize.py",
+        "src/nixupdate/pipeline.py",
+        "src/provenance/dependencies.py",
+        "src/provenance/digests.py",
+        "src/provenance/main.py",
+        "src/repology/adapter.py",
+        "src/repology/cves.py",
+        "src/repology/sbom.py",
+        "src/sbomnix/cpe.py",
+        "src/sbomnix/dependency_index.py",
+        "src/sbomnix/derivation.py",
+        "src/sbomnix/nix.py",
+        "src/sbomnix/sbomdb.py",
+        "src/sbomnix/vuln_enrichment.py",
+        "src/vulnxscan/osv_client.py",
+        "src/vulnxscan/repology_lookup.py",
+        "src/vulnxscan/reporting.py",
+        "src/vulnxscan/triage.py",
+        "src/vulnxscan/vulnscan.py",
+    ],
+    "extraPaths": ["src"],
+    "pythonVersion": "3.10",
+    "typeCheckingMode": "standard",
+    "reportMissingTypeStubs": false,
 }

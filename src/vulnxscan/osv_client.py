@@ -45,7 +45,7 @@ class OSV:
             setcol(cols.VERSION, []).append(package["version"])
 
     def _parse_batch_response(self, query, results):
-        for package, vulns in zip(query["queries"], results):
+        for package, vulns in zip(query["queries"], results, strict=False):
             if not package or not vulns:
                 continue
             LOG.debug("package: %s", package)
