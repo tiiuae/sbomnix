@@ -21,7 +21,7 @@ from common.log import LOG, is_debug_enabled
 from nixgraph.graph import NixDependencies
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
-from sbomnix.meta import Meta
+from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.nix import Store, find_deriver
 from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 
@@ -43,6 +43,9 @@ class SbomDb:
         buildtime=False,
         depth=None,
         flakeref=None,
+        original_ref=None,
+        meta_nixpkgs=None,
+        impure=False,
         include_meta=True,
         include_vulns=False,
         include_cpe=True,
@@ -61,7 +64,13 @@ class SbomDb:
         self.df_sbomdb_outputs_exploded = None
         self.dependency_index = None
         self.flakeref = flakeref
+        self.original_ref = original_ref
+        self.meta_nixpkgs = meta_nixpkgs
+        self.impure = impure
         self.meta = None
+        # "disabled" records explicit opt-out; "none" means auto-selection
+        # found no source.
+        self.nixpkgs_meta_source = NixpkgsMetaSource(method="disabled")
         self.include_cpe = include_cpe
         self._init_sbomdb(include_meta)
         self.include_vulns = include_vulns
@@ -133,12 +142,27 @@ class SbomDb:
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
         self.meta = Meta()
-        df_meta = self.meta.get_nixpkgs_meta(self.flakeref)
+        df_meta, source = self.meta.get_nixpkgs_meta_with_source(
+            target_path=self.nix_path,
+            flakeref=self.flakeref,
+            original_ref=self.original_ref,
+            explicit_nixpkgs=self.meta_nixpkgs,
+            impure=self.impure,
+        )
+        self.nixpkgs_meta_source = source
         if df_meta is None or df_meta.empty:
-            LOG.warning(
-                "Failed reading nix meta information: "
-                "SBOM will include only minimum set of attributes"
-            )
+            if source.message:
+                LOG.info("%s", source.message)
+            if source.path:
+                LOG.warning(
+                    "Failed reading nix meta information: "
+                    "SBOM will include only minimum set of attributes"
+                )
+            else:
+                LOG.info(
+                    "Skipping nix meta information: "
+                    "SBOM will include only minimum set of attributes"
+                )
             return
         if is_debug_enabled():
             df_to_csv_file(df_meta, "meta.csv")

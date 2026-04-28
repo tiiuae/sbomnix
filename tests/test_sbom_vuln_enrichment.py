@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
+from common.errors import SbomnixError
 from sbomnix import cli_utils as sbomnix_cli_utils
 from sbomnix import main as sbomnix_main
 from sbomnix import vuln_enrichment as sbomnix_vuln_enrichment
@@ -31,6 +32,38 @@ class CapturingLogger:
         self.records.append(("fatal", msg, args))
 
 
+def test_sbomnix_getargs_accepts_meta_nixpkgs():
+    args = sbomnix_main.getargs(
+        [
+            "/nix/store/target",
+            "--meta-nixpkgs",
+            "nix-path",
+        ]
+    )
+
+    assert args.meta_nixpkgs == "nix-path"
+
+
+def test_sbomnix_run_rejects_exclude_meta_with_meta_nixpkgs():
+    args = SimpleNamespace(
+        NIXREF="/nix/store/target",
+        buildtime=False,
+        depth=None,
+        verbose=0,
+        include_vulns=False,
+        exclude_meta=True,
+        meta_nixpkgs="nix-path",
+        exclude_cpe_matching=False,
+        csv=None,
+        cdx=None,
+        spdx=None,
+        impure=True,
+    )
+
+    with pytest.raises(SbomnixError, match="--exclude-meta"):
+        sbomnix_main._run(args)
+
+
 def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypatch):
     args = SimpleNamespace(
         NIXREF=".#target",
@@ -39,11 +72,12 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
         verbose=0,
         include_vulns=True,
         exclude_meta=False,
+        meta_nixpkgs=None,
         exclude_cpe_matching=False,
         csv=None,
         cdx="sbom.cdx.json",
         spdx=None,
-        impure=False,
+        impure=True,
     )
     events = []
 
@@ -90,6 +124,9 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
                 "buildtime": False,
                 "depth": None,
                 "flakeref": ".#target",
+                "original_ref": None,
+                "meta_nixpkgs": None,
+                "impure": True,
                 "include_meta": True,
                 "include_vulns": True,
                 "include_cpe": True,
@@ -114,6 +151,7 @@ def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
         verbose=0,
         include_vulns=False,
         exclude_meta=False,
+        meta_nixpkgs=None,
         exclude_cpe_matching=False,
         csv=None,
         cdx=None,
@@ -151,6 +189,9 @@ def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
                 "buildtime": False,
                 "depth": None,
                 "flakeref": ".#target",
+                "original_ref": None,
+                "meta_nixpkgs": None,
+                "impure": False,
                 "include_meta": True,
                 "include_vulns": False,
                 "include_cpe": True,
