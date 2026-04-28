@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-branches,too-many-locals,too-many-statements
-
 """HTML parser helpers for Repology project search pages."""
 
 import re
@@ -25,7 +23,9 @@ class ParsedProjectsPage:
     processed_ids: set[str]
 
 
-def parse_projects_search_html(html, repository, processed_ids=None, pkg_stop=None):
+def parse_projects_search_html(  # noqa: PLR0912, PLR0914, PLR0915
+    html, repository, processed_ids=None, pkg_stop=None
+):
     """Parse a Repology package search response."""
     processed_ids = set() if processed_ids is None else set(processed_ids)
     next_query_project = ""

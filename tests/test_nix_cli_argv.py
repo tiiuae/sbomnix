@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: 2026 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=missing-function-docstring
 
 """Whitespace-safe argv construction tests for nix-facing helpers."""
 
@@ -171,7 +170,6 @@ def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(nix_outdated, "exec_cmd", fake_exec_cmd)
 
-    # pylint: disable=protected-access
     returned_path = nix_outdated._run_nix_visualize("/nix/store/my target")
 
     assert returned_path == output_path

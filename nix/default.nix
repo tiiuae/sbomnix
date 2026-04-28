@@ -4,7 +4,6 @@
 {
   imports = [
     ./apps.nix
-    ./checks.nix
     ./formatter.nix
     ./packages.nix
     ./git-hooks.nix

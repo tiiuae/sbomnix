@@ -31,7 +31,7 @@ _NIXREF_RESOLUTION_EXCEPTIONS = (AttributeError, *SCAN_EXCEPTIONS)
 
 
 @dataclass(frozen=True)
-class NixpkgsMetaSource:  # pylint: disable=too-many-instance-attributes
+class NixpkgsMetaSource:
     """Description of the nixpkgs source used for metadata enrichment."""
 
     method: str

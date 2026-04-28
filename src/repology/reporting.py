@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-arguments,too-many-locals
-
 """Console and CSV reporting helpers for Repology commands."""
 
 from tabulate import tabulate
@@ -13,7 +11,7 @@ from common.df import df_to_csv_file
 from common.log import LOG
 
 
-def _stats_sbom(df, *, log=LOG):
+def _stats_sbom(df, *, log=LOG):  # noqa: PLR0914
     df = df.copy()
     df = df.drop_duplicates(keep="first", subset=[cols.PACKAGE, cols.VERSION])
     repo_rows_n = df.shape[0]
@@ -57,7 +55,7 @@ def _stats_sbom(df, *, log=LOG):
     )
 
 
-def _stats_repology(df, *, log=LOG):
+def _stats_repology(df, *, log=LOG):  # noqa: PLR0914
     df = df.copy(deep=True)
     base_cols = ["newest", "devel", "unique", "outdated"]
     df = df[df.status.isin(base_cols)]
@@ -119,7 +117,9 @@ def report_cves(df, *, log=LOG):
     return True
 
 
-def write_query_report(df, args, *, query_url, df_sbom, console_report=True, log=LOG):
+def write_query_report(  # noqa: PLR0913
+    df, args, *, query_url, df_sbom, console_report=True, log=LOG
+):
     """Generate result report to console and to csv file."""
     report_df = df.copy(deep=True)
     console_df = report_df.copy(deep=True)

@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-return-statements
-
 """Vulnerability triage helpers."""
 
 from common import columns as cols
@@ -20,20 +18,20 @@ _DEFAULT_GITHUB_PR_LOOKUP = None
 
 
 def _get_default_repology_lookup():
-    global _DEFAULT_REPOLOGY_LOOKUP  # pylint: disable=global-statement
+    global _DEFAULT_REPOLOGY_LOOKUP  # noqa: PLW0603
     if _DEFAULT_REPOLOGY_LOOKUP is None:
         _DEFAULT_REPOLOGY_LOOKUP = RepologyVulnerabilityLookup()
     return _DEFAULT_REPOLOGY_LOOKUP
 
 
 def _get_default_github_lookup():
-    global _DEFAULT_GITHUB_PR_LOOKUP  # pylint: disable=global-statement
+    global _DEFAULT_GITHUB_PR_LOOKUP  # noqa: PLW0603
     if _DEFAULT_GITHUB_PR_LOOKUP is None:
         _DEFAULT_GITHUB_PR_LOOKUP = GitHubPrLookup()
     return _DEFAULT_GITHUB_PR_LOOKUP
 
 
-def classify_vulnerability(row, repology_lookup=None):
+def classify_vulnerability(row, repology_lookup=None):  # noqa: PLR0911
     """Classify a vulnerable package row using Repology/CVE data."""
     repology_lookup = (
         _get_default_repology_lookup() if repology_lookup is None else repology_lookup

@@ -12,7 +12,7 @@ RE_NIX_STORE_PATH_BASENAME = re.compile(r"^[0-9a-z]{32}-.+")
 RE_NIX_STORE_PATH = re.compile(r"(?P<store_path>/(?:[^/\s:]+/)+[0-9a-z]{32}-[^/\s:]+)")
 
 
-def get_nix_store_dir(path=None, default="/nix/store"):
+def get_nix_store_dir(path=None, default: str | None = "/nix/store") -> str | None:
     """Infer the nix store directory from an absolute store path-like string."""
     if path:
         match = RE_NIX_STORE_PATH.search(str(path))
@@ -70,11 +70,14 @@ def _normalize_nix_derivation_info(drv_info, store_dir):
     if isinstance(outputs, dict):
         normalized["outputs"] = {}
         for name, output in outputs.items():
+            normalized_output = output
             if isinstance(output, dict):
-                output = dict(output)
-                if output.get("path"):
-                    output["path"] = normalize_nix_store_path(output["path"], store_dir)
-            normalized["outputs"][name] = output
+                normalized_output = dict(output)
+                if normalized_output.get("path"):
+                    normalized_output["path"] = normalize_nix_store_path(
+                        normalized_output["path"], store_dir
+                    )
+            normalized["outputs"][name] = normalized_output
 
     env = normalized.get("env")
     if isinstance(env, dict):
@@ -125,7 +128,7 @@ def parse_nix_derivation_show(stdout, store_path_hint=None):
         return {}
 
     normalized = {}
-    fallback_store_dir = get_nix_store_dir(store_path_hint)
+    fallback_store_dir = get_nix_store_dir(store_path_hint) or "/nix/store"
     for drv_path, drv_info in derivations.items():
         store_dir = get_nix_store_dir(drv_path, default=None)
         if not store_dir:

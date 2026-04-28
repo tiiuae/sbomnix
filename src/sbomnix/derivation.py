@@ -4,9 +4,6 @@
 
 # SPDX-FileCopyrightText: 2022-2023 Technology Innovation Institute (TII)
 
-# pylint: disable=invalid-name
-# pylint: disable=too-many-instance-attributes
-
 """Nix derivation, originally from https://github.com/flyingcircusio/vulnix"""
 
 import bisect

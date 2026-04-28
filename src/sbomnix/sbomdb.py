@@ -4,9 +4,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-many-instance-attributes, too-many-arguments
-# pylint: disable=too-many-positional-arguments
-
 """Module for generating SBOMs in various formats"""
 
 import argparse
@@ -37,7 +34,7 @@ SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
 class SbomDb:
     """Generates SBOMs in various formats"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         nix_path,
         buildtime=False,

@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=attribute-defined-outside-init,too-many-instance-attributes
-
 """Repology query adapter."""
 
 import pathlib
