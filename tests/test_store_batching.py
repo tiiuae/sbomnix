@@ -9,7 +9,8 @@ import json
 from types import SimpleNamespace
 
 from sbomnix import derivation as sbomnix_derivation
-from sbomnix import nix as sbomnix_nix
+from sbomnix import derivers as sbomnix_derivers
+from sbomnix import fallback_store as sbomnix_fallback_store
 
 
 def test_find_derivers_batches_nix_store_queries(monkeypatch):
@@ -22,10 +23,10 @@ def test_find_derivers_batches_nix_store_queries(monkeypatch):
             returncode=0,
         )
 
-    monkeypatch.setattr(sbomnix_nix, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(sbomnix_derivers, "exec_cmd", fake_exec_cmd)
     monkeypatch.setattr("os.path.exists", lambda path: path.endswith(".drv"))
 
-    resolved = sbomnix_nix.find_derivers(
+    resolved = sbomnix_derivers.find_derivers(
         ["/nix/store/first", "/nix/store/second"],
         batch_size=50,
     )
@@ -146,6 +147,7 @@ def test_store_add_paths_loads_each_deriver_once(monkeypatch):
         }
 
     def fake_load_many(_paths, output_paths_by_drv=None, batch_size=200):
+        assert output_paths_by_drv is not None
         load_calls.append(
             (
                 list(_paths),
@@ -157,11 +159,11 @@ def test_store_add_paths_loads_each_deriver_once(monkeypatch):
             "/nix/store/shared.drv": FakeDrv("/nix/store/shared.drv"),
         }
 
-    monkeypatch.setattr(sbomnix_nix, "find_derivers", fake_find_derivers)
-    monkeypatch.setattr(sbomnix_nix, "load_many", fake_load_many)
+    monkeypatch.setattr(sbomnix_fallback_store, "find_derivers", fake_find_derivers)
+    monkeypatch.setattr(sbomnix_fallback_store, "load_many", fake_load_many)
     monkeypatch.setattr("os.path.exists", lambda _path: True)
 
-    store = sbomnix_nix.Store(buildtime=True, include_cpe=False)
+    store = sbomnix_fallback_store.FallbackStore(buildtime=True, include_cpe=False)
     store.add_paths(["/nix/store/first-out", "/nix/store/second-out"])
 
     assert load_calls == [

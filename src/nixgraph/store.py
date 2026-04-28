@@ -11,7 +11,7 @@ import re
 from common.errors import MissingNixDeriverError, MissingNixOutPathError
 from common.log import LOG
 from common.proc import exec_cmd
-from sbomnix.nix import find_deriver
+from sbomnix.derivers import find_deriver
 
 
 def get_nix_store_path(nix_path, log=LOG):
