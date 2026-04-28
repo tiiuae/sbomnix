@@ -12,7 +12,6 @@ import uuid
 from types import SimpleNamespace
 
 import numpy as np
-import pandas as pd
 
 from common import columns as cols
 from common.df import df_to_csv_file
@@ -24,9 +23,12 @@ from sbomnix.closure import (
     dependency_paths,
     derivation_dependencies_df,
 )
-from sbomnix.cpe import CPE
+from sbomnix.components import (
+    recursive_derivations_to_dataframe,
+    runtime_derivations_to_dataframe,
+)
 from sbomnix.dependency_index import build_dependency_index
-from sbomnix.derivation import load_many, load_recursive
+from sbomnix.derivation import load_recursive
 from sbomnix.derivers import find_deriver
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.fallback_store import FallbackStore
@@ -197,9 +199,17 @@ class SbomBuilder:
             if self._runtime_output_paths_by_drv is None:
                 self.df_sbomdb = self._load_fallback_store_dataframe(paths)
             else:
-                self.df_sbomdb = self._runtime_derivations_to_dataframe(paths)
+                self.df_sbomdb = runtime_derivations_to_dataframe(
+                    paths,
+                    self._runtime_output_paths_by_drv,
+                    include_cpe=self.include_cpe,
+                )
         else:
-            self.df_sbomdb = self._recursive_derivations_to_dataframe(paths)
+            self.df_sbomdb = recursive_derivations_to_dataframe(
+                paths,
+                self._recursive_buildtime_derivations,
+                include_cpe=self.include_cpe,
+            )
         # Join with meta information
         if include_meta:
             self._join_meta()
@@ -218,44 +228,6 @@ class SbomBuilder:
             # will be the target itself.
             return set([self.target_deriver])
         return dependency_paths(self.df_deps)
-
-    def _recursive_derivations_to_dataframe(self, paths):
-        derivations = self._recursive_buildtime_derivations
-        assert derivations is not None
-        drvs = []
-        for path in sorted(paths):
-            drv = derivations.get(path)
-            if not drv:
-                LOG.debug("Recursive buildtime closure missing path: %s", path)
-                continue
-            drvs.append(drv)
-        return self._derivations_to_dataframe(drvs)
-
-    def _runtime_derivations_to_dataframe(self, paths):
-        output_paths_by_drv = self._filtered_runtime_outputs_by_drv(paths)
-        return self._derivations_to_dataframe(
-            load_many(
-                sorted(output_paths_by_drv),
-                output_paths_by_drv=output_paths_by_drv,
-            ).values()
-        )
-
-    def _derivations_to_dataframe(self, derivations):
-        cpe_generator = CPE(include_cpe=self.include_cpe)
-        drv_dicts = []
-        for drv in derivations:
-            drv.set_cpe(cpe_generator)
-            drv_dicts.append(drv.to_dict())
-        return pd.DataFrame.from_records(drv_dicts)
-
-    def _filtered_runtime_outputs_by_drv(self, paths):
-        output_paths_by_drv = {}
-        assert self._runtime_output_paths_by_drv is not None
-        for drv_path, output_paths in self._runtime_output_paths_by_drv.items():
-            filtered_output_paths = set(output_paths) & paths
-            if filtered_output_paths:
-                output_paths_by_drv[drv_path] = filtered_output_paths
-        return output_paths_by_drv
 
     def _load_fallback_store_dataframe(self, paths):
         store = FallbackStore(self.buildtime, include_cpe=self.include_cpe)
