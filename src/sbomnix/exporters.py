@@ -16,6 +16,15 @@ from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency
 
+_NIXPKGS_META_SOURCE_FIELDS = (
+    ("nixpkgs:metadata_source_method", "method"),
+    ("nixpkgs:path", "path"),
+    ("nixpkgs:rev", "rev"),
+    ("nixpkgs:flakeref", "flakeref"),
+    ("nixpkgs:version", "version"),
+    ("nixpkgs:message", "message"),
+)
+
 
 def write_json(pathname, data, printinfo=False):
     """Write JSON data to a file."""
@@ -24,6 +33,34 @@ def write_json(pathname, data, printinfo=False):
         outfile.write(json_string)
         if printinfo:
             LOG.info("Wrote: %s", outfile.name)
+
+
+def _nixpkgs_meta_source_properties(sbomdb):
+    """Return non-empty document properties for nixpkgs metadata source."""
+    source = getattr(sbomdb, "nixpkgs_meta_source", None)
+    if source is None:
+        return []
+    properties = []
+    for property_name, attr_name in _NIXPKGS_META_SOURCE_FIELDS:
+        value = getattr(source, attr_name)
+        if value:
+            properties.append({"name": property_name, "value": str(value)})
+    return properties
+
+
+def _spdx_nixpkgs_meta_source_comment(sbomdb):
+    """Return a compact SPDX comment line for nixpkgs metadata source."""
+    source = getattr(sbomdb, "nixpkgs_meta_source", None)
+    if source is None:
+        return None
+    fields = []
+    for property_name, attr_name in _NIXPKGS_META_SOURCE_FIELDS:
+        value = getattr(source, attr_name)
+        if value:
+            fields.append(f"{property_name.removeprefix('nixpkgs:')}={value}")
+    if not fields:
+        return None
+    return "nixpkgs metadata source: " + "; ".join(fields)
 
 
 def build_cdx_document(sbomdb):
@@ -45,6 +82,7 @@ def build_cdx_document(sbomdb):
         prop["name"] = "sbom_dependencies_depth"
         prop["value"] = str(sbomdb.depth)
         cdx["metadata"]["properties"].append(prop)
+    cdx["metadata"]["properties"].extend(_nixpkgs_meta_source_properties(sbomdb))
     tool = {}
     tool["vendor"] = "TII"
     tool["name"] = "sbomnix"
@@ -164,7 +202,11 @@ def build_spdx_document(sbomdb):
     creation_info["creators"] = []
     creation_info["creators"].append(f"Tool: sbomnix-{get_py_pkg_version()}")
     spdx["creationInfo"] = creation_info
-    spdx["comment"] = f"included dependencies: '{sbomdb.sbom_type}'"
+    comments = [f"included dependencies: '{sbomdb.sbom_type}'"]
+    source_comment = _spdx_nixpkgs_meta_source_comment(sbomdb)
+    if source_comment:
+        comments.append(source_comment)
+    spdx["comment"] = "\n".join(comments)
     spdx["packages"] = []
     spdx["relationships"] = []
     for drv in sbomdb.df_sbomdb.itertuples():
