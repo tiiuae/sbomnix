@@ -45,6 +45,23 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
 
 
+def _runtime_output_paths_by_load_path(output_paths_by_drv):
+    output_paths_by_load_path = {}
+    for drv_path, output_paths in output_paths_by_drv.items():
+        if is_loadable_deriver_path(drv_path):
+            output_paths_by_load_path.setdefault(drv_path, set()).update(output_paths)
+            continue
+        for output_path in output_paths:
+            output_paths_by_load_path.setdefault(output_path, set()).add(output_path)
+    return output_paths_by_load_path
+
+
+def _mapped_runtime_output_paths(output_paths_by_load_path):
+    if not output_paths_by_load_path:
+        return set()
+    return set().union(*output_paths_by_load_path.values())
+
+
 class SbomBuilder:
     """Generate SBOMs in various formats."""
 
@@ -109,6 +126,10 @@ class SbomBuilder:
             return
         if not self.buildtime and self._init_runtime_path_info_dependencies(nix_path):
             return
+        self._init_nix_store_dependencies(nix_path)
+
+    def _init_nix_store_dependencies(self, nix_path):
+        """Initialize dependencies from the nix-store graph fallback."""
         nix_dependencies = NixDependencies(
             nix_path,
             buildtime=self.buildtime,
@@ -149,33 +170,22 @@ class SbomBuilder:
                 self.target_deriver,
             )
             return False
-        paths = dependency_paths(runtime_closure.df_deps) | {nix_path}
-        mapped_paths = set().union(*runtime_closure.output_paths_by_drv.values())
-        if not paths.issubset(mapped_paths):
-            LOG.debug(
-                "Runtime path-info missing derivers for: %s", paths - mapped_paths
-            )
-            LOG.warning(
-                "Falling back to nix-store runtime graph for '%s'",
-                self.target_deriver,
-            )
-            return False
-        invalid_derivers = sorted(
-            drv_path
-            for drv_path in runtime_closure.output_paths_by_drv
-            if not is_loadable_deriver_path(drv_path)
+        output_paths_by_load_path = _runtime_output_paths_by_load_path(
+            runtime_closure.output_paths_by_drv
         )
-        if invalid_derivers:
+        mapped_paths = _mapped_runtime_output_paths(output_paths_by_load_path)
+        if nix_path not in mapped_paths:
+            output_paths_by_load_path.setdefault(self.target_deriver, set()).add(
+                nix_path
+            )
+            mapped_paths.add(nix_path)
+        graph_only_paths = dependency_paths(runtime_closure.df_deps) - mapped_paths
+        if graph_only_paths:
             LOG.debug(
-                "Runtime path-info contains unusable derivers: %s",
-                invalid_derivers,
+                "Runtime path-info references graph-only paths: %s",
+                sorted(graph_only_paths),
             )
-            LOG.warning(
-                "Falling back to nix-store runtime graph for '%s'",
-                self.target_deriver,
-            )
-            return False
-        self._runtime_output_paths_by_drv = runtime_closure.output_paths_by_drv
+        self._runtime_output_paths_by_drv = output_paths_by_load_path
         self.df_deps = runtime_closure.df_deps
         if self.depth:
             self.df_deps = self._filter_dependencies_to_depth(
@@ -184,6 +194,23 @@ class SbomBuilder:
                 self.depth,
             )
         return True
+
+    def _init_runtime_components(self, paths):
+        try:
+            return runtime_derivations_to_dataframe(
+                paths,
+                self._runtime_output_paths_by_drv,
+                include_cpe=self.include_cpe,
+            )
+        except (RuntimeError, subprocess.CalledProcessError, ValueError):
+            LOG.debug("Failed loading runtime derivation components", exc_info=True)
+            LOG.warning(
+                "Falling back to nix-store runtime graph for '%s'",
+                self.target_deriver,
+            )
+            self._runtime_output_paths_by_drv = None
+            self._init_nix_store_dependencies(self.nix_path)
+            return self._load_fallback_store_dataframe(self._sbom_component_paths())
 
     def _filter_dependencies_to_depth(
         self,
@@ -214,11 +241,7 @@ class SbomBuilder:
             if self._runtime_output_paths_by_drv is None:
                 self.df_sbomdb = self._load_fallback_store_dataframe(paths)
             else:
-                self.df_sbomdb = runtime_derivations_to_dataframe(
-                    paths,
-                    self._runtime_output_paths_by_drv,
-                    include_cpe=self.include_cpe,
-                )
+                self.df_sbomdb = self._init_runtime_components(paths)
         else:
             self.df_sbomdb = recursive_derivations_to_dataframe(
                 paths,

@@ -31,47 +31,139 @@ def load(path, outpath):
         exec_cmd(nix_cmd("derivation", "show", path)).stdout,
         store_path_hint=path,
     )
+    drv_path = path
     drv_info = drv_infos.get(path)
     if drv_info is None and drv_infos:
-        drv_info = next(iter(drv_infos.values()))
+        drv_path, drv_info = next(iter(drv_infos.items()))
     if drv_info is None:
         raise RuntimeError(f"Failed loading derivation '{path}'")
-    d_obj = Derive.from_nix_derivation_info(path, drv_info, outpath)
+    if outpath is None and path != drv_path and not path.endswith(".drv"):
+        outpath = path
+    d_obj = Derive.from_nix_derivation_info(drv_path, drv_info, outpath)
     LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
     LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
-def load_many(paths, output_paths_by_drv=None, batch_size=200):
+def load_many(paths, output_paths_by_drv=None, batch_size=200, ignore_missing=False):
     """Load many derivations with batched `nix derivation show` calls."""
     if not paths:
         return {}
     output_paths_by_drv = {} if output_paths_by_drv is None else output_paths_by_drv
     loaded = {}
     for batch in _batched(dict.fromkeys(paths), batch_size):
-        drv_infos = parse_nix_derivation_show(
-            exec_cmd(nix_cmd("derivation", "show", *batch)).stdout
+        drv_infos = _load_derivation_infos(
+            batch,
+            store_path_hint=batch[0],
+            ignore_missing=ignore_missing,
         )
-        for path in batch:
-            drv_info = drv_infos.get(path)
-            if drv_info is None:
-                loaded[path] = load(
-                    path,
-                    next(iter(output_paths_by_drv.get(path, ())), None),
-                )
+        query_to_drv_path = _query_paths_to_derivations(batch, drv_infos)
+        output_paths_by_loaded_drv = {}
+        missing_paths = []
+        for query_path in batch:
+            drv_path = query_to_drv_path.get(query_path)
+            if drv_path is None:
+                missing_paths.append(query_path)
                 continue
-            output_paths = list(output_paths_by_drv.get(path, ()))
+            output_paths = output_paths_by_loaded_drv.setdefault(drv_path, set())
+            output_paths.update(output_paths_by_drv.get(drv_path, ()))
+            output_paths.update(output_paths_by_drv.get(query_path, ()))
+            if query_path != drv_path and not query_path.endswith(".drv"):
+                output_paths.add(query_path)
+
+        for drv_path, output_paths in output_paths_by_loaded_drv.items():
+            drv_info = drv_infos[drv_path]
+            sorted_output_paths = sorted(output_paths)
             drv = Derive.from_nix_derivation_info(
-                path,
+                drv_path,
                 drv_info,
-                output_paths[0] if output_paths else None,
+                sorted_output_paths[0] if sorted_output_paths else None,
             )
-            for outpath in output_paths[1:]:
+            for outpath in sorted_output_paths[1:]:
                 drv.add_output_path(outpath)
             LOG.log(LOG_SPAM, "load derivation: %s", drv)
             LOG.log(LOG_SPAM, "derivation attrs: %s", drv.to_dict())
-            loaded[path] = drv
+            loaded[drv_path] = drv
+
+        for path in missing_paths:
+            if ignore_missing:
+                LOG.debug("Skipping path without derivation metadata: %s", path)
+                continue
+            loaded[path] = load(
+                path,
+                next(iter(output_paths_by_drv.get(path, ())), None),
+            )
     return loaded
+
+
+def _load_derivation_infos(paths, store_path_hint=None, ignore_missing=False):
+    if ignore_missing:
+        ret = exec_cmd(
+            nix_cmd("derivation", "show", *paths),
+            raise_on_error=False,
+            log_error=False,
+        )
+    else:
+        ret = exec_cmd(nix_cmd("derivation", "show", *paths))
+    if ret is not None:
+        return parse_nix_derivation_show(ret.stdout, store_path_hint=store_path_hint)
+    if len(paths) == 1:
+        return {}
+    midpoint = len(paths) // 2
+    left = _load_derivation_infos(
+        paths[:midpoint],
+        store_path_hint=paths[0],
+        ignore_missing=ignore_missing,
+    )
+    right = _load_derivation_infos(
+        paths[midpoint:],
+        store_path_hint=paths[midpoint],
+        ignore_missing=ignore_missing,
+    )
+    return {**left, **right}
+
+
+def _query_paths_to_derivations(query_paths, drv_infos):
+    output_to_drv_path = {}
+    for drv_path, drv_info in drv_infos.items():
+        for output_path in _derivation_output_paths(drv_info):
+            output_to_drv_path.setdefault(output_path, drv_path)
+
+    query_to_drv_path = {}
+    for query_path in query_paths:
+        if query_path in drv_infos:
+            query_to_drv_path[query_path] = query_path
+            continue
+        drv_path = output_to_drv_path.get(query_path)
+        if drv_path:
+            query_to_drv_path[query_path] = drv_path
+    return query_to_drv_path
+
+
+def _derivation_output_paths(drv_info):
+    outputs = drv_info.get("outputs", {})
+    env_vars = drv_info.get("env", {})
+    if not isinstance(outputs, dict):
+        outputs = {}
+    if not isinstance(env_vars, dict):
+        env_vars = {}
+    output_paths = []
+
+    def add_output_path(path):
+        if path and path not in output_paths:
+            output_paths.append(path)
+
+    for output_name, output in outputs.items():
+        path = _derivation_output_path(outputs, output_name)
+        if path:
+            add_output_path(path)
+        elif isinstance(output, str):
+            add_output_path(output)
+        else:
+            add_output_path(env_vars.get(output_name))
+    for output_name in str(env_vars.get("outputs", "")).split():
+        add_output_path(env_vars.get(output_name))
+    return output_paths
 
 
 def load_recursive(path):

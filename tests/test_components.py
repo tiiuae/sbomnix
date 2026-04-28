@@ -65,8 +65,8 @@ def test_recursive_derivations_to_dataframe_skips_missing_paths():
 def test_runtime_derivations_to_dataframe_filters_outputs_before_loading(monkeypatch):
     load_calls = []
 
-    def fake_load_many(paths, output_paths_by_drv=None):
-        load_calls.append((paths, output_paths_by_drv))
+    def fake_load_many(paths, output_paths_by_drv=None, ignore_missing=False):
+        load_calls.append((paths, output_paths_by_drv, ignore_missing))
         return {
             "/nix/store/first.drv": FakeDrv("/nix/store/first.drv", "first"),
             "/nix/store/second.drv": FakeDrv("/nix/store/second.drv", "second"),
@@ -101,6 +101,7 @@ def test_runtime_derivations_to_dataframe_filters_outputs_before_loading(monkeyp
                 "/nix/store/first.drv": {"/nix/store/first-out"},
                 "/nix/store/second.drv": {"/nix/store/second-out"},
             },
+            True,
         )
     ]
     assert df_components["store_path"].to_list() == [
