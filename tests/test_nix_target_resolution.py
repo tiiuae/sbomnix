@@ -24,6 +24,97 @@ def test_resolve_nix_target_preserves_flakeref_on_success(monkeypatch):
     assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
         path="/nix/store/resolved",
         flakeref=".#hello",
+        original_ref=".#hello",
+    )
+
+
+def test_resolve_nix_target_normalizes_plain_nixos_configuration(monkeypatch):
+    calls = []
+
+    def fake_resolve(flakeref, **_kwargs):
+        calls.append(flakeref)
+        return "/nix/store/resolved"
+
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        fake_resolve,
+    )
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(
+        "/flake#nixosConfigurations.host",
+        buildtime=False,
+    )
+
+    assert calls == ['/flake#nixosConfigurations."host".config.system.build.toplevel']
+    assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
+        path="/nix/store/resolved",
+        flakeref='/flake#nixosConfigurations."host".config.system.build.toplevel',
+        original_ref="/flake#nixosConfigurations.host",
+    )
+
+
+def test_resolve_nix_target_normalizes_quoted_nixos_configuration(monkeypatch):
+    calls = []
+
+    def fake_resolve(flakeref, **_kwargs):
+        calls.append(flakeref)
+        return "/nix/store/resolved"
+
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        fake_resolve,
+    )
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(
+        '/flake#nixosConfigurations."host.example.com"',
+        buildtime=False,
+    )
+
+    assert calls == [
+        '/flake#nixosConfigurations."host.example.com".config.system.build.toplevel'
+    ]
+    assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
+        path="/nix/store/resolved",
+        flakeref=(
+            '/flake#nixosConfigurations."host.example.com".config.system.build.toplevel'
+        ),
+        original_ref='/flake#nixosConfigurations."host.example.com"',
+    )
+
+
+@pytest.mark.parametrize(
+    "nixref",
+    [
+        "/flake#nixosConfigurations.",
+        '/flake#nixosConfigurations."unterminated',
+        '/flake#nixosConfigurations."trailing\\',
+    ],
+)
+def test_resolve_nix_target_leaves_malformed_nixos_configuration_refs(
+    nixref,
+    monkeypatch,
+):
+    calls = []
+
+    def fake_resolve(flakeref, **_kwargs):
+        calls.append(flakeref)
+        return "/nix/store/resolved"
+
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        fake_resolve,
+    )
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(nixref, buildtime=False)
+
+    assert calls == [nixref]
+    assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
+        path="/nix/store/resolved",
+        flakeref=nixref,
+        original_ref=nixref,
     )
 
 
@@ -102,5 +193,6 @@ def test_resolve_nix_target_falls_back_to_store_path_validation(monkeypatch):
     assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
         path="/nix/store/not-a-flake",
         flakeref=None,
+        original_ref="/nix/store/not-a-flake",
     )
     assert artifact_checks == [("/nix/store/not-a-flake", True)]
