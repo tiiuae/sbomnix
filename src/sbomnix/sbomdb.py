@@ -20,10 +20,16 @@ from common.log import LOG, is_debug_enabled
 from nixgraph.graph import NixDependencies
 from nixgraph.render import NixDependencyGraph
 from sbomnix.dependency_index import build_dependency_index
-from sbomnix.derivation import load_recursive
+from sbomnix.derivation import load_many, load_recursive
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.nix import Store, find_deriver
+from sbomnix.runtime import (
+    DEPENDENCY_COLUMNS as RUNTIME_DEPENDENCY_COLUMNS,
+)
+from sbomnix.runtime import (
+    load_runtime_closure,
+)
 from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 
 ###############################################################################
@@ -84,6 +90,14 @@ def _store_path_label(path):
     return name if separator else basename
 
 
+def _dependency_paths(df_deps):
+    if df_deps is None or df_deps.empty:
+        return set()
+    src_paths = df_deps[cols.SRC_PATH].unique().tolist()
+    target_paths = df_deps[cols.TARGET_PATH].unique().tolist()
+    return set(src_paths + target_paths)
+
+
 class SbomDb:
     """Generates SBOMs in various formats"""
 
@@ -110,6 +124,7 @@ class SbomDb:
         if self.target_deriver is None:
             raise RuntimeError(f"Failed finding deriver for '{nix_path}'")
         self._recursive_buildtime_derivations = None
+        self._runtime_output_paths_by_drv = None
         self.df_deps = None
         self.depth = depth
         self._init_dependencies(nix_path)
@@ -145,6 +160,8 @@ class SbomDb:
         """Initialize dependencies (df_deps)"""
         if self.buildtime and self._init_recursive_buildtime_dependencies():
             return
+        if not self.buildtime and self._init_runtime_path_info_dependencies(nix_path):
+            return
         nix_dependencies = NixDependencies(
             nix_path,
             buildtime=self.buildtime,
@@ -174,7 +191,46 @@ class SbomDb:
             )
         return True
 
-    def _filter_dependencies_to_depth(self, df_deps, start_path, depth):
+    def _init_runtime_path_info_dependencies(self, nix_path):
+        """Initialize runtime dependencies from structured path-info JSON."""
+        try:
+            runtime_closure = load_runtime_closure(nix_path)
+        except (RuntimeError, subprocess.CalledProcessError, ValueError):
+            LOG.debug("Failed loading runtime path-info closure", exc_info=True)
+            LOG.warning(
+                "Falling back to nix-store runtime graph for '%s'",
+                self.target_deriver,
+            )
+            return False
+        paths = _dependency_paths(runtime_closure.df_deps) | {nix_path}
+        mapped_paths = set().union(*runtime_closure.output_paths_by_drv.values())
+        if not paths.issubset(mapped_paths):
+            LOG.debug(
+                "Runtime path-info missing derivers for: %s", paths - mapped_paths
+            )
+            LOG.warning(
+                "Falling back to nix-store runtime graph for '%s'",
+                self.target_deriver,
+            )
+            return False
+        self._runtime_output_paths_by_drv = runtime_closure.output_paths_by_drv
+        self.df_deps = runtime_closure.df_deps
+        if self.depth:
+            self.df_deps = self._filter_dependencies_to_depth(
+                self.df_deps,
+                nix_path,
+                self.depth,
+                columns=RUNTIME_DEPENDENCY_COLUMNS,
+            )
+        return True
+
+    def _filter_dependencies_to_depth(
+        self,
+        df_deps,
+        start_path,
+        depth,
+        columns=_DEPENDENCY_COLUMNS,
+    ):
         """Return dependency rows reachable from ``start_path`` up to ``depth``."""
         LOG.debug("Reading dependencies until depth=%s", depth)
         args = argparse.Namespace()
@@ -182,7 +238,7 @@ class SbomDb:
         args.return_df = True
         df_depth = NixDependencyGraph(df_deps).draw(start_path, args)
         if df_depth is None:
-            return pd.DataFrame(columns=pd.Index(_DEPENDENCY_COLUMNS))
+            return pd.DataFrame(columns=pd.Index(columns))
         return df_depth.drop(columns=["graph_depth"], errors="ignore")
 
     def _get_dependencies_df(self, nix_dependencies):
@@ -202,9 +258,12 @@ class SbomDb:
         paths = self._sbom_component_paths()
         # Populate store based on the dependencies
         if self._recursive_buildtime_derivations is None:
-            store = Store(self.buildtime, include_cpe=self.include_cpe)
-            store.add_paths(paths)
-            self.df_sbomdb = store.to_dataframe()
+            if self._runtime_output_paths_by_drv is None:
+                store = Store(self.buildtime, include_cpe=self.include_cpe)
+                store.add_paths(paths)
+                self.df_sbomdb = store.to_dataframe()
+            else:
+                self.df_sbomdb = self._runtime_derivations_to_dataframe(paths)
         else:
             self.df_sbomdb = self._recursive_derivations_to_dataframe(paths)
         # Join with meta information
@@ -219,13 +278,12 @@ class SbomDb:
 
     def _sbom_component_paths(self):
         if self.df_deps is None or self.df_deps.empty:
+            if self._runtime_output_paths_by_drv is not None:
+                return set().union(*self._runtime_output_paths_by_drv.values())
             # No dependencies, so the only component in the sbom
             # will be the target itself.
             return set([self.target_deriver])
-        # Get unique src_paths and target_paths.
-        src_paths = self.df_deps[cols.SRC_PATH].unique().tolist()
-        target_paths = self.df_deps[cols.TARGET_PATH].unique().tolist()
-        return set(src_paths + target_paths)
+        return _dependency_paths(self.df_deps)
 
     def _recursive_derivations_to_dataframe(self, paths):
         drv_dicts = []
@@ -242,6 +300,27 @@ class SbomDb:
             drv.set_cpe(cpe_generator)
             drv_dicts.append(drv.to_dict())
         return pd.DataFrame.from_records(drv_dicts)
+
+    def _runtime_derivations_to_dataframe(self, paths):
+        output_paths_by_drv = self._filtered_runtime_outputs_by_drv(paths)
+        store = Store(self.buildtime, include_cpe=self.include_cpe)
+        drv_dicts = []
+        for _drv_path, drv in load_many(
+            list(output_paths_by_drv),
+            output_paths_by_drv=output_paths_by_drv,
+        ).items():
+            drv.set_cpe(store.cpe_generator)
+            drv_dicts.append(drv.to_dict())
+        return pd.DataFrame.from_records(drv_dicts)
+
+    def _filtered_runtime_outputs_by_drv(self, paths):
+        output_paths_by_drv = {}
+        assert self._runtime_output_paths_by_drv is not None
+        for drv_path, output_paths in self._runtime_output_paths_by_drv.items():
+            filtered_output_paths = set(output_paths) & paths
+            if filtered_output_paths:
+                output_paths_by_drv[drv_path] = filtered_output_paths
+        return output_paths_by_drv
 
     def _init_dependency_index(self):
         """Build indexed dependency lookups used during export."""

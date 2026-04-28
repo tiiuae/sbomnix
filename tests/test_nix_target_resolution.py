@@ -5,6 +5,8 @@
 
 """Focused tests for shared nix target resolution helpers."""
 
+from types import SimpleNamespace
+
 import pytest
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
@@ -223,3 +225,31 @@ def test_resolve_nix_target_falls_back_to_store_path_validation(monkeypatch):
         original_ref="/nix/store/not-a-flake",
     )
     assert artifact_checks == [("/nix/store/not-a-flake", True)]
+
+
+def test_resolve_nix_target_realises_runtime_drv_target(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        return SimpleNamespace(stdout="/nix/store/resolved-output\n")
+
+    monkeypatch.setattr(sbomnix_cli_utils, "exec_cmd", fake_exec_cmd)
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(
+        "/nix/store/target.drv",
+        buildtime=False,
+    )
+
+    assert resolved == sbomnix_cli_utils.ResolvedNixTarget(
+        path="/nix/store/resolved-output",
+        flakeref=None,
+        original_ref="/nix/store/target.drv",
+    )
+    assert calls == [(["nix-store", "-qf", "/nix/store/target.drv"], {})]
