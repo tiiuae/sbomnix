@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Module for generating SBOMs in various formats"""
+"""SBOM builder orchestration."""
 
 import logging
 import subprocess
@@ -43,8 +43,8 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
 
 
-class SbomDb:
-    """Generates SBOMs in various formats"""
+class SbomBuilder:
+    """Generate SBOMs in various formats."""
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
@@ -59,8 +59,8 @@ class SbomDb:
         include_vulns=False,
         include_cpe=True,
     ):
-        # self.uid specifies the attribute that SbomDb uses as unique
-        # identifier for the sbom components. See the column names in
+        # self.uid specifies the attribute that identifies SBOM components.
+        # See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
         self.uid = cols.STORE_PATH
         self.nix_path = nix_path
@@ -85,7 +85,7 @@ class SbomDb:
         # found no source.
         self.nixpkgs_meta_source = NixpkgsMetaSource(method="disabled")
         self.include_cpe = include_cpe
-        self._init_sbomdb(include_meta)
+        self._init_components(include_meta)
         self.include_vulns = include_vulns
         # Use a random UUID as the serial number when any data source that is
         # not strictly coming from the target_deriver is used
@@ -189,8 +189,8 @@ class SbomDb:
         LOG.debug("Reading all dependencies")
         return nix_dependencies.to_dataframe()
 
-    def _init_sbomdb(self, include_meta):
-        """Initialize self.df_sbomdb"""
+    def _init_components(self, include_meta):
+        """Initialize the SBOM component dataframe."""
         paths = self._sbom_component_paths()
         # Populate store based on the dependencies
         if self._recursive_buildtime_derivations is None:
@@ -202,7 +202,7 @@ class SbomDb:
             self.df_sbomdb = self._recursive_derivations_to_dataframe(paths)
         # Join with meta information
         if include_meta:
-            self._sbomdb_join_meta()
+            self._join_meta()
         # Clean, drop duplicates, sort
         self.df_sbomdb.replace(np.nan, "", regex=True, inplace=True)
         self.df_sbomdb.drop_duplicates(subset=[self.uid], keep="first", inplace=True)
@@ -271,8 +271,8 @@ class SbomDb:
             uid=self.uid,
         )
 
-    def _sbomdb_join_meta(self):
-        """Join self.df_sbomdb with meta information"""
+    def _join_meta(self):
+        """Join component rows with nixpkgs metadata."""
         assert self.df_sbomdb is not None
         self.meta = Meta()
         df_meta, source = self.meta.get_nixpkgs_meta_with_source(
@@ -309,13 +309,7 @@ class SbomDb:
         )
 
     def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
-        """
-        Lookup the runtime and buildtime dependencies for `drv`.
-        Returns a list of unique dependencies as specified by the
-        dependencies' attribute (column) `uid` values.
-        By default, returns the list of unique `store_path` values
-        which includes the build and runtime dependencies of `drv`.
-        """
+        """Return indexed dependency values for one SBOM component."""
         dependency_index = getattr(self, "dependency_index", None)
         if dependency_index is None:
             return None
@@ -338,15 +332,15 @@ class SbomDb:
         write_json(pathname, data, printinfo=printinfo)
 
     def to_cdx(self, cdx_path, printinfo=True):
-        """Export sbomdb to cyclonedx json file"""
+        """Export SBOM components to a CycloneDX JSON file."""
         cdx = self.to_cdx_data()
         self.write_json(cdx_path, cdx, printinfo)
 
     def to_spdx(self, spdx_path, printinfo=True):
-        """Export sbomdb to spdx json file"""
+        """Export SBOM components to an SPDX JSON file."""
         spdx = self.to_spdx_data()
         self.write_json(spdx_path, spdx, printinfo)
 
     def to_csv(self, csv_path, loglevel=logging.INFO):
-        """Export sbomdb to csv file"""
+        """Export SBOM components to a CSV file."""
         df_to_csv_file(self.df_sbomdb, csv_path, loglevel)

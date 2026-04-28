@@ -64,7 +64,7 @@ def _spdx_nixpkgs_meta_source_comment(sbomdb):
 
 
 def build_cdx_document(sbomdb):
-    """Build a CycloneDX document from an SbomDb instance."""
+    """Build a CycloneDX document from an SBOM builder."""
     cdx = {}
     cdx["bomFormat"] = "CycloneDX"
     cdx["specVersion"] = "1.4"
@@ -190,7 +190,7 @@ def _drv_to_spdx_relationships(drv, deps_list, uid=cols.STORE_PATH):
 
 
 def build_spdx_document(sbomdb):
-    """Build an SPDX document from an SbomDb instance."""
+    """Build an SPDX document from an SBOM builder."""
     spdx = {}
     spdx["spdxVersion"] = "SPDX-2.3"
     spdx["dataLicense"] = "CC0-1.0"

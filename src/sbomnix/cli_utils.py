@@ -21,7 +21,7 @@ from common.flakeref import (
 )
 from common.log import LOG
 from common.proc import exec_cmd, exit_unless_nix_artifact
-from sbomnix.sbomdb import SbomDb
+from sbomnix.builder import SbomBuilder
 
 
 @dataclass(frozen=True)
@@ -104,19 +104,19 @@ def generate_temp_sbom(
 ):
     """Generate temporary SBOM artifact files for downstream CLI workflows."""
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbomdb = SbomDb(target_path, buildtime, include_meta=False)
+    sbom = SbomBuilder(target_path, buildtime, include_meta=False)
     cdx_path = None
     csv_path = None
     try:
         with NamedTemporaryFile(delete=False, prefix=prefix, suffix=cdx_suffix) as fcdx:
             cdx_path = pathlib.Path(fcdx.name)
             if not include_csv:
-                sbomdb.to_cdx(cdx_path, printinfo=False)
+                sbom.to_cdx(cdx_path, printinfo=False)
                 return GeneratedSbom(cdx_path=cdx_path)
             with NamedTemporaryFile(delete=False, prefix=prefix, suffix=".csv") as fcsv:
                 csv_path = pathlib.Path(fcsv.name)
-                sbomdb.to_cdx(cdx_path, printinfo=False)
-                sbomdb.to_csv(csv_path, loglevel=logging.DEBUG)
+                sbom.to_cdx(cdx_path, printinfo=False)
+                sbom.to_csv(csv_path, loglevel=logging.DEBUG)
         return GeneratedSbom(cdx_path=cdx_path, csv_path=csv_path)
     except Exception:
         if cdx_path is not None:

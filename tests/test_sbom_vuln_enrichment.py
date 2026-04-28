@@ -16,7 +16,7 @@ from common.errors import SbomnixError
 from sbomnix import cli_utils as sbomnix_cli_utils
 from sbomnix import main as sbomnix_main
 from sbomnix import vuln_enrichment as sbomnix_vuln_enrichment
-from sbomnix.sbomdb import SbomDb
+from sbomnix.builder import SbomBuilder
 
 
 class CapturingLogger:
@@ -79,7 +79,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
     )
     events = []
 
-    class FakeSbomDb:
+    class FakeSbomBuilder:
         def __init__(self, **kwargs):
             events.append(("init", kwargs))
 
@@ -110,7 +110,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
             flakeref=".#target",
         ),
     )
-    monkeypatch.setattr(sbomnix_main, "SbomDb", FakeSbomDb)
+    monkeypatch.setattr(sbomnix_main, "SbomBuilder", FakeSbomBuilder)
 
     sbomnix_main.main()
 
@@ -141,7 +141,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
     ]
 
 
-def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
+def test_sbomnix_main_logs_generation_before_initializing_builder(monkeypatch):
     args = SimpleNamespace(
         NIXREF=".#target",
         buildtime=False,
@@ -159,7 +159,7 @@ def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
     logger = CapturingLogger()
     events = []
 
-    class FakeSbomDb:
+    class FakeSbomBuilder:
         def __init__(self, **kwargs):
             events.append(("init", kwargs))
 
@@ -172,7 +172,7 @@ def test_sbomnix_main_logs_generation_before_initializing_sbomdb(monkeypatch):
             flakeref=".#target",
         ),
     )
-    monkeypatch.setattr(sbomnix_main, "SbomDb", FakeSbomDb)
+    monkeypatch.setattr(sbomnix_main, "SbomBuilder", FakeSbomBuilder)
 
     sbomnix_main._run(args)
 
@@ -218,7 +218,7 @@ def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
             raise AssertionError("scan_osv should not run during plain export")
 
     # Bypass __init__ to keep the test focused on export behavior without Nix IO.
-    sbomdb = object.__new__(SbomDb)
+    sbomdb = object.__new__(SbomBuilder)
     sbomdb.uid = "store_path"
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
@@ -245,7 +245,7 @@ def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr("sbomnix.vuln_enrichment.VulnScan", FailIfCalledScanner)
-    monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
+    monkeypatch.setattr(SbomBuilder, "lookup_dependencies", no_dependencies)
 
     out_path = tmp_path / "out.cdx.json"
     sbomdb.to_cdx(out_path, printinfo=False)
@@ -261,7 +261,7 @@ def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
         (True, "/nix/store/target.drv"),
     ],
 )
-def test_sbomdb_vuln_enrichment_scans_expected_nix_target(
+def test_sbom_vuln_enrichment_scans_expected_nix_target(
     buildtime,
     expected_target,
     monkeypatch,
@@ -284,7 +284,7 @@ def test_sbomdb_vuln_enrichment_scans_expected_nix_target(
             return None
 
     # Bypass __init__ to keep the test focused on enrichment target selection.
-    sbomdb = object.__new__(SbomDb)
+    sbomdb = object.__new__(SbomBuilder)
     sbomdb.nix_path = "/nix/store/target-output"
     sbomdb.buildtime = buildtime
     sbomdb.target_deriver = "/nix/store/target.drv"
@@ -300,7 +300,7 @@ def test_sbomdb_vuln_enrichment_scans_expected_nix_target(
     assert cdx["vulnerabilities"] == []
 
 
-def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
+def test_sbom_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
     temp_cdx_path = tmp_path / "vulnscan_temp.json"
     seen_paths = []
 
@@ -338,7 +338,7 @@ def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
             raise RuntimeError("osv scan failed")
 
     # Bypass __init__ to keep the test focused on enrichment tempfile cleanup.
-    sbomdb = object.__new__(SbomDb)
+    sbomdb = object.__new__(SbomBuilder)
     sbomdb.uid = "store_path"
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
@@ -370,7 +370,7 @@ def test_sbomdb_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
         lambda **_kwargs: FakeTempFile(temp_cdx_path),
     )
     monkeypatch.setattr(sbomnix_vuln_enrichment, "VulnScan", FailingScanner)
-    monkeypatch.setattr(SbomDb, "lookup_dependencies", no_dependencies)
+    monkeypatch.setattr(SbomBuilder, "lookup_dependencies", no_dependencies)
 
     cdx = sbomdb.to_cdx_data()
 

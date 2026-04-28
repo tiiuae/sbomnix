@@ -86,7 +86,7 @@ def _cdx_component_add_patches(component, drv):
 
 
 def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
-    """Convert one entry from sbomdb (drv) to cdx component"""
+    """Convert one SBOM component row to a CycloneDX component."""
     component = {}
     # Set the cdx component type based on the following heuristic:
     # - Set the default component type to 'library'
@@ -140,7 +140,7 @@ def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
 
 
 def _drv_to_cdx_dependency(drv, deps_list, uid=cols.STORE_PATH):
-    """Return cdx dependency structure for sbomdb drv"""
+    """Return CycloneDX dependency structure for one component row."""
     dependency = {}
     dependency["ref"] = getattr(drv, uid)
     if deps_list:

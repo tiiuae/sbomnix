@@ -199,8 +199,9 @@ metadata, including fields such as `nixpkgs:metadata_source_method`,
 `nixpkgs:message`.
 
 #### Visualize Package Dependencies
-`sbomnix` finds the package dependencies using `nixgraph`.
-Moreover, `nixgraph` can also be used as a stand-alone tool for visualizing package dependencies.
+`sbomnix` uses structured Nix JSON to find package dependencies where
+available. `nixgraph` can also be used as a stand-alone tool for visualizing
+package dependencies.
 Below, we show an example of visualizing package `wget` runtime dependencies:
 ```bash
 $ nixgraph github:NixOS/nixpkgs/nixos-unstable#wget --depth=2
@@ -237,4 +238,8 @@ This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt]
 
 
 ## Acknowledgements
-`sbomnix` uses Nix store derivation scanner ([nix.py](src/sbomnix/nix.py) and [derivation.py](src/sbomnix/derivation.py)) originally from [vulnix](https://github.com/nix-community/vulnix).
+Parts of the Nix store derivation loading code in `sbomnix`
+([fallback_store.py](src/sbomnix/fallback_store.py),
+[derivation.py](src/sbomnix/derivation.py), and
+[derivers.py](src/sbomnix/derivers.py)) originate from
+[vulnix](https://github.com/nix-community/vulnix).
