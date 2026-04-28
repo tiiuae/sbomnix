@@ -13,13 +13,10 @@ import pandas as pd
 
 from common import columns as cols
 from common.proc import exec_cmd, nix_cmd
-
-DEPENDENCY_COLUMNS = [
-    cols.SRC_PATH,
-    "src_pname",
-    cols.TARGET_PATH,
-    "target_pname",
-]
+from sbomnix.closure import (
+    dependency_rows_to_dataframe,
+    store_path_label,
+)
 
 
 @dataclass(frozen=True)
@@ -64,24 +61,10 @@ def runtime_closure_from_path_info(path_info):
                     "target_pname": store_path_label(target_path),
                 }
             )
-    df_deps = pd.DataFrame.from_records(rows, columns=pd.Index(DEPENDENCY_COLUMNS))
-    if not df_deps.empty:
-        df_deps.drop_duplicates(inplace=True)
-        df_deps.sort_values(
-            by=["src_pname", cols.SRC_PATH, "target_pname", cols.TARGET_PATH],
-            inplace=True,
-        )
     return RuntimeClosure(
-        df_deps=df_deps,
+        df_deps=dependency_rows_to_dataframe(rows),
         output_paths_by_drv=output_paths_by_drv,
     )
-
-
-def store_path_label(path):
-    """Return the nix-store graph-style label for a store path."""
-    basename = str(path).rstrip("/").rsplit("/", maxsplit=1)[-1]
-    _hash, separator, name = basename.partition("-")
-    return name if separator else basename
 
 
 def _iter_path_info(path_info):

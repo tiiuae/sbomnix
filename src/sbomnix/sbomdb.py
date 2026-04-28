@@ -6,10 +6,10 @@
 
 """Module for generating SBOMs in various formats"""
 
-import argparse
 import logging
 import subprocess
 import uuid
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -18,15 +18,17 @@ from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, is_debug_enabled
 from nixgraph.graph import NixDependencies
-from nixgraph.render import NixDependencyGraph
+from sbomnix.closure import (
+    DEPENDENCY_COLUMNS,
+    dependencies_to_depth,
+    dependency_paths,
+    derivation_dependencies_df,
+)
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_many, load_recursive
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.nix import Store, find_deriver
-from sbomnix.runtime import (
-    DEPENDENCY_COLUMNS as RUNTIME_DEPENDENCY_COLUMNS,
-)
 from sbomnix.runtime import (
     load_runtime_closure,
 )
@@ -37,65 +39,6 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 # Namespace UUID (a UUIDv4) for stable UUIDv5 identifiers.
 # See RFC9562, *6.6.  Namespace ID Usage and Allocation*.
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
-
-###############################################################################
-
-_DEPENDENCY_COLUMNS = [
-    cols.SRC_PATH,
-    "src_pname",
-    cols.TARGET_PATH,
-    "target_pname",
-]
-
-
-def _recursive_buildtime_dependencies_df(drv_infos):
-    """Return build-time dependency edges from recursive derivation JSON."""
-    rows = []
-    for target_path, drv_info in drv_infos.items():
-        for src_path in _iter_input_drv_paths(drv_info):
-            rows.append(
-                {
-                    cols.SRC_PATH: src_path,
-                    "src_pname": _store_path_label(src_path),
-                    cols.TARGET_PATH: target_path,
-                    "target_pname": _store_path_label(target_path),
-                }
-            )
-    df = pd.DataFrame.from_records(rows, columns=_DEPENDENCY_COLUMNS)
-    if not df.empty:
-        df.drop_duplicates(inplace=True)
-        df.sort_values(
-            by=["src_pname", cols.SRC_PATH, "target_pname", cols.TARGET_PATH],
-            inplace=True,
-        )
-    return df
-
-
-def _iter_input_drv_paths(drv_info):
-    """Yield input derivation paths from old and new derivation JSON formats."""
-    inputs = drv_info.get("inputs", {})
-    if isinstance(inputs, dict):
-        drvs = inputs.get("drvs", {})
-        if isinstance(drvs, dict):
-            yield from drvs
-    input_drvs = drv_info.get("inputDrvs", {})
-    if isinstance(input_drvs, dict):
-        yield from input_drvs
-
-
-def _store_path_label(path):
-    """Return the nix-store graph-style label for a store path."""
-    basename = str(path).rstrip("/").rsplit("/", maxsplit=1)[-1]
-    _hash, separator, name = basename.partition("-")
-    return name if separator else basename
-
-
-def _dependency_paths(df_deps):
-    if df_deps is None or df_deps.empty:
-        return set()
-    src_paths = df_deps[cols.SRC_PATH].unique().tolist()
-    target_paths = df_deps[cols.TARGET_PATH].unique().tolist()
-    return set(src_paths + target_paths)
 
 
 class SbomDb:
@@ -182,7 +125,7 @@ class SbomDb:
             )
             return False
         self._recursive_buildtime_derivations = derivations
-        self.df_deps = _recursive_buildtime_dependencies_df(drv_infos)
+        self.df_deps = derivation_dependencies_df(drv_infos)
         if self.depth:
             self.df_deps = self._filter_dependencies_to_depth(
                 self.df_deps,
@@ -202,7 +145,7 @@ class SbomDb:
                 self.target_deriver,
             )
             return False
-        paths = _dependency_paths(runtime_closure.df_deps) | {nix_path}
+        paths = dependency_paths(runtime_closure.df_deps) | {nix_path}
         mapped_paths = set().union(*runtime_closure.output_paths_by_drv.values())
         if not paths.issubset(mapped_paths):
             LOG.debug(
@@ -220,7 +163,6 @@ class SbomDb:
                 self.df_deps,
                 nix_path,
                 self.depth,
-                columns=RUNTIME_DEPENDENCY_COLUMNS,
             )
         return True
 
@@ -229,25 +171,17 @@ class SbomDb:
         df_deps,
         start_path,
         depth,
-        columns=_DEPENDENCY_COLUMNS,
+        columns=DEPENDENCY_COLUMNS,
     ):
         """Return dependency rows reachable from ``start_path`` up to ``depth``."""
         LOG.debug("Reading dependencies until depth=%s", depth)
-        args = argparse.Namespace()
-        args.depth = depth
-        args.return_df = True
-        df_depth = NixDependencyGraph(df_deps).draw(start_path, args)
-        if df_depth is None:
-            return pd.DataFrame(columns=pd.Index(columns))
-        return df_depth.drop(columns=["graph_depth"], errors="ignore")
+        return dependencies_to_depth(df_deps, start_path, depth, columns=columns)
 
     def _get_dependencies_df(self, nix_dependencies):
         if self.depth:
             # Return dependencies until the given depth
             LOG.debug("Reading dependencies until depth=%s", self.depth)
-            args = argparse.Namespace()
-            args.depth = self.depth
-            args.return_df = True
+            args = SimpleNamespace(depth=self.depth, return_df=True)
             return nix_dependencies.graph(args)
         # Otherwise, return all dependencies
         LOG.debug("Reading all dependencies")
@@ -283,7 +217,7 @@ class SbomDb:
             # No dependencies, so the only component in the sbom
             # will be the target itself.
             return set([self.target_deriver])
-        return _dependency_paths(self.df_deps)
+        return dependency_paths(self.df_deps)
 
     def _recursive_derivations_to_dataframe(self, paths):
         drv_dicts = []

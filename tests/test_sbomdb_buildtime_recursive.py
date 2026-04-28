@@ -5,7 +5,7 @@
 
 """Focused tests for recursive build-time derivation parsing."""
 
-from sbomnix.sbomdb import _recursive_buildtime_dependencies_df
+from sbomnix.closure import derivation_dependencies_df
 
 
 def test_recursive_buildtime_dependencies_df_reads_new_derivation_inputs():
@@ -24,7 +24,7 @@ def test_recursive_buildtime_dependencies_df_reads_new_derivation_inputs():
         }
     }
 
-    df = _recursive_buildtime_dependencies_df(drv_infos)
+    df = derivation_dependencies_df(drv_infos)
     rows = df.sort_values("src_path").to_dict("records")
 
     assert rows == [
@@ -52,7 +52,7 @@ def test_recursive_buildtime_dependencies_df_reads_legacy_input_drvs():
         }
     }
 
-    df = _recursive_buildtime_dependencies_df(drv_infos)
+    df = derivation_dependencies_df(drv_infos)
 
     assert df.to_dict("records") == [
         {
