@@ -6,6 +6,5 @@
 
 set -euo pipefail
 
-nix fmt
 nix --extra-experimental-features 'flakes nix-command' flake check
 nix develop --command ./scripts/run-pytest-lane.sh full
