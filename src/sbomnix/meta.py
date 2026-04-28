@@ -2,21 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=too-few-public-methods
+"""Cache and scan nixpkgs meta information."""
 
-"""Cache nixpkgs meta information"""
-
-import os
 import pathlib
-import re
 import tempfile
+from dataclasses import replace
 from getpass import getuser
 
 from filelock import FileLock
 
 from common.log import LOG
-from nixmeta.scanner import NixMetaScanner, nixref_to_nixpkgs_path
+from nixmeta.scanner import NixMetaScanner
 from sbomnix.dfcache import LockedDfCache
+from sbomnix.meta_source import (
+    META_NIXPKGS_NIX_PATH,
+    SCAN_EXCEPTIONS,
+    NixpkgsMetaSource,
+    NixpkgsMetaSourceResolver,
+    classify_meta_nixpkgs,
+)
 
 ###############################################################################
 
@@ -29,13 +33,21 @@ _FLOCK = pathlib.Path(tempfile.gettempdir()) / f"{getuser()}_sbomnix_meta.lock"
 
 ###############################################################################
 
+__all__ = [
+    "META_NIXPKGS_NIX_PATH",
+    "Meta",
+    "NixpkgsMetaSource",
+    "classify_meta_nixpkgs",
+]
 
-class Meta:
-    """Cache nixpkgs meta information"""
+
+class Meta:  # pylint: disable=too-many-arguments
+    """Cache nixpkgs meta information."""
 
     def __init__(self):
         self.lock = FileLock(_FLOCK)
         self.cache = LockedDfCache()
+        self.source_resolver = NixpkgsMetaSourceResolver()
 
     def get_nixpkgs_meta(self, nixref=None):
         """
@@ -43,30 +55,134 @@ class Meta:
         nix store path or flake reference. If nixref is None, attempt to
         read the nixpkgs store path from NIX_PATH environment variable.
         """
-        nixpkgs_path = None
-        if nixref:
-            # Read meta from nixpkgs pinned by nixref
-            LOG.debug("Reading nixpkgs path from nixref: %s", nixref)
-            nixpath = nixref_to_nixpkgs_path(nixref)
-            if nixpath:
-                nixpkgs_path = nixpath.as_posix()
-        elif "NIX_PATH" in os.environ:
-            # Read meta from nipxkgs referenced in NIX_PATH
-            LOG.debug("Reading nixpkgs path from NIX_PATH environment")
-            nix_path = os.environ["NIX_PATH"]
-            m_nixpkgs = re.search(r"(?:^|:)nixpkgs=([^:]+)", nix_path)
-            if m_nixpkgs:
-                nixpkgs_path = m_nixpkgs.group(1)
-        df = None
-        if nixpkgs_path:
-            LOG.debug("Scanning meta-info using nixpkgs path: %s", nixpkgs_path)
-            df = self._scan(nixpkgs_path)
+        source = self.source_resolver.resolve_legacy_source(nixref)
+        return self._scan_source(source)
+
+    def get_nixpkgs_meta_with_source(
+        self,
+        *,
+        target_path=None,
+        flakeref=None,
+        original_ref=None,
+        explicit_nixpkgs=None,
+        impure=False,
+    ):
+        """Return nixpkgs metadata and selected metadata source."""
+        source = self._resolve_source(
+            target_path=target_path,
+            flakeref=flakeref,
+            original_ref=original_ref,
+            explicit_nixpkgs=explicit_nixpkgs,
+            impure=impure,
+        )
+        return self._scan_source_with_source(source)
+
+    def _resolve_source(
+        self,
+        *,
+        target_path=None,
+        flakeref=None,
+        original_ref=None,
+        explicit_nixpkgs=None,
+        impure=False,
+    ):
+        if explicit_nixpkgs:
+            return self.source_resolver.resolve_meta_nixpkgs_option(
+                explicit_nixpkgs,
+                target_path=target_path,
+            )
+        if flakeref:
+            source = self.source_resolver.resolve_flakeref_target_source(
+                flakeref,
+                impure=impure,
+            )
+            if source and source.path:
+                return source
+            legacy_source = self.source_resolver.resolve_legacy_source(flakeref)
+            if legacy_source.path:
+                return legacy_source
+            # Keep target-specific failure guidance when legacy lookup also fails.
+            if source:
+                return source
+            return legacy_source
+
+        return self.source_resolver.path_target_without_source(
+            target_path=target_path,
+            original_ref=original_ref,
+        )
+
+    def _scan_source(self, source):
+        df, _source = self._scan_source_with_source(source)
         return df
+
+    def _scan_source_with_source(self, source):
+        if not source.path:
+            return None, source
+        if source.expression:
+            LOG.debug("Scanning meta-info using nix expression for: %s", source.path)
+            df = self._scan_expression(
+                source.expression,
+                cache_key=source.expression_cache_key,
+                impure=source.expression_impure,
+            )
+            if df is not None and not df.empty:
+                return df, source
+            LOG.warning(
+                "Failed scanning evaluated package set; falling back to source path: %s",
+                source.path,
+            )
+            source = replace(
+                source,
+                expression=None,
+                expression_cache_key=None,
+                expression_impure=False,
+                message=(
+                    "Evaluated package-set metadata scan failed; fell back to "
+                    "base nixpkgs source metadata. Overlays, package overrides, "
+                    "nixpkgs config, and target system-specific package-set "
+                    "changes may not be represented."
+                ),
+            )
+        LOG.debug("Scanning meta-info using nixpkgs path: %s", source.path)
+        return self._scan(source.path), source
+
+    def _scan_expression(self, expression, *, cache_key=None, impure=False):
+        if cache_key is None:
+            with self.lock:
+                LOG.debug("cache disabled, scanning expression")
+                df = self._try_scan_expression(expression, impure=impure)
+                if df is None or df.empty:
+                    LOG.warning("Failed scanning uncached nixmeta expression")
+                    return None
+                return df
+        cache_key = f"expr:{cache_key}"
+        with self.lock:
+            df = self.cache.get(cache_key)
+            if df is not None and not df.empty:
+                LOG.debug("found from cache: %s", cache_key)
+                return df
+            LOG.debug("cache miss, scanning expression: %s", cache_key)
+            df = self._try_scan_expression(expression, impure=impure)
+            if df is None or df.empty:
+                LOG.warning("Failed scanning nixmeta expression: %s", cache_key)
+                return None
+            self.cache.set(key=cache_key, value=df, ttl=_NIXMETA_NIXPKGS_TTL)
+            return df
+
+    @staticmethod
+    def _try_scan_expression(expression, *, impure=False):
+        try:
+            scanner = NixMetaScanner()
+            scanner.scan_expression(expression, impure=impure)
+            return scanner.to_df()
+        except SCAN_EXCEPTIONS:
+            LOG.debug("Failed scanning nixmeta expression", exc_info=True)
+            return None
 
     def _scan(self, nixpkgs_path):
         # In case sbomnix is run concurrently, we want to make sure there's
-        # only one instance of NixMetaScanner.scan() running at a time.
-        # The reason is, NixMetaScanner.scan() potentially invokes
+        # only one instance of NixMetaScanner.scan_path() running at a time.
+        # The reason is, NixMetaScanner.scan_path() potentially invokes
         # `nix-env -qa --meta --json -f /path/to/nixpkgs` which is very
         # memory intensive. The locking needs to happen here (and not in
         # NixMetaScanner) because this object caches the nixmeta info.
@@ -81,7 +197,7 @@ class Meta:
                 return df
             LOG.debug("cache miss, scanning: %s", nixpkgs_path)
             scanner = NixMetaScanner()
-            scanner.scan(nixpkgs_path)
+            scanner.scan_path(nixpkgs_path)
             df = scanner.to_df()
             if df is None or df.empty:
                 LOG.warning("Failed scanning nixmeta: %s", nixpkgs_path)

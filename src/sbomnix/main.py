@@ -50,6 +50,12 @@ def getargs(args=None):
     parser.add_argument(
         "--exclude-meta", help=helps, action="store_true", default=False
     )
+    helps = (
+        "Nixpkgs source used for metadata enrichment. Accepts a nixpkgs "
+        "flakeref, a nixpkgs source path, or nix-path. Overrides automatic "
+        "metadata-source detection."
+    )
+    parser.add_argument("--meta-nixpkgs", help=helps, metavar="META_NIXPKGS")
     helps = "Exclude using heuristics-based CPE matches in the output"
     parser.add_argument(
         "--exclude-cpe-matching", help=helps, action="store_true", default=False
@@ -83,6 +89,8 @@ def main():
 
 
 def _run(args):
+    if args.exclude_meta and args.meta_nixpkgs:
+        raise SbomnixError("--exclude-meta cannot be used with --meta-nixpkgs")
     target = resolve_nix_target(
         args.NIXREF, buildtime=args.buildtime, impure=args.impure
     )
@@ -92,6 +100,9 @@ def _run(args):
         buildtime=args.buildtime,
         depth=args.depth,
         flakeref=target.flakeref,
+        original_ref=target.original_ref,
+        meta_nixpkgs=args.meta_nixpkgs,
+        impure=args.impure,
         include_meta=not args.exclude_meta,
         include_vulns=args.include_vulns,
         include_cpe=not args.exclude_cpe_matching,
