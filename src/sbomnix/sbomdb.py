@@ -24,6 +24,7 @@ from sbomnix.closure import (
     dependency_paths,
     derivation_dependencies_df,
 )
+from sbomnix.cpe import CPE
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_many, load_recursive
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
@@ -193,9 +194,7 @@ class SbomDb:
         # Populate store based on the dependencies
         if self._recursive_buildtime_derivations is None:
             if self._runtime_output_paths_by_drv is None:
-                store = Store(self.buildtime, include_cpe=self.include_cpe)
-                store.add_paths(paths)
-                self.df_sbomdb = store.to_dataframe()
+                self.df_sbomdb = self._load_fallback_store_dataframe(paths)
             else:
                 self.df_sbomdb = self._runtime_derivations_to_dataframe(paths)
         else:
@@ -220,30 +219,31 @@ class SbomDb:
         return dependency_paths(self.df_deps)
 
     def _recursive_derivations_to_dataframe(self, paths):
-        drv_dicts = []
         derivations = self._recursive_buildtime_derivations
         assert derivations is not None
-        cpe_generator = Store(
-            self.buildtime, include_cpe=self.include_cpe
-        ).cpe_generator
+        drvs = []
         for path in sorted(paths):
             drv = derivations.get(path)
             if not drv:
                 LOG.debug("Recursive buildtime closure missing path: %s", path)
                 continue
-            drv.set_cpe(cpe_generator)
-            drv_dicts.append(drv.to_dict())
-        return pd.DataFrame.from_records(drv_dicts)
+            drvs.append(drv)
+        return self._derivations_to_dataframe(drvs)
 
     def _runtime_derivations_to_dataframe(self, paths):
         output_paths_by_drv = self._filtered_runtime_outputs_by_drv(paths)
-        store = Store(self.buildtime, include_cpe=self.include_cpe)
+        return self._derivations_to_dataframe(
+            load_many(
+                sorted(output_paths_by_drv),
+                output_paths_by_drv=output_paths_by_drv,
+            ).values()
+        )
+
+    def _derivations_to_dataframe(self, derivations):
+        cpe_generator = CPE(include_cpe=self.include_cpe)
         drv_dicts = []
-        for _drv_path, drv in load_many(
-            list(output_paths_by_drv),
-            output_paths_by_drv=output_paths_by_drv,
-        ).items():
-            drv.set_cpe(store.cpe_generator)
+        for drv in derivations:
+            drv.set_cpe(cpe_generator)
             drv_dicts.append(drv.to_dict())
         return pd.DataFrame.from_records(drv_dicts)
 
@@ -255,6 +255,11 @@ class SbomDb:
             if filtered_output_paths:
                 output_paths_by_drv[drv_path] = filtered_output_paths
         return output_paths_by_drv
+
+    def _load_fallback_store_dataframe(self, paths):
+        store = Store(self.buildtime, include_cpe=self.include_cpe)
+        store.add_paths(paths)
+        return store.to_dataframe()
 
     def _init_dependency_index(self):
         """Build indexed dependency lookups used during export."""
