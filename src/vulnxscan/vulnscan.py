@@ -155,7 +155,10 @@ class VulnScan:
             LOG.verbose("Running vulnerability triage")
             self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
         # Rename 'version' to 'version_local'
-        self.df_report.rename(columns={cols.VERSION: cols.VERSION_LOCAL}, inplace=True)
+        self.df_report.columns = [
+            cols.VERSION_LOCAL if col == cols.VERSION else col
+            for col in self.df_report.columns
+        ]
 
         LOG.debug("Writing reports")
         # Console report

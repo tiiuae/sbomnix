@@ -5,6 +5,7 @@
 """Generate CPE (Common Platform Enumeration) identifiers"""
 
 import string
+from typing import cast
 
 from common.df import df_from_csv_file, df_log
 from common.errors import InvalidCpeDictionaryError
@@ -73,7 +74,7 @@ class CPE:
             df_log(df, LOG_SPAM)
             return None
 
-        vendor = df["vendor"].values[0]
+        vendor = cast(str, df.loc[df.index[0], "vendor"])
         LOG.log(LOG_SPAM, "found vendor for product '%s': '%s'", product, vendor)
         return vendor
 

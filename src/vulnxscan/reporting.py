@@ -7,6 +7,7 @@
 """Reporting helpers for vulnxscan findings."""
 
 import pathlib
+from typing import cast
 
 import pandas as pd
 from tabulate import tabulate
@@ -74,11 +75,11 @@ def filter_patched_report(df_report, sbom_csv, *, log=LOG):
         how="left",
         left_on=[cols.PACKAGE, cols.VERSION],
         right_on=[cols.PNAME, cols.VERSION],
-        suffixes=["", "_sbom_csv"],
+        suffixes=("", "_sbom_csv"),
     )
     df[cols.PATCHED] = df.apply(_is_patched, axis=1)
     df = df[~df[cols.PATCHED]]
-    df = df[df_report.columns.values]
+    df = cast(pd.DataFrame, df[list(df_report.columns)])
     return df.drop_duplicates(keep="first")
 
 

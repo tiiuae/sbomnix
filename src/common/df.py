@@ -7,6 +7,7 @@
 import csv
 import logging
 import urllib.error
+from typing import Literal, cast, overload
 
 import pandas as pd
 from tabulate import tabulate
@@ -21,6 +22,17 @@ def df_to_csv_file(df, name, loglevel=logging.INFO):
         path_or_buf=name, quoting=csv.QUOTE_ALL, sep=",", index=False, encoding="utf-8"
     )
     LOG.log(loglevel, "Wrote: %s", name)
+
+
+@overload
+def df_from_csv_file(name, exit_on_error: Literal[True] = True) -> pd.DataFrame: ...
+
+
+@overload
+def df_from_csv_file(
+    name,
+    exit_on_error: Literal[False],
+) -> pd.DataFrame | None: ...
 
 
 def df_from_csv_file(name, exit_on_error=True):
@@ -42,10 +54,10 @@ def df_from_csv_file(name, exit_on_error=True):
         return None
 
 
-def df_regex_filter(df, column, regex):
+def df_regex_filter(df: pd.DataFrame, column: str, regex: str) -> pd.DataFrame:
     """Return rows where column `column` values match the given regex."""
     LOG.debug("column:'%s', regex:'%s'", column, regex)
-    return df[df[column].str.contains(regex, regex=True, na=False)]
+    return cast(pd.DataFrame, df[df[column].str.contains(regex, regex=True, na=False)])
 
 
 def df_log(df, loglevel, tablefmt="presto"):

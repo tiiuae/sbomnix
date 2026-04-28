@@ -6,6 +6,7 @@
 
 import logging
 from dataclasses import dataclass
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -14,6 +15,8 @@ from common.log import LOG, LOG_SPAM, LOG_VERBOSE
 from nixupdate.nix_visualize import nix_visualize_csv_to_df, run_nix_visualize
 from repology.adapter import RepologyAdapter, RepologyQuery
 from sbomnix.cli_utils import generate_temp_sbom
+
+HookFn = Callable[..., Any]
 
 
 @dataclass
@@ -41,10 +44,10 @@ def query_repology(sbompath, *, adapter=None, log=LOG):
 class OutdatedScanHooks:
     """Injectable helpers used by ``collect_outdated_scan_data``."""
 
-    query_repology: object = query_repology
-    generate_temp_sbom: object = generate_temp_sbom
-    run_nix_visualize: object = run_nix_visualize
-    parse_nix_visualize: object = nix_visualize_csv_to_df
+    query_repology: HookFn = query_repology
+    generate_temp_sbom: HookFn = generate_temp_sbom
+    run_nix_visualize: HookFn = run_nix_visualize
+    parse_nix_visualize: HookFn = nix_visualize_csv_to_df
 
 
 def collect_outdated_scan_data(

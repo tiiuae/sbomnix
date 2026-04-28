@@ -80,7 +80,7 @@ def merge_sbom_fields(df_sbom, df_repo):
         how="left",
         left_on=[cols.NAME],
         right_on=[cols.PACKAGE],
-        suffixes=["_sbom", ""],
+        suffixes=("_sbom", ""),
     )
     df[cols.VERSION_SBOM] = df.pop(cols.VERSION_SBOM)
     df.drop(cols.NAME, axis=1, inplace=True)

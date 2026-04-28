@@ -8,7 +8,7 @@ import pathlib
 import re
 import urllib.parse
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -90,8 +90,8 @@ class RepologyAdapter:
         if not self.pkgs_dict:
             return
         LOG.debug("packages in pkgs_dict: %s", len(self.pkgs_dict[cols.PACKAGE]))
-        df = pd.DataFrame.from_dict(self.pkgs_dict)
-        df_cols = df.columns.values.tolist()
+        df: pd.DataFrame = pd.DataFrame.from_dict(self.pkgs_dict)
+        df_cols = list(df.columns)
         if query.repository and cols.REPO in df_cols:
             df = df_regex_filter(df, cols.REPO, re.escape(query.repository))
         if re_pkg_internal and cols.PACKAGE in df_cols:
@@ -105,7 +105,7 @@ class RepologyAdapter:
             df = df_regex_filter(df, cols.STATUS, query.re_status)
         if query.re_vuln and cols.POTENTIALLY_VULNERABLE in df_cols:
             df = df_regex_filter(df, cols.POTENTIALLY_VULNERABLE, query.re_vuln)
-        self.df = pd.concat([self.df, df])
+        self.df = pd.concat([self.df, cast(pd.DataFrame, df)])
         self.df.replace(np.nan, "", regex=True, inplace=True)
         self.df.drop_duplicates(keep="first", inplace=True)
         self.df.sort_values(by=self.df.columns.values.tolist(), inplace=True)
@@ -172,58 +172,60 @@ class RepologyAdapter:
 
     def _query_sbom_cdx(self, query):
         self.df_sbom = parse_cdx_sbom(query.sbom_cdx)
-        for cmp in self.df_sbom.itertuples():
-            LOG.debug("Package: %s", cmp)
-            if not cmp.name:
-                LOG.fatal("Missing package name: %s", cmp)
+        for component in self.df_sbom.to_dict("records"):
+            LOG.debug("Package: %s", component)
+            name = component[cols.NAME]
+            version = component.get(cols.VERSION, "")
+            if not name:
+                LOG.fatal("Missing package name: %s", component)
                 raise repology.exceptions.RepologyUnexpectedResponse
-            pkg_id = f"{query.repository}:{cmp.name}"
+            pkg_id = f"{query.repository}:{name}"
             if pkg_id in self.processed:
-                LOG.debug("Package '%s' in sbom already processed", cmp.name)
-                self._packages_to_df(query, re_pkg_internal=cmp.name)
+                LOG.debug("Package '%s' in sbom already processed", name)
+                self._packages_to_df(query, re_pkg_internal=name)
                 continue
-            if not cmp.version:
+            if not version:
                 self._append_package_rows(
                     [
                         make_sbom_status_row(
                             query.repository,
-                            cmp.name,
+                            name,
                             "",
                             "NO_VERSION",
                         )
                     ]
                 )
-                self._packages_to_df(query, re_pkg_internal=cmp.name)
+                self._packages_to_df(query, re_pkg_internal=name)
                 continue
-            if is_ignored_sbom_package(cmp.name):
+            if is_ignored_sbom_package(name):
                 self._append_package_rows(
                     [
                         make_sbom_status_row(
                             query.repository,
-                            cmp.name,
-                            cmp.version,
+                            name,
+                            version,
                             "IGNORED",
                         )
                     ]
                 )
-                self._packages_to_df(query, re_pkg_internal=cmp.name)
+                self._packages_to_df(query, re_pkg_internal=name)
                 continue
             try:
-                self._query_pkg_exact(cmp.name, query.repository)
+                self._query_pkg_exact(name, query.repository)
             except repology.exceptions.RepologyNoMatchingPackages:
-                LOG.debug("Package '%s' not found in repology", cmp.name)
+                LOG.debug("Package '%s' not found in repology", name)
             if pkg_id not in self.processed:
                 self._append_package_rows(
                     [
                         make_sbom_status_row(
                             query.repository,
-                            cmp.name,
-                            cmp.version,
+                            name,
+                            version,
                             "NOT_FOUND",
                         )
                     ]
                 )
-            self._packages_to_df(query, re_pkg_internal=cmp.name)
+            self._packages_to_df(query, re_pkg_internal=name)
         self.urlq = self.url_projects
 
     def query(self, query):

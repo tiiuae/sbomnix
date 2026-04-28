@@ -10,7 +10,7 @@ import shlex
 import subprocess
 from collections.abc import Callable, Sequence
 from shutil import which
-from typing import IO
+from typing import IO, Literal, overload
 
 from common.errors import CommandNotFoundError, InvalidNixArtifactError
 from common.log import LOG, LOG_VERBOSE
@@ -18,6 +18,36 @@ from common.log import LOG, LOG_VERBOSE
 CommandPart = str | os.PathLike[str]
 ExecCmdResult = subprocess.CompletedProcess[str] | subprocess.CalledProcessError | None
 ExecCmdFn = Callable[..., ExecCmdResult]
+
+
+@overload
+def exec_cmd(
+    cmd: Sequence[CommandPart],
+    raise_on_error: Literal[True] = True,
+    return_error: bool = False,
+    log_error: bool = True,
+    stdout: IO[str] | None = None,
+) -> subprocess.CompletedProcess[str]: ...
+
+
+@overload
+def exec_cmd(
+    cmd: Sequence[CommandPart],
+    raise_on_error: Literal[False],
+    return_error: Literal[True],
+    log_error: bool = True,
+    stdout: IO[str] | None = None,
+) -> subprocess.CompletedProcess[str] | subprocess.CalledProcessError | None: ...
+
+
+@overload
+def exec_cmd(
+    cmd: Sequence[CommandPart],
+    raise_on_error: Literal[False],
+    return_error: Literal[False] = False,
+    log_error: bool = True,
+    stdout: IO[str] | None = None,
+) -> subprocess.CompletedProcess[str] | None: ...
 
 
 def exec_cmd(

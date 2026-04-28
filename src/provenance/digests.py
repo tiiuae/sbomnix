@@ -28,7 +28,10 @@ def canonical_hash_algo(hash_algo):
 
 def hash_size_bytes(hash_algo):
     """Return expected digest size for the given algorithm."""
-    return HASH_SIZE_BYTES.get(canonical_hash_algo(hash_algo))
+    hash_algo = canonical_hash_algo(hash_algo)
+    if hash_algo is None:
+        return None
+    return HASH_SIZE_BYTES.get(hash_algo)
 
 
 def decode_nix32(hash_value, size_bytes):

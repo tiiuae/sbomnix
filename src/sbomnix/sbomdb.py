@@ -54,6 +54,8 @@ class SbomDb:
         self.nix_path = nix_path
         self.buildtime = buildtime
         self.target_deriver = find_deriver(nix_path)
+        if self.target_deriver is None:
+            raise RuntimeError(f"Failed finding deriver for '{nix_path}'")
         self.df_deps = None
         self.depth = depth
         self._init_dependencies(nix_path)
@@ -138,6 +140,7 @@ class SbomDb:
 
     def _sbomdb_join_meta(self):
         """Join self.df_sbomdb with meta information"""
+        assert self.df_sbomdb is not None
         self.meta = Meta()
         df_meta, source = self.meta.get_nixpkgs_meta_with_source(
             target_path=self.nix_path,
@@ -169,7 +172,7 @@ class SbomDb:
             how="left",
             left_on=[cols.NAME],
             right_on=[cols.NAME],
-            suffixes=["", "_meta"],
+            suffixes=("", "_meta"),
         )
 
     def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
