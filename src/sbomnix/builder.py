@@ -29,7 +29,7 @@ from sbomnix.components import (
 )
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_recursive
-from sbomnix.derivers import find_deriver
+from sbomnix.derivers import find_deriver, is_loadable_deriver_path
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.fallback_store import FallbackStore
 from sbomnix.meta import Meta, NixpkgsMetaSource
@@ -154,6 +154,21 @@ class SbomBuilder:
         if not paths.issubset(mapped_paths):
             LOG.debug(
                 "Runtime path-info missing derivers for: %s", paths - mapped_paths
+            )
+            LOG.warning(
+                "Falling back to nix-store runtime graph for '%s'",
+                self.target_deriver,
+            )
+            return False
+        invalid_derivers = sorted(
+            drv_path
+            for drv_path in runtime_closure.output_paths_by_drv
+            if not is_loadable_deriver_path(drv_path)
+        )
+        if invalid_derivers:
+            LOG.debug(
+                "Runtime path-info contains unusable derivers: %s",
+                invalid_derivers,
             )
             LOG.warning(
                 "Falling back to nix-store runtime graph for '%s'",
