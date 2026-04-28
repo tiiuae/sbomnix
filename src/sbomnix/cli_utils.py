@@ -8,9 +8,11 @@
 
 import logging
 import pathlib
+import subprocess
 from dataclasses import dataclass
 from tempfile import NamedTemporaryFile
 
+from common.errors import InvalidNixArtifactError, MissingNixOutPathError
 from common.flakeref import (
     NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
     parse_nixos_configuration_ref,
@@ -18,7 +20,7 @@ from common.flakeref import (
     try_resolve_flakeref,
 )
 from common.log import LOG
-from common.proc import exit_unless_nix_artifact
+from common.proc import exec_cmd, exit_unless_nix_artifact
 from sbomnix.sbomdb import SbomDb
 
 
@@ -63,8 +65,25 @@ def resolve_nix_target(nixref, buildtime=False, impure=False):
         )
 
     target_path = pathlib.Path(nixref).resolve().as_posix()
-    exit_unless_nix_artifact(nixref, force_realise=runtime)
+    if runtime and target_path.endswith(".drv"):
+        target_path = _realise_derivation_output(target_path)
+    else:
+        exit_unless_nix_artifact(nixref, force_realise=runtime)
     return ResolvedNixTarget(path=target_path, original_ref=nixref)
+
+
+def _realise_derivation_output(path):
+    try:
+        ret = exec_cmd(["nix-store", "-qf", path])
+    except subprocess.CalledProcessError:
+        raise InvalidNixArtifactError(path) from None
+    out_path = next(
+        (line.strip() for line in ret.stdout.splitlines() if line.strip()), ""
+    )
+    if not out_path:
+        raise MissingNixOutPathError(path)
+    LOG.debug("runtime derivation target '%s' maps to output '%s'", path, out_path)
+    return out_path
 
 
 def _normalize_nixos_configuration_ref(nixref):
