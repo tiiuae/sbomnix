@@ -45,6 +45,7 @@ class OSV:
             setcol(cols.VERSION, []).append(package["version"])
 
     def _parse_batch_response(self, query, results):
+        # Preserve the previous tolerant behavior if the API returns fewer results.
         for package, vulns in zip(query["queries"], results, strict=False):
             if not package or not vulns:
                 continue
@@ -97,15 +98,17 @@ class OSV:
         batchquery = {"queries": []}
         if ecosystems is None:
             ecosystems = ["GIT", "OSS-Fuzz"]
-        for drv in df_sbom.itertuples():
-            if not drv.version:
-                LOG.debug("skipping osv query (unknown version): %s", drv.name)
+        for component in df_sbom.to_dict("records"):
+            name = component[cols.NAME]
+            version = component.get(cols.VERSION, "")
+            if not version:
+                LOG.debug("skipping osv query (unknown version): %s", name)
                 continue
             for ecosystem in ecosystems:
                 query = {
-                    "version": drv.version,
+                    "version": version,
                     "package": {
-                        "name": drv.name,
+                        "name": name,
                         "ecosystem": ecosystem,
                     },
                 }

@@ -110,10 +110,12 @@ def build_dependency_index(df_deps, df_sbomdb, df_sbomdb_outputs_exploded, uid):
     buildtime_by_target = _group_dependency_rows(buildtime_edges, cols.DEPENDENCY_UID)
 
     for drv in df_sbomdb.itertuples():
-        deps = set(buildtime_by_target.get(drv.store_path, ()))
+        deps: set[str] = set(buildtime_by_target.get(drv.store_path, ()))
         for output in _normalize_outputs(drv.outputs):
             deps.update(runtime_by_target.get(output, ()))
-        deps.discard(getattr(drv, uid, None))
+        self_uid = getattr(drv, uid, None)
+        if self_uid is not None:
+            deps.discard(self_uid)
         by_store_path[drv.store_path] = sorted(deps)
 
     return DependencyIndex(

@@ -8,6 +8,7 @@
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 from vulnxscan.github_prs import GitHubPrLookup
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
@@ -207,3 +208,13 @@ def test_query_repology_versions_prefers_exact_version_match():
             "sortcol": "2024A0000000002",
         }
     ]
+
+
+def test_query_repology_rejects_unknown_match_type():
+    lookup = RepologyVulnerabilityLookup(
+        adapter=FakeAdapter(),
+        cve_query=lambda *_args: None,
+    )
+
+    with pytest.raises(ValueError, match="Unknown match_type: 'bad'"):
+        lookup.query_repology("openssl", match_type="bad")

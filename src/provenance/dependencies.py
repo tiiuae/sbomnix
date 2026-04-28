@@ -5,7 +5,9 @@
 """Helpers for provenance dependency resolution."""
 
 import errno
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Callable
 
 from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
@@ -13,32 +15,20 @@ from common.proc import exec_cmd
 from provenance.digests import normalize_digest, output_digest
 from provenance.subjects import output_path
 
+HookFn = Callable[..., Any]
+
 
 @dataclass
 class DependencyHooks:
     """Injectable helpers used by provenance dependency resolution."""
 
-    exec_cmd_fn: object = None
-    query_store_hashes_fn: object = None
-    parse_nix_derivation_show_fn: object = None
-    normalize_digest_fn: object = None
-    output_digest_fn: object = None
-    output_path_fn: object = None
-    log: object = LOG
-
-    def __post_init__(self):
-        if self.exec_cmd_fn is None:
-            self.exec_cmd_fn = exec_cmd
-        if self.query_store_hashes_fn is None:
-            self.query_store_hashes_fn = query_store_hashes
-        if self.parse_nix_derivation_show_fn is None:
-            self.parse_nix_derivation_show_fn = parse_nix_derivation_show
-        if self.normalize_digest_fn is None:
-            self.normalize_digest_fn = normalize_digest
-        if self.output_digest_fn is None:
-            self.output_digest_fn = output_digest
-        if self.output_path_fn is None:
-            self.output_path_fn = output_path
+    exec_cmd_fn: HookFn = exec_cmd
+    query_store_hashes_fn: HookFn = field(default_factory=lambda: query_store_hashes)
+    parse_nix_derivation_show_fn: HookFn = parse_nix_derivation_show
+    normalize_digest_fn: HookFn = normalize_digest
+    output_digest_fn: HookFn = output_digest
+    output_path_fn: HookFn = output_path
+    log: logging.Logger = LOG
 
 
 def query_store_hashes(paths, hooks=None):

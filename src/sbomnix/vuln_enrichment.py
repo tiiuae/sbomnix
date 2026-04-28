@@ -6,6 +6,7 @@
 
 import pathlib
 from tempfile import NamedTemporaryFile
+from typing import cast
 
 import pandas as pd
 
@@ -34,18 +35,25 @@ def enrich_cdx_with_vulnerabilities(sbomdb, cdx):
             pathlib.Path(temp_cdx_path).unlink(missing_ok=True)
 
     cdx["vulnerabilities"] = []
-    df_vulns = pd.concat(
-        [scanner.df_grype, scanner.df_osv, scanner.df_vulnix],
-        ignore_index=True,
-    )
+    vuln_frames = [
+        df
+        for df in [scanner.df_grype, scanner.df_osv, scanner.df_vulnix]
+        if df is not None
+    ]
+    if not vuln_frames:
+        return cdx
+    df_vulns = pd.concat(vuln_frames, ignore_index=True)
     if df_vulns.empty:
         return cdx
     if cols.MODIFIED in df_vulns.columns:
         df_vulns = df_vulns.drop(cols.MODIFIED, axis=1)
-    vuln_grouped = df_vulns.groupby(
-        [cols.PACKAGE, cols.VERSION, cols.SEVERITY, cols.VULN_ID],
-        as_index=False,
-    ).agg({cols.SCANNER: pd.Series.unique})
+    vuln_grouped = cast(
+        pd.DataFrame,
+        df_vulns.groupby(
+            [cols.PACKAGE, cols.VERSION, cols.SEVERITY, cols.VULN_ID],
+            as_index=False,
+        ).agg({cols.SCANNER: pd.Series.unique}),
+    )
     vuln_components = pd.merge(
         left=vuln_grouped,
         right=sbomdb.df_sbomdb,

@@ -76,6 +76,9 @@ def parse_cve_html(html_text, pkg_name, pkg_version, *, log=LOG, log_spam=LOG_SP
         log.debug("Unexpected response: CVE table missing")
         return pd.DataFrame()
     cve_table = tables[0]
+    if cve_table.thead is None or cve_table.tbody is None:
+        log.debug("Unexpected response: CVE table missing header or body")
+        return pd.DataFrame()
     headers = {}
     for idx, header in enumerate(cve_table.thead.find_all("th")):
         headers[header.text] = idx

@@ -4,6 +4,9 @@
 
 """Shared HTTP session primitives."""
 
+from collections.abc import Collection
+from typing import Any
+
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests_cache import CacheMixin
@@ -13,7 +16,7 @@ from urllib3.util.retry import Retry
 DEFAULT_RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
 
 
-class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
+class CachedLimiterSession(CacheMixin, LimiterMixin, Session):  # pyright: ignore[reportIncompatibleMethodOverride]
     """
     Session class with caching and rate-limiting.
     https://requests-cache.readthedocs.io/en/stable/user_guide/compatibility.html
@@ -21,10 +24,10 @@ class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
 
 
 def mount_retries(
-    session,
+    session: Session,
     *,
-    allowed_methods=frozenset(("GET", "HEAD")),
-):
+    allowed_methods: Collection[str] = frozenset(("GET", "HEAD")),
+) -> Session:
     """Attach a retrying adapter to a requests session."""
     retry = Retry(
         total=3,
@@ -45,14 +48,14 @@ def mount_retries(
 
 def create_cached_limited_session(
     *,
-    per_second=None,
-    per_minute=None,
-    expire_after=None,
-    user_agent=None,
-    allowed_methods=frozenset(("GET", "HEAD")),
-):
+    per_second: int | None = None,
+    per_minute: int | None = None,
+    expire_after: int | None = None,
+    user_agent: str | None = None,
+    allowed_methods: Collection[str] = frozenset(("GET", "HEAD")),
+) -> Session:
     """Create a cached, rate-limited session with retry policy attached."""
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     if per_second is not None:
         kwargs["per_second"] = per_second
     if per_minute is not None:

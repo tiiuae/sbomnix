@@ -6,6 +6,7 @@
 
 import logging
 import os
+from typing import Any, cast
 
 from colorlog import ColoredFormatter, default_log_colors
 
@@ -15,22 +16,22 @@ LOG_TRACE = LOG_SPAM
 LOG_LEVELS = [logging.INFO, LOG_VERBOSE, logging.DEBUG, LOG_SPAM]
 
 
-class SbomnixLogger(logging.getLoggerClass()):
+class SbomnixLogger(logging.Logger):
     """Project logger with sbomnix-specific verbose levels."""
 
-    def verbose(self, msg, *args, **kwargs):
+    def verbose(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Log at the project VERBOSE level."""
         if self.isEnabledFor(LOG_VERBOSE):
             kwargs.setdefault("stacklevel", 2)
             self._log(LOG_VERBOSE, msg, args, **kwargs)
 
-    def spam(self, msg, *args, **kwargs):
+    def spam(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Log at the project SPAM level."""
         if self.isEnabledFor(LOG_SPAM):
             kwargs.setdefault("stacklevel", 2)
             self._log(LOG_SPAM, msg, args, **kwargs)
 
-    def trace(self, msg, *args, **kwargs):
+    def trace(self, msg: object, *args: object, **kwargs: Any) -> None:
         """Log at the project TRACE level alias."""
         if self.isEnabledFor(LOG_TRACE):
             kwargs.setdefault("stacklevel", 2)
@@ -51,7 +52,7 @@ logging.addLevelName(LOG_VERBOSE, "VERBOSE")
 logging.addLevelName(LOG_SPAM, "SPAM")
 logging.setLoggerClass(SbomnixLogger)
 
-LOG = logging.getLogger(os.path.abspath(__file__))
+LOG = cast(SbomnixLogger, logging.getLogger(os.path.abspath(__file__)))
 
 
 def set_log_verbosity(verbosity=0):

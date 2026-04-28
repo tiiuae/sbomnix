@@ -6,6 +6,8 @@
 
 """Repology-backed lookup helpers for vulnerability triage."""
 
+from pathlib import Path
+
 import pandas as pd
 
 from common import columns as cols
@@ -118,13 +120,28 @@ class RepologyVulnerabilityLookup:
         if cache_key in self._repology_dfs:
             LOG.log(LOG_SPAM, "Using cached repology results")
             return self._repology_dfs[cache_key].copy(deep=True)
-        query_kwargs = {
-            "repository": "nix_unstable",
-            "re_status": "outdated|newest|devel|unique",
-        }
-        query_kwargs[match_type] = pname
+        if match_type == "pkg_search":
+            query = RepologyQuery(
+                repository="nix_unstable",
+                pkg_search=pname,
+                re_status="outdated|newest|devel|unique",
+            )
+        elif match_type == "sbom_cdx":
+            query = RepologyQuery(
+                repository="nix_unstable",
+                sbom_cdx=Path(pname),
+                re_status="outdated|newest|devel|unique",
+            )
+        elif match_type == "pkg_exact":
+            query = RepologyQuery(
+                repository="nix_unstable",
+                pkg_exact=pname,
+                re_status="outdated|newest|devel|unique",
+            )
+        else:
+            raise ValueError(f"Unknown match_type: {match_type!r}")
         try:
-            df_repology = self.adapter.query(RepologyQuery(**query_kwargs))
+            df_repology = self.adapter.query(query)
         except RepologyNoMatchingPackages:
             df_repology = None
         if df_repology is None or df_repology.empty:

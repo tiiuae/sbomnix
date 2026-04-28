@@ -96,8 +96,11 @@ def _get_flake_nixpkgs_obj(meta_json):
 
 
 def _get_flake_nixpkgs_val(meta_json, key):
+    nixpkgs_obj = _get_flake_nixpkgs_obj(meta_json)
+    if nixpkgs_obj is None:
+        return None
     try:
-        return _get_flake_nixpkgs_obj(meta_json)[key]
+        return nixpkgs_obj[key]
     except (KeyError, TypeError):
         return None
 
