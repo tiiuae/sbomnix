@@ -48,16 +48,56 @@ def is_nixpkgs_metadata(meta_json):
     return False
 
 
-def _get_flake_nixpkgs_val(meta_json, key):
+def _locked_obj_is_nixpkgs(node_name, locked_obj):
     try:
-        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"][key]
-    except (KeyError, TypeError):
-        return None
+        if locked_obj.get("repo") == "nixpkgs":
+            return True
+        if node_name.startswith("nixpkgs") and locked_obj.get("type") == "path":
+            return True
+    except AttributeError:
+        return False
+    return False
+
+
+def _input_node_names(value):
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and value and isinstance(value[-1], str):
+        # Lock-file override chains store the resolved input node as the last item.
+        return [value[-1]]
+    return []
 
 
 def _get_flake_nixpkgs_obj(meta_json):
     try:
-        return meta_json["locks"]["nodes"]["nixpkgs"]["locked"]
+        nodes = meta_json["locks"]["nodes"]
+        root_name = meta_json["locks"]["root"]
+        root_inputs = nodes[root_name].get("inputs", {})
+    except (KeyError, TypeError, AttributeError):
+        return None
+
+    for node_name in _input_node_names(root_inputs.get("nixpkgs")):
+        try:
+            return nodes[node_name]["locked"]
+        except (KeyError, TypeError):
+            continue
+
+    candidates = []
+    for node_name, node in nodes.items():
+        try:
+            locked_obj = node["locked"]
+        except (KeyError, TypeError):
+            continue
+        if _locked_obj_is_nixpkgs(node_name, locked_obj):
+            candidates.append(locked_obj)
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
+
+
+def _get_flake_nixpkgs_val(meta_json, key):
+    try:
+        return _get_flake_nixpkgs_obj(meta_json)[key]
     except (KeyError, TypeError):
         return None
 

@@ -6,6 +6,7 @@
 """Summarize nixpkgs meta-attributes"""
 
 import pathlib
+import subprocess
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
@@ -17,6 +18,19 @@ from nixmeta.flake_metadata import get_flake_metadata, nixref_to_nixpkgs_path
 from nixmeta.metadata_json import parse_json_metadata
 
 ###############################################################################
+
+
+def _run_nix_env_metadata(cmd, stdout):
+    """Run nix-env metadata scan while keeping successful eval warnings quiet."""
+    ret = subprocess.run(
+        cmd,
+        encoding="utf-8",
+        check=True,
+        stdout=stdout,
+        stderr=subprocess.PIPE,
+    )
+    if ret.stderr:
+        LOG.debug("nix-env metadata stderr:\n%s", ret.stderr.strip())
 
 
 class NixMetaScanner:
@@ -52,13 +66,35 @@ class NixMetaScanner:
             #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
             #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output
             nixpkgs_path = pathlib.Path(nixref)
-            if not nixpkgs_path.exists():
-                return
+        self.scan_path(nixpkgs_path)
+
+    def scan_path(self, nixpkgs_path):
+        """Scan nixpkgs meta-info using an already resolved nixpkgs path."""
+        nixpkgs_path = pathlib.Path(nixpkgs_path)
         if not nixpkgs_path.exists():
             LOG.warning("Nixpkgs not in nix store: %s", nixpkgs_path.as_posix())
             return
         LOG.debug("nixpkgs: %s", nixpkgs_path)
         self._read_nixpkgs_meta(nixpkgs_path)
+
+    def scan_expression(self, expression, *, impure=False):
+        """Scan nixpkgs meta-info using an expression returning a package set."""
+        prefix = "nixmeta_expr_"
+        suffix = ".nix"
+        with NamedTemporaryFile(
+            mode="w",
+            delete=True,
+            encoding="utf-8",
+            prefix=prefix,
+            suffix=suffix,
+        ) as f:
+            f.write(expression)
+            f.flush()
+            self._read_nixpkgs_meta(
+                pathlib.Path(f.name),
+                enable_flakes=True,
+                impure=impure,
+            )
 
     def to_csv(self, csv_path, append=False):
         """Export meta-info to a csv file"""
@@ -77,7 +113,13 @@ class NixMetaScanner:
         """Return meta-info as dataframe"""
         return self.df_meta
 
-    def _read_nixpkgs_meta(self, nixpkgs_path):
+    def _read_nixpkgs_meta(
+        self,
+        nixpkgs_path,
+        *,
+        enable_flakes=False,
+        impure=False,
+    ):
         prefix = "nixmeta_"
         suffix = ".json"
         with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
@@ -89,17 +131,21 @@ class NixMetaScanner:
                 "--json",
                 "-f",
                 f"{nixpkgs_path.as_posix()}",
-                "--arg",
-                "config",
-                "{allowAliases=false;}",
             ]
-            exec_cmd(cmd, stdout=f)
+            if enable_flakes:
+                cmd.extend(["--option", "experimental-features", "nix-command flakes"])
+            if impure:
+                cmd.append("--impure")
+            cmd.extend(["--arg", "config", "{allowAliases=false;}"])
+            _run_nix_env_metadata(cmd, stdout=f)
             LOG.debug("Generated meta.json: %s", f.name)
             LOG.info("Parsing nixpkgs metadata")
             self.df_meta = parse_json_metadata(f.name, log=LOG)
             self._drop_duplicates()
 
     def _drop_duplicates(self):
+        if self.df_meta is None or self.df_meta.empty:
+            return
         self.df_meta = self.df_meta.astype(str)
         self.df_meta.fillna("", inplace=True)
         uids = [
