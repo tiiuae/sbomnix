@@ -10,6 +10,7 @@ import re
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.log import LOG, LOG_VERBOSE
+from common.nix_utils import parse_nix_derivation_show
 from common.proc import ExecCmdFn, exec_cmd, nix_cmd
 
 NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX = ".config.system.build.toplevel"
@@ -26,10 +27,11 @@ _NIX_STRING_ESCAPES = {
 }
 
 
-def try_resolve_flakeref(
+def try_resolve_flakeref(  # noqa: PLR0913
     flakeref: str,
     force_realise: bool = False,
     impure: bool = False,
+    derivation: bool = False,
     *,
     exec_cmd_fn: ExecCmdFn | None = None,
     log: logging.Logger | None = None,
@@ -42,6 +44,22 @@ def try_resolve_flakeref(
     log = LOG if log is None else log
 
     looks_like_flakeref = _looks_like_flakeref(flakeref)
+    if derivation and not force_realise and looks_like_flakeref:
+        log.info("Evaluating flakeref '%s'", flakeref)
+        cmd = nix_cmd("derivation", "show", flakeref, impure=impure)
+        ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+        if ret is None or ret.returncode != 0:
+            raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
+        drv_paths = parse_nix_derivation_show(ret.stdout)
+        drv_path = next(iter(drv_paths), "")
+        if not drv_path:
+            raise FlakeRefResolutionError(
+                flakeref,
+                "nix derivation show returned no derivation path",
+            )
+        log.debug("flakeref='%s' maps to derivation='%s'", flakeref, drv_path)
+        return drv_path
+
     if force_realise and looks_like_flakeref:
         log.info("Realising flakeref '%s'", flakeref)
         cmd = nix_cmd(

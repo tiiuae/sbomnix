@@ -53,6 +53,7 @@ def resolve_nix_target(nixref, buildtime=False, impure=False):
         resolved_ref,
         force_realise=runtime,
         impure=impure,
+        derivation=buildtime,
     )
     if target_path:
         return ResolvedNixTarget(

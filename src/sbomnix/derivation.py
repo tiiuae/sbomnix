@@ -74,6 +74,23 @@ def load_many(paths, output_paths_by_drv=None, batch_size=200):
     return loaded
 
 
+def load_recursive(path):
+    """Load a derivation and its recursive build-time closure."""
+    drv_infos = parse_nix_derivation_show(
+        exec_cmd(nix_cmd("derivation", "show", "--recursive", path)).stdout,
+        store_path_hint=path,
+    )
+    if not drv_infos:
+        raise RuntimeError(f"Failed loading recursive derivation closure '{path}'")
+    loaded = {}
+    for drv_path, drv_info in drv_infos.items():
+        drv = Derive.from_nix_derivation_info(drv_path, drv_info)
+        LOG.log(LOG_SPAM, "load derivation: %s", drv)
+        LOG.log(LOG_SPAM, "derivation attrs: %s", drv.to_dict())
+        loaded[drv_path] = drv
+    return loaded, drv_infos
+
+
 def destructure(env):
     """Decodes Nix 2.0 __structuredAttrs."""
     if "__json" in env:
