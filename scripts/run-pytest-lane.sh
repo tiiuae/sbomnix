@@ -12,26 +12,34 @@ usage() {
 }
 
 lane="${1:-}"
+marker_expr=""
+coverage=false
+pytest_args=(
+  -n auto
+  -x
+)
+
 case "$lane" in
   fast)
     marker_expr="not slow and not network"
+    pytest_args+=(-v --durations=10)
     ;;
   full)
-    marker_expr=""
+    coverage=true
+    pytest_args+=(-v --durations=20)
     ;;
   *)
     usage
     ;;
 esac
 
-pytest_args=(
-  -n auto
-  -vx
-  --durations=20
-  --cov=src
-  --cov-report=term-missing
-  --cov-report=xml
-)
+if $coverage; then
+  pytest_args+=(
+    --cov=src
+    --cov-report=term-missing
+    --cov-report=xml
+  )
+fi
 
 if [ -n "$marker_expr" ]; then
   pytest_args+=(-m "$marker_expr")

@@ -47,9 +47,10 @@ def fixture_test_work_dir(tmp_path):
 
 @pytest.fixture(name="test_nix_drv", scope="session")
 def fixture_test_nix_drv():
-    """Instantiate nixpkgs.hello once per test session without building it."""
+    """Instantiate a small test derivation chain once per test session."""
+    test_derivation = RESOURCES_DIR / "test-derivation-chain.nix"
     ret = subprocess.run(
-        ["nix-instantiate", "<nixpkgs>", "-A", "hello"],
+        ["nix-instantiate", test_derivation.as_posix()],
         capture_output=True,
         encoding="utf-8",
         check=True,
