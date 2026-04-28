@@ -20,7 +20,7 @@ from nixgraph.store import (
     get_nix_store_path,
     runtime_query_output,
 )
-from sbomnix.nix import find_deriver
+from sbomnix.derivers import find_deriver
 
 
 class NixDependencies:

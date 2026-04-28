@@ -27,9 +27,10 @@ from sbomnix.closure import (
 from sbomnix.cpe import CPE
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_many, load_recursive
+from sbomnix.derivers import find_deriver
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
+from sbomnix.fallback_store import FallbackStore
 from sbomnix.meta import Meta, NixpkgsMetaSource
-from sbomnix.nix import Store, find_deriver
 from sbomnix.runtime import (
     load_runtime_closure,
 )
@@ -257,7 +258,7 @@ class SbomDb:
         return output_paths_by_drv
 
     def _load_fallback_store_dataframe(self, paths):
-        store = Store(self.buildtime, include_cpe=self.include_cpe)
+        store = FallbackStore(self.buildtime, include_cpe=self.include_cpe)
         store.add_paths(paths)
         return store.to_dataframe()
 

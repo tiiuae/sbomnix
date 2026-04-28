@@ -13,7 +13,7 @@ import pytest
 from common.proc import exec_cmd, nix_cmd
 from nixmeta import flake_metadata
 from nixupdate import nix_outdated
-from sbomnix import nix as sbomnix_nix
+from sbomnix import derivers as sbomnix_derivers
 from sbomnix.meta import Meta
 
 
@@ -46,10 +46,10 @@ def test_find_deriver_uses_argv_list(monkeypatch):
             )
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(sbomnix_nix, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(sbomnix_derivers, "exec_cmd", fake_exec_cmd)
     monkeypatch.setattr("os.path.exists", lambda path: path.endswith(".drv"))
 
-    drv_path = sbomnix_nix.find_deriver("/nix/store/my target")
+    drv_path = sbomnix_derivers.find_deriver("/nix/store/my target")
 
     assert drv_path == "my target.drv"
     assert calls == [
@@ -87,10 +87,10 @@ def test_find_deriver_supports_nix_2_33_wrapped_json(monkeypatch):
             )
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
-    monkeypatch.setattr(sbomnix_nix, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr(sbomnix_derivers, "exec_cmd", fake_exec_cmd)
     monkeypatch.setattr("os.path.exists", lambda path: path.endswith(".drv"))
 
-    drv_path = sbomnix_nix.find_deriver(target_path)
+    drv_path = sbomnix_derivers.find_deriver(target_path)
 
     assert drv_path == f"/custom/store/{drv_basename}"
 
