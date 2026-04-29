@@ -13,6 +13,8 @@ import pytest
 from nixgraph import graph as nixgraph_graph
 from nixgraph.parsing import parse_nix_query_out
 from nixgraph.render import NixDependencyGraph, NixGraphFilter
+from sbomnix.closure import dependency_rows_to_dataframe
+from sbomnix.runtime import RuntimeClosure
 
 
 class CapturingLogger:
@@ -117,23 +119,11 @@ def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
     monkeypatch.setattr(nixgraph_graph, "LOG", logger)
     monkeypatch.setattr(
         nixgraph_graph,
-        "find_deriver_path",
-        lambda *_args, **_kwargs: "/nix/store/target.drv",
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "get_nix_store_path",
-        lambda *_args, **_kwargs: "/nix/store/",
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "find_output_path",
-        lambda *_args, **_kwargs: "/nix/store/target",
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "runtime_query_output",
-        lambda *_args, **_kwargs: "",
+        "load_runtime_closure",
+        lambda *_args, **_kwargs: RuntimeClosure(
+            df_deps=dependency_rows_to_dataframe([]),
+            output_paths_by_drv={},
+        ),
     )
 
     nixgraph_graph.NixDependencies("/nix/store/target")
@@ -153,11 +143,6 @@ def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
             }
         }
     }
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "get_nix_store_path",
-        lambda *_args, **_kwargs: "/nix/store/",
-    )
     monkeypatch.setattr(
         nixgraph_graph,
         "load_recursive",
@@ -187,7 +172,7 @@ def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
     ]
 
 
-def test_nix_dependencies_can_reuse_resolved_drv_without_output_lookup(monkeypatch):
+def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
     calls = []
     monkeypatch.setattr(
         nixgraph_graph,
@@ -198,16 +183,30 @@ def test_nix_dependencies_can_reuse_resolved_drv_without_output_lookup(monkeypat
         nixgraph_graph,
         "find_output_path",
         lambda *_args, **_kwargs: calls.append("find_output_path"),
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "get_nix_store_path",
-        lambda *_args, **_kwargs: "/nix/store/",
+        raising=False,
     )
     monkeypatch.setattr(
         nixgraph_graph,
         "runtime_query_output",
-        lambda *_args, **_kwargs: "",
+        lambda *_args, **_kwargs: calls.append("runtime_query_output"),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "load_runtime_closure",
+        lambda *_args, **_kwargs: RuntimeClosure(
+            df_deps=dependency_rows_to_dataframe(
+                [
+                    {
+                        "src_path": "/nix/store/dep",
+                        "src_pname": "dep",
+                        "target_path": "/nix/store/target",
+                        "target_pname": "target",
+                    }
+                ]
+            ),
+            output_paths_by_drv={},
+        ),
     )
 
     deps = nixgraph_graph.NixDependencies(
@@ -216,5 +215,13 @@ def test_nix_dependencies_can_reuse_resolved_drv_without_output_lookup(monkeypat
         resolve_output=False,
     )
 
-    assert deps.start_path is None
+    assert deps.start_path == "/nix/store/target"
     assert calls == []
+    assert deps.to_dataframe().to_dict("records") == [
+        {
+            "src_path": "/nix/store/dep",
+            "src_pname": "dep",
+            "target_path": "/nix/store/target",
+            "target_pname": "target",
+        }
+    ]
