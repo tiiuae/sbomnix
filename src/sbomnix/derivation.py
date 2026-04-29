@@ -8,10 +8,12 @@
 
 import bisect
 import json
+import subprocess
 from itertools import islice
 
 from packageurl import PackageURL
 
+from common.errors import NixCommandError
 from common.log import LOG, LOG_SPAM
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
@@ -27,8 +29,9 @@ def _batched(iterable, size):
 
 def load(path, outpath):
     """Load derivation from path"""
+    cmd = nix_cmd("derivation", "show", path)
     drv_infos = parse_nix_derivation_show(
-        exec_cmd(nix_cmd("derivation", "show", path)).stdout,
+        _exec_required_nix_command(cmd).stdout,
         store_path_hint=path,
     )
     drv_path = path
@@ -36,7 +39,10 @@ def load(path, outpath):
     if drv_info is None and drv_infos:
         drv_path, drv_info = next(iter(drv_infos.items()))
     if drv_info is None:
-        raise RuntimeError(f"Failed loading derivation '{path}'")
+        raise NixCommandError(
+            cmd,
+            stderr=f"No derivation metadata returned for '{path}'",
+        )
     if outpath is None and path != drv_path and not path.endswith(".drv"):
         outpath = path
     d_obj = Derive.from_nix_derivation_info(drv_path, drv_info, outpath)
@@ -104,7 +110,7 @@ def _load_derivation_infos(paths, store_path_hint=None, ignore_missing=False):
             log_error=False,
         )
     else:
-        ret = exec_cmd(nix_cmd("derivation", "show", *paths))
+        ret = _exec_required_nix_command(nix_cmd("derivation", "show", *paths))
     if ret is not None:
         return parse_nix_derivation_show(ret.stdout, store_path_hint=store_path_hint)
     if len(paths) == 1:
@@ -168,12 +174,16 @@ def _derivation_output_paths(drv_info):
 
 def load_recursive(path):
     """Load a derivation and its recursive build-time closure."""
+    cmd = nix_cmd("derivation", "show", "--recursive", path)
     drv_infos = parse_nix_derivation_show(
-        exec_cmd(nix_cmd("derivation", "show", "--recursive", path)).stdout,
+        _exec_required_nix_command(cmd).stdout,
         store_path_hint=path,
     )
     if not drv_infos:
-        raise RuntimeError(f"Failed loading recursive derivation closure '{path}'")
+        raise NixCommandError(
+            cmd,
+            stderr=f"No derivation metadata returned for '{path}'",
+        )
     loaded = {}
     for drv_path, drv_info in drv_infos.items():
         drv = Derive.from_nix_derivation_info(drv_path, drv_info)
@@ -181,6 +191,17 @@ def load_recursive(path):
         LOG.log(LOG_SPAM, "derivation attrs: %s", drv.to_dict())
         loaded[drv_path] = drv
     return loaded, drv_infos
+
+
+def _exec_required_nix_command(cmd):
+    try:
+        return exec_cmd(cmd)
+    except subprocess.CalledProcessError as error:
+        raise NixCommandError(
+            cmd,
+            stderr=error.stderr,
+            stdout=error.stdout,
+        ) from None
 
 
 def destructure(env):
@@ -196,8 +217,6 @@ class Derive:
     def __init__(
         self,
         _outputs=None,
-        _inputDrvs=None,
-        _inputSrcs=None,
         _system=None,
         _builder=None,
         _args=None,
@@ -273,7 +292,8 @@ class Derive:
 
     def init(self, path, outpath):
         """Initialize self.store_path and self.outputs"""
-        assert self.store_path is None
+        if self.store_path is not None:
+            raise AssertionError("Derivation is already initialized")
         LOG.log(LOG_SPAM, "path:%s, outpath:%s", path, outpath)
         self.store_path = path
         outpath = outpath if outpath and outpath != path else self.out

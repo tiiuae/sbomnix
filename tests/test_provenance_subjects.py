@@ -7,8 +7,16 @@
 
 import json
 import logging
+import subprocess
 from types import SimpleNamespace
 
+import pytest
+
+from common.errors import (
+    InvalidNixJsonError,
+    MissingNixDerivationMetadataError,
+    NixCommandError,
+)
 from common.log import LOG
 from common.nix_utils import parse_nix_derivation_show
 from provenance import main as provenance_main
@@ -22,6 +30,15 @@ from provenance.subjects import SubjectHooks, get_subjects, output_path
 
 
 def _dependency_hooks(*, exec_cmd_fn, query_path_hashes_fn=None):
+    if query_path_hashes_fn is None:
+        return DependencyHooks(
+            exec_cmd_fn=exec_cmd_fn,
+            parse_nix_derivation_show_fn=parse_nix_derivation_show,
+            normalize_digest_fn=normalize_digest,
+            output_digest_fn=output_digest,
+            output_path_fn=output_path,
+            log=LOG,
+        )
     return DependencyHooks(
         exec_cmd_fn=exec_cmd_fn,
         query_path_hashes_fn=query_path_hashes_fn,
@@ -236,6 +253,23 @@ def test_get_dependencies_maps_env_only_output_paths_back_to_derivations():
     ]
 
 
+def test_get_dependencies_wraps_derivation_show_failures():
+    drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=cmd,
+            stderr="derivation show failed",
+        )
+
+    with pytest.raises(NixCommandError, match="derivation show failed"):
+        get_dependencies(
+            drv_path,
+            hooks=_dependency_hooks(exec_cmd_fn=fake_exec_cmd),
+        )
+
+
 def test_get_subjects_falls_back_to_env_output_paths():
     output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     output_hash = "1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
@@ -418,6 +452,72 @@ def test_provenance_uses_store_path_hint_for_nix_2_33_outputs_without_path(monke
             "digest": {"sha256": digest},
         }
     ]
+
+
+def test_provenance_wraps_target_derivation_show_failures(monkeypatch):
+    target = "/custom/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=cmd,
+            stderr="target derivation show failed",
+        )
+
+    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
+
+    metadata = provenance_main.BuildMeta("", "", "", "", "", "{}", "{}")
+    with pytest.raises(NixCommandError, match="target derivation show failed"):
+        provenance_main.provenance(target, metadata)
+
+
+def test_provenance_rejects_empty_target_derivation_metadata(monkeypatch):
+    target = "/custom/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[:3] == ["nix", "derivation", "show"]:
+            return SimpleNamespace(stdout=json.dumps({"version": 4, "derivations": {}}))
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
+
+    metadata = provenance_main.BuildMeta("", "", "", "", "", "{}", "{}")
+    with pytest.raises(
+        MissingNixDerivationMetadataError,
+        match="No derivation metadata found",
+    ):
+        provenance_main.provenance(target, metadata)
+
+
+def test_provenance_rejects_target_derivation_without_outputs(monkeypatch):
+    target = "/custom/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+    drv_basename = "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[:3] == ["nix", "derivation", "show"]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "version": 4,
+                        "derivations": {
+                            drv_basename: {
+                                "name": "root",
+                                "env": {"name": "root"},
+                            }
+                        },
+                    }
+                )
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr(provenance_main, "exec_cmd", fake_exec_cmd)
+
+    metadata = provenance_main.BuildMeta("", "", "", "", "", "{}", "{}")
+    with pytest.raises(
+        InvalidNixJsonError,
+        match=r"missing `outputs` in target derivation",
+    ):
+        provenance_main.provenance(target, metadata)
 
 
 def test_provenance_keeps_fixed_output_subjects_when_output_is_not_realized(

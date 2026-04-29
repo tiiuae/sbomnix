@@ -6,8 +6,12 @@
 """Focused tests for batched store and derivation loading."""
 
 import json
+import subprocess
 from types import SimpleNamespace
 
+import pytest
+
+from common.errors import NixCommandError
 from sbomnix import derivation as sbomnix_derivation
 
 
@@ -243,3 +247,46 @@ def test_load_many_can_ignore_missing_output_derivations(monkeypatch):
         ["/nix/store/good-out"],
         ["/nix/store/missing-out"],
     ]
+
+
+def test_load_recursive_wraps_nix_command_failures(monkeypatch):
+    def fail_exec_cmd(cmd):
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=cmd,
+            stderr="recursive derivation show failed",
+        )
+
+    monkeypatch.setattr(sbomnix_derivation, "exec_cmd", fail_exec_cmd)
+
+    with pytest.raises(NixCommandError, match="recursive derivation show failed"):
+        sbomnix_derivation.load_recursive(
+            "/nix/store/11111111111111111111111111111111-target-1.0.drv"
+        )
+
+
+def test_load_rejects_empty_derivation_metadata(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_derivation,
+        "exec_cmd",
+        lambda _cmd: SimpleNamespace(stdout="{}", stderr="", returncode=0),
+    )
+
+    with pytest.raises(NixCommandError, match="No derivation metadata returned"):
+        sbomnix_derivation.load(
+            "/nix/store/11111111111111111111111111111111-target-1.0",
+            None,
+        )
+
+
+def test_load_recursive_rejects_empty_derivation_metadata(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_derivation,
+        "exec_cmd",
+        lambda _cmd: SimpleNamespace(stdout="{}", stderr="", returncode=0),
+    )
+
+    with pytest.raises(NixCommandError, match="No derivation metadata returned"):
+        sbomnix_derivation.load_recursive(
+            "/nix/store/11111111111111111111111111111111-target-1.0.drv"
+        )

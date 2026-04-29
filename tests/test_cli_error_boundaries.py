@@ -13,6 +13,7 @@ from common.errors import SbomnixError
 from nixgraph import main as nixgraph_main
 from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated
+from provenance import main as provenance_main
 from vulnxscan import osv as osv_cli
 from vulnxscan import vulnxscan_cli
 
@@ -118,6 +119,21 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
             ),
             lambda monkeypatch: None,
             "exit_unless_command_exists",
+        ),
+        (
+            provenance_main,
+            SimpleNamespace(
+                target="/nix/store/broken.drv",
+                recursive=False,
+                out=None,
+                verbose=0,
+            ),
+            lambda monkeypatch: monkeypatch.setattr(
+                provenance_main,
+                "get_env_metadata",
+                lambda: provenance_main.BuildMeta("", "", "", "", "", "{}", "{}"),
+            ),
+            "provenance",
         ),
     ],
 )

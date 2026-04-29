@@ -12,6 +12,7 @@ import os
 from dataclasses import dataclass
 
 from common.cli_args import add_verbose_argument, add_version_argument
+from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
@@ -140,7 +141,11 @@ def main():
 
     build_metadata = get_env_metadata()
 
-    schema = provenance(args.target, build_metadata, recursive=args.recursive)
+    try:
+        schema = provenance(args.target, build_metadata, recursive=args.recursive)
+    except SbomnixError as error:
+        LOG.fatal("%s", error)
+        raise SystemExit(1) from error
 
     if args.out:
         with open(args.out, "w", encoding="utf-8") as filepath:

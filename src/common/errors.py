@@ -4,6 +4,9 @@
 
 """Shared exception types for expected user-facing failures."""
 
+import os
+import shlex
+
 
 class SbomnixError(RuntimeError):
     """Base class for expected user-facing errors."""
@@ -46,12 +49,38 @@ class CommandNotFoundError(SbomnixError):
         super().__init__(f"command '{name}' is not in PATH")
 
 
+class NixCommandError(SbomnixError):
+    """Raised when a required Nix command fails."""
+
+    def __init__(self, command, stderr="", stdout=""):
+        self.command = _format_command(command)
+        self.stderr = "" if stderr is None else str(stderr)
+        self.stdout = "" if stdout is None else str(stdout)
+        message = f"Failed running Nix command `{self.command}`"
+        detail = self.stderr.strip() or self.stdout.strip()
+        if detail:
+            message += f": {detail}"
+        super().__init__(message)
+
+
 class InvalidNixArtifactError(SbomnixError):
     """Raised when a CLI target is not a valid nix artifact."""
 
     def __init__(self, path):
         self.path = path
         super().__init__(f"Specified target is not a nix artifact: '{path}'")
+
+
+class InvalidNixJsonError(SbomnixError):
+    """Raised when a Nix JSON interface returns an unsupported shape."""
+
+    def __init__(self, command, detail):
+        self.command = command
+        self.detail = detail
+        super().__init__(
+            f"Unexpected JSON from `{command}`: {detail}. "
+            "The pinned Nix output schema may have changed; refusing to continue."
+        )
 
 
 class MissingNixDeriverError(SbomnixError):
@@ -101,3 +130,11 @@ class InvalidSbomError(SbomnixError):
     def __init__(self, path):
         self.path = path
         super().__init__(f"Specified sbom target is not a json file: '{path}'")
+
+
+def _format_command(command):
+    if isinstance(command, bytes):
+        return command.decode(errors="replace")
+    if isinstance(command, str):
+        return command
+    return shlex.join(os.fspath(part) for part in command)
