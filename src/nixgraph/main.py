@@ -11,7 +11,7 @@ import argparse
 from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
-from nixgraph.graph import NixDependencies
+from nixgraph.graph import draw_dependencies, load_dependencies
 from sbomnix.cli_utils import resolve_nix_target
 
 ###############################################################################
@@ -90,8 +90,8 @@ def main():
 
 def _run(args):
     target = resolve_nix_target(args.NIXREF, buildtime=args.buildtime)
-    deps = NixDependencies(target.path, args.buildtime)
-    deps.graph(args)
+    deps = load_dependencies(target.path, args.buildtime)
+    draw_dependencies(deps, args)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@
 
 import os
 
+from common.errors import MissingNixDeriverError, SbomnixError
 from common.log import LOG, LOG_SPAM
 from common.nix_utils import parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
@@ -53,3 +54,17 @@ def find_deriver(path):
         "Cannot determine deriver. Is this really a path into the nix store?",
         path,
     )
+
+
+def require_deriver(path, *, find_deriver_fn=find_deriver, log=LOG):
+    """Return the deriver for ``path`` or raise a typed error."""
+    try:
+        drv_path = find_deriver_fn(path)
+    except SbomnixError:
+        raise
+    except RuntimeError as error:
+        raise MissingNixDeriverError(path) from error
+    if not drv_path:
+        raise MissingNixDeriverError(path)
+    log.debug("nix_drv: %s", drv_path)
+    return drv_path

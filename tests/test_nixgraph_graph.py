@@ -78,7 +78,7 @@ def test_dependency_graph_returns_dataframe_for_csv_output():
     assert list(df_out["src_path"]) == ["/nix/store/bash", "/nix/store/glibc"]
 
 
-def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
+def test_load_dependencies_logs_dependency_loading_at_info(monkeypatch):
     logger = CapturingLogger()
     monkeypatch.setattr(nixgraph_graph, "LOG", logger)
     monkeypatch.setattr(
@@ -90,7 +90,7 @@ def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
         ),
     )
 
-    nixgraph_graph.NixDependencies("/nix/store/target")
+    nixgraph_graph.load_dependencies("/nix/store/target")
 
     assert (
         "info",
@@ -99,7 +99,7 @@ def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
     ) in logger.records
 
 
-def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
+def test_load_dependencies_buildtime_uses_derivation_json(monkeypatch):
     drv_infos = {
         "/nix/store/11111111111111111111111111111111-target.drv": {
             "inputDrvs": {
@@ -109,18 +109,22 @@ def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
     }
     monkeypatch.setattr(
         nixgraph_graph,
+        "require_deriver",
+        lambda path: path,
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
         "load_recursive",
         lambda path: ({path: object()}, drv_infos),
     )
 
-    deps = nixgraph_graph.NixDependencies(
+    deps = nixgraph_graph.load_dependencies(
         "/nix/store/target.drv",
         buildtime=True,
-        drv_path="/nix/store/11111111111111111111111111111111-target.drv",
     )
 
-    assert deps.start_path == "/nix/store/11111111111111111111111111111111-target.drv"
-    assert deps.to_dataframe().to_dict("records") == [
+    assert deps.start_path == "/nix/store/target.drv"
+    assert deps.df.to_dict("records") == [
         {
             "src_path": "/nix/store/22222222222222222222222222222222-dep.drv",
             "src_pname": "dep.drv",
@@ -130,13 +134,7 @@ def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
     ]
 
 
-def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
-    calls = []
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "find_deriver_path",
-        lambda *_args, **_kwargs: calls.append("find_deriver_path"),
-    )
+def test_load_dependencies_runtime_uses_resolved_output_path(monkeypatch):
     monkeypatch.setattr(
         nixgraph_graph,
         "load_runtime_closure",
@@ -155,15 +153,10 @@ def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
         ),
     )
 
-    deps = nixgraph_graph.NixDependencies(
-        "/nix/store/target",
-        drv_path="/nix/store/target.drv",
-        resolve_output=False,
-    )
+    deps = nixgraph_graph.load_dependencies("/nix/store/target")
 
     assert deps.start_path == "/nix/store/target"
-    assert calls == []
-    assert deps.to_dataframe().to_dict("records") == [
+    assert deps.df.to_dict("records") == [
         {
             "src_path": "/nix/store/dep",
             "src_pname": "dep",
@@ -173,7 +166,8 @@ def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
     ]
 
 
-def test_nix_dependencies_no_longer_exposes_legacy_graph_helpers():
+def test_nixgraph_no_longer_exposes_legacy_graph_helpers():
+    assert not hasattr(nixgraph_graph, "NixDependencies")
     assert not hasattr(nixgraph_graph, "parse_nix_query_out")
     assert not hasattr(nixgraph_graph, "runtime_query_output")
     assert not hasattr(nixgraph_graph, "buildtime_query_output")

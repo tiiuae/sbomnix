@@ -16,13 +16,14 @@ from common.errors import (
     CsvLoadError,
     InvalidCpeDictionaryError,
     InvalidNixArtifactError,
+    InvalidNixJsonError,
     MissingNixDeriverError,
     WhitelistApplicationError,
 )
 from common.proc import exit_unless_command_exists, exit_unless_nix_artifact
-from nixgraph import store as nixgraph_store
 from repology.reporting import report_cves
 from sbomnix import cpe
+from sbomnix.derivers import require_deriver
 from vulnxscan import whitelist
 
 
@@ -58,7 +59,26 @@ def test_exit_unless_nix_artifact_raises_typed_error():
 
 def test_find_deriver_raises_typed_error():
     with pytest.raises(MissingNixDeriverError, match="No deriver found for: 'missing'"):
-        nixgraph_store.find_deriver_path("missing", find_deriver_fn=lambda _path: None)
+        require_deriver("missing", find_deriver_fn=lambda _path: None)
+
+
+def test_require_deriver_wraps_lookup_runtime_errors():
+    def fail_find_deriver(_path):
+        raise RuntimeError("deriver metadata exists but is not loadable")
+
+    with pytest.raises(
+        MissingNixDeriverError,
+        match="No deriver found for: 'missing'",
+    ):
+        require_deriver("missing", find_deriver_fn=fail_find_deriver)
+
+
+def test_require_deriver_preserves_typed_lookup_errors():
+    def fail_find_deriver(_path):
+        raise InvalidNixJsonError("nix derivation show", "bad schema")
+
+    with pytest.raises(InvalidNixJsonError, match="bad schema"):
+        require_deriver("missing", find_deriver_fn=fail_find_deriver)
 
 
 def test_cpe_raises_typed_error_when_required_columns_are_missing(monkeypatch):

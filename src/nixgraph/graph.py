@@ -6,60 +6,56 @@
 
 """Python script to query and visualize nix package dependencies."""
 
+from dataclasses import dataclass
+
+import pandas as pd
+
 from common.df import df_to_csv_file
 from common.log import LOG, is_debug_enabled
 from nixgraph.render import NixDependencyGraph
-from nixgraph.store import find_deriver_path
 from sbomnix.closure import derivation_dependencies_df
 from sbomnix.derivation import load_recursive
-from sbomnix.derivers import find_deriver
+from sbomnix.derivers import require_deriver
 from sbomnix.runtime import load_runtime_closure
 
 
-class NixDependencies:
-    """Parse nix package dependencies."""
+@dataclass(frozen=True)
+class LoadedDependencies:
+    """Dependency dataframe and graph traversal start path."""
 
-    def __init__(self, nix_path, buildtime=False, drv_path=None, resolve_output=True):
-        LOG.debug("nix_path: %s", nix_path)
-        # Kept temporarily for SbomBuilder fallback callers; runtime targets
-        # are already output paths after CLI resolution.
-        del resolve_output
-        self.df_dependencies = None
-        self.dtype = "buildtime" if buildtime else "runtime"
-        LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
-        if buildtime and drv_path is None:
-            drv_path = find_deriver_path(
-                nix_path,
-                find_deriver_fn=find_deriver,
-                log=LOG,
-            )
-        if buildtime:
-            assert drv_path is not None
-            self.start_path = drv_path
-            self._parse_buildtime_dependencies(drv_path)
-        else:
-            self.start_path = nix_path
-            self._parse_runtime_dependencies(nix_path)
-        if self.df_dependencies is not None and self.df_dependencies.empty:
-            LOG.info("No %s dependencies", self.dtype)
+    start_path: str
+    df: pd.DataFrame
+    dtype: str
 
-    def _parse_runtime_dependencies(self, output_path):
-        runtime_closure = load_runtime_closure(output_path)
-        self.df_dependencies = runtime_closure.df_deps
 
-    def _parse_buildtime_dependencies(self, drv_path):
+def load_dependencies(nix_path, buildtime=False):
+    """Load nixgraph dependency rows from structured Nix data."""
+    LOG.debug("nix_path: %s", nix_path)
+    dtype = "buildtime" if buildtime else "runtime"
+    LOG.info("Loading %s dependencies referenced by '%s'", dtype, nix_path)
+    if buildtime:
+        drv_path = require_deriver(nix_path)
         _derivations, drv_infos = load_recursive(drv_path)
-        self.df_dependencies = derivation_dependencies_df(drv_infos)
+        loaded = LoadedDependencies(
+            start_path=drv_path,
+            df=derivation_dependencies_df(drv_infos),
+            dtype=dtype,
+        )
+    else:
+        runtime_closure = load_runtime_closure(nix_path)
+        loaded = LoadedDependencies(
+            start_path=nix_path,
+            df=runtime_closure.df_deps,
+            dtype=dtype,
+        )
+    if loaded.df.empty:
+        LOG.info("No %s dependencies", dtype)
+    return loaded
 
-    def to_dataframe(self):
-        """Return the dependencies as pandas dataframe."""
-        assert self.df_dependencies is not None
-        df = self.df_dependencies
-        if is_debug_enabled():
-            df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
-        return df
 
-    def graph(self, args):
-        """Draw the dependencies as directed graph."""
-        digraph = NixDependencyGraph(self.to_dataframe())
-        return digraph.draw(self.start_path, args)
+def draw_dependencies(loaded, args):
+    """Draw loaded dependencies as a directed graph."""
+    if is_debug_enabled():
+        df_to_csv_file(loaded.df, f"nixgraph_deps_{loaded.dtype}.csv")
+    digraph = NixDependencyGraph(loaded.df)
+    return digraph.draw(loaded.start_path, args)
