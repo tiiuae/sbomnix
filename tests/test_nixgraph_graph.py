@@ -3,15 +3,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Focused tests for nixgraph parsing and traversal."""
+"""Focused tests for nixgraph loading and traversal."""
 
 from types import SimpleNamespace
 
 import pandas as pd
-import pytest
 
 from nixgraph import graph as nixgraph_graph
-from nixgraph.parsing import parse_nix_query_out
 from nixgraph.render import NixDependencyGraph, NixGraphFilter
 from sbomnix.closure import dependency_rows_to_dataframe
 from sbomnix.runtime import RuntimeClosure
@@ -29,40 +27,6 @@ class CapturingLogger:
 
     def log(self, level, msg, *args):
         self.records.append(("log", level, msg, args))
-
-
-def test_parse_nix_query_out_extracts_dependency_edges():
-    """Parse nix-store graph output into structured dependency edges."""
-    nix_query_out = "\n".join(
-        [
-            '"11111111111111111111111111111111-bash-5.1"'
-            ' -> "22222222222222222222222222222222-hello-2.12.1"',
-            "not a dependency line",
-            '"33333333333333333333333333333333-glibc-2.39"'
-            ' -> "11111111111111111111111111111111-bash-5.1"',
-        ]
-    )
-
-    dependencies = parse_nix_query_out(nix_query_out, "/custom/store/")
-    dependency_dicts = sorted(
-        (dependency.to_dict() for dependency in dependencies),
-        key=lambda entry: (entry["target_path"], entry["src_path"]),
-    )
-
-    assert dependency_dicts == [
-        {
-            "src_path": "/custom/store/33333333333333333333333333333333-glibc-2.39",
-            "src_pname": "glibc-2.39",
-            "target_path": "/custom/store/11111111111111111111111111111111-bash-5.1",
-            "target_pname": "bash-5.1",
-        },
-        {
-            "src_path": "/custom/store/11111111111111111111111111111111-bash-5.1",
-            "src_pname": "bash-5.1",
-            "target_path": "/custom/store/22222222222222222222222222222222-hello-2.12.1",
-            "target_pname": "hello-2.12.1",
-        },
-    ]
 
 
 def test_nixgraph_filter_get_query_str_joins_fields():
@@ -148,12 +112,6 @@ def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
         "load_recursive",
         lambda path: ({path: object()}, drv_infos),
     )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "buildtime_query_output",
-        lambda *_args, **_kwargs: pytest.fail("legacy buildtime query called"),
-        raising=False,
-    )
 
     deps = nixgraph_graph.NixDependencies(
         "/nix/store/target.drv",
@@ -178,18 +136,6 @@ def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
         nixgraph_graph,
         "find_deriver_path",
         lambda *_args, **_kwargs: calls.append("find_deriver_path"),
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "find_output_path",
-        lambda *_args, **_kwargs: calls.append("find_output_path"),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        nixgraph_graph,
-        "runtime_query_output",
-        lambda *_args, **_kwargs: calls.append("runtime_query_output"),
-        raising=False,
     )
     monkeypatch.setattr(
         nixgraph_graph,
@@ -225,3 +171,10 @@ def test_nix_dependencies_runtime_uses_resolved_output_path(monkeypatch):
             "target_pname": "target",
         }
     ]
+
+
+def test_nix_dependencies_no_longer_exposes_legacy_graph_helpers():
+    assert not hasattr(nixgraph_graph, "parse_nix_query_out")
+    assert not hasattr(nixgraph_graph, "runtime_query_output")
+    assert not hasattr(nixgraph_graph, "buildtime_query_output")
+    assert not hasattr(nixgraph_graph, "find_output_path")

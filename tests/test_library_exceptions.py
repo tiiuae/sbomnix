@@ -6,7 +6,6 @@
 """Unit tests for typed library exceptions."""
 
 import subprocess
-from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -18,7 +17,6 @@ from common.errors import (
     InvalidCpeDictionaryError,
     InvalidNixArtifactError,
     MissingNixDeriverError,
-    MissingNixOutPathError,
     WhitelistApplicationError,
 )
 from common.proc import exit_unless_command_exists, exit_unless_nix_artifact
@@ -61,16 +59,6 @@ def test_exit_unless_nix_artifact_raises_typed_error():
 def test_find_deriver_raises_typed_error():
     with pytest.raises(MissingNixDeriverError, match="No deriver found for: 'missing'"):
         nixgraph_store.find_deriver_path("missing", find_deriver_fn=lambda _path: None)
-
-
-def test_find_outpath_raises_typed_error():
-    with pytest.raises(
-        MissingNixOutPathError, match="No outpath found for: 'missing.drv'"
-    ):
-        nixgraph_store.find_output_path(
-            "missing.drv",
-            exec_cmd_fn=lambda *_args, **_kwargs: SimpleNamespace(stdout=""),
-        )
 
 
 def test_cpe_raises_typed_error_when_required_columns_are_missing(monkeypatch):
