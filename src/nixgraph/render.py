@@ -13,29 +13,13 @@ from typing import Any
 import graphviz as gv
 import pandas as pd
 
+from common import columns as cols
 from common.df import df_regex_filter, df_to_csv_file
 from common.log import LOG, LOG_SPAM
 from common.regex import regex_match
+from sbomnix.closure import walk_dependency_rows
 
 DBG_INDENT = "    "
-
-
-class NixGraphFilter:
-    """Filter graph entries based on specified arguments."""
-
-    def __init__(self, src_path=None, target_path=None):
-        self.src_path = src_path
-        self.target_path = target_path
-
-    def get_query_str(self):
-        """Return filter representation as string."""
-        return " and ".join(
-            [
-                f"{key} == '{value}'"
-                for key, value in self.__dict__.items()
-                if value is not None
-            ]
-        )
 
 
 class NixDependencyGraph:
@@ -44,7 +28,6 @@ class NixDependencyGraph:
     def __init__(self, df_dependencies):
         self.df = df_dependencies
         self.digraph = None
-        self.paths_drawn = set()
         self.df_out_csv = None
         self.maxdepth = 1
         self.inverse_regex = None
@@ -68,15 +51,12 @@ class NixDependencyGraph:
         self.digraph.attr("graph", concentrate="false")
         initlen = len(self.digraph.body)
 
-        if self.inverse_regex:
-            df = df_regex_filter(self.df, "src_path", self.inverse_regex)
-            for row in df.to_dict("records"):
-                inverse_path = row["src_path"]
-                LOG.debug("Start path inverse: %s", inverse_path)
-                self._graph(NixGraphFilter(src_path=inverse_path))
+        walked_rows = self._walk_rows(start_path)
+        if self.df_out_csv is not None:
+            self.df_out_csv = self._walked_rows_to_dataframe(walked_rows)
         else:
-            LOG.debug("Start path: %s", start_path)
-            self._graph(NixGraphFilter(target_path=start_path))
+            for walked in walked_rows:
+                self._draw_row(walked.row, walked.depth)
 
         if len(self.digraph.body) > initlen:
             self._render(args.out)
@@ -88,6 +68,42 @@ class NixDependencyGraph:
         else:
             LOG.warning("Nothing to draw")
         return None
+
+    def _walk_rows(self, start_path):
+        if self.inverse_regex:
+            df = df_regex_filter(self.df, cols.SRC_PATH, self.inverse_regex)
+            start_paths = df[cols.SRC_PATH].tolist() if not df.empty else []
+            for inverse_path in dict.fromkeys(start_paths):
+                LOG.debug("Start path inverse: %s", inverse_path)
+            return walk_dependency_rows(
+                self.df,
+                start_paths,
+                self.maxdepth,
+                inverse=True,
+                stop_at=self._matches_until,
+            )
+        LOG.debug("Start path: %s", start_path)
+        return walk_dependency_rows(
+            self.df,
+            start_path,
+            self.maxdepth,
+            stop_at=self._matches_until,
+        )
+
+    def _walked_rows_to_dataframe(self, walked_rows):
+        rows = [{"graph_depth": walked.depth, **walked.row} for walked in walked_rows]
+        if rows:
+            return pd.DataFrame.from_records(rows)
+        return pd.DataFrame()
+
+    def _draw_row(self, row, depth):
+        self._dbg_print_row(row, depth)
+        if self._matches_until(row):
+            LOG.debug("%sReached until_function", (DBG_INDENT * (depth - 1)))
+            return
+        self._add_node(row[cols.SRC_PATH], row["src_pname"])
+        self._add_node(row[cols.TARGET_PATH], row["target_pname"])
+        self._add_edge(row)
 
     def _init_df_out(self, args):
         if hasattr(args, "out"):
@@ -110,63 +126,15 @@ class NixDependencyGraph:
         self.digraph.render(filename=fname, format=gformat, cleanup=True)
         LOG.info("Wrote: %s", filename)
 
-    def _graph(self, nixfilter, curr_depth=0):
-        curr_depth += 1
-        if curr_depth > self.maxdepth:
-            LOG.log(LOG_SPAM, "Reached maxdepth: %s", self.maxdepth)
-            return
-        df = self._query(nixfilter, curr_depth)
-        if df.empty and curr_depth == 1:
-            LOG.debug("No matching packages found")
-            return
-        if df.empty:
-            LOG.debug("%sFound nothing", (DBG_INDENT * (curr_depth - 1)))
-            return
-        if self.df_out_csv is not None:
-            df.insert(0, "graph_depth", curr_depth)
-            self.df_out_csv = pd.concat([self.df_out_csv, df])
-        for row in df.to_dict("records"):
-            self._dbg_print_row(row, curr_depth)
-            src_path = row["src_path"]
-            src_pname = row["src_pname"]
-            target_path = row["target_path"]
-            target_pname = row["target_pname"]
-            if regex_match(self.until_regex, target_pname):
-                LOG.debug("%sReached until_function", (DBG_INDENT * (curr_depth - 1)))
-                continue
-            if self._path_drawn(row):
-                LOG.debug("%sSkipping duplicate path", (DBG_INDENT * (curr_depth - 1)))
-                continue
-            self._add_node(src_path, src_pname)
-            self._add_node(target_path, target_pname)
-            self._add_edge(row)
-
-            if self.inverse_regex:
-                next_filter = NixGraphFilter(src_path=target_path)
-            else:
-                next_filter = NixGraphFilter(target_path=src_path)
-            self._graph(next_filter, curr_depth)
-
-    def _path_drawn(self, row: dict[str, Any]):
-        hash_str = hash(f"{row['target_path']}:{row['src_path']}")
-        if hash_str in self.paths_drawn:
-            return True
-        self.paths_drawn.add(hash_str)
-        return False
-
-    def _query(self, nixfilter, depth):
-        query_str = nixfilter.get_query_str()
-        LOG.debug("%sFiltering by: %s", (DBG_INDENT * (depth - 1)), query_str)
-        if self.df.empty:
-            return pd.DataFrame()
-        return self.df.query(query_str)
+    def _matches_until(self, row):
+        return regex_match(self.until_regex, row["target_pname"])
 
     def _add_edge(self, row):
         if self.df_out_csv is not None:
             return
         if self.digraph is None:
             return
-        self.digraph.edge(row["target_path"], row["src_path"], style=None)
+        self.digraph.edge(row[cols.TARGET_PATH], row[cols.SRC_PATH], style=None)
 
     def _add_node(self, path, pname):
         if self.df_out_csv is not None:
@@ -191,6 +159,6 @@ class NixDependencyGraph:
             LOG_SPAM,
             "%sFound: %s ==> %s",
             (DBG_INDENT * (depth - 1)),
-            row["target_path"],
-            row["src_path"],
+            row[cols.TARGET_PATH],
+            row[cols.SRC_PATH],
         )
