@@ -6,31 +6,46 @@
 """Offline provenance tests that do not require CLI execution."""
 
 import errno
+import json
 import subprocess
 
-from provenance.dependencies import DependencyHooks, query_store_hashes
+from provenance.path_info import query_path_hashes
+
+
+def _path_info_paths(cmd):
+    assert cmd[:5] == ["nix", "path-info", "--json", "--json-format", "1"]
+    args = cmd[5:]
+    if "--extra-experimental-features" in args:
+        args = args[: args.index("--extra-experimental-features")]
+    return args
 
 
 def test_provenance_hash_query_batches_on_e2big():
-    """Test provenance splits oversized nix-store hash queries and preserves order."""
+    """Test provenance splits oversized path-info hash queries and preserves order."""
     references = [f"/nix/store/hash-{idx}" for idx in range(5)]
     calls = []
 
     def fake_exec_cmd(cmd, **_kwargs):
-        if cmd[:3] == ["nix-store", "--query", "--hash"]:
-            batch = cmd[3:]
+        if cmd[:5] == ["nix", "path-info", "--json", "--json-format", "1"]:
+            batch = _path_info_paths(cmd)
             calls.append(batch)
             if len(batch) > 2:
                 raise OSError(errno.E2BIG, "Argument list too long")
-            hashes = "\n".join(
-                f"sha256:hash-{path.rsplit('-', 1)[-1]}" for path in batch
+            path_info = {
+                path: {"narHash": f"sha256:hash-{path.rsplit('-', 1)[-1]}"}
+                for path in batch
+            }
+            return subprocess.CompletedProcess(
+                cmd,
+                0,
+                stdout=json.dumps(path_info),
+                stderr="",
             )
-            return subprocess.CompletedProcess(cmd, 0, stdout=f"{hashes}\n", stderr="")
         raise AssertionError(f"unexpected command: {cmd}")
 
-    hashes = query_store_hashes(
+    hashes = query_path_hashes(
         references,
-        hooks=DependencyHooks(exec_cmd_fn=fake_exec_cmd),
+        exec_cmd_fn=fake_exec_cmd,
     )
 
     assert hashes == [f"sha256:hash-{idx}" for idx in range(5)]

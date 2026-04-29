@@ -4,15 +4,15 @@
 
 """Helpers for provenance dependency resolution."""
 
-import errno
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
-from common.proc import exec_cmd
+from common.proc import exec_cmd, nix_cmd
 from provenance.digests import normalize_digest, output_digest
+from provenance.path_info import query_path_hashes, query_path_info
 from provenance.subjects import output_path
 
 HookFn = Callable[..., Any]
@@ -23,37 +23,12 @@ class DependencyHooks:
     """Injectable helpers used by provenance dependency resolution."""
 
     exec_cmd_fn: HookFn = exec_cmd
-    query_store_hashes_fn: HookFn = field(default_factory=lambda: query_store_hashes)
+    query_path_hashes_fn: HookFn = field(default_factory=lambda: query_path_hashes)
     parse_nix_derivation_show_fn: HookFn = parse_nix_derivation_show
     normalize_digest_fn: HookFn = normalize_digest
     output_digest_fn: HookFn = output_digest
     output_path_fn: HookFn = output_path
     log: logging.Logger = LOG
-
-
-def query_store_hashes(paths, hooks=None):
-    """Query store hashes, splitting the request when argv exceeds OS limits."""
-    hooks = DependencyHooks() if hooks is None else hooks
-    if not paths:
-        return []
-
-    try:
-        return hooks.exec_cmd_fn(
-            [
-                "nix-store",
-                "--query",
-                "--hash",
-                *paths,
-            ]
-        ).stdout.split()
-    except OSError as error:
-        if error.errno != errno.E2BIG or len(paths) == 1:
-            raise
-        midpoint = len(paths) // 2
-        return query_store_hashes(paths[:midpoint], hooks=hooks) + query_store_hashes(
-            paths[midpoint:],
-            hooks=hooks,
-        )
 
 
 def derivation_outputs_by_path(infos, hooks=None):
@@ -72,6 +47,34 @@ def derivation_outputs_by_path(infos, hooks=None):
             if resolved_output_path:
                 outputs_by_path[resolved_output_path] = (info, output)
     return outputs_by_path
+
+
+def dependency_paths(drv_path, recursive=False, outputs_by_path=None, hooks=None):
+    """Return dependency store paths from structured path-info data."""
+    hooks = DependencyHooks() if hooks is None else hooks
+    path_infos = query_path_info(
+        [drv_path],
+        exec_cmd_fn=hooks.exec_cmd_fn,
+        recursive=recursive,
+    )
+    if path_infos is None:
+        return []
+    if recursive:
+        paths = list(path_infos)
+        for path in outputs_by_path or ():
+            if path not in path_infos:
+                paths.append(path)
+        return paths
+
+    drv_info = path_infos.get(drv_path)
+    if drv_info is None and path_infos:
+        drv_info = next(iter(path_infos.values()))
+    if not drv_info:
+        return []
+    references = drv_info.get("references", [])
+    if not isinstance(references, list):
+        return []
+    return [path for path in references if isinstance(path, str)]
 
 
 def dependency_package(drv, output_hash, infos, outputs_by_path, hooks=None):
@@ -119,22 +122,18 @@ def get_dependencies(drv_path, recursive=False, hooks=None):
         "recursively" if recursive else "",
     )
 
-    depth = "--requisites" if recursive else "--references"
-    references = hooks.exec_cmd_fn(
-        [
-            "nix-store",
-            "--query",
-            depth,
-            "--include-outputs",
-            drv_path,
-        ]
-    ).stdout.split()
-    hashes = hooks.query_store_hashes_fn(references)
     infos = hooks.parse_nix_derivation_show_fn(
-        hooks.exec_cmd_fn(["nix", "derivation", "show", "-r", drv_path]).stdout,
+        hooks.exec_cmd_fn(nix_cmd("derivation", "show", "-r", drv_path)).stdout,
         store_path_hint=drv_path,
     )
     outputs_by_path = derivation_outputs_by_path(infos, hooks=hooks)
+    references = dependency_paths(
+        drv_path,
+        recursive=recursive,
+        outputs_by_path=outputs_by_path,
+        hooks=hooks,
+    )
+    hashes = hooks.query_path_hashes_fn(references, exec_cmd_fn=hooks.exec_cmd_fn)
 
     dependencies = []
     for drv, output_hash in zip(references, hashes, strict=True):

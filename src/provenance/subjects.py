@@ -12,6 +12,7 @@ from typing import Any, Callable
 from common.log import LOG, LOG_VERBOSE
 from common.proc import ExecCmdFn, exec_cmd
 from provenance.digests import normalize_digest, output_digest
+from provenance.path_info import nar_hash_for_path, query_path_info
 
 Digest = dict[str, str]
 Subject = dict[str, Any]
@@ -69,21 +70,24 @@ def get_subjects(
                 name,
             )
         elif resolved_output_path:
-            store_hash = hooks.exec_cmd_fn(
-                ["nix-store", "--query", "--hash", resolved_output_path],
+            path_infos = query_path_info(
+                [resolved_output_path],
+                exec_cmd_fn=hooks.exec_cmd_fn,
                 raise_on_error=False,
             )
-            if store_hash is None:
+            if path_infos is None or resolved_output_path not in path_infos:
                 hooks.log.warning(
                     "Derivation output '%s' was not found in the nix store, "
                     "assuming it was not built.",
                     name,
                 )
                 continue
-            digest = hooks.normalize_digest_fn(store_hash.stdout.strip())
+            digest = hooks.normalize_digest_fn(
+                nar_hash_for_path(path_infos, resolved_output_path)
+            )
             if digest is None:
                 hooks.log.warning(
-                    "Cannot normalize nix-store hash for derivation output '%s'",
+                    "Cannot normalize NAR hash for derivation output '%s'",
                     name,
                 )
                 continue
