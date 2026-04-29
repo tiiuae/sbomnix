@@ -7,16 +7,13 @@
 """SBOM builder orchestration."""
 
 import logging
-import subprocess
 import uuid
-from types import SimpleNamespace
 
 import numpy as np
 
 from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, is_debug_enabled
-from nixgraph.graph import NixDependencies
 from sbomnix.closure import (
     DEPENDENCY_COLUMNS,
     dependencies_to_depth,
@@ -31,7 +28,6 @@ from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_recursive
 from sbomnix.derivers import find_deriver, is_loadable_deriver_path
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
-from sbomnix.fallback_store import FallbackStore
 from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.runtime import (
     load_runtime_closure,
@@ -122,33 +118,14 @@ class SbomBuilder:
 
     def _init_dependencies(self, nix_path):
         """Initialize dependencies (df_deps)"""
-        if self.buildtime and self._init_recursive_buildtime_dependencies():
+        if self.buildtime:
+            self._init_recursive_buildtime_dependencies()
             return
-        if not self.buildtime and self._init_runtime_path_info_dependencies(nix_path):
-            return
-        self._init_nix_store_dependencies(nix_path)
-
-    def _init_nix_store_dependencies(self, nix_path):
-        """Initialize dependencies from the nix-store graph fallback."""
-        nix_dependencies = NixDependencies(
-            nix_path,
-            buildtime=self.buildtime,
-            drv_path=self.target_deriver,
-            resolve_output=self.depth is not None,
-        )
-        self.df_deps = self._get_dependencies_df(nix_dependencies)
+        self._init_runtime_path_info_dependencies(nix_path)
 
     def _init_recursive_buildtime_dependencies(self):
         """Initialize build-time dependencies from recursive derivation JSON."""
-        try:
-            derivations, drv_infos = load_recursive(self.target_deriver)
-        except (RuntimeError, subprocess.CalledProcessError, ValueError):
-            LOG.debug("Failed loading recursive derivation closure", exc_info=True)
-            LOG.warning(
-                "Falling back to nix-store buildtime graph for '%s'",
-                self.target_deriver,
-            )
-            return False
+        derivations, drv_infos = load_recursive(self.target_deriver)
         self._recursive_buildtime_derivations = derivations
         self.df_deps = derivation_dependencies_df(drv_infos)
         if self.depth:
@@ -157,19 +134,10 @@ class SbomBuilder:
                 self.target_deriver,
                 self.depth,
             )
-        return True
 
     def _init_runtime_path_info_dependencies(self, nix_path):
         """Initialize runtime dependencies from structured path-info JSON."""
-        try:
-            runtime_closure = load_runtime_closure(nix_path)
-        except (RuntimeError, subprocess.CalledProcessError, ValueError):
-            LOG.debug("Failed loading runtime path-info closure", exc_info=True)
-            LOG.warning(
-                "Falling back to nix-store runtime graph for '%s'",
-                self.target_deriver,
-            )
-            return False
+        runtime_closure = load_runtime_closure(nix_path)
         output_paths_by_load_path = _runtime_output_paths_by_load_path(
             runtime_closure.output_paths_by_drv
         )
@@ -193,24 +161,14 @@ class SbomBuilder:
                 nix_path,
                 self.depth,
             )
-        return True
 
     def _init_runtime_components(self, paths):
-        try:
-            return runtime_derivations_to_dataframe(
-                paths,
-                self._runtime_output_paths_by_drv,
-                include_cpe=self.include_cpe,
-            )
-        except (RuntimeError, subprocess.CalledProcessError, ValueError):
-            LOG.debug("Failed loading runtime derivation components", exc_info=True)
-            LOG.warning(
-                "Falling back to nix-store runtime graph for '%s'",
-                self.target_deriver,
-            )
-            self._runtime_output_paths_by_drv = None
-            self._init_nix_store_dependencies(self.nix_path)
-            return self._load_fallback_store_dataframe(self._sbom_component_paths())
+        assert self._runtime_output_paths_by_drv is not None
+        return runtime_derivations_to_dataframe(
+            paths,
+            self._runtime_output_paths_by_drv,
+            include_cpe=self.include_cpe,
+        )
 
     def _filter_dependencies_to_depth(
         self,
@@ -223,31 +181,20 @@ class SbomBuilder:
         LOG.debug("Reading dependencies until depth=%s", depth)
         return dependencies_to_depth(df_deps, start_path, depth, columns=columns)
 
-    def _get_dependencies_df(self, nix_dependencies):
-        if self.depth:
-            # Return dependencies until the given depth
-            LOG.debug("Reading dependencies until depth=%s", self.depth)
-            args = SimpleNamespace(depth=self.depth, return_df=True)
-            return nix_dependencies.graph(args)
-        # Otherwise, return all dependencies
-        LOG.debug("Reading all dependencies")
-        return nix_dependencies.to_dataframe()
-
     def _init_components(self, include_meta):
         """Initialize the SBOM component dataframe."""
         paths = self._sbom_component_paths()
         # Populate store based on the dependencies
-        if self._recursive_buildtime_derivations is None:
-            if self._runtime_output_paths_by_drv is None:
-                self.df_sbomdb = self._load_fallback_store_dataframe(paths)
-            else:
-                self.df_sbomdb = self._init_runtime_components(paths)
-        else:
+        if self._recursive_buildtime_derivations is not None:
             self.df_sbomdb = recursive_derivations_to_dataframe(
                 paths,
                 self._recursive_buildtime_derivations,
                 include_cpe=self.include_cpe,
             )
+        elif self._runtime_output_paths_by_drv is not None:
+            self.df_sbomdb = self._init_runtime_components(paths)
+        else:
+            raise RuntimeError("Structured dependency metadata was not initialized")
         # Join with meta information
         if include_meta:
             self._join_meta()
@@ -266,11 +213,6 @@ class SbomBuilder:
             # will be the target itself.
             return set([self.target_deriver])
         return dependency_paths(self.df_deps)
-
-    def _load_fallback_store_dataframe(self, paths):
-        store = FallbackStore(self.buildtime, include_cpe=self.include_cpe)
-        store.add_paths(paths)
-        return store.to_dataframe()
 
     def _init_dependency_index(self):
         """Build indexed dependency lookups used during export."""

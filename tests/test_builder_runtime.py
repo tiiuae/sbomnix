@@ -5,7 +5,6 @@
 
 """Focused tests for SBOM builder runtime closure selection."""
 
-import pandas as pd
 import pytest
 
 from sbomnix import builder as sbomnix_builder
@@ -52,74 +51,29 @@ def test_runtime_path_info_dependencies_accepts_existing_derivers(monkeypatch):
 
     builder = _builder_double()
 
-    assert builder._init_runtime_path_info_dependencies(TARGET_PATH) is True
+    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+
     assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
 
 
-def test_runtime_components_fall_back_when_derivation_loading_fails(monkeypatch):
-    fallback_rows = [
-        {
-            "src_path": GRAPH_ONLY_PATH,
-            "src_pname": "source",
-            "target_path": TARGET_PATH,
-            "target_pname": "target-1.0",
-        }
-    ]
-    fallback_deps = dependency_rows_to_dataframe(fallback_rows)
-    calls = {}
-
+def test_runtime_components_propagate_derivation_loading_failures(monkeypatch):
     def fail_runtime_components(*_args, **_kwargs):
         raise ValueError("broken derivation metadata")
-
-    def fake_init_nix_store_dependencies(builder, nix_path):
-        calls["nix_path"] = nix_path
-        builder.df_deps = fallback_deps
-
-    def fake_load_fallback_store_dataframe(_builder, paths):
-        calls["fallback_paths"] = paths
-        return pd.DataFrame.from_records(
-            [
-                {
-                    "store_path": TARGET_DERIVER,
-                    "outputs": [TARGET_PATH],
-                }
-            ]
-        )
 
     monkeypatch.setattr(
         sbomnix_builder,
         "runtime_derivations_to_dataframe",
         fail_runtime_components,
     )
-    monkeypatch.setattr(
-        SbomBuilder,
-        "_init_nix_store_dependencies",
-        fake_init_nix_store_dependencies,
-    )
-    monkeypatch.setattr(
-        SbomBuilder,
-        "_load_fallback_store_dataframe",
-        fake_load_fallback_store_dataframe,
-    )
 
     builder = _builder_double()
     builder._runtime_output_paths_by_drv = {TARGET_DERIVER: {TARGET_PATH}}
 
-    df_components = builder._init_runtime_components({TARGET_PATH})
+    with pytest.raises(ValueError, match="broken derivation metadata"):
+        builder._init_runtime_components({TARGET_PATH})
 
-    assert calls == {
-        "nix_path": TARGET_PATH,
-        "fallback_paths": {GRAPH_ONLY_PATH, TARGET_PATH},
-    }
-    assert builder._runtime_output_paths_by_drv is None
-    assert builder.df_deps.equals(fallback_deps)
-    assert df_components.to_dict("records") == [
-        {
-            "store_path": TARGET_DERIVER,
-            "outputs": [TARGET_PATH],
-        }
-    ]
+    assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
 
 
 @pytest.mark.parametrize(
@@ -148,7 +102,8 @@ def test_runtime_path_info_dependencies_uses_output_queries_for_unloadable_deriv
 
     builder = _builder_double()
 
-    assert builder._init_runtime_path_info_dependencies(TARGET_PATH) is True
+    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+
     assert builder._runtime_output_paths_by_drv == {TARGET_PATH: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
 
@@ -176,6 +131,7 @@ def test_runtime_path_info_dependencies_accepts_graph_only_references(monkeypatc
 
     builder = _builder_double()
 
-    assert builder._init_runtime_path_info_dependencies(TARGET_PATH) is True
+    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+
     assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
