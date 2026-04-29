@@ -14,12 +14,13 @@ from common.proc import exec_cmd
 from nixgraph.parsing import parse_nix_query_out
 from nixgraph.render import NixDependencyGraph
 from nixgraph.store import (
-    buildtime_query_output,
     find_deriver_path,
     find_output_path,
     get_nix_store_path,
     runtime_query_output,
 )
+from sbomnix.closure import derivation_dependencies_df
+from sbomnix.derivation import load_recursive
 from sbomnix.derivers import find_deriver
 
 
@@ -29,6 +30,7 @@ class NixDependencies:
     def __init__(self, nix_path, buildtime=False, drv_path=None, resolve_output=True):
         LOG.debug("nix_path: %s", nix_path)
         self.dependencies = set()
+        self.df_dependencies = None
         self.dtype = "buildtime" if buildtime else "runtime"
         LOG.info("Loading %s dependencies referenced by '%s'", self.dtype, nix_path)
         if drv_path is None:
@@ -62,12 +64,8 @@ class NixDependencies:
         self._parse_nix_query_out(nix_query_out)
 
     def _parse_buildtime_dependencies(self, drv_path):
-        nix_query_out = buildtime_query_output(
-            drv_path,
-            exec_cmd_fn=exec_cmd,
-        )
-        LOG.log(LOG_SPAM, "nix_query_out: %s", nix_query_out)
-        self._parse_nix_query_out(nix_query_out)
+        _derivations, drv_infos = load_recursive(drv_path)
+        self.df_dependencies = derivation_dependencies_df(drv_infos)
 
     def _parse_nix_query_out(self, nix_query_out):
         self.dependencies.update(
@@ -76,6 +74,11 @@ class NixDependencies:
 
     def to_dataframe(self):
         """Return the dependencies as pandas dataframe."""
+        if self.df_dependencies is not None:
+            df = self.df_dependencies
+            if is_debug_enabled():
+                df_to_csv_file(df, f"nixgraph_deps_{self.dtype}.csv")
+            return df
         deps = [dep.to_dict() for dep in self.dependencies]
         df = pd.DataFrame.from_records(deps)
         if not df.empty:

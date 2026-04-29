@@ -8,6 +8,7 @@
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 from nixgraph import graph as nixgraph_graph
 from nixgraph.parsing import parse_nix_query_out
@@ -142,6 +143,48 @@ def test_nix_dependencies_logs_dependency_loading_at_info(monkeypatch):
         "Loading %s dependencies referenced by '%s'",
         ("runtime", "/nix/store/target"),
     ) in logger.records
+
+
+def test_nix_dependencies_buildtime_uses_derivation_json(monkeypatch):
+    drv_infos = {
+        "/nix/store/11111111111111111111111111111111-target.drv": {
+            "inputDrvs": {
+                "/nix/store/22222222222222222222222222222222-dep.drv": ["out"],
+            }
+        }
+    }
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "get_nix_store_path",
+        lambda *_args, **_kwargs: "/nix/store/",
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "load_recursive",
+        lambda path: ({path: object()}, drv_infos),
+    )
+    monkeypatch.setattr(
+        nixgraph_graph,
+        "buildtime_query_output",
+        lambda *_args, **_kwargs: pytest.fail("legacy buildtime query called"),
+        raising=False,
+    )
+
+    deps = nixgraph_graph.NixDependencies(
+        "/nix/store/target.drv",
+        buildtime=True,
+        drv_path="/nix/store/11111111111111111111111111111111-target.drv",
+    )
+
+    assert deps.start_path == "/nix/store/11111111111111111111111111111111-target.drv"
+    assert deps.to_dataframe().to_dict("records") == [
+        {
+            "src_path": "/nix/store/22222222222222222222222222222222-dep.drv",
+            "src_pname": "dep.drv",
+            "target_path": "/nix/store/11111111111111111111111111111111-target.drv",
+            "target_pname": "target.drv",
+        }
+    ]
 
 
 def test_nix_dependencies_can_reuse_resolved_drv_without_output_lookup(monkeypatch):
