@@ -223,6 +223,7 @@ def test_to_cdx_no_longer_triggers_vulnerability_scans(tmp_path, monkeypatch):
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
     sbomdb.target_deriver = "/nix/store/target.drv"
+    sbomdb.target_component_ref = "/nix/store/target.drv"
     sbomdb.depth = None
     sbomdb.uuid = uuid.uuid4()
     sbomdb.include_vulns = True
@@ -288,6 +289,7 @@ def test_sbom_vuln_enrichment_scans_expected_nix_target(
     sbomdb.nix_path = "/nix/store/target-output"
     sbomdb.buildtime = buildtime
     sbomdb.target_deriver = "/nix/store/target.drv"
+    sbomdb.target_component_ref = "/nix/store/target.drv"
     sbomdb.df_sbomdb = pd.DataFrame()
 
     monkeypatch.setattr(sbomnix_vuln_enrichment, "VulnScan", CapturingScanner)
@@ -343,6 +345,7 @@ def test_sbom_vuln_tempfile_is_removed_on_scan_failure(tmp_path, monkeypatch):
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
     sbomdb.target_deriver = "/nix/store/target.drv"
+    sbomdb.target_component_ref = "/nix/store/target.drv"
     sbomdb.depth = None
     sbomdb.uuid = uuid.uuid4()
     sbomdb.include_vulns = True

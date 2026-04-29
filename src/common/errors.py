@@ -62,6 +62,14 @@ class MissingNixDeriverError(SbomnixError):
         super().__init__(f"No deriver found for: '{path}'")
 
 
+class MissingNixDerivationMetadataError(SbomnixError):
+    """Raised when an artifact has no derivation metadata to model as a package."""
+
+    def __init__(self, path):
+        self.path = path
+        super().__init__(f"No derivation metadata found for: '{path}'")
+
+
 class MissingNixOutPathError(SbomnixError):
     """Raised when a derivation does not expose an out path."""
 

@@ -25,15 +25,17 @@ def recursive_derivations_to_dataframe(paths, derivations, include_cpe=True):
     return derivations_to_dataframe(drvs, include_cpe=include_cpe)
 
 
-def runtime_derivations_to_dataframe(paths, output_paths_by_drv, include_cpe=True):
-    """Return component rows from runtime output-to-deriver mappings."""
-    filtered_outputs_by_drv = filter_runtime_outputs_by_drv(
+def runtime_derivations_to_dataframe(
+    paths, output_paths_by_load_path, include_cpe=True
+):
+    """Return component rows from runtime output-to-load-path mappings."""
+    filtered_outputs_by_load_path = filter_runtime_outputs_by_load_path(
         paths,
-        output_paths_by_drv,
+        output_paths_by_load_path,
     )
     derivations = load_many(
-        sorted(filtered_outputs_by_drv),
-        output_paths_by_drv=filtered_outputs_by_drv,
+        sorted(filtered_outputs_by_load_path),
+        output_paths_by_drv=filtered_outputs_by_load_path,
         ignore_missing=True,
     ).values()
     return derivations_to_dataframe(derivations, include_cpe=include_cpe)
@@ -49,12 +51,12 @@ def derivations_to_dataframe(derivations, include_cpe=True):
     return pd.DataFrame.from_records(drv_dicts)
 
 
-def filter_runtime_outputs_by_drv(paths, output_paths_by_drv):
+def filter_runtime_outputs_by_load_path(paths, output_paths_by_load_path):
     """Filter runtime output mappings to the selected component paths."""
     selected_paths = set(paths)
-    filtered_outputs_by_drv = {}
-    for drv_path, output_paths in output_paths_by_drv.items():
+    filtered_outputs_by_load_path = {}
+    for load_path, output_paths in output_paths_by_load_path.items():
         filtered_output_paths = set(output_paths) & selected_paths
         if filtered_output_paths:
-            filtered_outputs_by_drv[drv_path] = filtered_output_paths
-    return filtered_outputs_by_drv
+            filtered_outputs_by_load_path[load_path] = filtered_output_paths
+    return filtered_outputs_by_load_path

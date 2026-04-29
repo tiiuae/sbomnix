@@ -5,8 +5,11 @@
 
 """Focused tests for SBOM builder runtime closure selection."""
 
+import pandas as pd
 import pytest
 
+from common import columns as cols
+from common.errors import MissingNixDerivationMetadataError, SbomnixError
 from sbomnix import builder as sbomnix_builder
 from sbomnix.builder import SbomBuilder
 from sbomnix.closure import dependency_rows_to_dataframe
@@ -22,10 +25,11 @@ def _builder_double():
     builder.nix_path = TARGET_PATH
     builder.buildtime = False
     builder.target_deriver = TARGET_DERIVER
+    builder.target_component_ref = None
     builder.include_cpe = False
     builder.depth = None
     builder.df_deps = None
-    builder._runtime_output_paths_by_drv = None
+    builder._runtime_output_paths_by_load_path = None
     return builder
 
 
@@ -51,9 +55,11 @@ def test_runtime_path_info_dependencies_accepts_existing_derivers(monkeypatch):
 
     builder = _builder_double()
 
-    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+    loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
+    builder._init_dependencies(loaded)
 
-    assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
+    assert loaded.runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
+    assert builder._runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
 
 
@@ -68,12 +74,38 @@ def test_runtime_components_propagate_derivation_loading_failures(monkeypatch):
     )
 
     builder = _builder_double()
-    builder._runtime_output_paths_by_drv = {TARGET_DERIVER: {TARGET_PATH}}
+    builder._runtime_output_paths_by_load_path = {TARGET_DERIVER: {TARGET_PATH}}
 
     with pytest.raises(ValueError, match="broken derivation metadata"):
         builder._init_runtime_components({TARGET_PATH})
 
-    assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
+    assert builder._runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
+
+
+def test_runtime_components_reject_missing_derivation_metadata(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_builder,
+        "runtime_derivations_to_dataframe",
+        lambda *_args, **_kwargs: pd.DataFrame(),
+    )
+
+    builder = _builder_double()
+    builder._runtime_output_paths_by_load_path = {TARGET_PATH: {TARGET_PATH}}
+
+    with pytest.raises(MissingNixDerivationMetadataError, match=TARGET_PATH):
+        builder._init_runtime_components({TARGET_PATH})
+
+
+def test_runtime_deriver_lookup_preserves_typed_errors(monkeypatch):
+    def fail_find_deriver(_path):
+        raise SbomnixError("schema drift")
+
+    monkeypatch.setattr(sbomnix_builder, "find_deriver", fail_find_deriver)
+
+    builder = _builder_double()
+
+    with pytest.raises(SbomnixError, match="schema drift"):
+        builder._resolve_target_deriver(TARGET_PATH)
 
 
 @pytest.mark.parametrize(
@@ -102,9 +134,11 @@ def test_runtime_path_info_dependencies_uses_output_queries_for_unloadable_deriv
 
     builder = _builder_double()
 
-    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+    loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
+    builder._init_dependencies(loaded)
 
-    assert builder._runtime_output_paths_by_drv == {TARGET_PATH: {TARGET_PATH}}
+    assert loaded.runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
+    assert builder._runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
 
 
@@ -131,7 +165,95 @@ def test_runtime_path_info_dependencies_accepts_graph_only_references(monkeypatc
 
     builder = _builder_double()
 
-    builder._init_runtime_path_info_dependencies(TARGET_PATH)
+    loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
+    builder._init_dependencies(loaded)
 
-    assert builder._runtime_output_paths_by_drv == {TARGET_DERIVER: {TARGET_PATH}}
+    assert loaded.runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
+    assert builder._runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
     assert builder.df_deps.equals(closure.df_deps)
+
+
+def test_runtime_path_info_dependencies_supports_targets_without_derivers(
+    monkeypatch,
+):
+    closure = _runtime_closure({})
+    monkeypatch.setattr(
+        sbomnix_builder,
+        "load_runtime_closure",
+        lambda _path: closure,
+    )
+
+    builder = _builder_double()
+    builder.target_deriver = None
+
+    loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
+    builder._init_dependencies(loaded)
+
+    assert loaded.runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
+    assert builder._runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
+
+
+def test_target_component_ref_uses_runtime_output_when_deriver_is_unavailable():
+    builder = _builder_double()
+    builder.target_deriver = None
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: "/nix/store/runtime-load-path",
+                cols.OUTPUTS: [TARGET_PATH],
+            }
+        ]
+    )
+
+    assert builder._resolve_target_component_ref() == "/nix/store/runtime-load-path"
+
+
+def test_target_component_ref_skips_missing_outputs_when_deriver_is_unavailable():
+    builder = _builder_double()
+    builder.target_deriver = None
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: "/nix/store/no-outputs",
+                cols.OUTPUTS: float("nan"),
+            },
+            {
+                cols.STORE_PATH: "/nix/store/runtime-load-path",
+                cols.OUTPUTS: [TARGET_PATH],
+            },
+        ]
+    )
+
+    assert builder._resolve_target_component_ref() == "/nix/store/runtime-load-path"
+
+
+def test_target_component_ref_handles_non_identifier_output_column(monkeypatch):
+    monkeypatch.setattr(cols, "OUTPUTS", "store-outputs")
+    builder = _builder_double()
+    builder.target_deriver = None
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: "/nix/store/runtime-load-path",
+                cols.OUTPUTS: [TARGET_PATH],
+            }
+        ]
+    )
+
+    assert builder._resolve_target_component_ref() == "/nix/store/runtime-load-path"
+
+
+def test_target_component_ref_rejects_missing_runtime_target_metadata():
+    builder = _builder_double()
+    builder.target_deriver = None
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: "/nix/store/runtime-load-path",
+                cols.OUTPUTS: ["/nix/store/other-output"],
+            }
+        ]
+    )
+
+    with pytest.raises(MissingNixDerivationMetadataError, match=TARGET_PATH):
+        builder._resolve_target_component_ref()

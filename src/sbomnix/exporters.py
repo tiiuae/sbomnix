@@ -93,7 +93,7 @@ def build_cdx_document(sbomdb):
     cdx["dependencies"] = []
     for drv in sbomdb.df_sbomdb.itertuples():
         component = _drv_to_cdx_component(drv, uid=sbomdb.uid)
-        if drv.store_path == sbomdb.target_deriver:
+        if drv.store_path == sbomdb.target_component_ref:
             cdx["metadata"]["component"] = component
         else:
             cdx["components"].append(component)
@@ -212,7 +212,7 @@ def build_spdx_document(sbomdb):
     for drv in sbomdb.df_sbomdb.itertuples():
         package = _drv_to_spdx_package(drv, uid=sbomdb.uid)
         spdx["packages"].append(package)
-        if drv.store_path == sbomdb.target_deriver:
+        if drv.store_path == sbomdb.target_component_ref:
             spdx["name"] = _str_to_spdxid(getattr(drv, sbomdb.uid))
         deps = sbomdb.lookup_dependencies(drv, uid=sbomdb.uid)
         relationships = _drv_to_spdx_relationships(drv, deps, uid=sbomdb.uid)

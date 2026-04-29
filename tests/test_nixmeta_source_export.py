@@ -19,6 +19,7 @@ def _make_minimal_sbom():
     sbomdb.nix_path = "/nix/store/target"
     sbomdb.buildtime = False
     sbomdb.target_deriver = "/nix/store/target.drv"
+    sbomdb.target_component_ref = "/nix/store/target.drv"
     sbomdb.depth = None
     sbomdb.uuid = uuid.uuid4()
     sbomdb.sbom_type = "runtime_only"

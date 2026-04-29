@@ -8,11 +8,19 @@
 
 import logging
 import uuid
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from common import columns as cols
 from common.df import df_to_csv_file
+from common.errors import (
+    MissingNixDerivationMetadataError,
+    MissingNixDeriverError,
+    SbomnixError,
+)
 from common.log import LOG, is_debug_enabled
 from sbomnix.closure import (
     DEPENDENCY_COLUMNS,
@@ -26,7 +34,7 @@ from sbomnix.components import (
 )
 from sbomnix.dependency_index import build_dependency_index
 from sbomnix.derivation import load_recursive
-from sbomnix.derivers import find_deriver, is_loadable_deriver_path
+from sbomnix.derivers import find_deriver, is_loadable_deriver_path, require_deriver
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.runtime import (
@@ -39,6 +47,15 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 # Namespace UUID (a UUIDv4) for stable UUIDv5 identifiers.
 # See RFC9562, *6.6.  Namespace ID Usage and Allocation*.
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
+
+
+@dataclass(frozen=True)
+class StructuredClosure:
+    """Structured dependency data used to assemble an SBOM."""
+
+    df_deps: pd.DataFrame
+    recursive_buildtime_derivations: dict[str, Any] | None = None
+    runtime_output_paths_by_load_path: dict[str, set[str]] | None = None
 
 
 def _runtime_output_paths_by_load_path(output_paths_by_drv):
@@ -80,14 +97,14 @@ class SbomBuilder:
         self.uid = cols.STORE_PATH
         self.nix_path = nix_path
         self.buildtime = buildtime
-        self.target_deriver = find_deriver(nix_path)
-        if self.target_deriver is None:
-            raise RuntimeError(f"Failed finding deriver for '{nix_path}'")
+        self.target_deriver = self._resolve_target_deriver(nix_path)
+        self.target_component_ref = None
         self._recursive_buildtime_derivations = None
-        self._runtime_output_paths_by_drv = None
+        self._runtime_output_paths_by_load_path = None
         self.df_deps = None
         self.depth = depth
-        self._init_dependencies(nix_path)
+        self._structured_closure = self._load_structured_closure(nix_path)
+        self._init_dependencies(self._structured_closure)
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
         self.dependency_index = None
@@ -101,51 +118,81 @@ class SbomBuilder:
         self.nixpkgs_meta_source = NixpkgsMetaSource(method="disabled")
         self.include_cpe = include_cpe
         self._init_components(include_meta)
+        target_component_ref = self._resolve_target_component_ref()
+        self.target_component_ref = target_component_ref
         self.include_vulns = include_vulns
         # Use a random UUID as the serial number when any data source that is
-        # not strictly coming from the target_deriver is used
+        # not strictly coming from the resolved target component is used.
         if include_vulns or include_meta or include_cpe:
             LOG.verbose("Using random UUIDv4")
             self.uuid = uuid.uuid4()
         else:
-            LOG.verbose("Using stable UUIDv5 for '%s'", self.target_deriver)
-            # This uses a UUIDv5, which uses the deriver's store path as its input,
-            # resulting in a stable UUID across runs, depending on the SBOM's subject.
-            self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, self.target_deriver)
+            LOG.verbose("Using stable UUIDv5 for '%s'", target_component_ref)
+            # This uses a UUIDv5, resulting in a stable UUID across runs for
+            # the same SBOM subject.
+            self.uuid = uuid.uuid5(SBOMNIX_UUID_NAMESPACE, target_component_ref)
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
             self.sbom_type = "runtime_only"
 
-    def _init_dependencies(self, nix_path):
-        """Initialize dependencies (df_deps)"""
+    def _resolve_target_deriver(self, nix_path):
         if self.buildtime:
-            self._init_recursive_buildtime_dependencies()
-            return
-        self._init_runtime_path_info_dependencies(nix_path)
+            return require_deriver(nix_path)
+        try:
+            return find_deriver(nix_path)
+        except SbomnixError:
+            raise
+        except RuntimeError:
+            LOG.debug(
+                "Runtime target has no loadable deriver: %s",
+                nix_path,
+                exc_info=True,
+            )
+            return None
 
-    def _init_recursive_buildtime_dependencies(self):
-        """Initialize build-time dependencies from recursive derivation JSON."""
+    def _load_structured_closure(self, nix_path):
+        """Load structured dependency data for the configured SBOM type."""
+        if self.buildtime:
+            if self.target_deriver is None:
+                raise MissingNixDeriverError(nix_path)
+            return self._load_recursive_buildtime_closure()
+        return self._load_runtime_path_info_closure(nix_path)
+
+    def _init_dependencies(self, closure):
+        """Initialize dependency attributes from loaded structured data."""
+        self.df_deps = closure.df_deps
+        self._recursive_buildtime_derivations = closure.recursive_buildtime_derivations
+        self._runtime_output_paths_by_load_path = (
+            closure.runtime_output_paths_by_load_path
+        )
+
+    def _load_recursive_buildtime_closure(self):
+        """Load build-time dependencies from recursive derivation JSON."""
+        if self.target_deriver is None:
+            raise MissingNixDeriverError(self.nix_path)
         derivations, drv_infos = load_recursive(self.target_deriver)
-        self._recursive_buildtime_derivations = derivations
-        self.df_deps = derivation_dependencies_df(drv_infos)
+        df_deps = derivation_dependencies_df(drv_infos)
         if self.depth:
-            self.df_deps = self._filter_dependencies_to_depth(
-                self.df_deps,
+            df_deps = self._filter_dependencies_to_depth(
+                df_deps,
                 self.target_deriver,
                 self.depth,
             )
+        return StructuredClosure(
+            df_deps=df_deps,
+            recursive_buildtime_derivations=derivations,
+        )
 
-    def _init_runtime_path_info_dependencies(self, nix_path):
-        """Initialize runtime dependencies from structured path-info JSON."""
+    def _load_runtime_path_info_closure(self, nix_path):
+        """Load runtime dependencies from structured path-info JSON."""
         runtime_closure = load_runtime_closure(nix_path)
         output_paths_by_load_path = _runtime_output_paths_by_load_path(
             runtime_closure.output_paths_by_drv
         )
         mapped_paths = _mapped_runtime_output_paths(output_paths_by_load_path)
         if nix_path not in mapped_paths:
-            output_paths_by_load_path.setdefault(self.target_deriver, set()).add(
-                nix_path
-            )
+            load_path = self.target_deriver or nix_path
+            output_paths_by_load_path.setdefault(load_path, set()).add(nix_path)
             mapped_paths.add(nix_path)
         graph_only_paths = dependency_paths(runtime_closure.df_deps) - mapped_paths
         if graph_only_paths:
@@ -153,22 +200,29 @@ class SbomBuilder:
                 "Runtime path-info references graph-only paths: %s",
                 sorted(graph_only_paths),
             )
-        self._runtime_output_paths_by_drv = output_paths_by_load_path
-        self.df_deps = runtime_closure.df_deps
+        df_deps = runtime_closure.df_deps
         if self.depth:
-            self.df_deps = self._filter_dependencies_to_depth(
-                self.df_deps,
+            df_deps = self._filter_dependencies_to_depth(
+                df_deps,
                 nix_path,
                 self.depth,
             )
+        return StructuredClosure(
+            df_deps=df_deps,
+            runtime_output_paths_by_load_path=output_paths_by_load_path,
+        )
 
     def _init_runtime_components(self, paths):
-        assert self._runtime_output_paths_by_drv is not None
-        return runtime_derivations_to_dataframe(
+        if self._runtime_output_paths_by_load_path is None:
+            raise AssertionError("Runtime output metadata was not initialized")
+        df_components = runtime_derivations_to_dataframe(
             paths,
-            self._runtime_output_paths_by_drv,
+            self._runtime_output_paths_by_load_path,
             include_cpe=self.include_cpe,
         )
+        if df_components.empty:
+            raise MissingNixDerivationMetadataError(self.nix_path)
+        return df_components
 
     def _filter_dependencies_to_depth(
         self,
@@ -191,10 +245,11 @@ class SbomBuilder:
                 self._recursive_buildtime_derivations,
                 include_cpe=self.include_cpe,
             )
-        elif self._runtime_output_paths_by_drv is not None:
+        elif self._runtime_output_paths_by_load_path is not None:
             self.df_sbomdb = self._init_runtime_components(paths)
         else:
-            raise RuntimeError("Structured dependency metadata was not initialized")
+            # _load_structured_closure always selects exactly one metadata source.
+            raise AssertionError("Structured dependency metadata was not initialized")
         # Join with meta information
         if include_meta:
             self._join_meta()
@@ -207,12 +262,39 @@ class SbomBuilder:
 
     def _sbom_component_paths(self):
         if self.df_deps is None or self.df_deps.empty:
-            if self._runtime_output_paths_by_drv is not None:
-                return set().union(*self._runtime_output_paths_by_drv.values())
+            if self._runtime_output_paths_by_load_path is not None:
+                return set().union(*self._runtime_output_paths_by_load_path.values())
             # No dependencies, so the only component in the sbom
             # will be the target itself.
-            return set([self.target_deriver])
+            if self.target_deriver:
+                return {self.target_deriver}
+            return {self.nix_path}
         return dependency_paths(self.df_deps)
+
+    def _resolve_target_component_ref(self) -> str:
+        """Return the component reference that represents the SBOM subject."""
+        if self.df_sbomdb is None:
+            raise AssertionError("SBOM component metadata was not initialized")
+        if self.target_deriver:
+            df_target = self.df_sbomdb[
+                self.df_sbomdb[cols.STORE_PATH] == self.target_deriver
+            ]
+            if not df_target.empty:
+                return self.target_deriver
+        for component in self.df_sbomdb.to_dict("records"):
+            store_path = component.get(cols.STORE_PATH)
+            if not isinstance(store_path, str):
+                continue
+            outputs = component.get(cols.OUTPUTS, [])
+            if isinstance(outputs, str):
+                outputs = [outputs]
+            elif not isinstance(outputs, (list, tuple, set)):
+                continue
+            if self.nix_path in outputs:
+                return store_path
+        if self.target_deriver:
+            return self.target_deriver
+        raise MissingNixDerivationMetadataError(self.nix_path)
 
     def _init_dependency_index(self):
         """Build indexed dependency lookups used during export."""
@@ -225,7 +307,8 @@ class SbomBuilder:
 
     def _join_meta(self):
         """Join component rows with nixpkgs metadata."""
-        assert self.df_sbomdb is not None
+        if self.df_sbomdb is None:
+            raise AssertionError("SBOM component metadata was not initialized")
         self.meta = Meta()
         df_meta, source = self.meta.get_nixpkgs_meta_with_source(
             target_path=self.nix_path,
