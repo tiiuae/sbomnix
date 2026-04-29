@@ -5,11 +5,66 @@
 
 """CLI integration tests for nixgraph and dependency comparisons."""
 
+from textwrap import dedent
+
 import pandas as pd
 import pytest
 
 from tests.testpaths import COMPARE_DEPS, NIXGRAPH, SBOMNIX
 from tests.testutils import df_difference, df_to_string
+
+
+def _write_nixgraph_test_flake(flake_dir):
+    flake_dir.mkdir()
+    (flake_dir / "flake.nix").write_text(
+        dedent(
+            """
+            {
+              outputs = { self }:
+                let
+                  mkPackage = system:
+                    let
+                      mkTestDerivation =
+                        { name, pname, version, command }:
+                        builtins.derivation {
+                          inherit name pname system version;
+                          builder = "/bin/sh";
+                          args = [ "-c" command ];
+                        };
+
+                      first = mkTestDerivation {
+                        name = "sbomnix-flake-first-1.0";
+                        pname = "sbomnix-flake-first";
+                        version = "1.0";
+                        command = "echo first > $out";
+                      };
+
+                      second = mkTestDerivation {
+                        name = "sbomnix-flake-second-1.0";
+                        pname = "sbomnix-flake-second";
+                        version = "1.0";
+                        command = "echo ${first} > $out";
+                      };
+                    in
+                    mkTestDerivation {
+                      name = "sbomnix-flake-third-1.0";
+                      pname = "sbomnix-flake-third";
+                      version = "1.0";
+                      command = "echo ${second} > $out";
+                    };
+                in
+                {
+                  packages.x86_64-linux.default = mkPackage "x86_64-linux";
+                  packages.aarch64-linux.default = mkPackage "aarch64-linux";
+                  packages.x86_64-darwin.default = mkPackage "x86_64-darwin";
+                  packages.aarch64-darwin.default = mkPackage "aarch64-darwin";
+                };
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+    return f"{flake_dir.as_posix()}#"
 
 
 def test_nixgraph_help(_run_python_script):
@@ -33,6 +88,19 @@ def test_nixgraph_csv(_run_python_script, test_nix_result, test_work_dir):
     assert not df_out.empty
 
 
+def test_nixgraph_csv_runtime_drv(_run_python_script, test_nix_drv, test_work_dir):
+    """Test nixgraph runtime graph generation from a direct derivation path."""
+    csv_out = test_work_dir / "graph_runtime_drv.csv"
+    _run_python_script([NIXGRAPH, test_nix_drv, "--out", csv_out, "--depth", "3"])
+    assert csv_out.exists()
+    df_out = pd.read_csv(csv_out)
+    assert not df_out.empty
+    assert set(df_out["target_pname"]) >= {
+        "sbomnix-test-third-1.0",
+        "sbomnix-test-second-1.0",
+    }
+
+
 def test_nixgraph_csv_buildtime(_run_python_script, test_nix_drv, test_work_dir):
     """Test nixgraph with buildtime csv output generates valid csv."""
     csv_out = test_work_dir / "graph_buildtime.csv"
@@ -40,6 +108,95 @@ def test_nixgraph_csv_buildtime(_run_python_script, test_nix_drv, test_work_dir)
     assert csv_out.exists()
     df_out = pd.read_csv(csv_out)
     assert not df_out.empty
+
+
+def test_nixgraph_dot_includes_edges_labels_and_style(
+    _run_python_script,
+    test_nix_result,
+    test_work_dir,
+):
+    """Test DOT output for graph shape, labels, pathnames, and colorized nodes."""
+    dot_out = test_work_dir / "graph.dot"
+    _run_python_script(
+        [
+            NIXGRAPH,
+            test_nix_result,
+            "--out",
+            dot_out,
+            "--depth=3",
+            "--pathnames",
+            "--colorize=.*second.*",
+        ]
+    )
+    dot = dot_out.read_text(encoding="utf-8")
+    assert "->" in dot
+    assert "sbomnix-test-third-1.0" in dot
+    assert "sbomnix-test-second-1.0" in dot
+    assert "<BR/>" in dot
+    assert 'fillcolor="#FFE6E6"' in dot
+
+
+def test_nixgraph_depth_and_until_limit_traversal(
+    _run_python_script,
+    test_nix_result,
+    test_work_dir,
+):
+    """Test traversal limiting with --depth and --until."""
+    depth_one_csv = test_work_dir / "graph_depth_one.csv"
+    _run_python_script(
+        [
+            NIXGRAPH,
+            test_nix_result,
+            "--out",
+            depth_one_csv,
+            "--depth=1",
+        ]
+    )
+    df_depth_one = pd.read_csv(depth_one_csv)
+    assert df_depth_one["graph_depth"].max() == 1
+
+    until_dot = test_work_dir / "graph_until.dot"
+    _run_python_script(
+        [
+            NIXGRAPH,
+            test_nix_result,
+            "--out",
+            until_dot,
+            "--depth=100",
+            "--until=.*second.*",
+        ]
+    )
+    dot = until_dot.read_text(encoding="utf-8")
+    assert "sbomnix-test-second-1.0" in dot
+    assert "sbomnix-test-first-1.0" not in dot
+
+
+def test_nixgraph_csv_runtime_flakeref(_run_python_script, test_work_dir):
+    """Test nixgraph runtime graph generation from a flakeref."""
+    flakeref = _write_nixgraph_test_flake(test_work_dir / "runtime-flake")
+    csv_out = test_work_dir / "graph_runtime_flake.csv"
+    _run_python_script([NIXGRAPH, flakeref, "--out", csv_out, "--depth=3"])
+    assert csv_out.exists()
+    df_out = pd.read_csv(csv_out)
+    assert set(df_out["target_pname"]) >= {
+        "sbomnix-flake-third-1.0",
+        "sbomnix-flake-second-1.0",
+    }
+
+
+def test_nixgraph_csv_buildtime_flakeref(_run_python_script, test_work_dir):
+    """Test nixgraph buildtime graph generation from a flakeref."""
+    flakeref = _write_nixgraph_test_flake(test_work_dir / "buildtime-flake")
+    csv_out = test_work_dir / "graph_buildtime_flake.csv"
+    _run_python_script(
+        [NIXGRAPH, flakeref, "--out", csv_out, "--buildtime", "--depth=3"]
+    )
+    assert csv_out.exists()
+    df_out = pd.read_csv(csv_out)
+    assert set(df_out["target_pname"]) >= {
+        "sbomnix-flake-third-1.0.drv",
+        "sbomnix-flake-second-1.0.drv",
+    }
 
 
 def test_nixgraph_csv_graph_inverse(_run_python_script, test_nix_result, test_work_dir):
