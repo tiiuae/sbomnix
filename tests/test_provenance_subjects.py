@@ -21,10 +21,10 @@ from provenance.digests import normalize_digest, output_digest
 from provenance.subjects import SubjectHooks, get_subjects, output_path
 
 
-def _dependency_hooks(*, exec_cmd_fn, query_store_hashes_fn=None):
+def _dependency_hooks(*, exec_cmd_fn, query_path_hashes_fn=None):
     return DependencyHooks(
         exec_cmd_fn=exec_cmd_fn,
-        query_store_hashes_fn=query_store_hashes_fn,
+        query_path_hashes_fn=query_path_hashes_fn,
         parse_nix_derivation_show_fn=parse_nix_derivation_show,
         normalize_digest_fn=normalize_digest,
         output_digest_fn=output_digest,
@@ -43,6 +43,15 @@ def _subject_hooks(exec_cmd_fn):
     )
 
 
+def _path_info_paths(cmd):
+    if cmd[:5] != ["nix", "path-info", "--json", "--json-format", "1"]:
+        return None
+    args = cmd[5:]
+    if "--extra-experimental-features" in args:
+        args = args[: args.index("--extra-experimental-features")]
+    return args
+
+
 def test_get_dependencies_supports_nix_2_33_wrapped_json():
     drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
     dep_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dependency.drv"
@@ -50,14 +59,10 @@ def test_get_dependencies_supports_nix_2_33_wrapped_json():
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == [
-            "nix-store",
-            "--query",
-            "--references",
-            "--include-outputs",
-            drv_path,
-        ]:
-            return SimpleNamespace(stdout=f"{dep_path}\n")
+        if _path_info_paths(cmd) == [drv_path]:
+            return SimpleNamespace(
+                stdout=json.dumps({drv_path: {"references": [dep_path]}})
+            )
         if cmd[:4] == ["nix", "derivation", "show", "-r"]:
             return SimpleNamespace(
                 stdout=json.dumps(
@@ -78,7 +83,7 @@ def test_get_dependencies_supports_nix_2_33_wrapped_json():
         drv_path,
         hooks=_dependency_hooks(
             exec_cmd_fn=fake_exec_cmd,
-            query_store_hashes_fn=lambda _paths: [
+            query_path_hashes_fn=lambda _paths, **_kwargs: [
                 "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
             ],
         ),
@@ -141,14 +146,10 @@ def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
     metadata_digest = "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == [
-            "nix-store",
-            "--query",
-            "--references",
-            "--include-outputs",
-            drv_path,
-        ]:
-            return SimpleNamespace(stdout=f"{dep_out_path}\n")
+        if _path_info_paths(cmd) == [drv_path]:
+            return SimpleNamespace(
+                stdout=json.dumps({drv_path: {"references": [dep_out_path]}})
+            )
         if cmd[:4] == ["nix", "derivation", "show", "-r"]:
             return SimpleNamespace(
                 stdout=json.dumps(
@@ -176,7 +177,7 @@ def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
         drv_path,
         hooks=_dependency_hooks(
             exec_cmd_fn=fake_exec_cmd,
-            query_store_hashes_fn=lambda _paths: [
+            query_path_hashes_fn=lambda _paths, **_kwargs: [
                 "sha256:09i0w2qz3i5yp7m3yziq4z2n2r2v9s6d3n8j4x1q8k0m5a6b7c8d"
             ],
         ),
@@ -197,14 +198,10 @@ def test_get_dependencies_maps_env_only_output_paths_back_to_derivations():
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == [
-            "nix-store",
-            "--query",
-            "--references",
-            "--include-outputs",
-            drv_path,
-        ]:
-            return SimpleNamespace(stdout=f"{dep_out_path}\n")
+        if _path_info_paths(cmd) == [drv_path]:
+            return SimpleNamespace(
+                stdout=json.dumps({drv_path: {"references": [dep_out_path]}})
+            )
         if cmd[:4] == ["nix", "derivation", "show", "-r"]:
             return SimpleNamespace(
                 stdout=json.dumps(
@@ -229,7 +226,7 @@ def test_get_dependencies_maps_env_only_output_paths_back_to_derivations():
         drv_path,
         hooks=_dependency_hooks(
             exec_cmd_fn=fake_exec_cmd,
-            query_store_hashes_fn=lambda _paths: [
+            query_path_hashes_fn=lambda _paths, **_kwargs: [
                 "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
             ],
         ),
@@ -249,8 +246,12 @@ def test_get_subjects_falls_back_to_env_output_paths():
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == ["nix-store", "--query", "--hash", output_path_value]:
-            return SimpleNamespace(stdout=f"sha256:{output_hash}\n")
+        if _path_info_paths(cmd) == [output_path_value]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {output_path_value: {"narHash": f"sha256:{output_hash}"}}
+                )
+            )
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
     assert get_subjects(
@@ -337,7 +338,7 @@ def test_get_subjects_skips_unrealized_outputs_without_digest():
     output_path_value = "/custom/store/2ccccccccccccccccccccccccccccccc-nghttp2-doc"
 
     def fake_exec_cmd(cmd, **_kwargs):
-        assert cmd == ["nix-store", "--query", "--hash", output_path_value]
+        assert _path_info_paths(cmd) == [output_path_value]
 
     assert not get_subjects(
         {"out": {"method": "nar"}},
@@ -353,9 +354,13 @@ def test_get_subjects_skip_only_missing_unrealized_outputs():
     digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 
     def fake_exec_cmd(cmd, **kwargs):
-        if cmd == ["nix-store", "--query", "--hash", output_path_value]:
-            return SimpleNamespace(stdout=f"sha256:{output_hash}\n")
-        if cmd == ["nix-store", "--query", "--hash", missing_path]:
+        if _path_info_paths(cmd) == [output_path_value]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {output_path_value: {"narHash": f"sha256:{output_hash}"}}
+                )
+            )
+        if _path_info_paths(cmd) == [missing_path]:
             return None
         raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
 
