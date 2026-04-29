@@ -20,6 +20,7 @@ from common.regex import regex_match
 from sbomnix.closure import walk_dependency_rows
 
 DBG_INDENT = "    "
+GRAPHVIZ_RENDER_WARN_EDGES = 2000
 
 
 class NixDependencyGraph:
@@ -44,6 +45,7 @@ class NixDependencyGraph:
         self.colorize_regex = args.colorize if hasattr(args, "colorize") else None
         self.pathnames = args.pathnames if hasattr(args, "pathnames") else False
         self.digraph = gv.Digraph()
+        self.nodes_drawn = set()
         self.digraph.attr("graph", rankdir="LR")
         self.digraph.attr("node", shape="box")
         self.digraph.attr("node", style="rounded")
@@ -59,6 +61,7 @@ class NixDependencyGraph:
                 self._draw_row(walked.row, walked.depth)
 
         if len(self.digraph.body) > initlen:
+            self._warn_if_large_graphviz_render(args.out, len(walked_rows))
             self._render(args.out)
         elif self.df_out_csv is not None and not self.df_out_csv.empty:
             if hasattr(args, "return_df") and args.return_df:
@@ -123,8 +126,24 @@ class NixDependencyGraph:
             return
         fname, extension = os.path.splitext(filename)
         gformat = extension[1:]
+        if gformat == "dot":
+            self.digraph.save(filename)
+            LOG.info("Wrote: %s", filename)
+            return
         self.digraph.render(filename=fname, format=gformat, cleanup=True)
         LOG.info("Wrote: %s", filename)
+
+    def _warn_if_large_graphviz_render(self, filename, edge_count):
+        if edge_count < GRAPHVIZ_RENDER_WARN_EDGES:
+            return
+        _fname, extension = os.path.splitext(filename)
+        if extension[1:] in ("csv", "dot"):
+            return
+        LOG.warning(
+            "Rendering %s dependency edges with Graphviz may be slow; "
+            "use --out graph.csv or --out graph.dot for faster output.",
+            edge_count,
+        )
 
     def _matches_until(self, row):
         return regex_match(self.until_regex, row["target_pname"])
@@ -141,6 +160,9 @@ class NixDependencyGraph:
             return
         if self.digraph is None:
             return
+        if path in self.nodes_drawn:
+            return
+        self.nodes_drawn.add(path)
         node_id = path
         node_name = html.escape(str(pname))
         if self.pathnames:
