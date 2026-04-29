@@ -5,11 +5,17 @@
 
 """Focused tests for shared nix target resolution helpers."""
 
+import subprocess
 from types import SimpleNamespace
 
 import pytest
 
-from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
+from common.errors import (
+    FlakeRefRealisationError,
+    FlakeRefResolutionError,
+    InvalidNixArtifactError,
+    MissingNixOutPathError,
+)
 from sbomnix import cli_utils as sbomnix_cli_utils
 
 
@@ -252,4 +258,79 @@ def test_resolve_nix_target_realises_runtime_drv_target(monkeypatch):
         flakeref=None,
         original_ref="/nix/store/target.drv",
     )
-    assert calls == [(["nix-store", "-qf", "/nix/store/target.drv"], {})]
+    assert calls == [
+        (
+            [
+                "nix",
+                "build",
+                "--no-link",
+                "--print-out-paths",
+                "/nix/store/target.drv^*",
+                "--extra-experimental-features",
+                "flakes",
+                "--extra-experimental-features",
+                "nix-command",
+            ],
+            {},
+        )
+    ]
+
+
+def test_resolve_nix_target_uses_first_runtime_drv_output(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "exec_cmd",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout="\n/nix/store/first-output\n/nix/store/second-output\n"
+        ),
+    )
+
+    resolved = sbomnix_cli_utils.resolve_nix_target(
+        "/nix/store/target.drv",
+        buildtime=False,
+    )
+
+    assert resolved.path == "/nix/store/first-output"
+
+
+def test_resolve_nix_target_rejects_empty_runtime_drv_output(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "exec_cmd",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="\n"),
+    )
+
+    with pytest.raises(MissingNixOutPathError):
+        sbomnix_cli_utils.resolve_nix_target(
+            "/nix/store/target.drv",
+            buildtime=False,
+        )
+
+
+def test_resolve_nix_target_rejects_failed_runtime_drv_realisation(monkeypatch):
+    monkeypatch.setattr(
+        sbomnix_cli_utils,
+        "try_resolve_flakeref",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def fake_exec_cmd(*_args, **_kwargs):
+        raise subprocess.CalledProcessError(1, ["nix", "build"])
+
+    monkeypatch.setattr(sbomnix_cli_utils, "exec_cmd", fake_exec_cmd)
+
+    with pytest.raises(InvalidNixArtifactError):
+        sbomnix_cli_utils.resolve_nix_target(
+            "/nix/store/target.drv",
+            buildtime=False,
+        )

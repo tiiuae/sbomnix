@@ -20,7 +20,7 @@ from common.flakeref import (
     try_resolve_flakeref,
 )
 from common.log import LOG
-from common.proc import exec_cmd, exit_unless_nix_artifact
+from common.proc import exec_cmd, exit_unless_nix_artifact, nix_cmd
 from sbomnix.builder import SbomBuilder
 
 
@@ -74,7 +74,14 @@ def resolve_nix_target(nixref, buildtime=False, impure=False):
 
 def _realise_derivation_output(path):
     try:
-        ret = exec_cmd(["nix-store", "-qf", path])
+        ret = exec_cmd(
+            nix_cmd(
+                "build",
+                "--no-link",
+                "--print-out-paths",
+                f"{path}^*",
+            )
+        )
     except subprocess.CalledProcessError:
         raise InvalidNixArtifactError(path) from None
     out_path = next(
