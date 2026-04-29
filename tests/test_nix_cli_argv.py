@@ -95,6 +95,49 @@ def test_find_deriver_supports_nix_2_33_wrapped_json(monkeypatch):
     assert drv_path == f"/custom/store/{drv_basename}"
 
 
+def test_find_deriver_rejects_unloadable_structured_deriver(monkeypatch):
+    calls = []
+    target_path = "/nix/store/target"
+    drv_path = "/nix/store/missing-target.drv"
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        if cmd[:3] == ["nix", "derivation", "show"]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "derivations": {drv_path: {"name": "target"}},
+                        "version": 4,
+                    }
+                ),
+                returncode=0,
+                stderr="",
+            )
+        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
+
+    monkeypatch.setattr(sbomnix_derivers, "exec_cmd", fake_exec_cmd)
+    monkeypatch.setattr("os.path.exists", lambda _path: False)
+
+    with pytest.raises(RuntimeError, match="missing-target.drv"):
+        sbomnix_derivers.find_deriver(target_path)
+
+    assert calls == [
+        (
+            [
+                "nix",
+                "derivation",
+                "show",
+                target_path,
+                "--extra-experimental-features",
+                "flakes",
+                "--extra-experimental-features",
+                "nix-command",
+            ],
+            {"raise_on_error": False, "log_error": False},
+        )
+    ]
+
+
 def test_get_flake_metadata_uses_argv_list():
     calls = []
 

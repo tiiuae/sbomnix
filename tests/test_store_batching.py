@@ -9,38 +9,6 @@ import json
 from types import SimpleNamespace
 
 from sbomnix import derivation as sbomnix_derivation
-from sbomnix import derivers as sbomnix_derivers
-from sbomnix import fallback_store as sbomnix_fallback_store
-
-
-def test_find_derivers_batches_nix_store_queries(monkeypatch):
-    calls = []
-
-    def fake_exec_cmd(cmd, **kwargs):
-        calls.append((cmd, kwargs))
-        return SimpleNamespace(
-            stdout="/nix/store/first.drv\n/nix/store/second.drv\n",
-            returncode=0,
-        )
-
-    monkeypatch.setattr(sbomnix_derivers, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr("os.path.exists", lambda path: path.endswith(".drv"))
-
-    resolved = sbomnix_derivers.find_derivers(
-        ["/nix/store/first", "/nix/store/second"],
-        batch_size=50,
-    )
-
-    assert resolved == {
-        "/nix/store/first": "/nix/store/first.drv",
-        "/nix/store/second": "/nix/store/second.drv",
-    }
-    assert calls == [
-        (
-            ["nix-store", "-qd", "/nix/store/first", "/nix/store/second"],
-            {"raise_on_error": False, "log_error": False},
-        )
-    ]
 
 
 def test_load_many_batches_nix_derivation_show_and_preserves_outputs(monkeypatch):
@@ -275,70 +243,3 @@ def test_load_many_can_ignore_missing_output_derivations(monkeypatch):
         ["/nix/store/good-out"],
         ["/nix/store/missing-out"],
     ]
-
-
-def test_store_add_paths_loads_each_deriver_once(monkeypatch):
-    load_calls = []
-
-    class FakeDrv:
-        """Minimal derivation double for store batching tests."""
-
-        def __init__(self, store_path):
-            self.store_path = store_path
-            self.outputs = []
-
-        def add_output_path(self, path):
-            if path and path not in self.outputs:
-                self.outputs.append(path)
-
-        def set_cpe(self, _generator):
-            return None
-
-        def to_dict(self):
-            return {"store_path": self.store_path, "outputs": self.outputs}
-
-    def fake_find_derivers(_paths, batch_size=500):
-        assert batch_size == 500
-        return {
-            "/nix/store/first-out": "/nix/store/shared.drv",
-            "/nix/store/second-out": "/nix/store/shared.drv",
-        }
-
-    def fake_load_many(_paths, output_paths_by_drv=None, batch_size=200):
-        assert output_paths_by_drv is not None
-        load_calls.append(
-            (
-                list(_paths),
-                {key: sorted(value) for key, value in output_paths_by_drv.items()},
-                batch_size,
-            )
-        )
-        return {
-            "/nix/store/shared.drv": FakeDrv("/nix/store/shared.drv"),
-        }
-
-    monkeypatch.setattr(sbomnix_fallback_store, "find_derivers", fake_find_derivers)
-    monkeypatch.setattr(sbomnix_fallback_store, "load_many", fake_load_many)
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
-
-    store = sbomnix_fallback_store.FallbackStore(buildtime=True, include_cpe=False)
-    store.add_paths(["/nix/store/first-out", "/nix/store/second-out"])
-
-    assert load_calls == [
-        (
-            ["/nix/store/shared.drv"],
-            {
-                "/nix/store/shared.drv": [
-                    "/nix/store/first-out",
-                    "/nix/store/second-out",
-                ]
-            },
-            200,
-        )
-    ]
-    assert (
-        store.derivations["/nix/store/first-out"].store_path == "/nix/store/shared.drv"
-    )
-    assert (
-        store.derivations["/nix/store/second-out"].store_path == "/nix/store/shared.drv"
-    )
