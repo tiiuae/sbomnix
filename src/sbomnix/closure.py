@@ -69,6 +69,7 @@ def walk_dependency_rows(
 
     match_column = cols.SRC_PATH if inverse else cols.TARGET_PATH
     next_column = cols.TARGET_PATH if inverse else cols.SRC_PATH
+    rows_by_path = _dependency_rows_by_path(df_deps, match_column)
     rows = []
     visited_edges = set()
 
@@ -76,10 +77,7 @@ def walk_dependency_rows(
         curr_depth += 1
         if curr_depth > depth:
             return
-        df_matches = df_deps[df_deps[match_column] == current_path]
-        if df_matches.empty:
-            return
-        for row in df_matches.to_dict("records"):
+        for row in rows_by_path.get(current_path, ()):
             edge_key = (row[cols.TARGET_PATH], row[cols.SRC_PATH])
             if edge_key in visited_edges:
                 continue
@@ -92,6 +90,14 @@ def walk_dependency_rows(
     for start_path in dict.fromkeys(normalized_start_paths):
         walk(start_path)
     return rows
+
+
+def _dependency_rows_by_path(df_deps, match_column):
+    """Return dependency row records indexed by the path column used for walking."""
+    rows_by_path = {}
+    for row in df_deps.to_dict("records"):
+        rows_by_path.setdefault(row[match_column], []).append(row)
+    return rows_by_path
 
 
 def derivation_dependencies_df(drv_infos):
