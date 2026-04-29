@@ -43,7 +43,7 @@ def test_recursive_buildtime_dependencies_df_reads_new_derivation_inputs():
     ]
 
 
-def test_recursive_buildtime_dependencies_df_reads_legacy_input_drvs():
+def test_recursive_buildtime_dependencies_df_reads_input_drvs():
     drv_infos = {
         "/nix/store/11111111111111111111111111111111-target-1.0.drv": {
             "inputDrvs": {

@@ -113,9 +113,9 @@ class CPE:
                 LOG.log(LOG_SPAM, "re-trying with product name '%s'", product_mod)
                 vendor = self._cpedict_vendor(product_mod)
         if not vendor:
-            # Fallback: use the product name as vendor name
+            # Use the product name when no CPE dictionary vendor matches.
             vendor = product
-            LOG.log(LOG_SPAM, "fallback: use product name as vendor '%s'", vendor)
+            LOG.log(LOG_SPAM, "using product name as vendor '%s'", vendor)
         return vendor
 
     def generate(self, name, version):

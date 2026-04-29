@@ -189,7 +189,7 @@ def test_load_dependencies_runtime_uses_resolved_output_path(monkeypatch):
     ]
 
 
-def test_nixgraph_no_longer_exposes_legacy_graph_helpers():
+def test_nixgraph_no_longer_exposes_removed_graph_helpers():
     assert not hasattr(nixgraph_graph, "NixDependencies")
     assert not hasattr(nixgraph_graph, "parse_nix_query_out")
     assert not hasattr(nixgraph_graph, "runtime_query_output")

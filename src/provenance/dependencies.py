@@ -87,14 +87,6 @@ def dependency_package(drv, output_hash, infos, outputs_by_path, hooks=None):
     digest = hooks.output_digest_fn(output_info[1]) if output_info else None
     if digest is None:
         digest = hooks.normalize_digest_fn(output_hash)
-    if digest is None and ":" in output_hash:
-        hash_type, hash_value = output_hash.split(":", 1)
-        hooks.log.warning(
-            "Falling back to non-normalized digest for dependency '%s': %s",
-            drv,
-            output_hash,
-        )
-        digest = {hash_type: hash_value}
     if digest is None:
         hooks.log.warning("Cannot determine digest for dependency '%s'", drv)
         return None

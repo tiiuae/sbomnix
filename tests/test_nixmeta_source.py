@@ -257,7 +257,7 @@ def test_nixos_toplevel_flakeref_prefers_configuration_pkgs_path(
         sbomnix_meta_source,
         "nixref_to_nixpkgs_path",
         lambda _nixref: (_ for _ in ()).throw(
-            AssertionError("lock-node fallback should not run")
+            AssertionError("lock-node lookup should not run")
         ),
     )
     monkeypatch.setattr(
@@ -616,13 +616,12 @@ def test_nixos_toplevel_expression_cache_uses_only_stable_refs(monkeypatch, tmp_
     ]
 
 
-def test_nixos_toplevel_expression_scan_fallback_updates_source(
+def test_nixos_toplevel_expression_scan_failure_skips_metadata(
     monkeypatch,
     tmp_path,
 ):
     nixpkgs_path = tmp_path / "nixpkgs"
     nixpkgs_path.mkdir()
-    fake_df = SimpleNamespace(empty=False)
     scanned = []
 
     def fake_exec_cmd(_cmd, **_kwargs):
@@ -642,7 +641,7 @@ def test_nixos_toplevel_expression_scan_fallback_updates_source(
     monkeypatch.setattr(
         sbomnix_meta.Meta,
         "_scan",
-        lambda self, path: scanned.append(path) or fake_df,
+        lambda self, path: scanned.append(path),
     )
 
     df_meta, source = sbomnix_meta.Meta().get_nixpkgs_meta_with_source(
@@ -651,21 +650,18 @@ def test_nixos_toplevel_expression_scan_fallback_updates_source(
         original_ref="/flake#nixosConfigurations.host.config.system.build.toplevel",
     )
 
-    assert df_meta is fake_df
-    assert scanned == [nixpkgs_path.as_posix()]
+    assert df_meta is None
+    assert scanned == []
     assert source.method == "flakeref-target"
-    assert source.expression is None
-    assert source.expression_cache_key is None
-    assert source.expression_impure is False
-    assert "fell back to base nixpkgs source metadata" in source.message
-    assert "evaluated NixOS package set" not in source.message
+    assert source.expression is not None
+    assert source.path == nixpkgs_path.as_posix()
+    assert source.message == (
+        "Evaluated package-set metadata scan failed. Skipping nixpkgs metadata."
+    )
 
 
-def test_nixos_toplevel_flakeref_falls_back_to_revision(monkeypatch, tmp_path):
-    nixpkgs_path = tmp_path / "nixpkgs"
-    nixpkgs_path.mkdir()
+def test_nixos_toplevel_flakeref_without_pkgs_path_returns_message(monkeypatch):
     calls = []
-    scanned = []
 
     def fake_exec_cmd(cmd, **_kwargs):
         calls.append(cmd)
@@ -676,13 +672,6 @@ def test_nixos_toplevel_flakeref_falls_back_to_revision(monkeypatch, tmp_path):
             '/flake#nixosConfigurations."host".pkgs.path',
         ]:
             return SimpleNamespace(stdout="", stderr="missing", returncode=1)
-        if cmd == [
-            "nix",
-            "eval",
-            "--raw",
-            '/flake#nixosConfigurations."host".config.system.nixos.revision',
-        ]:
-            return SimpleNamespace(stdout="abc123\n", returncode=0)
         raise AssertionError(f"unexpected command: {cmd}")
 
     monkeypatch.setattr(
@@ -691,50 +680,23 @@ def test_nixos_toplevel_flakeref_falls_back_to_revision(monkeypatch, tmp_path):
         lambda *args, impure=False: ["nix", *args] + (["--impure"] if impure else []),
     )
     monkeypatch.setattr(sbomnix_meta_source, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr(
-        sbomnix_meta_source,
-        "nixref_to_nixpkgs_path",
-        lambda nixref: (
-            nixpkgs_path if nixref == "github:NixOS/nixpkgs?rev=abc123" else None
-        ),
-    )
-    monkeypatch.setattr(
-        sbomnix_meta.Meta,
-        "_scan",
-        lambda self, path: scanned.append(path) or "df",
-    )
-
     df_meta, source = sbomnix_meta.Meta().get_nixpkgs_meta_with_source(
         target_path="/nix/store/target",
         flakeref="/flake#nixosConfigurations.host.config.system.build.toplevel",
         original_ref="/flake#nixosConfigurations.host.config.system.build.toplevel",
     )
 
-    assert df_meta == "df"
+    assert df_meta is None
     assert calls == [
         ["nix", "eval", "--raw", '/flake#nixosConfigurations."host".pkgs.path'],
-        [
-            "nix",
-            "eval",
-            "--raw",
-            '/flake#nixosConfigurations."host".config.system.nixos.revision',
-        ],
     ]
-    assert scanned == [nixpkgs_path.as_posix()]
-    assert source == sbomnix_meta.NixpkgsMetaSource(
-        method="flakeref-target",
-        path=nixpkgs_path.as_posix(),
-        flakeref="github:NixOS/nixpkgs?rev=abc123",
-        rev="abc123",
-        message=(
-            "Resolved nixpkgs from NixOS configuration revision as a "
-            "best-effort fallback; this may not represent forked, patched, "
-            "dirty, local, or offline nixpkgs inputs"
-        ),
-    )
+    assert source.method == "none"
+    assert source.path is None
+    assert "NixOS configuration flakeref" in source.message
+    assert "--meta-nixpkgs" in source.message
 
 
-def test_nixos_toplevel_flakeref_without_pkgs_or_revision_returns_message(
+def test_nixos_toplevel_flakeref_without_pkgs_returns_message(
     monkeypatch,
 ):
     calls = []
@@ -764,12 +726,6 @@ def test_nixos_toplevel_flakeref_without_pkgs_or_revision_returns_message(
     assert df_meta is None
     assert calls == [
         ["nix", "eval", "--raw", '/flake#nixosConfigurations."host".pkgs.path'],
-        [
-            "nix",
-            "eval",
-            "--raw",
-            '/flake#nixosConfigurations."host".config.system.nixos.revision',
-        ],
     ]
     assert source.method == "none"
     assert source.path is None

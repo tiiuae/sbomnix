@@ -42,7 +42,9 @@ Table of Contents
 * [Acknowledgements](#acknowledgements)
 
 ## Getting Started
-`sbomnix` requires common [Nix](https://nixos.org/download.html) tools like `nix` and `nix-store`. These tools are expected to be in `$PATH`.
+`sbomnix` requires the [Nix](https://nixos.org/download.html) command line
+tool to be in `$PATH`. Direct, non-flake usage requires a modern `nix`
+supporting `nix-command` and `--json-format 1`.
 
 ### Running as Nix Flake
 `sbomnix` can be run as a [Nix flake](https://nixos.wiki/wiki/Flakes) from the `tiiuae/sbomnix` repository:
@@ -189,8 +191,8 @@ Store-path targets skip nixpkgs metadata by default; pass `--meta-nixpkgs` to
 choose the source explicitly.
 
 `--meta-nixpkgs <flakeref-or-path>` scans an explicit nixpkgs source.
-`--meta-nixpkgs nix-path` scans the `nixpkgs=` entry from `NIX_PATH` as a
-legacy opt-in source. `--exclude-meta` disables this enrichment and cannot be
+`--meta-nixpkgs nix-path` scans the `nixpkgs=` entry from `NIX_PATH` as an
+explicit opt-in source. `--exclude-meta` disables this enrichment and cannot be
 combined with `--meta-nixpkgs`.
 
 CycloneDX and SPDX outputs record the selected metadata source in document
@@ -239,7 +241,6 @@ This project is licensed under the Apache-2.0 license - see the [Apache-2.0.txt]
 
 ## Acknowledgements
 Parts of the Nix store derivation loading code in `sbomnix`
-([fallback_store.py](src/sbomnix/fallback_store.py),
-[derivation.py](src/sbomnix/derivation.py), and
+([derivation.py](src/sbomnix/derivation.py) and
 [derivers.py](src/sbomnix/derivers.py)) originate from
 [vulnix](https://github.com/nix-community/vulnix).

@@ -140,29 +140,7 @@ class NixpkgsMetaSourceResolver:
                 ),
             )
 
-        revision_ref = (
-            f"{flake}#nixosConfigurations.{name_attr}.config.system.nixos.revision"
-        )
-        rev = self._nix_eval_raw(revision_ref, impure=impure)
-        if not rev:
-            return self._nixos_toplevel_without_source()
-        nixpkgs_flakeref = f"github:NixOS/nixpkgs?rev={rev}"
-        nixpath = nixref_to_nixpkgs_path(nixpkgs_flakeref)
-        if not nixpath:
-            return self._nixos_toplevel_without_source()
-        return nixpkgs_meta_source_with_path(
-            NixpkgsMetaSource(
-                method="flakeref-target",
-                path=nixpath.as_posix(),
-                flakeref=nixpkgs_flakeref,
-                rev=rev,
-                message=(
-                    "Resolved nixpkgs from NixOS configuration revision as a "
-                    "best-effort fallback; this may not represent forked, patched, "
-                    "dirty, local, or offline nixpkgs inputs"
-                ),
-            ),
-        )
+        return self._nixos_toplevel_without_source()
 
     @staticmethod
     def _nixos_toplevel_without_source():
@@ -372,8 +350,8 @@ class NixpkgsMetaSourceResolver:
             return nixpath
         return None
 
-    def resolve_legacy_source(self, nixref=None):
-        """Return the metadata source selected by the legacy lookup policy."""
+    def resolve_flakeref_lock_source(self, nixref):
+        """Return the nixpkgs source selected by a flakeref lock graph."""
         if nixref:
             LOG.debug("Reading nixpkgs path from nixref: %s", nixref)
             nixpath = nixref_to_nixpkgs_path(nixref)
@@ -385,7 +363,13 @@ class NixpkgsMetaSourceResolver:
                         flakeref=nixref,
                     ),
                 )
-        elif "NIX_PATH" in os.environ:
+        return NixpkgsMetaSource(method="none")
+
+    def resolve_default_source(self, nixref=None):
+        """Return the metadata source for the older direct Meta API."""
+        if nixref:
+            return self.resolve_flakeref_lock_source(nixref)
+        if "NIX_PATH" in os.environ:
             return self.resolve_nix_path_source()
         return NixpkgsMetaSource(method="none")
 
