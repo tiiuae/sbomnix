@@ -114,7 +114,7 @@ def test_normalize_digest_rejects_overflowing_nix32_values():
     assert normalize_digest("sha256:" + ("z" * 52)) is None
 
 
-def test_dependency_package_logs_non_normalized_digest_fallback(caplog):
+def test_dependency_package_skips_non_normalized_digest(caplog):
     drv_path = "/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dependency.drv"
 
     with caplog.at_level(logging.WARNING, logger=LOG.name):
@@ -130,12 +130,8 @@ def test_dependency_package_logs_non_normalized_digest_fallback(caplog):
             ),
         )
 
-    assert package == {
-        "name": "dependency",
-        "uri": drv_path,
-        "digest": {"sha999": "abc"},
-    }
-    assert "Falling back to non-normalized digest" in caplog.text
+    assert package is None
+    assert "Cannot determine digest" in caplog.text
 
 
 def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
@@ -309,7 +305,7 @@ def test_get_subjects_uses_derivation_hash_when_output_is_not_realized():
     ]
 
 
-def test_get_subjects_supports_legacy_r_sha256_metadata():
+def test_get_subjects_supports_resource_sha256_metadata():
     output_path_value = "/custom/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nghttp2-1.68.1"
     digest = "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"
 

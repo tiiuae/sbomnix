@@ -20,7 +20,7 @@ NIX32_INDEX = {char: index for index, char in enumerate(NIX32_ALPHABET)}
 
 
 def canonical_hash_algo(hash_algo):
-    """Normalize legacy hash algorithm labels to plain algorithm names."""
+    """Normalize Nix hash algorithm labels to plain algorithm names."""
     if not hash_algo:
         return None
     return str(hash_algo).removeprefix("r:")
@@ -82,9 +82,9 @@ def split_hash_value(hash_value, hash_algo=None):
 
     if hash_algo:
         for separator in (":", "-"):
-            legacy_prefix = f"r:{hash_algo}{separator}"
-            if hash_value.startswith(legacy_prefix):
-                return hash_algo, hash_value.removeprefix(legacy_prefix)
+            resource_prefix = f"r:{hash_algo}{separator}"
+            if hash_value.startswith(resource_prefix):
+                return hash_algo, hash_value.removeprefix(resource_prefix)
             prefix = f"{hash_algo}{separator}"
             if hash_value.startswith(prefix):
                 return hash_algo, hash_value.removeprefix(prefix)

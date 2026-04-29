@@ -55,7 +55,7 @@ class Meta:
         nix store path or flake reference. If nixref is None, attempt to
         read the nixpkgs store path from NIX_PATH environment variable.
         """
-        source = self.source_resolver.resolve_legacy_source(nixref)
+        source = self.source_resolver.resolve_default_source(nixref)
         return self._scan_source(source)
 
     def get_nixpkgs_meta_with_source(
@@ -96,15 +96,9 @@ class Meta:
                 flakeref,
                 impure=impure,
             )
-            if source and source.path:
+            if source is not None:
                 return source
-            legacy_source = self.source_resolver.resolve_legacy_source(flakeref)
-            if legacy_source.path:
-                return legacy_source
-            # Keep target-specific failure guidance when legacy lookup also fails.
-            if source:
-                return source
-            return legacy_source
+            return self.source_resolver.resolve_flakeref_lock_source(flakeref)
 
         return self.source_resolver.path_target_without_source(
             target_path=target_path,
@@ -128,19 +122,14 @@ class Meta:
             if df is not None and not df.empty:
                 return df, source
             LOG.warning(
-                "Failed scanning evaluated package set; falling back to source path: %s",
+                "Failed scanning evaluated package set: %s",
                 source.path,
             )
-            source = replace(
+            return None, replace(
                 source,
-                expression=None,
-                expression_cache_key=None,
-                expression_impure=False,
                 message=(
-                    "Evaluated package-set metadata scan failed; fell back to "
-                    "base nixpkgs source metadata. Overlays, package overrides, "
-                    "nixpkgs config, and target system-specific package-set "
-                    "changes may not be represented."
+                    "Evaluated package-set metadata scan failed. "
+                    "Skipping nixpkgs metadata."
                 ),
             )
         LOG.debug("Scanning meta-info using nixpkgs path: %s", source.path)

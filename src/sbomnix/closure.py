@@ -119,7 +119,7 @@ def dependency_rows_to_dataframe(rows, columns=DEPENDENCY_COLUMNS):
 
 
 def store_path_label(path):
-    """Return the nix-store graph-style label for a store path."""
+    """Return the Nix store graph-style label for a store path."""
     basename = str(path).rstrip("/").rsplit("/", maxsplit=1)[-1]
     _hash, separator, name = basename.partition("-")
     return name if separator else basename

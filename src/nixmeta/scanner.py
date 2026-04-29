@@ -61,7 +61,7 @@ class NixMetaScanner:
             # ownpkgs-nix-env.nix:
             #   { ... }:
             #     (builtins.getFlake "/tmp/ownpkgs-special-unstable").
-            #     outputs.legacyPackages.${builtins.currentSystem}
+            #     outputs.packages.${builtins.currentSystem}
             # and execute
             #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
             #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output

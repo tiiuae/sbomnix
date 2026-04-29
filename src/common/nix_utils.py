@@ -119,7 +119,7 @@ def _normalize_nix_derivation_info(drv_info, store_dir):
 
 
 def parse_nix_derivation_show(stdout, store_path_hint=None):
-    """Normalize `nix derivation show` JSON across legacy and wrapped formats."""
+    """Normalize `nix derivation show` JSON across direct and wrapped formats."""
     payload = json.loads(stdout)
     derivations = (
         payload.get("derivations", payload) if isinstance(payload, dict) else {}
@@ -128,11 +128,11 @@ def parse_nix_derivation_show(stdout, store_path_hint=None):
         return {}
 
     normalized = {}
-    fallback_store_dir = get_nix_store_dir(store_path_hint) or "/nix/store"
+    default_store_dir = get_nix_store_dir(store_path_hint) or "/nix/store"
     for drv_path, drv_info in derivations.items():
         store_dir = get_nix_store_dir(drv_path, default=None)
         if not store_dir:
-            store_dir = _infer_nix_store_dir(drv_info, default=fallback_store_dir)
+            store_dir = _infer_nix_store_dir(drv_info, default=default_store_dir)
         normalized_drv_path = normalize_nix_store_path(drv_path, store_dir)
         normalized[normalized_drv_path] = _normalize_nix_derivation_info(
             drv_info, store_dir

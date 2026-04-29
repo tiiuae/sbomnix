@@ -46,7 +46,7 @@ def _is_integer(value):
 
 
 def _normalize_verbose_args(args):
-    """Normalize legacy short verbose values before argparse sees positionals."""
+    """Normalize compact short verbose values before argparse sees positionals."""
     normalized = []
     args = list(sys.argv[1:] if args is None else args)
     idx = 0
@@ -77,7 +77,7 @@ def _finalize_verbose_namespace(namespace):
 
 
 def _wrap_verbose_parser(parser):
-    """Teach parse_known_args to normalize legacy short verbose values."""
+    """Teach parse_known_args to normalize compact short verbose values."""
     if parser in _VERBOSE_WRAPPED_PARSERS:
         return
 
