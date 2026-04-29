@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 from nixgraph import graph as nixgraph_graph
-from nixgraph.render import NixDependencyGraph, NixGraphFilter
+from nixgraph.render import NixDependencyGraph
 from sbomnix.closure import dependency_rows_to_dataframe
 from sbomnix.runtime import RuntimeClosure
 
@@ -27,19 +27,6 @@ class CapturingLogger:
 
     def log(self, level, msg, *args):
         self.records.append(("log", level, msg, args))
-
-
-def test_nixgraph_filter_get_query_str_joins_fields():
-    """Render a stable pandas query string from the active filter fields."""
-    nixfilter = NixGraphFilter(
-        src_path="/nix/store/source",
-        target_path="/nix/store/target",
-    )
-
-    assert (
-        nixfilter.get_query_str()
-        == "src_path == '/nix/store/source' and target_path == '/nix/store/target'"
-    )
 
 
 def test_dependency_graph_returns_dataframe_for_csv_output():
@@ -76,6 +63,42 @@ def test_dependency_graph_returns_dataframe_for_csv_output():
     assert list(df_out["graph_depth"]) == [1, 2]
     assert list(df_out["target_path"]) == ["/nix/store/hello", "/nix/store/bash"]
     assert list(df_out["src_path"]) == ["/nix/store/bash", "/nix/store/glibc"]
+
+
+def test_dependency_graph_inverse_returns_dataframe_for_csv_output():
+    """Return inverse traversal rows through the shared dependency walker."""
+    df_dependencies = pd.DataFrame.from_records(
+        [
+            {
+                "src_path": "/nix/store/bash",
+                "src_pname": "bash",
+                "target_path": "/nix/store/hello",
+                "target_pname": "hello",
+            },
+            {
+                "src_path": "/nix/store/glibc",
+                "src_pname": "glibc",
+                "target_path": "/nix/store/bash",
+                "target_pname": "bash",
+            },
+        ]
+    )
+    args = SimpleNamespace(
+        out="graph.csv",
+        depth=3,
+        inverse="glibc",
+        until=None,
+        colorize=None,
+        pathnames=False,
+        return_df=True,
+    )
+
+    df_out = NixDependencyGraph(df_dependencies).draw("/nix/store/hello", args)
+    df_out = df_out.sort_values(["graph_depth", "target_path"]).reset_index(drop=True)
+
+    assert list(df_out["graph_depth"]) == [1, 2]
+    assert list(df_out["target_path"]) == ["/nix/store/bash", "/nix/store/hello"]
+    assert list(df_out["src_path"]) == ["/nix/store/glibc", "/nix/store/bash"]
 
 
 def test_load_dependencies_logs_dependency_loading_at_info(monkeypatch):

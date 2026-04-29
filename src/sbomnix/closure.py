@@ -6,6 +6,9 @@
 
 """Dependency closure helpers shared by SBOM generation paths."""
 
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable
+
 import pandas as pd
 
 from common import columns as cols
@@ -16,6 +19,14 @@ DEPENDENCY_COLUMNS = [
     cols.TARGET_PATH,
     "target_pname",
 ]
+
+
+@dataclass(frozen=True)
+class DependencyWalkRow:
+    """One dependency row reached during graph traversal."""
+
+    row: dict[str, Any]
+    depth: int
 
 
 def dependency_paths(df_deps):
@@ -29,17 +40,39 @@ def dependency_paths(df_deps):
 
 def dependencies_to_depth(df_deps, start_path, depth, columns=DEPENDENCY_COLUMNS):
     """Return dependency rows reachable from ``start_path`` up to ``depth``."""
-    if df_deps is None or df_deps.empty:
+    rows = [walked.row for walked in walk_dependency_rows(df_deps, start_path, depth)]
+    if not rows:
         return pd.DataFrame(columns=pd.Index(columns))
+    return pd.DataFrame.from_records(rows, columns=pd.Index(columns))
 
+
+def walk_dependency_rows(
+    df_deps,
+    start_paths: str | Iterable[str],
+    depth,
+    *,
+    inverse=False,
+    stop_at: Callable[[dict[str, Any]], bool] | None = None,
+):
+    """Return dependency rows reached by a depth-limited graph walk."""
+    if df_deps is None or df_deps.empty:
+        return []
+
+    if isinstance(start_paths, str):
+        normalized_start_paths = [start_paths]
+    else:
+        normalized_start_paths = list(start_paths)
+
+    match_column = cols.SRC_PATH if inverse else cols.TARGET_PATH
+    next_column = cols.TARGET_PATH if inverse else cols.SRC_PATH
     rows = []
     visited_edges = set()
 
-    def walk(target_path, curr_depth=0):
+    def walk(current_path, curr_depth=0):
         curr_depth += 1
         if curr_depth > depth:
             return
-        df_matches = df_deps[df_deps[cols.TARGET_PATH] == target_path]
+        df_matches = df_deps[df_deps[match_column] == current_path]
         if df_matches.empty:
             return
         for row in df_matches.to_dict("records"):
@@ -47,13 +80,14 @@ def dependencies_to_depth(df_deps, start_path, depth, columns=DEPENDENCY_COLUMNS
             if edge_key in visited_edges:
                 continue
             visited_edges.add(edge_key)
-            rows.append(row)
-            walk(row[cols.SRC_PATH], curr_depth)
+            rows.append(DependencyWalkRow(row=row, depth=curr_depth))
+            if stop_at is not None and stop_at(row):
+                continue
+            walk(row[next_column], curr_depth)
 
-    walk(start_path)
-    if not rows:
-        return pd.DataFrame(columns=pd.Index(columns))
-    return pd.DataFrame.from_records(rows, columns=pd.Index(columns))
+    for start_path in dict.fromkeys(normalized_start_paths):
+        walk(start_path)
+    return rows
 
 
 def derivation_dependencies_df(drv_infos):

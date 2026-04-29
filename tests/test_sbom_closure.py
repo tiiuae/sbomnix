@@ -7,7 +7,11 @@
 
 import pandas as pd
 
-from sbomnix.closure import dependencies_to_depth, dependency_paths
+from sbomnix.closure import (
+    dependencies_to_depth,
+    dependency_paths,
+    walk_dependency_rows,
+)
 
 
 def _dependency_df():
@@ -51,6 +55,44 @@ def test_dependencies_to_depth_returns_reachable_dependency_rows():
             "target_path": "/nix/store/bash",
             "target_pname": "bash",
         },
+    ]
+
+
+def test_walk_dependency_rows_supports_inverse_traversal():
+    walked = walk_dependency_rows(
+        _dependency_df(),
+        "/nix/store/zlib",
+        depth=2,
+        inverse=True,
+    )
+
+    assert [row.depth for row in walked] == [1, 2]
+    assert [row.row["target_path"] for row in walked] == [
+        "/nix/store/glibc",
+        "/nix/store/bash",
+    ]
+    assert [row.row["src_path"] for row in walked] == [
+        "/nix/store/zlib",
+        "/nix/store/glibc",
+    ]
+
+
+def test_walk_dependency_rows_stops_after_matching_boundary_row():
+    walked = walk_dependency_rows(
+        _dependency_df(),
+        "/nix/store/hello",
+        depth=3,
+        stop_at=lambda row: row["target_pname"] == "bash",
+    )
+
+    assert [row.depth for row in walked] == [1, 2]
+    assert [row.row["target_path"] for row in walked] == [
+        "/nix/store/hello",
+        "/nix/store/bash",
+    ]
+    assert [row.row["src_path"] for row in walked] == [
+        "/nix/store/bash",
+        "/nix/store/glibc",
     ]
 
 
