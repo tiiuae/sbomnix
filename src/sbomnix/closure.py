@@ -12,6 +12,10 @@ from typing import Any, Callable, Iterable
 import pandas as pd
 
 from common import columns as cols
+from common.nix_utils import (
+    nix_derivation_input_drv_paths,
+    nix_derivation_input_src_paths,
+)
 
 DEPENDENCY_COLUMNS = [
     cols.SRC_PATH,
@@ -94,7 +98,7 @@ def derivation_dependencies_df(drv_infos):
     """Return build-time dependency edges from recursive derivation JSON."""
     rows = []
     for target_path, drv_info in drv_infos.items():
-        for src_path in _iter_input_drv_paths(drv_info):
+        for src_path in _iter_input_paths(drv_info, target_path):
             rows.append(
                 {
                     cols.SRC_PATH: src_path,
@@ -125,13 +129,7 @@ def store_path_label(path):
     return name if separator else basename
 
 
-def _iter_input_drv_paths(drv_info):
-    """Yield input derivation paths from old and new derivation JSON formats."""
-    inputs = drv_info.get("inputs", {})
-    if isinstance(inputs, dict):
-        drvs = inputs.get("drvs", {})
-        if isinstance(drvs, dict):
-            yield from drvs
-    input_drvs = drv_info.get("inputDrvs", {})
-    if isinstance(input_drvs, dict):
-        yield from input_drvs
+def _iter_input_paths(drv_info, target_path=None):
+    """Yield validated input derivation and source paths from derivation JSON."""
+    yield from nix_derivation_input_drv_paths(target_path, drv_info)
+    yield from nix_derivation_input_src_paths(target_path, drv_info)

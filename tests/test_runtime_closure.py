@@ -5,6 +5,12 @@
 
 """Focused tests for structured runtime closure parsing."""
 
+import subprocess
+
+import pytest
+
+from common.errors import InvalidNixJsonError, NixCommandError
+from sbomnix import runtime as sbomnix_runtime
 from sbomnix.runtime import runtime_closure_from_path_info
 
 
@@ -60,3 +66,41 @@ def test_runtime_closure_from_path_info_supports_list_payloads():
             "/nix/store/11111111111111111111111111111111-target-1.0"
         }
     }
+
+
+def test_runtime_closure_from_path_info_rejects_missing_references():
+    with pytest.raises(InvalidNixJsonError, match="missing `references`"):
+        runtime_closure_from_path_info(
+            {
+                "/nix/store/11111111111111111111111111111111-target-1.0": {
+                    "deriver": None,
+                }
+            }
+        )
+
+
+def test_runtime_closure_from_path_info_rejects_malformed_reference_items():
+    with pytest.raises(InvalidNixJsonError, match=r"references\[0\]"):
+        runtime_closure_from_path_info(
+            {
+                "/nix/store/11111111111111111111111111111111-target-1.0": {
+                    "references": [None],
+                }
+            }
+        )
+
+
+def test_load_runtime_closure_wraps_nix_command_failures(monkeypatch):
+    def fail_exec_cmd(cmd):
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=cmd,
+            stderr="unsupported path-info json format",
+        )
+
+    monkeypatch.setattr(sbomnix_runtime, "exec_cmd", fail_exec_cmd)
+
+    with pytest.raises(NixCommandError, match="unsupported path-info json format"):
+        sbomnix_runtime.load_runtime_closure(
+            "/nix/store/11111111111111111111111111111111-target-1.0"
+        )

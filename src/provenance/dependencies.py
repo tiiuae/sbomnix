@@ -8,10 +8,16 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from common.errors import InvalidNixJsonError
 from common.log import LOG, LOG_VERBOSE
-from common.nix_utils import parse_nix_derivation_show
+from common.nix_utils import (
+    NIX_PATH_INFO_JSON,
+    nix_path_info_references,
+    parse_nix_derivation_show,
+)
 from common.proc import exec_cmd, nix_cmd
 from provenance.digests import normalize_digest, output_digest
+from provenance.nix_commands import exec_required_nix_command
 from provenance.path_info import query_path_hashes, query_path_info
 from provenance.subjects import output_path
 
@@ -67,14 +73,12 @@ def dependency_paths(drv_path, recursive=False, outputs_by_path=None, hooks=None
         return paths
 
     drv_info = path_infos.get(drv_path)
-    if drv_info is None and path_infos:
-        drv_info = next(iter(path_infos.values()))
-    if not drv_info:
-        return []
-    references = drv_info.get("references", [])
-    if not isinstance(references, list):
-        return []
-    return [path for path in references if isinstance(path, str)]
+    if drv_info is None:
+        raise InvalidNixJsonError(
+            NIX_PATH_INFO_JSON,
+            f"missing path-info record for `{drv_path}`",
+        )
+    return list(nix_path_info_references(drv_info, drv_path))
 
 
 def dependency_package(drv, output_hash, infos, outputs_by_path, hooks=None):
@@ -114,8 +118,9 @@ def get_dependencies(drv_path, recursive=False, hooks=None):
         "recursively" if recursive else "",
     )
 
+    cmd = nix_cmd("derivation", "show", "-r", drv_path)
     infos = hooks.parse_nix_derivation_show_fn(
-        hooks.exec_cmd_fn(nix_cmd("derivation", "show", "-r", drv_path)).stdout,
+        exec_required_nix_command(cmd, hooks.exec_cmd_fn).stdout,
         store_path_hint=drv_path,
     )
     outputs_by_path = derivation_outputs_by_path(infos, hooks=hooks)

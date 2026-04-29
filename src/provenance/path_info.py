@@ -5,8 +5,15 @@
 """Structured Nix path-info helpers for provenance generation."""
 
 import errno
-import json
+import subprocess
 
+from common.errors import InvalidNixJsonError, NixCommandError
+from common.nix_utils import (
+    NIX_PATH_INFO_JSON,
+    load_nix_json,
+    nix_path_info_nar_hash,
+    normalize_nix_path_info,
+)
 from common.proc import exec_cmd, nix_cmd
 
 
@@ -21,40 +28,25 @@ def query_path_info(
     if not paths:
         return {}
     recursive_args = ["--recursive"] if recursive else []
-    ret = exec_cmd_fn(
-        nix_cmd(
-            "path-info",
-            "--json",
-            "--json-format",
-            "1",
-            *recursive_args,
-            *paths,
-        ),
-        raise_on_error=raise_on_error,
+    cmd = nix_cmd(
+        "path-info",
+        "--json",
+        "--json-format",
+        "1",
+        *recursive_args,
+        *paths,
     )
+    try:
+        ret = exec_cmd_fn(cmd, raise_on_error=raise_on_error)
+    except subprocess.CalledProcessError as error:
+        raise NixCommandError(
+            cmd,
+            stderr=error.stderr,
+            stdout=error.stdout,
+        ) from None
     if ret is None:
         return None
-    return normalize_path_info(json.loads(ret.stdout))
-
-
-def normalize_path_info(path_info):
-    """Normalize Nix path-info JSON to a path-indexed dictionary."""
-    if isinstance(path_info, dict):
-        return {
-            path: info
-            for path, info in path_info.items()
-            if isinstance(path, str) and isinstance(info, dict)
-        }
-    if isinstance(path_info, list):
-        normalized = {}
-        for info in path_info:
-            if not isinstance(info, dict):
-                continue
-            path = info.get("path") or info.get("storePath")
-            if isinstance(path, str):
-                normalized[path] = info
-        return normalized
-    return {}
+    return normalize_nix_path_info(load_nix_json(ret.stdout, NIX_PATH_INFO_JSON))
 
 
 def query_path_hashes(paths, *, exec_cmd_fn=exec_cmd):
@@ -84,8 +76,8 @@ def nar_hash_for_path(path_infos, path):
     """Return the NAR hash for one path-info record."""
     info = path_infos.get(path)
     if info is None:
-        raise RuntimeError(f"Missing path-info for '{path}'")
-    nar_hash = info.get("narHash")
-    if not isinstance(nar_hash, str) or not nar_hash:
-        raise RuntimeError(f"Missing narHash in path-info for '{path}'")
-    return nar_hash
+        raise InvalidNixJsonError(
+            NIX_PATH_INFO_JSON,
+            f"missing path-info record for `{path}`",
+        )
+    return nix_path_info_nar_hash(info, path)

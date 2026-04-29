@@ -125,8 +125,13 @@ def test_load_dependencies_logs_dependency_loading_at_info(monkeypatch):
 def test_load_dependencies_buildtime_uses_derivation_json(monkeypatch):
     drv_infos = {
         "/nix/store/11111111111111111111111111111111-target.drv": {
-            "inputDrvs": {
-                "/nix/store/22222222222222222222222222222222-dep.drv": ["out"],
+            "inputs": {
+                "drvs": {
+                    "/nix/store/22222222222222222222222222222222-dep.drv": ["out"],
+                },
+                "srcs": [
+                    "/nix/store/33333333333333333333333333333333-source",
+                ],
             }
         }
     }
@@ -153,7 +158,13 @@ def test_load_dependencies_buildtime_uses_derivation_json(monkeypatch):
             "src_pname": "dep.drv",
             "target_path": "/nix/store/11111111111111111111111111111111-target.drv",
             "target_pname": "target.drv",
-        }
+        },
+        {
+            "src_path": "/nix/store/33333333333333333333333333333333-source",
+            "src_pname": "source",
+            "target_path": "/nix/store/11111111111111111111111111111111-target.drv",
+            "target_pname": "target.drv",
+        },
     ]
 
 

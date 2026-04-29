@@ -10,10 +10,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Protocol
 
+from common.errors import InvalidNixJsonError, MissingNixDerivationMetadataError
 from common.log import LOG, LOG_VERBOSE
-from common.nix_utils import parse_nix_derivation_show
+from common.nix_utils import NIX_DERIVATION_SHOW_JSON, parse_nix_derivation_show
 from common.proc import exec_cmd, nix_cmd
 from provenance.dependencies import get_dependencies
+from provenance.nix_commands import exec_required_nix_command
 from provenance.subjects import get_subjects
 
 JsonDict = dict[str, Any]
@@ -85,17 +87,24 @@ def provenance_document(
 
     cmd = hooks.nix_cmd_fn("derivation", "show", target)
     drv_json = hooks.parse_nix_derivation_show_fn(
-        hooks.exec_cmd_fn(cmd).stdout,
+        exec_required_nix_command(cmd, hooks.exec_cmd_fn).stdout,
         store_path_hint=target,
     )
-    drv_path = next(iter(drv_json))
-    drv_json = drv_json[drv_path]
+    if not drv_json:
+        raise MissingNixDerivationMetadataError(target)
+    drv_path, drv_json = next(iter(drv_json.items()))
+    outputs = drv_json.get("outputs")
+    if outputs is None:
+        raise InvalidNixJsonError(
+            NIX_DERIVATION_SHOW_JSON,
+            f"missing `outputs` in target derivation `{drv_path}`",
+        )
 
     hooks.log.log(LOG_VERBOSE, "Resolved derivation path is '%s'", drv_path)
 
     return {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": hooks.get_subjects_fn(drv_json["outputs"], env=drv_json.get("env")),
+        "subject": hooks.get_subjects_fn(outputs, env=drv_json.get("env")),
         "predicateType": "https://slsa.dev/provenance/v1",
         "predicate": {
             "buildDefinition": {
