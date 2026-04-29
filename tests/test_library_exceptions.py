@@ -6,6 +6,7 @@
 """Unit tests for typed library exceptions."""
 
 import subprocess
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -48,13 +49,49 @@ def test_exit_unless_command_exists_raises_typed_error():
 
 def test_exit_unless_nix_artifact_raises_typed_error():
     def fail_exec_cmd(*_args, **_kwargs):
-        raise subprocess.CalledProcessError(1, ["nix-store", "-q", "missing"])
+        raise subprocess.CalledProcessError(1, ["nix", "path-info", "missing"])
 
     with pytest.raises(
         InvalidNixArtifactError,
         match="Specified target is not a nix artifact: 'missing'",
     ):
         exit_unless_nix_artifact("missing", exec_cmd_fn=fail_exec_cmd)
+
+
+def test_exit_unless_nix_artifact_uses_modern_nix_commands():
+    calls = []
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        calls.append(cmd)
+        return SimpleNamespace(stdout="/nix/store/target\n")
+
+    exit_unless_nix_artifact(
+        "/nix/store/target",
+        force_realise=True,
+        exec_cmd_fn=fake_exec_cmd,
+    )
+
+    assert calls == [
+        [
+            "nix",
+            "build",
+            "--no-link",
+            "/nix/store/target",
+            "--extra-experimental-features",
+            "flakes",
+            "--extra-experimental-features",
+            "nix-command",
+        ],
+        [
+            "nix",
+            "path-info",
+            "/nix/store/target",
+            "--extra-experimental-features",
+            "flakes",
+            "--extra-experimental-features",
+            "nix-command",
+        ],
+    ]
 
 
 def test_find_deriver_raises_typed_error():

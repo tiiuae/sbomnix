@@ -153,7 +153,7 @@ def test_resolve_nix_target_leaves_malformed_nixos_configuration_refs(
     )
 
 
-def test_resolve_nix_target_propagates_flakeref_realisation_failure_without_store_fallback(
+def test_resolve_nix_target_propagates_flakeref_realisation_failure_without_path_probe(
     monkeypatch,
 ):
     artifact_checks = []
@@ -181,7 +181,7 @@ def test_resolve_nix_target_propagates_flakeref_realisation_failure_without_stor
     assert not artifact_checks
 
 
-def test_resolve_nix_target_propagates_flakeref_eval_failure_without_store_fallback(
+def test_resolve_nix_target_propagates_flakeref_eval_failure_without_path_probe(
     monkeypatch,
 ):
     artifact_checks = []
@@ -209,7 +209,7 @@ def test_resolve_nix_target_propagates_flakeref_eval_failure_without_store_fallb
     assert not artifact_checks
 
 
-def test_resolve_nix_target_falls_back_to_store_path_validation(monkeypatch):
+def test_resolve_nix_target_uses_plain_path_validation(monkeypatch):
     artifact_checks = []
 
     monkeypatch.setattr(

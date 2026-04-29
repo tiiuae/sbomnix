@@ -109,21 +109,18 @@ def exit_unless_nix_artifact(
     log: logging.Logger | None = None,
 ) -> None:
     """
-    Raise if `path` is not a nix artifact. If `force_realise` is True, run the
-    nix-store-query command with `--force-realise` realising the `path`
-    argument before running query.
+    Raise if `path` is not a nix artifact. If `force_realise` is True, build
+    the installable before querying path information.
     """
     exec_cmd_fn = exec_cmd if exec_cmd_fn is None else exec_cmd_fn
     log = LOG if log is None else log
 
     log.debug("force_realize: %s", force_realise)
-    if force_realise:
-        log.log(LOG_VERBOSE, "Try force-realising store-path '%s'", path)
-        cmd = ["nix-store", "-qf", path]
-    else:
-        cmd = ["nix-store", "-q", path]
     try:
-        exec_cmd_fn(cmd)
+        if force_realise:
+            log.log(LOG_VERBOSE, "Try force-realising store-path '%s'", path)
+            exec_cmd_fn(nix_cmd("build", "--no-link", path))
+        exec_cmd_fn(nix_cmd("path-info", path))
         return
     except subprocess.CalledProcessError:
         raise InvalidNixArtifactError(path) from None
