@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Technology Innovation Institute (TII)
 #
 # SPDX-License-Identifier: Apache-2.0
+{ self, ... }:
 {
   perSystem =
     {
@@ -12,6 +13,17 @@
     }:
     let
       pp = pkgs.python3.pkgs;
+      baseVersion = pkgs.lib.removeSuffix "\n" (builtins.readFile ../VERSION);
+      # Append git state so local builds are distinguishable from release
+      # artifacts. shortRev is set on a clean tree; dirtyShortRev (Nix >= 2.14)
+      # is set when the working tree has uncommitted changes.
+      gitSuffix =
+        if self ? shortRev then
+          "+g${self.shortRev}"
+        else if self ? dirtyShortRev then
+          "+g${self.dirtyShortRev}"
+        else
+          "";
       # Thin wrapper that calls a module entry point via the ambient python3.
       # PYTHONPATH (set in shellHook) resolves to the local src/, so edits are
       # picked up without reinstalling.
@@ -60,9 +72,12 @@
         default = sbomnix;
         sbomnix = pp.buildPythonPackage {
           pname = "sbomnix";
-          version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../VERSION);
+          version = "${baseVersion}${gitSuffix}";
           pyproject = true;
           src = lib.cleanSource ../.;
+          postPatch = ''
+            printf '%s' "${baseVersion}${gitSuffix}" > VERSION
+          '';
           build-system = build_system;
           nativeCheckInputs = check_inputs;
           dependencies = build_inputs;
