@@ -20,7 +20,7 @@ $ nix run github:tiiuae/sbomnix#nixmeta -- --help
 As an example, below command outputs nixpkgs meta-attributes from the nixpkgs version pinned by flake `github:NixOS/nixpkgs?ref=master`:
 
 ```bash
-$ ./src/nixmeta/main.py --flakeref=github:NixOS/nixpkgs?ref=master
+$ nixmeta --flakeref=github:NixOS/nixpkgs?ref=master
 INFO     Finding meta-info for nixpkgs pinned in flake: github:NixOS/nixpkgs?ref=master
 INFO     Wrote: /home/foo/sbomnix-fork/nixmeta.csv
 ```
