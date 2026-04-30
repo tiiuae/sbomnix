@@ -9,6 +9,7 @@ build/
 .eggs/
 __pycache__/
 .coverage
+.coverage.*
 .hypothesis/
 coverage.xml
 htmlcov/
