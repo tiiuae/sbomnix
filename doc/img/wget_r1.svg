@@ -6,9 +6,17 @@
 <!-- Title: %3 Pages: 1 -->
 <svg width="415pt" height="314pt"
  viewBox="0.00 0.00 415.00 314.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<style>
+@media (prefers-color-scheme: dark) {
+  .edge path, .edge polygon { stroke: #ccc; }
+  .edge polygon { fill: #ccc; }
+  .node path { stroke: #ccc; fill: #444; }
+  .node text { fill: white; }
+}
+</style>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 310)">
 <title>%3</title>
-<polygon fill="white" stroke="transparent" points="-4,4 -4,-310 411,-310 411,4 -4,4"/>
+<polygon fill="none" stroke="transparent" points="-4,4 -4,-310 411,-310 411,4 -4,4"/>
 <!-- /nix/store/4nlgxhb09sdr51nc9hdm8az5b08vzkgx&#45;glibc&#45;2.35&#45;163 -->
 <g id="node1" class="node">
 <title>/nix/store/4nlgxhb09sdr51nc9hdm8az5b08vzkgx&#45;glibc&#45;2.35&#45;163</title>
