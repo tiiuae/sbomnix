@@ -6,8 +6,16 @@
 <!-- Pages: 1 -->
 <svg width="1251pt" height="4208pt"
  viewBox="0.00 0.00 1251.05 4208.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<style>
+@media (prefers-color-scheme: dark) {
+  .edge path, .edge polygon { stroke: #ccc; }
+  .edge polygon { fill: #ccc; }
+  .node path { stroke: #ccc; fill: #444; }
+  .node text { fill: white; }
+}
+</style>
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 4204)">
-<polygon fill="white" stroke="none" points="-4,4 -4,-4204 1247.05,-4204 1247.05,4 -4,4"/>
+<polygon fill="none" stroke="none" points="-4,4 -4,-4204 1247.05,-4204 1247.05,4 -4,4"/>
 <!-- /nix/store/hla091y2jgs76hd8ps5ky6d81qzkdfz5&#45;bash&#45;5.2&#45;p15.drv -->
 <g id="node1" class="node">
 <title>/nix/store/hla091y2jgs76hd8ps5ky6d81qzkdfz5&#45;bash&#45;5.2&#45;p15.drv</title>
