@@ -71,44 +71,7 @@ $ cd sbomnix
 $ nix develop
 ```
 
-You can also use `nix-shell` to enter the development shell:
-```bash
-$ git clone https://github.com/tiiuae/sbomnix
-$ cd sbomnix
-$ nix-shell
-```
-
-Keep in mind this doesn't add the various entrypoint binaries to your `PATH`
-directly. They are produced when the project is installed as a Python package.
-
-While you're in the devshell, you can run various command line tools via the entrypoint files
-directly:
-
-```bash
-# sbomnix:
-$ src/sbomnix/main.py --help
-
-# nixgraph:
-$ src/nixgraph/main.py --help
-
-# nixmeta:
-$ src/nixmeta/main.py --help
-
-# vulnxscan:
-$ src/vulnxscan/vulnxscan_cli.py --help
-
-# repology_cli:
-$ src/repology/repology_cli.py --help
-
-# repology_cve:
-$ src/repology/repology_cve.py --help
-
-# nix_outdated:
-$ src/nixupdate/nix_outdated.py --help
-
-# provenance:
-$ src/provenance/main.py --help
-```
+The devshell adds all CLI entry points (`sbomnix`, `nixgraph`, `nixmeta`, `vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`, `provenance`) to `PATH`. They run against the local source tree, so any edits are picked up immediately without reinstalling.
 
 All tools support a consistent verbosity flag: no flag or `--verbose=0`
 shows INFO output, `-v` or `--verbose=1` enables VERBOSE progress

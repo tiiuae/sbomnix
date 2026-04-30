@@ -12,6 +12,14 @@
     }:
     let
       pp = pkgs.python3.pkgs;
+      # Thin wrapper that calls a module entry point via the ambient python3.
+      # PYTHONPATH (set in shellHook) resolves to the local src/, so edits are
+      # picked up without reinstalling.
+      mkDevEntry =
+        name: module:
+        pkgs.writeShellScriptBin name ''
+          exec python3 -c "import sys; sys.argv[0]='${name}'; from ${module} import main; main()" "$@"
+        '';
       prefix_path = with pkgs; [
         git
         graphviz
@@ -75,7 +83,17 @@
         ]
         ++ check_inputs
         ++ build_system
-        ++ build_inputs;
+        ++ build_inputs
+        ++ [
+          (mkDevEntry "sbomnix" "sbomnix.main")
+          (mkDevEntry "nixgraph" "nixgraph.main")
+          (mkDevEntry "nixmeta" "nixmeta.main")
+          (mkDevEntry "nix_outdated" "nixupdate.nix_outdated")
+          (mkDevEntry "vulnxscan" "vulnxscan.vulnxscan_cli")
+          (mkDevEntry "repology_cli" "repology.repology_cli")
+          (mkDevEntry "repology_cve" "repology.repology_cve")
+          (mkDevEntry "provenance" "provenance.main")
+        ];
         # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
         # able to find the python packages in the repo) becomes possible.
         # `pytest.ini` already sets this for invoking `pytest`
