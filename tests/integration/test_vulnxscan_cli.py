@@ -16,6 +16,7 @@ def test_vulnxscan_help(_run_python_script):
 
 
 @pytest.mark.network
+@pytest.mark.grype
 def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with the nix result as input."""
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"
@@ -30,6 +31,7 @@ def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_wor
 
 
 @pytest.mark.network
+@pytest.mark.grype
 def test_vulnxscan_scan_sbom(_run_python_script, test_cdx_sbom, test_work_dir):
     """Test vulnxscan scan with SBOM as input."""
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"
@@ -45,6 +47,7 @@ def test_vulnxscan_scan_sbom(_run_python_script, test_cdx_sbom, test_work_dir):
 
 
 @pytest.mark.network
+@pytest.mark.grype
 def test_vulnxscan_triage(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with --triage."""
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"
@@ -60,6 +63,7 @@ def test_vulnxscan_triage(_run_python_script, test_nix_result, test_work_dir):
 
 
 @pytest.mark.network
+@pytest.mark.grype
 def test_vulnxscan_triage_whitelist(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with --triage and --whitelist."""
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"

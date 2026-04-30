@@ -11,6 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import filelock
 import pytest
 
 REPOROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +38,23 @@ def _pythonpath_with_repo_root(env):
     if repo_root not in paths:
         env["PYTHONPATH"] = f"{pythonpath}{os.pathsep}{repo_root}"
     return env
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _warm_grype_db(request, tmp_path_factory):
+    """Pre-warm the grype vulnerability DB once per session when grype tests are collected.
+
+    Under pytest-xdist, multiple workers share a filelock so only one worker
+    runs the update; the rest wait and proceed once the DB is current.
+    """
+    has_grype_test = any(
+        item.get_closest_marker("grype") for item in request.session.items
+    )
+    if not has_grype_test:
+        return
+    lock_path = tmp_path_factory.getbasetemp().parent / "grype-db-update.lock"
+    with filelock.FileLock(str(lock_path)):
+        subprocess.run(["grype", "db", "update"], check=True)
 
 
 @pytest.fixture(name="test_work_dir")
@@ -85,6 +103,7 @@ def fixture_run_python_script(test_work_dir):
 
     def _run(args, **kwargs):
         env = _pythonpath_with_repo_root(os.environ.copy())
+        env.setdefault("GRYPE_DB_AUTO_UPDATE", "false")
         kwargs.setdefault("cwd", test_work_dir)
         check = kwargs.pop("check", True)
         return subprocess.run(args, check=check, env=env, **kwargs)
