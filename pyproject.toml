@@ -51,7 +51,7 @@ repology_cve = "repology.repology_cve:main"
 provenance = "provenance.main:main"
 
 [tool.setuptools]
-license-files = ["LICENSES/Apache-2.0.txt"]
+license-files = ["LICENSES/Apache-2.0.txt", "LICENSES/BSD-3-Clause.txt"]
 
 [tool.setuptools.dynamic]
 version = { file = ["VERSION"] }
