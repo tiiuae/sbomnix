@@ -11,12 +11,14 @@ import subprocess
 import time
 from pathlib import Path
 
-import filelock
 import pytest
 
 REPOROOT = Path(__file__).resolve().parent.parent
 INTEGRATION_DIR = REPOROOT / "tests" / "integration"
 RESOURCES_DIR = REPOROOT / "tests" / "resources"
+
+_GRYPE_TEST_DB = RESOURCES_DIR / "grype-test-db.tar.gz"
+_GRYPE_CACHE_SUBDIR = "grype-cache"
 
 
 def _output_mentions_repology_host(output):
@@ -42,19 +44,32 @@ def _pythonpath_with_repo_root(env):
 
 @pytest.fixture(scope="session", autouse=True)
 def _warm_grype_db(request, tmp_path_factory):
-    """Pre-warm the grype vulnerability DB once per session when grype tests are collected.
+    """Import the committed minimal grype DB into a session-scoped temp dir.
 
-    Under pytest-xdist, multiple workers share a filelock so only one worker
-    runs the update; the rest wait and proceed once the DB is current.
+    Returns the cache Path so _run_python_script can point GRYPE_DB_CACHE_DIR
+    at it. Returns None when no grype-marked tests are collected (non-grype
+    sessions are unaffected and no DB import runs).
+
+    Each pytest-xdist worker imports into its own getbasetemp() subdir, so
+    there is no shared state and no locking is needed.
     """
     has_grype_test = any(
         item.get_closest_marker("grype") for item in request.session.items
     )
     if not has_grype_test:
-        return
-    lock_path = tmp_path_factory.getbasetemp().parent / "grype-db-update.lock"
-    with filelock.FileLock(str(lock_path)):
-        subprocess.run(["grype", "db", "update"], check=True)
+        return None
+    cache_dir = tmp_path_factory.getbasetemp() / _GRYPE_CACHE_SUBDIR
+    cache_dir.mkdir(exist_ok=True)
+    subprocess.run(
+        ["grype", "db", "import", str(_GRYPE_TEST_DB)],
+        env={
+            **os.environ,
+            "GRYPE_DB_CACHE_DIR": str(cache_dir),
+            "GRYPE_DB_VALIDATE_AGE": "false",
+        },
+        check=True,
+    )
+    return cache_dir
 
 
 @pytest.fixture(name="test_work_dir")
@@ -98,12 +113,15 @@ def fixture_test_cdx_sbom():
 
 
 @pytest.fixture(name="_run_python_script")
-def fixture_run_python_script(test_work_dir):
+def fixture_run_python_script(test_work_dir, _warm_grype_db):
     """Invoke a Python entrypoint from an isolated test workdir."""
 
     def _run(args, **kwargs):
         env = _pythonpath_with_repo_root(os.environ.copy())
         env.setdefault("GRYPE_DB_AUTO_UPDATE", "false")
+        env.setdefault("GRYPE_DB_VALIDATE_AGE", "false")
+        if _warm_grype_db is not None:
+            env["GRYPE_DB_CACHE_DIR"] = str(_warm_grype_db)
         kwargs.setdefault("cwd", test_work_dir)
         check = kwargs.pop("check", True)
         return subprocess.run(args, check=check, env=env, **kwargs)
