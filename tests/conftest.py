@@ -7,11 +7,14 @@
 
 import os
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
 
 import pytest
+
+from tests import vulnix_test_support
 
 REPOROOT = Path(__file__).resolve().parent.parent
 INTEGRATION_DIR = REPOROOT / "tests" / "integration"
@@ -72,6 +75,42 @@ def _warm_grype_db(request, tmp_path_factory):
     return cache_dir
 
 
+@pytest.fixture(scope="session")
+def _configure_test_vulnix(request, tmp_path_factory):
+    """Prepare the vulnix test wrapper with a deterministic default mode."""
+    requested_mode = os.environ.get("SBOMNIX_TEST_VULNIX_MODE", "dummy")
+    if requested_mode not in {"dummy", "real"}:
+        raise ValueError(
+            "invalid SBOMNIX_TEST_VULNIX_MODE "
+            f"{requested_mode!r}; expected one of: dummy, real"
+        )
+    tmp_root = tmp_path_factory.getbasetemp().parent
+    real_vulnix = shutil.which("vulnix")
+    if requested_mode == "real" and real_vulnix is None:
+        raise RuntimeError(
+            "real vulnix selected for tests, but 'vulnix' is not available in PATH"
+        )
+    cache_dir = vulnix_test_support.default_vulnix_cache_dir()
+    reporter = request.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is not None:
+        reporter.write_sep(
+            "=",
+            f"vulnix test mode: {requested_mode}",
+            bold=True,
+        )
+        if requested_mode == "real":
+            reporter.write_line(f"real vulnix binary: {real_vulnix}")
+            reporter.write_line(f"real vulnix cache dir: {cache_dir}")
+        else:
+            reporter.write_line("using dummy vulnix wrapper for deterministic tests")
+    return vulnix_test_support.configure_vulnix_for_tests(
+        tmp_root=tmp_root,
+        effective_mode=requested_mode,
+        cache_dir=cache_dir,
+        real_vulnix=real_vulnix,
+    )
+
+
 @pytest.fixture(name="test_work_dir")
 def fixture_test_work_dir(tmp_path):
     """Return a per-test working directory."""
@@ -113,7 +152,7 @@ def fixture_test_cdx_sbom():
 
 
 @pytest.fixture(name="_run_python_script")
-def fixture_run_python_script(test_work_dir, _warm_grype_db):
+def fixture_run_python_script(test_work_dir, _warm_grype_db, _configure_test_vulnix):
     """Invoke a Python entrypoint from an isolated test workdir."""
 
     def _run(args, **kwargs):
@@ -122,6 +161,10 @@ def fixture_run_python_script(test_work_dir, _warm_grype_db):
         env.setdefault("GRYPE_DB_VALIDATE_AGE", "false")
         if _warm_grype_db is not None:
             env["GRYPE_DB_CACHE_DIR"] = str(_warm_grype_db)
+        env = vulnix_test_support.build_vulnix_test_env(
+            env,
+            config=_configure_test_vulnix,
+        )
         kwargs.setdefault("cwd", test_work_dir)
         check = kwargs.pop("check", True)
         return subprocess.run(args, check=check, env=env, **kwargs)
@@ -172,7 +215,13 @@ def fixture_run_python_script_retry_on_repology_network_error(_run_python_script
 
 def pytest_collection_modifyitems(items):
     """Mark integration tests based on their path."""
+    run_real_vulnix = os.environ.get("SBOMNIX_RUN_REAL_VULNIX_TESTS") == "1"
+    skip_real_vulnix = pytest.mark.skip(
+        reason="real vulnix tests are opt-in; set SBOMNIX_RUN_REAL_VULNIX_TESTS=1"
+    )
     for item in items:
         path = Path(str(item.fspath)).resolve()
         if INTEGRATION_DIR in path.parents:
             item.add_marker(pytest.mark.integration)
+        if item.get_closest_marker("real_vulnix") and not run_real_vulnix:
+            item.add_marker(skip_real_vulnix)
