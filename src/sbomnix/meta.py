@@ -159,7 +159,7 @@ class Meta:
         return None, out_source
 
     def _scan_store_names(self, names, *, cache_key=None, impure=False, pkgs_expr=None):
-        if cache_key is None:
+        if impure or cache_key is None:
             with self.lock:
                 LOG.debug("cache disabled for store-names scan (%d names)", len(names))
                 df, is_complete = self._try_scan_store_names(

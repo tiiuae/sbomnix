@@ -389,8 +389,9 @@ def test_nixos_toplevel_flakeref_honors_impure(monkeypatch):
 
     assert df_meta is fake_df
     assert source.method == "flake-meta"
+    assert source.expression_cache_key is None
     assert source.expression_impure is True
-    assert calls == [["nix", "flake", "metadata", "/flake", "--json", "--impure"]]
+    assert calls == []
     assert scanned[0][1] is True
 
 
@@ -862,6 +863,45 @@ def test_partial_batch_failure_skips_cache(monkeypatch):
     assert call_count[0] == 2, (
         "Second call must re-scan when previous result was not cached"
     )
+
+
+def test_impure_scan_store_names_skips_persistent_cache(monkeypatch):
+    """Impure metadata scans must not read or write the persistent cache."""
+    cache_get_calls = []
+    cache_set_calls = []
+
+    class FakeScanner:
+        had_failures = False
+
+        def scan_store_names(self, names, *, impure=False, pkgs_expr=None):
+            self._names = list(names)
+
+        def to_df(self):
+            return pd.DataFrame(
+                {"name": self._names, "meta_license_short": ["MIT"] * len(self._names)}
+            )
+
+    def fake_get(key):
+        cache_get_calls.append(key)
+
+    def fake_set(**kwargs):
+        cache_set_calls.append(kwargs["key"])
+
+    meta = sbomnix_meta.Meta()
+    monkeypatch.setattr(meta.cache, "get", fake_get)
+    monkeypatch.setattr(meta.cache, "set", fake_set)
+    monkeypatch.setattr(sbomnix_meta, "NixMetaScanner", FakeScanner)
+
+    result = meta._scan_store_names(
+        ["hello-2.12.3"],
+        cache_key="flake-meta:path:/nix/store/abc?narHash=sha256-x#hello",
+        impure=True,
+        pkgs_expr="pkgs",
+    )
+
+    assert result is not None and not result.empty
+    assert cache_get_calls == []
+    assert cache_set_calls == []
 
 
 def test_flake_lock_source_honors_impure(monkeypatch):

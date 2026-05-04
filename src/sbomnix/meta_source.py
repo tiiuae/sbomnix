@@ -116,7 +116,9 @@ class NixpkgsMetaSourceResolver:
                     f"import (builtins.getFlake {json.dumps(stable)}) {{}}"
                 )
                 source_kwargs = self._source_details_from_flake_ref(stable)
-        cache_key = f"flake-meta:{stable}#{attr_part}" if stable else None
+        cache_key = None
+        if stable and not impure:
+            cache_key = f"flake-meta:{stable}#{attr_part}"
         source = NixpkgsMetaSource(
             method="flake-meta",
             expression_cache_key=cache_key,
@@ -397,7 +399,11 @@ class NixpkgsMetaSourceResolver:
                 if pkgs_path
                 else None
             ),
-            expression_cache_key=self._flake_meta_cache_key(locked_ref, impure=impure),
+            expression_cache_key=(
+                None
+                if impure
+                else self._flake_meta_cache_key(locked_ref, impure=impure)
+            ),
             expression_impure=impure,
             pkgs_expression=pkgs_expression,
         )
