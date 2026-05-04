@@ -4,27 +4,17 @@
 
 """Thread-safe DataFrameDiskCache"""
 
-import pathlib
-import tempfile
-from getpass import getuser
-
 from dfdiskcache import DataFrameDiskCache
 from filelock import FileLock
 
-###############################################################################
-
-# DataFrameDiskCache cache local path and lock file
-DFCACHE_PATH = pathlib.Path(tempfile.gettempdir()) / f"{getuser()}_sbomnix_df_cache"
-DFCACHE_LOCK = DFCACHE_PATH / "dfcache.lock"
-
-################################################################################
+from sbomnix.cache_paths import dfcache_dir, dfcache_lock_path
 
 
 class LockedDfCache:
     """Thread-safe (and process-safe) wrapper for DataFrameDiskCache"""
 
     def __init__(self):
-        self.dflock = FileLock(DFCACHE_LOCK)
+        self.dflock = FileLock(dfcache_lock_path())
 
     def __getattr__(self, name):
         def wrap(*a, **k):
@@ -38,7 +28,7 @@ class LockedDfCache:
                 # for the first thread making other threads throw with
                 # 'database locked' etc. even if we otherwise protect
                 # concurrent writes.
-                dfcache = DataFrameDiskCache(cache_dir_path=DFCACHE_PATH)
+                dfcache = DataFrameDiskCache(cache_dir_path=dfcache_dir())
                 return getattr(dfcache, name)(*a, **k)
 
         return wrap

@@ -13,6 +13,8 @@ from requests_cache import CacheMixin
 from requests_ratelimiter import LimiterMixin
 from urllib3.util.retry import Retry
 
+from sbomnix.cache_paths import http_cache_name
+
 DEFAULT_RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
 
 
@@ -46,13 +48,14 @@ def mount_retries(
     return session
 
 
-def create_cached_limited_session(
+def create_cached_limited_session(  # noqa: PLR0913
     *,
     per_second: int | None = None,
     per_minute: int | None = None,
     expire_after: int | None = None,
     user_agent: str | None = None,
     allowed_methods: Collection[str] = frozenset(("GET", "HEAD")),
+    cache_name: str | None = None,
 ) -> Session:
     """Create a cached, rate-limited session with retry policy attached."""
     kwargs: dict[str, Any] = {}
@@ -62,6 +65,9 @@ def create_cached_limited_session(
         kwargs["per_minute"] = per_minute
     if expire_after is not None:
         kwargs["expire_after"] = expire_after
+    if cache_name is None:
+        cache_name = str(http_cache_name())
+    kwargs["cache_name"] = cache_name
     session = CachedLimiterSession(**kwargs)
     mount_retries(session, allowed_methods=allowed_methods)
     if user_agent:
