@@ -10,11 +10,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from common.proc import exec_cmd, nix_cmd
-from nixmeta import flake_metadata
+from common.proc import exec_cmd
 from nixupdate import nix_outdated
 from sbomnix import derivers as sbomnix_derivers
-from sbomnix.meta import Meta
 
 
 def test_exec_cmd_rejects_string_commands():
@@ -138,54 +136,6 @@ def test_find_deriver_rejects_unloadable_structured_deriver(monkeypatch):
     ]
 
 
-def test_get_flake_metadata_uses_argv_list():
-    calls = []
-
-    def fake_exec_cmd(cmd, **kwargs):
-        calls.append((cmd, kwargs))
-        return SimpleNamespace(stdout='{"path": "/nix/store/nixpkgs"}', returncode=0)
-
-    meta = flake_metadata.get_flake_metadata(
-        "/tmp/my flake",
-        exec_cmd_fn=fake_exec_cmd,
-        nix_cmd_fn=nix_cmd,
-    )
-
-    assert meta == {"path": "/nix/store/nixpkgs"}
-    assert calls == [
-        (
-            [
-                "nix",
-                "flake",
-                "metadata",
-                "/tmp/my flake",
-                "--json",
-                "--extra-experimental-features",
-                "flakes",
-                "--extra-experimental-features",
-                "nix-command",
-            ],
-            {"raise_on_error": False, "return_error": True, "log_error": False},
-        )
-    ]
-
-
-def test_get_flake_metadata_strips_nixpkgs_prefix_without_splitting_spaces():
-    calls = []
-
-    def fake_exec_cmd(cmd, **kwargs):
-        calls.append((cmd, kwargs))
-        return SimpleNamespace(stdout='{"path": "/nix/store/nixpkgs"}', returncode=0)
-
-    flake_metadata.get_flake_metadata(
-        "nixpkgs=/tmp/my flake",
-        exec_cmd_fn=fake_exec_cmd,
-        nix_cmd_fn=nix_cmd,
-    )
-
-    assert calls[0][0][3] == "/tmp/my flake"
-
-
 def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
     calls = []
     output_path = tmp_path / "graph output.csv"
@@ -226,15 +176,3 @@ def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
             {},
         )
     ]
-
-
-def test_meta_reads_nix_path_entry_with_spaces(monkeypatch):
-    scanned = []
-
-    monkeypatch.setenv("NIX_PATH", "foo=/tmp/other:nixpkgs=/tmp/my flake")
-    monkeypatch.setattr(Meta, "_scan", lambda self, path: scanned.append(path) or path)
-
-    resolved = Meta().get_nixpkgs_meta()
-
-    assert resolved == "/tmp/my flake"
-    assert scanned == ["/tmp/my flake"]

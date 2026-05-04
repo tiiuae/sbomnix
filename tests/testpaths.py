@@ -18,7 +18,6 @@ SAMPLE_CDX_SBOM = RESOURCES_DIR / "sample_cdx_sbom.json"
 
 SBOMNIX = SRCDIR / "sbomnix" / "main.py"
 NIXGRAPH = SRCDIR / "nixgraph" / "main.py"
-NIXMETA = SRCDIR / "nixmeta" / "main.py"
 PROVENANCE = SRCDIR / "provenance" / "main.py"
 NIX_OUTDATED = SRCDIR / "nixupdate" / "nix_outdated.py"
 VULNXSCAN = SRCDIR / "vulnxscan" / "vulnxscan_cli.py"
