@@ -4,8 +4,10 @@
 
 """Cache and scan nixpkgs meta information."""
 
+import functools
 import hashlib
 from dataclasses import replace
+from pathlib import Path
 
 from filelock import FileLock
 
@@ -38,6 +40,13 @@ def _names_hash(names):
         h.update(n.encode())
         h.update(b"\0")
     return h.hexdigest()[:16]
+
+
+@functools.cache
+def _meta_nix_hash():
+    """Return a short content hash for meta.nix to invalidate stale cache entries."""
+    meta_nix = Path(__file__).resolve().parent.parent / "nixmeta" / "meta.nix"
+    return hashlib.sha256(meta_nix.read_bytes()).hexdigest()[:16]
 
 
 def _with_buildtime_suffix(source, buildtime):
@@ -158,7 +167,7 @@ class Meta:
                 )
                 self._last_scan_complete = is_complete
                 return df
-        key = f"expr:{cache_key}:names:{_names_hash(names)}"
+        key = f"expr:{cache_key}:meta_nix:{_meta_nix_hash()}:names:{_names_hash(names)}"
         with self.lock:
             df = self.cache.get(key)
             if df is not None and not df.empty:

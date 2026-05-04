@@ -793,6 +793,49 @@ def test_scan_store_names_cache_key_includes_names(monkeypatch):
     assert scan_calls[1] == names_deep
 
 
+def test_scan_store_names_cache_key_includes_meta_nix_hash(monkeypatch):
+    """Changing meta.nix logic must invalidate old metadata cache entries."""
+    scan_calls = []
+
+    class FakeScanner:
+        had_failures = False
+
+        def scan_store_names(self, names, *, impure=False, pkgs_expr=None):
+            scan_calls.append(list(names))
+            self._names = list(names)
+
+        def to_df(self):
+            return pd.DataFrame(
+                {"name": self._names, "meta_license_short": ["MIT"] * len(self._names)}
+            )
+
+    cache_store = {}
+
+    def fake_get(key):
+        return cache_store.get(key)
+
+    def fake_set(**kwargs):
+        cache_store[kwargs["key"]] = kwargs["value"]
+
+    meta = sbomnix_meta.Meta()
+    monkeypatch.setattr(meta.cache, "get", fake_get)
+    monkeypatch.setattr(meta.cache, "set", fake_set)
+    monkeypatch.setattr(sbomnix_meta, "NixMetaScanner", FakeScanner)
+    monkeypatch.setattr(sbomnix_meta, "_meta_nix_hash", lambda: "hash-a")
+
+    cache_key = "flake-meta:path:/nix/store/abc?narHash=sha256-x#hello"
+    names = ["hello-2.12.3", "glibc-2.42"]
+
+    meta._scan_store_names(names, cache_key=cache_key, pkgs_expr="pkgs")
+    assert len(scan_calls) == 1
+
+    monkeypatch.setattr(sbomnix_meta, "_meta_nix_hash", lambda: "hash-b")
+    meta._scan_store_names(names, cache_key=cache_key, pkgs_expr="pkgs")
+    assert len(scan_calls) == 2, (
+        "A changed meta.nix hash must invalidate the previous cache entry"
+    )
+
+
 def test_partial_batch_failure_skips_cache(monkeypatch):
     """A partial scan (some batches failed) must not be written to the cache.
 
