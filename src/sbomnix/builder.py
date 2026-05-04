@@ -85,7 +85,6 @@ class SbomBuilder:
         depth=None,
         flakeref=None,
         original_ref=None,
-        meta_nixpkgs=None,
         impure=False,
         include_meta=True,
         include_vulns=False,
@@ -110,7 +109,6 @@ class SbomBuilder:
         self.dependency_index = None
         self.flakeref = flakeref
         self.original_ref = original_ref
-        self.meta_nixpkgs = meta_nixpkgs
         self.impure = impure
         self.meta = None
         # "disabled" records explicit opt-out; "none" means auto-selection
@@ -309,23 +307,23 @@ class SbomBuilder:
         """Join component rows with nixpkgs metadata."""
         if self.df_sbomdb is None:
             raise AssertionError("SBOM component metadata was not initialized")
+        store_names = self.df_sbomdb[cols.NAME].dropna().unique().tolist()
         self.meta = Meta()
         df_meta, source = self.meta.get_nixpkgs_meta_with_source(
             target_path=self.nix_path,
             flakeref=self.flakeref,
             original_ref=self.original_ref,
-            explicit_nixpkgs=self.meta_nixpkgs,
             impure=self.impure,
+            store_names=store_names,
+            buildtime=self.buildtime,
         )
         self.nixpkgs_meta_source = source
         if df_meta is None or df_meta.empty:
             if source.message:
-                LOG.info("%s", source.message)
-            if source.path:
-                LOG.warning(
-                    "Failed reading nix meta information: "
-                    "SBOM will include only minimum set of attributes"
-                )
+                if source.method == "flake-meta":
+                    LOG.warning("%s", source.message)
+                else:
+                    LOG.info("%s", source.message)
             else:
                 LOG.info(
                     "Skipping nix meta information: "

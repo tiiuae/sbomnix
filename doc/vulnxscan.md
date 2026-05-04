@@ -248,7 +248,7 @@ Consider the following example, using [ghaf](https://github.com/tiiuae/ghaf) as 
 #               superset of runtime dependencies.
 #  --whitelist: Use 'manual_analysis.csv' as a whitelist file.
 #  --triage   : Help manual analysis by querying version info from repology.org.
-$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage
+$ vulnxscan github:tiiuae/ghaf/main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage
 INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
 INFO     CVE-2023-27371 for 'libmicrohttpd' is patched with: ['/nix/store/l53sq07v6hghm7cchcjbrwyvjyjag06r-CVE-2023-27371.patch']
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
@@ -298,7 +298,7 @@ Consider the following example, using the same Ghaf target as earlier:
 
 ```bash
 # Run vulnscan with --triage and --nixprs
-$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage --nixprs
+$ vulnxscan github:tiiuae/ghaf/main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage --nixprs
 INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
 ...
 Potential vulnerabilities impacting version_local:

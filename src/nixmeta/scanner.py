@@ -6,31 +6,16 @@
 """Summarize nixpkgs meta-attributes"""
 
 import pathlib
-import subprocess
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
 from common.df import df_from_csv_file, df_to_csv_file
-from common.log import LOG, LOG_SPAM
+from common.log import LOG
 from common.proc import exec_cmd, nix_cmd
-from nixmeta.flake_metadata import get_flake_metadata, nixref_to_nixpkgs_path
 from nixmeta.metadata_json import parse_json_metadata
 
 ###############################################################################
-
-
-def _run_nix_env_metadata(cmd, stdout):
-    """Run nix-env metadata scan while keeping successful eval warnings quiet."""
-    ret = subprocess.run(
-        cmd,
-        encoding="utf-8",
-        check=True,
-        stdout=stdout,
-        stderr=subprocess.PIPE,
-    )
-    if ret.stderr:
-        LOG.debug("nix-env metadata stderr:\n%s", ret.stderr.strip())
 
 
 class NixMetaScanner:
@@ -38,63 +23,69 @@ class NixMetaScanner:
 
     def __init__(self):
         self.df_meta = None
+        self._had_failures = False
 
-    def scan(self, nixref):
-        """
-        Scan nixpkgs meta-info using nixpkgs version pinned in nixref;
-        nixref can be a nix store path, flakeref or dynamical attribute set.
-        """
-        nixpkgs_path = nixref_to_nixpkgs_path(
-            nixref,
-            get_flake_metadata_fn=lambda flakeref: get_flake_metadata(
-                flakeref,
-                exec_cmd_fn=exec_cmd,
-                nix_cmd_fn=nix_cmd,
-                log=LOG,
-            ),
-            log=LOG,
-            log_spam=LOG_SPAM,
-        )
-        if not nixpkgs_path:
-            # try format which is understood by nix-env:
-            #   https://ianthehenry.com/posts/how-to-learn-nix/chipping-away-at-flakes/
-            # ownpkgs-nix-env.nix:
-            #   { ... }:
-            #     (builtins.getFlake "/tmp/ownpkgs-special-unstable").
-            #     outputs.packages.${builtins.currentSystem}
-            # and execute
-            #   NIX_PATH="nixpkgs=/tmp/ownpkgs-special-unstable/ownpkgs-nix-env.nix"
-            #   sbomnix /nix/store/outputpath-for-ownpkgs-special-unstable-flake-output
-            nixpkgs_path = pathlib.Path(nixref)
-        self.scan_path(nixpkgs_path)
+    @property
+    def had_failures(self):
+        """True if at least one batch eval failed during the last scan_store_names call."""
+        return self._had_failures
 
-    def scan_path(self, nixpkgs_path):
-        """Scan nixpkgs meta-info using an already resolved nixpkgs path."""
-        nixpkgs_path = pathlib.Path(nixpkgs_path)
-        if not nixpkgs_path.exists():
-            LOG.warning("Nixpkgs not in nix store: %s", nixpkgs_path.as_posix())
+    def scan_store_names(self, names, *, impure=False, batch_size=2000, pkgs_expr=None):
+        """Look up nixpkgs metadata for the given list of store-path names."""
+        self._had_failures = False
+        if not names or pkgs_expr is None:
             return
-        LOG.debug("nixpkgs: %s", nixpkgs_path)
-        self._read_nixpkgs_meta(nixpkgs_path)
-
-    def scan_expression(self, expression, *, impure=False):
-        """Scan nixpkgs meta-info using an expression returning a package set."""
-        prefix = "nixmeta_expr_"
-        suffix = ".nix"
-        with NamedTemporaryFile(
-            mode="w",
-            delete=True,
-            encoding="utf-8",
-            prefix=prefix,
-            suffix=suffix,
-        ) as f:
-            f.write(expression)
-            f.flush()
-            self._read_nixpkgs_meta(
-                pathlib.Path(f.name),
-                enable_flakes=True,
+        meta_nix = pathlib.Path(__file__).parent / "meta.nix"
+        frames = []
+        saw_success = False
+        for i in range(0, len(names), batch_size):
+            batch = names[i : i + batch_size]
+            # Store-path names are alphanumeric + [-_.+?=], safe to embed without escaping.
+            names_nix = " ".join(f'"{n}"' for n in batch)
+            pkgs_arg = f" pkgs = {pkgs_expr};"
+            apply_expr = f"f: f {{ names = [{names_nix}];{pkgs_arg} }}"
+            cmd = nix_cmd(
+                "eval",
+                "--json",
+                "--file",
+                str(meta_nix),
+                "--apply",
+                apply_expr,
                 impure=impure,
             )
+            ret = exec_cmd(
+                cmd, raise_on_error=False, return_error=True, log_error=False
+            )
+            if ret is None or ret.returncode != 0:
+                self._had_failures = True
+                LOG.warning(
+                    "meta.nix eval failed for batch of %d names (offset %d); "
+                    "metadata for those packages will be missing",
+                    len(batch),
+                    i,
+                )
+                continue
+            saw_success = True
+            prefix, suffix = "nixmeta_names_", ".json"
+            with NamedTemporaryFile(
+                mode="w",
+                delete=True,
+                encoding="utf-8",
+                prefix=prefix,
+                suffix=suffix,
+            ) as f:
+                f.write(ret.stdout)
+                f.flush()
+                df = parse_json_metadata(f.name, log=LOG)
+                if df is not None and not df.empty:
+                    frames.append(df)
+        if frames:
+            LOG.info("Parsing nixpkgs metadata from meta.nix output")
+            self.df_meta = pd.concat(frames, ignore_index=True)
+            self._drop_duplicates()
+        elif saw_success:
+            # Distinguish a successful lookup with zero matches from an eval failure.
+            self.df_meta = pd.DataFrame()
 
     def to_csv(self, csv_path, append=False):
         """Export meta-info to a csv file"""
@@ -112,36 +103,6 @@ class NixMetaScanner:
     def to_df(self):
         """Return meta-info as dataframe"""
         return self.df_meta
-
-    def _read_nixpkgs_meta(
-        self,
-        nixpkgs_path,
-        *,
-        enable_flakes=False,
-        impure=False,
-    ):
-        prefix = "nixmeta_"
-        suffix = ".json"
-        with NamedTemporaryFile(delete=True, prefix=prefix, suffix=suffix) as f:
-            LOG.info("Reading nixpkgs metadata from '%s'", nixpkgs_path.as_posix())
-            cmd = [
-                "nix-env",
-                "-qa",
-                "--meta",
-                "--json",
-                "-f",
-                f"{nixpkgs_path.as_posix()}",
-            ]
-            if enable_flakes:
-                cmd.extend(["--option", "experimental-features", "nix-command flakes"])
-            if impure:
-                cmd.append("--impure")
-            cmd.extend(["--arg", "config", "{allowAliases=false;}"])
-            _run_nix_env_metadata(cmd, stdout=f)
-            LOG.debug("Generated meta.json: %s", f.name)
-            LOG.info("Parsing nixpkgs metadata")
-            self.df_meta = parse_json_metadata(f.name, log=LOG)
-            self._drop_duplicates()
 
     def _drop_duplicates(self):
         if self.df_meta is None or self.df_meta.empty:

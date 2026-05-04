@@ -9,7 +9,6 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 This repository is home to various command line tools and Python libraries that aim to help with software supply chain challenges:
 - [`sbomnix`](#generate-sbom) is a utility that generates SBOMs given a [Nix](https://nixos.org/) flake reference or store path.
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) packages.
-- [`nixmeta`](./doc/nixmeta.md) summarizes nixpkgs meta-attributes from the given nixpkgs version.
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
 - [`repology_cli`](./doc/repology_cli.md) and [`repology_cve`](./doc/repology_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
@@ -35,7 +34,6 @@ Table of Contents
    * [Generate SBOM Based on Derivation File or Out-path](#generate-sbom-based-on-derivation-file-or-out-path)
    * [Generate SBOM Including Buildtime Dependencies](#generate-sbom-including-buildtime-dependencies)
    * [Generate SBOM Based on a Store Path or Result Symlink](#generate-sbom-based-on-a-store-path-or-result-symlink)
-   * [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection)
    * [Visualize Package Dependencies](#visualize-package-dependencies)
 * [Contribute](#contribute)
 * [License](#license)
@@ -71,7 +69,7 @@ $ cd sbomnix
 $ nix develop
 ```
 
-The devshell adds all CLI entry points (`sbomnix`, `nixgraph`, `nixmeta`, `vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`, `provenance`) to `PATH`. They run against the local source tree, so any edits are picked up immediately without reinstalling.
+The devshell adds all CLI entry points (`sbomnix`, `nixgraph`, `vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`, `provenance`) to `PATH`. They run against the local source tree, so any edits are picked up immediately without reinstalling.
 
 All tools support a consistent verbosity flag: no flag or `--verbose=0`
 shows INFO output, `-v` or `--verbose=1` enables VERBOSE progress
@@ -99,11 +97,21 @@ In the below examples, we use Nix package `wget` as an example target, referred 
 #### Generate SBOM Based on Flake Reference
 `sbomnix` accepts [flake references](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake.html#flake-references) as targets:
 ```bash
-$ sbomnix github:NixOS/nixpkgs?ref=nixos-unstable#wget
+$ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget
 ```
+Use `--impure` when the target is a local or environment-dependent flake that
+requires impure Nix evaluation. `sbomnix` forwards the flag to both target
+resolution and nixpkgs metadata lookup.
 
 #### Generate SBOM Based on Derivation File or Out-path
-Flake references are the recommended target for `sbomnix`. When the target is a flake reference, `sbomnix` can resolve the nixpkgs version used to build the package and enrich the SBOM with metadata such as descriptions, licenses, maintainers, and homepage links. When the target is a store path, there is no information about which nixpkgs version produced it, so metadata enrichment is skipped by default; see [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection).
+Flake references are the recommended target for `sbomnix`. When the target is a flake reference, `sbomnix` walks the dependency graph with `meta.nix` and enriches the SBOM with metadata such as descriptions, licenses, maintainers, and homepage links — including packages from sub-package-sets like `haskellPackages` and `python3Packages`. When the target is a store path, metadata enrichment is skipped.
+
+When metadata lookup runs, `sbomnix` also records the selected nixpkgs source
+in the output SBOM. CycloneDX exports document properties and SPDX exports a
+document comment with fields such as `nixpkgs:metadata_source_method`,
+`nixpkgs:flakeref`, `nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:version`, and
+`nixpkgs:message`. For the full lookup pipeline and source-selection rules,
+see [nixpkgs metadata lookup](./doc/nixpkgs_meta.md).
 
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
 Notice: determining the target runtime dependencies in Nix requires building the target.
@@ -135,30 +143,7 @@ $ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget --buildtime
 ```bash
 $ sbomnix /path/to/result
 ```
-Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped by default. Pass `--meta-nixpkgs` to supply a nixpkgs source explicitly, or see [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection).
-
-#### Nixpkgs Metadata Source Selection
-`sbomnix` enriches packages with nixpkgs metadata, such as descriptions,
-licenses, maintainers, and homepage links, when it can select a nixpkgs
-source that is tied to the target.
-
-For flakeref targets, `sbomnix` uses the target flake context. NixOS
-toplevel flakerefs are handled through the selected NixOS package set, so
-overlays, package overrides, nixpkgs config, and system-specific package-set
-changes can be represented.
-
-Store-path targets skip nixpkgs metadata by default; pass `--meta-nixpkgs` to
-choose the source explicitly.
-
-`--meta-nixpkgs <flakeref-or-path>` scans an explicit nixpkgs source.
-`--meta-nixpkgs nix-path` scans the `nixpkgs=` entry from `NIX_PATH` as an
-explicit opt-in source. `--exclude-meta` disables this enrichment and cannot be
-combined with `--meta-nixpkgs`.
-
-CycloneDX and SPDX outputs record the selected metadata source in document
-metadata, including fields such as `nixpkgs:metadata_source_method`,
-`nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:flakeref`, `nixpkgs:version`, and
-`nixpkgs:message`.
+Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped. Use a flakeref target to get metadata. The output SBOM still records that no automatic nixpkgs metadata source was available.
 
 #### Visualize Package Dependencies
 `sbomnix` uses structured Nix JSON to find package dependencies where
