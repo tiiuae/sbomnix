@@ -555,22 +555,15 @@ def test_plain_nixos_configuration_attrset_uses_flake_meta(monkeypatch):
     assert "nixpkgs" in source.message.lower()
 
 
-def test_nixos_config_shorthand_flakeref_uses_config_pkgs(monkeypatch):
-    """ghaf#hostname → NixOS config probe succeeds → pkgs from nixosConfigurations."""
+def test_plain_flakeref_does_not_probe_nixos_configuration_pkgs(monkeypatch):
+    """Bare flake attrs keep the generic flake import path without config probing."""
     source_path = "/nix/store/abc-ghaf-src"
-    scanned = []
-    fake_df = SimpleNamespace(empty=False)
     locked_ref = f"path:{source_path}?narHash=sha256-ghaf"
-    pkgs_path_ref = (
-        f'{locked_ref}#nixosConfigurations."lenovo-x1-carbon-gen11-debug".pkgs.path'
-    )
+    eval_raw_calls = []
 
     def fake_exec_cmd(cmd, **_kwargs):
-        if cmd[1:3] == ["eval", "--raw"] and cmd[3] == pkgs_path_ref:
-            return SimpleNamespace(
-                returncode=0, stdout="/nix/store/abc-nixpkgs-src", stderr=""
-            )
         if cmd[1:3] == ["eval", "--raw"]:
+            eval_raw_calls.append(cmd)
             return SimpleNamespace(returncode=1, stdout="", stderr="")
         if cmd[1:4] == ["flake", "metadata", "/home/user/ghaf"]:
             return SimpleNamespace(
@@ -587,32 +580,20 @@ def test_nixos_config_shorthand_flakeref_uses_config_pkgs(monkeypatch):
         lambda *args, impure=False: ["nix", *args] + (["--impure"] if impure else []),
     )
     monkeypatch.setattr(sbomnix_meta_source, "exec_cmd", fake_exec_cmd)
-    monkeypatch.setattr(
-        sbomnix_meta.Meta,
-        "_scan_store_names",
-        lambda self, names, *, cache_key=None, impure=False, pkgs_expr=None: (
-            scanned.append((names, pkgs_expr)) or fake_df
-        ),
+    source = (
+        sbomnix_meta_source.NixpkgsMetaSourceResolver().resolve_flakeref_lock_source(
+            "/home/user/ghaf#lenovo-x1-carbon-gen11-debug"
+        )
     )
 
-    df_meta, source = sbomnix_meta.Meta().get_nixpkgs_meta_with_source(
-        target_path="/nix/store/target",
-        flakeref="/home/user/ghaf#lenovo-x1-carbon-gen11-debug",
-        original_ref="/home/user/ghaf#lenovo-x1-carbon-gen11-debug",
-        store_names=_NAMES,
-    )
-
-    expected_pkgs = (
-        f"(builtins.getFlake {json.dumps(locked_ref)})"
-        '.nixosConfigurations."lenovo-x1-carbon-gen11-debug".pkgs'
-    )
-    assert df_meta is fake_df
+    assert eval_raw_calls == []
     assert source.method == "flake-meta"
-    assert source.flakeref == pkgs_path_ref
-    assert source.path == "/nix/store/abc-nixpkgs-src"
-    assert source.pkgs_expression == expected_pkgs
-    assert len(scanned) == 1
-    assert scanned[0][1] == expected_pkgs
+    assert source.flakeref == locked_ref
+    assert source.path == source_path
+    assert (
+        source.pkgs_expression
+        == f"import (builtins.getFlake {json.dumps(locked_ref)}) {{}}"
+    )
 
 
 def test_flake_meta_no_pkgs_expression_returns_message():
@@ -1038,7 +1019,7 @@ def test_resolve_flakeref_lock_source_caches_flake_metadata_and_result(monkeypat
 
     assert first is second
     assert len(metadata_calls) == 1
-    assert len(eval_raw_calls) == 1
+    assert len(eval_raw_calls) == 0
 
 
 def test_third_party_flake_lock_graph_resolution(monkeypatch):

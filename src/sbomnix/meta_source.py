@@ -97,34 +97,17 @@ class NixpkgsMetaSourceResolver:
         pkgs_expression = None
         source_kwargs = {"flakeref": stable or nixref}
         if stable:
-            # Probe whether the attr is a NixOS configuration name and use its
-            # pkgs. NixOS configuration names are always bare identifiers, so
-            # dotted attr paths (e.g. "haskellPackages.vector") are excluded
-            # from the probe and fall through to the lock-graph path.
-            if self._should_probe_nixos_pkgs_path(flake_part, attr_part, meta_json):
-                quoted = quote_nix_attr_segment(attr_part)
-                pkgs_path_ref = f"{stable}#nixosConfigurations.{quoted}.pkgs.path"
-                pkgs_path = self._cached_nix_eval_raw(pkgs_path_ref, impure=impure)
-                if pkgs_path:
-                    pkgs_expression = self._nixos_pkgs_expression(stable, attr_part)
-                    source_kwargs = {
-                        "flakeref": pkgs_path_ref,
-                        "path": pkgs_path,
-                        "version": read_nixpkgs_version(pkgs_path),
-                        "message": "Scanning evaluated NixOS package set from flakeref",
-                    }
             # Try to resolve nixpkgs from the flake's lock graph. This handles
             # third-party flakes that pin nixpkgs as an input and preserves the
             # exact source details for SBOM export.
-            if pkgs_expression is None:
-                locked_source = self._locked_nixpkgs_source(
-                    stable,
-                    meta_json=meta_json,
-                    impure=impure,
-                )
-                if locked_source is not None:
-                    pkgs_expression = locked_source.pop("pkgs_expression")
-                    source_kwargs = locked_source
+            locked_source = self._locked_nixpkgs_source(
+                stable,
+                meta_json=meta_json,
+                impure=impure,
+            )
+            if locked_source is not None:
+                pkgs_expression = locked_source.pop("pkgs_expression")
+                source_kwargs = locked_source
             # Final fallback: import the flake directly. Works when the target
             # itself is nixpkgs; for other flakes the eval will fail and the scan
             # is skipped, matching pre-existing behaviour.
@@ -518,20 +501,6 @@ class NixpkgsMetaSourceResolver:
         return cls._locked_flake_ref_from_metadata(flake_part, impure=impure)
 
     @classmethod
-    def _nixos_pkgs_from_attr(cls, stable, attr, *, impure=False):
-        """Return a pkgs expression by probing nixosConfigurations.ATTR.pkgs.
-
-        This handles targets like "ghaf#lenovo-x1-carbon-gen11-debug" where
-        ATTR is a NixOS configuration name in the flake.  Returns None when
-        the configuration or its pkgs attribute does not exist.
-        """
-        quoted = quote_nix_attr_segment(attr)
-        pkgs_path_ref = f"{stable}#nixosConfigurations.{quoted}.pkgs.path"
-        if cls._nix_eval_raw(pkgs_path_ref, impure=impure):
-            return cls._nixos_pkgs_expression(stable, attr)
-        return None
-
-    @classmethod
     def _flake_meta_cache_key(cls, flake_str, *, impure=False):
         flake_part, _, attr_part = flake_str.partition("#")
         stable = cls._stable_flake_ref(flake_part, impure=impure)
@@ -578,17 +547,6 @@ class NixpkgsMetaSourceResolver:
         if cls._is_existing_local_flake_ref(flake):
             return True
         return re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", flake or "") is not None
-
-    @classmethod
-    def _should_probe_nixos_pkgs_path(cls, flake_part, attr_part, meta_json):
-        """Return True when the attr likely denotes a shorthand NixOS config."""
-        if not attr_part or "." in attr_part:
-            return False
-        if meta_json is not None and cls._is_nixpkgs_flake(meta_json):
-            return False
-        if cls._is_existing_local_flake_ref(flake_part):
-            return True
-        return any(ch in attr_part for ch in '-_:"')
 
     @staticmethod
     def _is_existing_local_flake_ref(flake):
