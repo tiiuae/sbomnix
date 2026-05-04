@@ -912,6 +912,92 @@ def test_dotted_attr_flakeref_skips_nixos_probe(monkeypatch):
     )
 
 
+def test_nixpkgs_package_attr_skips_nixos_probe(monkeypatch):
+    """Simple nixpkgs package attrs must not trigger the NixOS config probe."""
+    source_path = "/nix/store/abc-nixpkgs-src"
+    eval_raw_calls = []
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1:3] == ["eval", "--raw"]:
+            eval_raw_calls.append(cmd)
+            return SimpleNamespace(returncode=1, stdout="", stderr="")
+        return SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    "description": "A collection of packages for the Nix package manager",
+                    "path": source_path,
+                    "locked": {
+                        "owner": "NixOS",
+                        "repo": "nixpkgs",
+                        "narHash": "sha256-abc",
+                    },
+                }
+            ),
+            returncode=0,
+        )
+
+    monkeypatch.setattr(
+        sbomnix_meta_source,
+        "nix_cmd",
+        lambda *args, impure=False: ["nix", *args] + (["--impure"] if impure else []),
+    )
+    monkeypatch.setattr(sbomnix_meta_source, "exec_cmd", fake_exec_cmd)
+
+    source = (
+        sbomnix_meta_source.NixpkgsMetaSourceResolver().resolve_flakeref_lock_source(
+            "github:NixOS/nixpkgs/nixos-unstable#git"
+        )
+    )
+
+    assert eval_raw_calls == [], "NixOS config probe must not fire for nixpkgs attrs"
+    assert source.pkgs_expression is not None
+    assert "nixosConfigurations" not in source.pkgs_expression
+    locked_ref = f"path:{source_path}?narHash=sha256-abc"
+    assert source.flakeref == locked_ref
+    assert (
+        source.pkgs_expression
+        == f"import (builtins.getFlake {json.dumps(locked_ref)}) {{}}"
+    )
+
+
+def test_resolve_flakeref_lock_source_caches_flake_metadata_and_result(monkeypatch):
+    """Repeated resolution reuses the cached metadata and final source object."""
+    metadata_calls = []
+    eval_raw_calls = []
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1:3] == ["eval", "--raw"]:
+            eval_raw_calls.append(cmd)
+            return SimpleNamespace(returncode=1, stdout="", stderr="")
+        if cmd[1:3] == ["flake", "metadata"]:
+            metadata_calls.append(cmd)
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "path": "/nix/store/abc-flake-src",
+                        "locked": {"narHash": "sha256-xyz"},
+                    }
+                ),
+                returncode=0,
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr(
+        sbomnix_meta_source,
+        "nix_cmd",
+        lambda *args, impure=False: ["nix", *args] + (["--impure"] if impure else []),
+    )
+    monkeypatch.setattr(sbomnix_meta_source, "exec_cmd", fake_exec_cmd)
+
+    resolver = sbomnix_meta_source.NixpkgsMetaSourceResolver()
+    first = resolver.resolve_flakeref_lock_source(".#target")
+    second = resolver.resolve_flakeref_lock_source(".#target")
+
+    assert first is second
+    assert len(metadata_calls) == 1
+    assert len(eval_raw_calls) == 1
+
+
 def test_third_party_flake_lock_graph_resolution(monkeypatch):
     """Third-party flake with root.inputs.nixpkgs → pkgs from the pinned nixpkgs."""
     source_path = "/nix/store/abc-ghaf-src"
