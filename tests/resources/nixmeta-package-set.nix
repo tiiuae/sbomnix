@@ -105,6 +105,8 @@ let
       version,
       description,
       homepage,
+      licenseShort ? "Apache-2.0",
+      licenseSpdxId ? "Apache-2.0",
     }:
     builtins.derivation {
       inherit name pname version;
@@ -117,8 +119,8 @@ let
       meta = {
         inherit description homepage;
         license = {
-          shortName = "Apache-2.0";
-          spdxId = "Apache-2.0";
+          shortName = licenseShort;
+          spdxId = licenseSpdxId;
         };
       };
     };
@@ -126,11 +128,101 @@ in
 {
   inherit lib;
 
-  # Empty sub-package sets (meta.nix probes these via _safeSet).
+  # Mostly empty sub-package sets; a few contain targeted fixtures used by
+  # meta.nix unit tests.
   haskellPackages = { };
-  python3Packages = { };
-  perlPackages = { };
-  rubyPackages = { };
+  python3Packages = {
+    gyp = mkPackage {
+      name = "gyp-0.1";
+      pname = "gyp";
+      version = "0.1";
+      description = "Fixture: python package reached via unstable suffix strip";
+      homepage = "https://example.test/gyp";
+    };
+  };
+  perlPackages = {
+    CGI = mkPackage {
+      name = "perl-CGI-1.0";
+      pname = "CGI";
+      version = "1.0";
+      description = "Fixture: wrong Perl suffix-strip target";
+      homepage = "https://example.test/perl-cgi";
+      licenseShort = "Wrong-CGI";
+      licenseSpdxId = "LicenseRef-Wrong-CGI";
+    };
+    CGIFast = mkPackage {
+      name = "perl-CGI-Fast-2.16";
+      pname = "CGI-Fast";
+      version = "2.16";
+      description = "Fixture: correct Perl dash-removed lookup";
+      homepage = "https://example.test/perl-cgi-fast";
+      licenseShort = "Correct-CGI-Fast";
+      licenseSpdxId = "LicenseRef-Correct-CGI-Fast";
+    };
+    Encode = mkPackage {
+      name = "perl-Encode-1.0";
+      pname = "Encode";
+      version = "1.0";
+      description = "Fixture: wrong Perl suffix-strip target for Encode-Locale";
+      homepage = "https://example.test/perl-encode";
+      licenseShort = "Wrong-Encode";
+      licenseSpdxId = "LicenseRef-Wrong-Encode";
+    };
+    EncodeLocale = mkPackage {
+      name = "perl-Encode-Locale-1.05";
+      pname = "Encode-Locale";
+      version = "1.05";
+      description = "Fixture: correct Perl dash-removed lookup for Encode-Locale";
+      homepage = "https://example.test/perl-encode-locale";
+      licenseShort = "Correct-Encode-Locale";
+      licenseSpdxId = "LicenseRef-Correct-Encode-Locale";
+    };
+    FCGI = mkPackage {
+      name = "perl-FCGI-1.0";
+      pname = "FCGI";
+      version = "1.0";
+      description = "Fixture: wrong Perl suffix-strip target";
+      homepage = "https://example.test/perl-fcgi";
+      licenseShort = "Wrong-FCGI";
+      licenseSpdxId = "LicenseRef-Wrong-FCGI";
+    };
+    FCGIProcManager = mkPackage {
+      name = "perl-FCGI-ProcManager-0.28";
+      pname = "FCGI-ProcManager";
+      version = "0.28";
+      description = "Fixture: correct Perl dash-removed lookup";
+      homepage = "https://example.test/perl-fcgi-procmanager";
+      licenseShort = "Correct-FCGI-ProcManager";
+      licenseSpdxId = "LicenseRef-Correct-FCGI-ProcManager";
+    };
+    IO = mkPackage {
+      name = "perl-IO-1.0";
+      pname = "IO";
+      version = "1.0";
+      description = "Fixture: wrong Perl suffix-strip target for IO-HTML";
+      homepage = "https://example.test/perl-io";
+      licenseShort = "Wrong-IO";
+      licenseSpdxId = "LicenseRef-Wrong-IO";
+    };
+    IOHTML = mkPackage {
+      name = "perl-IO-HTML-1.004";
+      pname = "IO-HTML";
+      version = "1.004";
+      description = "Fixture: correct Perl dash-removed lookup for IO-HTML";
+      homepage = "https://example.test/perl-io-html";
+      licenseShort = "Correct-IO-HTML";
+      licenseSpdxId = "LicenseRef-Correct-IO-HTML";
+    };
+  };
+  rubyPackages = {
+    kramdown = mkPackage {
+      name = "kramdown-2.4.0";
+      pname = "kramdown";
+      version = "2.4.0";
+      description = "Fixture: ruby package reached via ruby prefix extraction";
+      homepage = "https://example.test/kramdown";
+    };
+  };
   ocamlPackages = { };
   rPackages = { };
   nodePackages = { };
@@ -182,6 +274,15 @@ in
     homepage = "https://example.test/test-digitsuffix";
   };
 
+  # underscore-major-version fallback: pname "libsoup", attr "libsoup_3"
+  libsoup_3 = mkPackage {
+    name = "libsoup-3.6.6";
+    pname = "libsoup";
+    version = "3.6.6";
+    description = "Fixture: underscore major version in attr name";
+    homepage = "https://example.test/libsoup";
+  };
+
   # dot→dash fallback: pname "test.dot", attr "test-dot"
   "test-dot" = mkPackage {
     name = "test-dot-1.0";
@@ -198,5 +299,24 @@ in
     version = "1.0";
     description = "Fixture: plus sign in pname";
     homepage = "https://example.test/test86plus";
+  };
+
+  # leading-digit pname fallback: pname "3proxy", attr "_3proxy"
+  "_3proxy" = mkPackage {
+    name = "3proxy-0.9.6";
+    pname = "3proxy";
+    version = "0.9.6";
+    description = "Fixture: leading-digit pname stored under underscore attr";
+    homepage = "https://example.test/3proxy";
+    licenseShort = "BSD-2-Clause";
+    licenseSpdxId = "BSD-2-Clause";
+  };
+
+  cve = mkPackage {
+    name = "cve-1.0";
+    pname = "cve";
+    version = "1.0";
+    description = "Fixture: would be a false positive for CVE patch files";
+    homepage = "https://example.test/cve";
   };
 }

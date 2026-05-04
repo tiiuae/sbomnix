@@ -82,6 +82,7 @@ let
   #   python3.13-requests-2.31.0   → requests    (python3Packages prefix)
   #   perl5.42.0-CGI-4.59          → CGI         (perlPackages, 3-part version)
   #   perl5.40-XML-Simple-1.0      → XML-Simple  (perlPackages, 2-part version)
+  #   ruby3.3-kramdown-2.4.0       → kramdown    (rubyPackages prefix)
   #   alsa-utils-1.2.14            → alsa-utils  (standard)
   #   hello-2.12.3                 → hello
   #   glibc-2.42-51                → glibc       (not glibc-2.42, greedy trap)
@@ -99,6 +100,7 @@ let
       mPy = builtins.match "python[23][.][0-9]+-(${_pnamePat})-[0-9].*" name;
       mPerl3 = builtins.match "perl[0-9]+[.][0-9]+[.][0-9]+-(${_pnamePat})-[0-9].*" name;
       mPerl = builtins.match "perl[0-9]+[.][0-9]+-(${_pnamePat})-[0-9].*" name;
+      mRuby = builtins.match "ruby[0-9]+[.][0-9]+-(${_pnamePat})-[0-9].*" name;
       # Stops the pname at the first dash-followed-by-digit so that names like
       # "glibc-2.42-51" yield "glibc" rather than "glibc-2.42".  Dash-segments
       # that begin with a letter (e.g. "alsa-utils", "bash-interactive") are
@@ -112,6 +114,8 @@ let
       lib.head mPerl3
     else if mPerl != null then
       lib.head mPerl
+    else if mRuby != null then
+      lib.head mRuby
     else if mStd != null then
       lib.head mStd
     else if mBare != null then
@@ -145,44 +149,65 @@ let
     in
     if m != null then lib.head m else null;
 
+  # Patch files appear in build-time closures but are not nixpkgs packages.
+  _isPatchLikeName = name: builtins.match ".*[.]patch([.][a-zA-Z0-9]+)?$" name != null;
+
   # Find a derivation whose pname matches.  Lookup order:
   #   1. Exact pname in the language-prefixed search sets
-  #   2. Strip trailing dash-word suffixes (up to two levels) in pkgs only:
+  #   2. Strip trailing dash-word suffixes (up to two levels). For python/perl/ruby
+  #      prefixes, also try the language sub-set before pkgs:
+  #      "python3.13-gyp-unstable-2024-02-07" → python3Packages.gyp
+  #      "ruby3.3-kramdown-parser-gfm-1.1.0" → rubyPackages.kramdown-parser-gfm
+  #      Otherwise, strip only in pkgs:
   #      "bash-interactive" → "bash", "ghostscript-with-X" → "ghostscript"
-  #      (restricted to pkgs to prevent language sub-sets from producing
+  #      (restricted for non-language names to prevent language sub-sets from producing
   #      false positives, e.g. "speech-dispatcher" stripped to "speech"
   #      matching rPackages.speech)
   #   3. Named convention fallbacks (Perl, C++, GTK, webkitgtk, dash→underscore)
   #   4. Attr-name divergence fallbacks: lowercase, dash-removed, digit-suffix,
-  #      dot→dash, plus→"plus" — all performed against the language-prefixed
-  #      sets to preserve correct package-set disambiguation
+  #      underscore-major-version, dot→dash, plus→"plus" — all performed against
+  #      the language-prefixed sets to preserve correct package-set disambiguation
   _findByStoreName =
     name:
     let
       pname = _pnameFromName name;
       sets = _prefixedSearchSets name;
+      isPerlName =
+        builtins.match "perl[0-9]+[.][0-9]+[.][0-9]+-.+" name != null
+        || builtins.match "perl[0-9]+[.][0-9]+-.+" name != null;
+      stripSets =
+        if
+          builtins.match "python[23][.][0-9]+-.+" name != null
+          || builtins.match "ruby[0-9]+[.][0-9]+-.+" name != null
+        then
+          sets
+        else
+          [ pkgs ];
     in
-    if pname == null then
+    if _isPatchLikeName name || pname == null then
       null
     else
       let
         r0 = _lookupInSets pname sets;
-        # Suffix-strip cascade: restricted to pkgs to avoid false positives
-        # from language sub-sets matching unrelated top-level name fragments.
-        p1 = if r0 == null then _stripSuffix pname else null;
-        r1 = if p1 != null then _lookupPname p1 pkgs else null;
-        p2 = if r1 == null && p1 != null then _stripSuffix p1 else null;
-        r2 = if p2 != null then _lookupPname p2 pkgs else null;
-        allFailed = r0 == null && r1 == null && r2 == null;
-        # Perl: "Authen-SASL" → perlPackages.AuthenSASL (dashes removed)
+        # Perl: "Authen-SASL" → perlPackages.AuthenSASL (dashes removed).
+        # Try this before suffix stripping to avoid false positives like
+        # "CGI-Fast" → "CGI" and "IO-HTML" → "IO".
         rPerl =
-          if allFailed then
+          if isPerlName && r0 == null then
             let
               noDash = lib.replaceStrings [ "-" ] [ "" ] pname;
             in
             if noDash != pname then _lookupPname noDash _perlPkgs else null
           else
             null;
+        # Suffix-strip cascade: use the language sub-set only for explicitly
+        # language-prefixed names, otherwise restrict to pkgs to avoid false
+        # positives from unrelated top-level name fragments.
+        p1 = if r0 == null && rPerl == null then _stripSuffix pname else null;
+        r1 = if p1 != null then _lookupInSets p1 stripSets else null;
+        p2 = if r1 == null && p1 != null then _stripSuffix p1 else null;
+        r2 = if p2 != null then _lookupInSets p2 stripSets else null;
+        allFailed = r0 == null && r1 == null && r2 == null;
         # C++ libs: "libsigc++" → pkgs.libsigcxx, "libxml++" → pkgs.libxmlxx
         rXx =
           if allFailed && rPerl == null && lib.hasSuffix "++" pname then
@@ -232,6 +257,24 @@ let
             if lc != pname then _lookupInSets lc sets else null
           else
             null;
+        # Leading digit attrs are often underscore-prefixed in nixpkgs:
+        # "3proxy" → pkgs._3proxy
+        rLeadingDigit =
+          if
+            allFailed
+            && rPerl == null
+            && rXx == null
+            && rGtk == null
+            && rWk == null
+            && rUs == null
+            && rLower == null
+          then
+            let
+              attr = if builtins.match "^[0-9].*" pname != null then "_${pname}" else null;
+            in
+            if attr != null then _lookupInSets attr sets else null
+          else
+            null;
         # Dash removed: "boehm-gc" → pkgs.boehmgc, "wireless-tools" → pkgs.wirelesstools
         rNoDash =
           if
@@ -242,6 +285,7 @@ let
             && rWk == null
             && rUs == null
             && rLower == null
+            && rLeadingDigit == null
           then
             let
               noDash = lib.replaceStrings [ "-" ] [ "" ] pname;
@@ -260,6 +304,7 @@ let
             && rWk == null
             && rUs == null
             && rLower == null
+            && rLeadingDigit == null
             && rNoDash == null
           then
             lib.findFirst (x: x != null) null (
@@ -272,6 +317,28 @@ let
             )
           else
             null;
+        # Underscore-major-version: "libsoup-3.6.6" → pkgs.libsoup_3,
+        # "spidermonkey-140.7.1" → pkgs.spidermonkey_140
+        rUnderscoreMajor =
+          if
+            allFailed
+            && rPerl == null
+            && rXx == null
+            && rGtk == null
+            && rWk == null
+            && rUs == null
+            && rLower == null
+            && rLeadingDigit == null
+            && rNoDash == null
+            && rDigit == null
+          then
+            let
+              m = builtins.match "${pname}-([0-9]+).*" name;
+              attr = if m != null then "${pname}_${lib.head m}" else null;
+            in
+            if attr != null then _lookupInSets attr sets else null
+          else
+            null;
         # Dot → dash in attr: "vid.stab" → pkgs.vid-stab
         rDotDash =
           if
@@ -282,8 +349,10 @@ let
             && rWk == null
             && rUs == null
             && rLower == null
+            && rLeadingDigit == null
             && rNoDash == null
             && rDigit == null
+            && rUnderscoreMajor == null
           then
             let
               dotDash = lib.replaceStrings [ "." ] [ "-" ] pname;
@@ -301,8 +370,10 @@ let
             && rWk == null
             && rUs == null
             && rLower == null
+            && rLeadingDigit == null
             && rNoDash == null
             && rDigit == null
+            && rUnderscoreMajor == null
             && rDotDash == null
           then
             let
@@ -330,10 +401,14 @@ let
         rUs
       else if rLower != null then
         rLower
+      else if rLeadingDigit != null then
+        rLeadingDigit
       else if rNoDash != null then
         rNoDash
       else if rDigit != null then
         rDigit
+      else if rUnderscoreMajor != null then
+        rUnderscoreMajor
       else if rDotDash != null then
         rDotDash
       else

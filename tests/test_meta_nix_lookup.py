@@ -13,9 +13,12 @@ They are fast (no network, no builds) and exercise the lookup paths in meta.nix:
   - lowercase fallback (case-divergent pnames)
   - dash-removed fallback (attr name has no dashes)
   - digit-suffix fallback (attr name has trailing digit)
+  - underscore-major-version fallback (attr name embeds major version)
   - dot→dash fallback (dot in pname maps to dash in attr)
   - plus→"plus" fallback (+ sign in pname)
   - dot-in-pname pname extraction ("test.dot-1.0" → pname "test.dot")
+  - ruby prefix extraction ("ruby3.3-kramdown-2.4.0" → pname "kramdown")
+  - language-subset suffix strip ("python3.13-gyp-unstable-..." → "gyp")
 """
 
 import json
@@ -52,6 +55,11 @@ def _license(result: dict, name: str) -> str:
     return lic.get("shortName", "")
 
 
+def _description(result: dict, name: str) -> str:
+    """Return description for *name* in the result dict."""
+    return result.get(name, {}).get("meta", {}).get("description", "")
+
+
 def test_exact_pname_lookup():
     """Standard packages with matching pname and attr name are found."""
     result = _run_meta_nix(["sbomnix-meta-first-1.0", "sbomnix-meta-second-2.0"])
@@ -83,6 +91,14 @@ def test_digit_suffix_fallback():
     )
 
 
+def test_underscore_major_version_fallback():
+    """Store name "libsoup-3.6.6": pname "libsoup", attr "libsoup_3"."""
+    result = _run_meta_nix(["libsoup-3.6.6"])
+    assert _license(result, "libsoup-3.6.6") == "Apache-2.0", (
+        'underscore-major fallback should find libsoup_3 via pname + "_" + major'
+    )
+
+
 def test_dot_to_dash_fallback():
     """Store name "test.dot-1.0": pname "test.dot", attr "test-dot"."""
     result = _run_meta_nix(["test.dot-1.0"])
@@ -97,6 +113,65 @@ def test_plus_to_plus_word_fallback():
     assert _license(result, "test86+-1.0") == "Apache-2.0", (
         'rPlus should find test86plus via replaceStrings ["+"] ["plus"]'
     )
+
+
+def test_leading_digit_pname_fallback():
+    """Store name "3proxy-0.9.6": pname "3proxy", attr "_3proxy"."""
+    result = _run_meta_nix(["3proxy-0.9.6"])
+    assert _license(result, "3proxy-0.9.6") == "BSD-2-Clause", (
+        'digit-leading pnames should try an underscore-prefixed attr like "_3proxy"'
+    )
+
+
+def test_ruby_prefix_extraction_uses_ruby_packages():
+    """Store name "ruby3.3-kramdown-2.4.0" should extract pname "kramdown"."""
+    result = _run_meta_nix(["ruby3.3-kramdown-2.4.0"])
+    assert _license(result, "ruby3.3-kramdown-2.4.0") == "Apache-2.0", (
+        "mRuby should extract kramdown and search rubyPackages first"
+    )
+    assert result.get("ruby3.3-kramdown-2.4.0", {}).get("pname") == "kramdown"
+
+
+def test_language_subset_suffix_strip_uses_prefixed_package_set():
+    """Store name "python3.13-gyp-unstable-..." should strip to python3Packages.gyp."""
+    result = _run_meta_nix(["python3.13-gyp-unstable-2024-02-07"])
+    assert _license(result, "python3.13-gyp-unstable-2024-02-07") == "Apache-2.0", (
+        "suffix stripping should search python3Packages for prefixed python names"
+    )
+    assert result.get("python3.13-gyp-unstable-2024-02-07", {}).get("pname") == "gyp"
+
+
+def test_perl_dash_removed_lookup_runs_before_suffix_strip():
+    """Perl CPAN dash-removal must win before suffix stripping can hit the wrong module."""
+    result = _run_meta_nix(
+        [
+            "perl5.42.0-CGI-Fast-2.16",
+            "perl5.42.0-FCGI-ProcManager-0.28",
+            "perl5.42.0-Encode-Locale-1.05",
+            "perl5.42.0-IO-HTML-1.004",
+        ]
+    )
+
+    assert _license(result, "perl5.42.0-CGI-Fast-2.16") == "Correct-CGI-Fast"
+    assert _license(result, "perl5.42.0-FCGI-ProcManager-0.28") == (
+        "Correct-FCGI-ProcManager"
+    )
+    assert (
+        _description(result, "perl5.42.0-Encode-Locale-1.05")
+        == "Fixture: correct Perl dash-removed lookup for Encode-Locale"
+    )
+    assert (
+        _description(result, "perl5.42.0-IO-HTML-1.004")
+        == "Fixture: correct Perl dash-removed lookup for IO-HTML"
+    )
+
+
+def test_patch_files_are_not_matched_as_packages():
+    """Build-time patch files must not resolve to unrelated nixpkgs package metadata."""
+    result = _run_meta_nix(["CVE-2019-13232-1.patch", "fix-static.patch.gz"])
+
+    assert "CVE-2019-13232-1.patch" not in result
+    assert "fix-static.patch.gz" not in result
 
 
 def test_dot_in_pname_extraction():
