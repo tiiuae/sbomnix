@@ -11,7 +11,6 @@ import pytest
 
 from common.errors import SbomnixError
 from nixgraph import main as nixgraph_main
-from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated
 from provenance import main as provenance_main
 from vulnxscan import osv as osv_cli
@@ -108,17 +107,6 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
                 vulnxscan_cli, "exit_unless_command_exists", lambda _command: None
             ),
             "resolve_nix_target",
-        ),
-        (
-            nixmeta_main,
-            SimpleNamespace(
-                flakeref="github:NixOS/nixpkgs?ref=nixos-unstable",
-                out="nixmeta.csv",
-                append=False,
-                verbose=0,
-            ),
-            lambda monkeypatch: None,
-            "exit_unless_command_exists",
         ),
         (
             provenance_main,
