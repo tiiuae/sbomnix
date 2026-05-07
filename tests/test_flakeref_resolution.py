@@ -45,7 +45,7 @@ PLAIN_MISSING_PATHS = st.lists(PATH_SEGMENTS, min_size=1, max_size=3).map(
 FLAKE_ATTRS = st.text(SAFE_PATH_CHARS, min_size=1, max_size=24)
 FLAKE_REFS = st.one_of(
     FLAKE_ATTRS.map(lambda attr: f".#{attr}"),
-    FLAKE_ATTRS.map(lambda attr: f"nixpkgs?ref=nixos-unstable#{attr}"),
+    FLAKE_ATTRS.map(lambda attr: f"nixpkgs/nixos-unstable#{attr}"),
     st.builds(
         lambda owner, repo, attr: f"github:{owner}/{repo}#{attr}",
         PATH_SEGMENTS,

@@ -53,6 +53,9 @@ provenance = "provenance.main:main"
 [tool.setuptools]
 license-files = ["LICENSES/Apache-2.0.txt", "LICENSES/BSD-3-Clause.txt"]
 
+[tool.setuptools.package-data]
+nixmeta = ["meta.nix"]
+
 [tool.setuptools.dynamic]
 version = { file = ["VERSION"] }
 

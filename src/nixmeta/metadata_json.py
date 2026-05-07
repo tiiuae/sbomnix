@@ -20,8 +20,13 @@ def parse_meta_entry(meta, key):
     elif isinstance(meta, list):
         items.extend([parse_meta_entry(item, key) for item in meta])
     else:
-        return str(meta)
+        return "" if meta is None else str(meta)
     return ";".join(list(filter(None, items)))
+
+
+def _stringify_meta_scalar(value):
+    """Normalize scalar metadata values, preserving empty strings for nulls."""
+    return "" if value is None else str(value)
 
 
 def parse_json_metadata(json_filename, *, log=LOG):
@@ -35,11 +40,21 @@ def parse_json_metadata(json_filename, *, log=LOG):
         setcol(cols.NAME, []).append(pkg.get("name", ""))
         setcol("pname", []).append(pkg.get("pname", ""))
         setcol(cols.VERSION, []).append(pkg.get("version", ""))
+        setcol("meta_ambiguous", []).append(
+            _stringify_meta_scalar(pkg.get("ambiguous", False))
+        )
+        setcol("meta_precise_needed", []).append(
+            _stringify_meta_scalar(pkg.get("preciseNeeded", False))
+        )
         meta = pkg.get("meta", {})
         setcol("meta_homepage", []).append(parse_meta_entry(meta, key="homepage"))
-        setcol("meta_unfree", []).append(meta.get("unfree", ""))
-        setcol("meta_description", []).append(meta.get("description", ""))
-        setcol("meta_position", []).append(meta.get("position", ""))
+        setcol("meta_unfree", []).append(_stringify_meta_scalar(meta.get("unfree", "")))
+        setcol("meta_description", []).append(
+            _stringify_meta_scalar(meta.get("description", ""))
+        )
+        setcol("meta_position", []).append(
+            _stringify_meta_scalar(meta.get("position", ""))
+        )
         meta_license = meta.get("license", {})
         setcol("meta_license_short", []).append(
             parse_meta_entry(meta_license, key="shortName")

@@ -6,8 +6,14 @@
 """Focused tests for nixmeta parsing helpers."""
 
 import json
+from pathlib import Path
+from types import SimpleNamespace
 
 from nixmeta import metadata_json
+from nixmeta import scanner as nixmeta_scanner
+from nixmeta.resources import meta_nix_path
+
+REPOROOT = Path(__file__).resolve().parent.parent
 
 
 def test_parse_json_metadata_flattens_nested_fields(tmp_path):
@@ -19,6 +25,8 @@ def test_parse_json_metadata_flattens_nested_fields(tmp_path):
                     "name": "hello-2.12.1",
                     "pname": "hello",
                     "version": "2.12.1",
+                    "ambiguous": True,
+                    "preciseNeeded": False,
                     "meta": {
                         "homepage": ["https://example.invalid/hello"],
                         "unfree": False,
@@ -44,6 +52,8 @@ def test_parse_json_metadata_flattens_nested_fields(tmp_path):
             "name": "hello-2.12.1",
             "pname": "hello",
             "version": "2.12.1",
+            "meta_ambiguous": "True",
+            "meta_precise_needed": "False",
             "meta_homepage": "https://example.invalid/hello",
             "meta_unfree": "False",
             "meta_description": "GNU hello",
@@ -53,3 +63,42 @@ def test_parse_json_metadata_flattens_nested_fields(tmp_path):
             "meta_maintainers_email": "maintainer@example.invalid",
         }
     ]
+
+
+def test_scan_store_names_preserves_successful_empty_result(monkeypatch):
+    """A successful meta.nix lookup with no matches must remain distinguishable."""
+    monkeypatch.setattr(
+        nixmeta_scanner,
+        "nix_cmd",
+        lambda *args, impure=False: ["nix", *args] + (["--impure"] if impure else []),
+    )
+    monkeypatch.setattr(
+        nixmeta_scanner,
+        "exec_cmd",
+        lambda cmd, **_kwargs: SimpleNamespace(returncode=0, stdout="{}", stderr=""),
+    )
+
+    scanner = nixmeta_scanner.NixMetaScanner()
+    scanner.scan_store_names(["ghaf.iso"], pkgs_expr="pkgs")
+
+    df = scanner.to_df()
+    assert df is not None
+    assert df.empty
+    assert scanner.had_failures is False
+
+
+def test_meta_nix_path_points_to_packaged_helper():
+    meta_nix = meta_nix_path()
+
+    assert meta_nix.name == "meta.nix"
+    assert meta_nix.is_file()
+    assert "Look up nixpkgs metadata for a list of store-path names." in (
+        meta_nix.read_text(encoding="utf-8")
+    )
+
+
+def test_pyproject_declares_meta_nix_as_package_data():
+    pyproject = (REPOROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "[tool.setuptools.package-data]" in pyproject
+    assert 'nixmeta = ["meta.nix"]' in pyproject

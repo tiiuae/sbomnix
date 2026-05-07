@@ -2,17 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Resolve nixpkgs metadata sources from target context and CLI options."""
+"""Resolve nixpkgs metadata sources from target context."""
 
 import json
-import os
 import pathlib
+import posixpath
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from subprocess import CalledProcessError
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlparse
 
-from common.errors import SbomnixError
 from common.flakeref import (
     NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
     parse_nixos_configuration_ref,
@@ -20,36 +19,8 @@ from common.flakeref import (
 )
 from common.log import LOG
 from common.proc import exec_cmd, nix_cmd
-from nixmeta.scanner import nixref_to_nixpkgs_path
-
-META_NIXPKGS_NIX_PATH = "nix-path"
-
-RESERVED_META_NIXPKGS_MODES = frozenset({META_NIXPKGS_NIX_PATH})
 
 SCAN_EXCEPTIONS = (KeyError, OSError, CalledProcessError, TypeError, ValueError)
-_NIXREF_RESOLUTION_EXCEPTIONS = (AttributeError, *SCAN_EXCEPTIONS)
-
-
-@dataclass(frozen=True)
-class NixpkgsMetaSource:
-    """Description of the nixpkgs source used for metadata enrichment."""
-
-    method: str
-    path: str | None = None
-    flakeref: str | None = None
-    rev: str | None = None
-    version: str | None = None
-    message: str | None = None
-    expression: str | None = None
-    expression_cache_key: str | None = None
-    expression_impure: bool = False
-
-
-def classify_meta_nixpkgs(value):
-    """Classify a --meta-nixpkgs value as a reserved mode or explicit source."""
-    if value in RESERVED_META_NIXPKGS_MODES:
-        return value
-    return "explicit"
 
 
 def read_nixpkgs_version(nixpkgs_path):
@@ -64,16 +35,19 @@ def read_nixpkgs_version(nixpkgs_path):
         return None
 
 
-def is_nix_store_path(path):
-    """Return true when path syntactically points into /nix/store."""
-    return pathlib.Path(path).as_posix().startswith("/nix/store/")
+@dataclass(frozen=True)
+class NixpkgsMetaSource:
+    """Description of the nixpkgs source used for metadata enrichment."""
 
-
-def nixpkgs_meta_source_with_path(source):
-    """Attach path-local nixpkgs version to a metadata source."""
-    if not source.path:
-        return source
-    return replace(source, version=read_nixpkgs_version(source.path))
+    method: str
+    path: str | None = None
+    flakeref: str | None = None
+    rev: str | None = None
+    version: str | None = None
+    message: str | None = None
+    expression_cache_key: str | None = None
+    expression_impure: bool = False
+    pkgs_expression: str | None = None
 
 
 class NixpkgsMetaSourceResolver:
@@ -90,85 +64,640 @@ class NixpkgsMetaSourceResolver:
         return NixpkgsMetaSource(
             method="none",
             message=(
-                "No nixpkgs metadata source was provided for store-path target. "
-                "Skipping nixpkgs metadata. Re-run with "
-                "--meta-nixpkgs <nixpkgs-flakeref-or-path> to include metadata."
+                "No nixpkgs metadata source is available for store-path targets. "
+                "Skipping nixpkgs metadata. Use a flakeref target instead."
             ),
         )
 
-    def resolve_meta_nixpkgs_option(self, meta_nixpkgs, *, target_path=None):
-        """Resolve an explicit --meta-nixpkgs source or reserved mode."""
-        LOG.debug(
-            "Resolving explicit nixpkgs metadata source for target path=%s",
-            target_path,
+    def resolve_flakeref_lock_source(self, nixref, *, impure=False):
+        """Return a flake-meta source for the given flakeref."""
+        if not nixref:
+            return NixpkgsMetaSource(method="none")
+        LOG.debug("Resolving flake-meta source for '%s'", nixref)
+        flake_part, _, attr_part = nixref.partition("#")
+        stable = self._stable_flake_ref(flake_part, impure=impure)
+        pkgs_expression = None
+        source_kwargs = {"flakeref": stable or nixref}
+        if stable:
+            # Probe whether the attr is a NixOS configuration name and use its
+            # pkgs. NixOS configuration names are always bare identifiers, so
+            # dotted attr paths (e.g. "haskellPackages.vector") are excluded
+            # from the probe and fall through to the lock-graph path.
+            if "." not in attr_part:
+                quoted = quote_nix_attr_segment(attr_part)
+                pkgs_path_ref = f"{stable}#nixosConfigurations.{quoted}.pkgs.path"
+                pkgs_path = self._nix_eval_raw(pkgs_path_ref, impure=impure)
+                if pkgs_path:
+                    pkgs_expression = self._nixos_pkgs_expression(stable, attr_part)
+                    source_kwargs = {
+                        "flakeref": pkgs_path_ref,
+                        "path": pkgs_path,
+                        "version": read_nixpkgs_version(pkgs_path),
+                        "message": "Scanning evaluated NixOS package set from flakeref",
+                    }
+            # Try to resolve nixpkgs from the flake's lock graph. This handles
+            # third-party flakes that pin nixpkgs as an input and preserves the
+            # exact source details for SBOM export.
+            if pkgs_expression is None:
+                locked_source = self._locked_nixpkgs_source(stable, impure=impure)
+                if locked_source is not None:
+                    pkgs_expression = locked_source.pop("pkgs_expression")
+                    source_kwargs = locked_source
+            # Final fallback: import the flake directly. Works when the target
+            # itself is nixpkgs; for other flakes the eval will fail and the scan
+            # is skipped, matching pre-existing behaviour.
+            if pkgs_expression is None:
+                pkgs_expression = (
+                    f"import (builtins.getFlake {json.dumps(stable)}) {{}}"
+                )
+                source_kwargs = self._source_details_from_flake_ref(stable)
+        cache_key = f"flake-meta:{stable}#{attr_part}" if stable else None
+        return NixpkgsMetaSource(
+            method="flake-meta",
+            expression_cache_key=cache_key,
+            expression_impure=impure,
+            pkgs_expression=pkgs_expression,
+            **source_kwargs,
         )
-        mode = classify_meta_nixpkgs(meta_nixpkgs)
-        if mode == META_NIXPKGS_NIX_PATH:
-            return self.resolve_nix_path_source(
-                message="NIX_PATH metadata source may not match the target",
-                required=True,
+
+    @classmethod
+    def _locked_nixpkgs_source(cls, stable, *, impure=False):
+        """Return source details for the nixpkgs input in the lock graph.
+
+        Returns a mapping containing pkgs_expression plus exportable source
+        fields. Returns None when the flake itself is nixpkgs (caller uses
+        import-flake directly), when the lock graph has no unambiguous nixpkgs
+        input, or when the locked type is not supported.
+        """
+        meta_json = cls._nix_flake_metadata(stable, impure=impure)
+        if meta_json is None:
+            return None
+        if cls._is_nixpkgs_flake(meta_json):
+            return None
+        return cls._nixpkgs_source_from_lock(meta_json)
+
+    @staticmethod
+    def _is_nixpkgs_flake(meta_json):
+        """Return True if meta_json describes nixpkgs itself."""
+        try:
+            if (
+                meta_json.get("description")
+                == "A collection of packages for the Nix package manager"
+            ):
+                return True
+            locked = meta_json.get("locked", {})
+            return locked.get("owner") == "NixOS" and locked.get("repo") == "nixpkgs"
+        except (AttributeError, TypeError):
+            return False
+
+    @staticmethod
+    def _nixpkgs_source_from_lock(meta_json):
+        """Build source details from the nixpkgs input in the flake lock graph.
+
+        Prefers root.inputs.nixpkgs; falls back to a single unambiguous
+        nixpkgs-like node.  Returns None when ambiguous or unsupported.
+        """
+        try:
+            nodes = meta_json["locks"]["nodes"]
+            root_name = meta_json["locks"]["root"]
+            root_inputs = nodes[root_name].get("inputs", {})
+        except (KeyError, TypeError, AttributeError):
+            return None
+
+        nixpkgs_input = root_inputs.get("nixpkgs")
+        if isinstance(nixpkgs_input, str):
+            node_names = [nixpkgs_input]
+        elif (
+            isinstance(nixpkgs_input, list)
+            and nixpkgs_input
+            and isinstance(nixpkgs_input[-1], str)
+        ):
+            # Lock-file override chains store the resolved input node as the
+            # last element, e.g. root.inputs.nixpkgs = ["nixpkgs_3"].
+            node_names = [nixpkgs_input[-1]]
+        else:
+            node_names = []
+
+        if not node_names:
+            candidates = []
+            for node_name, node in nodes.items():
+                try:
+                    locked = node.get("locked") or {}
+                    if NixpkgsMetaSourceResolver._locked_node_identifies_nixpkgs(
+                        locked
+                    ):
+                        candidates.append(node_name)
+                except (AttributeError, TypeError):
+                    continue
+            if len(candidates) == 1:
+                node_names = candidates
+
+        root_source_details = NixpkgsMetaSourceResolver._root_source_details(meta_json)
+        for node_name in node_names:
+            try:
+                node = nodes[node_name]
+                locked = node["locked"]
+            except (KeyError, TypeError):
+                continue
+            source = NixpkgsMetaSourceResolver._nixpkgs_locked_source_details(
+                locked,
+                node=node,
+                nodes=nodes,
+                root_source_details=root_source_details,
             )
-        return self.resolve_explicit_source(meta_nixpkgs)
+            if source is not None:
+                return source
+
+        return None
+
+    @staticmethod
+    def _nixpkgs_locked_source_details(
+        locked,
+        *,
+        node=None,
+        nodes=None,
+        root_source_details=None,
+        include_version=True,
+    ):
+        """Convert a lock-graph locked object to source details."""
+        try:
+            lock_type = locked.get("type")
+        except AttributeError:
+            return None
+        if lock_type == "github":
+            return NixpkgsMetaSourceResolver._locked_github_source_details(locked)
+        if lock_type == "git":
+            return NixpkgsMetaSourceResolver._locked_git_source_details(locked)
+        if lock_type == "tarball":
+            return NixpkgsMetaSourceResolver._locked_tarball_source_details(locked)
+        if lock_type == "path":
+            return NixpkgsMetaSourceResolver._locked_path_source_details(
+                locked,
+                node=node,
+                nodes=nodes,
+                root_source_details=root_source_details,
+                include_version=include_version,
+            )
+        return None
+
+    @staticmethod
+    def _root_source_details(meta_json):
+        details = {}
+        flakeref = NixpkgsMetaSourceResolver._locked_flake_ref_from_meta_json(meta_json)
+        if flakeref:
+            details["flakeref"] = flakeref
+        try:
+            root_path = meta_json.get("path")
+            root_locked = meta_json.get("locked") or {}
+        except AttributeError:
+            root_path = None
+            root_locked = {}
+        source_path = NixpkgsMetaSourceResolver._locked_source_path(
+            root_locked,
+            root_source_path=root_path,
+        )
+        if source_path:
+            details["path"] = source_path
+        return details or None
+
+    @staticmethod
+    def _locked_node_identifies_nixpkgs(locked):
+        """Return True when the locked object positively identifies nixpkgs.
+
+        This fallback is intentionally narrower than the supported source-detail
+        reconstructor: path inputs are only accepted when referenced explicitly
+        through root.inputs.nixpkgs, not guessed by node name.
+        """
+        try:
+            lock_type = locked.get("type")
+        except AttributeError:
+            return False
+        if lock_type == "github":
+            return locked.get("repo") == "nixpkgs"
+        if lock_type in {"git", "tarball"}:
+            return NixpkgsMetaSourceResolver._url_identifies_nixpkgs(locked.get("url"))
+        return False
+
+    @staticmethod
+    def _url_identifies_nixpkgs(url):
+        """Return True when a locked URL path clearly points at nixpkgs."""
+        if not isinstance(url, str) or not url:
+            return False
+        try:
+            path = urlparse(url).path
+        except ValueError:
+            return False
+        segments = [
+            segment.removesuffix(".git") for segment in path.split("/") if segment
+        ]
+        return "nixpkgs" in segments
+
+    @staticmethod
+    def _locked_dir(locked):
+        try:
+            locked_dir = locked.get("dir")
+        except AttributeError:
+            return None
+        if isinstance(locked_dir, str) and locked_dir:
+            return locked_dir
+        return None
+
+    @staticmethod
+    def _append_query_params(ref, params):
+        base, separator, query = ref.partition("?")
+        query_pairs = (
+            dict(parse_qsl(query, keep_blank_values=True)) if separator else {}
+        )
+        query_pairs.update(params)
+        return f"{base}?{urlencode(query_pairs, safe='/')}"
+
+    @staticmethod
+    def _locked_query_parts(locked, **query_parts):
+        nar_hash = locked.get("narHash")
+        if nar_hash:
+            query_parts["narHash"] = nar_hash
+        locked_dir = NixpkgsMetaSourceResolver._locked_dir(locked)
+        if locked_dir:
+            query_parts["dir"] = locked_dir
+        return query_parts
+
+    @staticmethod
+    def _locked_github_source_details(locked):
+        owner = locked.get("owner")
+        repo = locked.get("repo")
+        rev = locked.get("rev")
+        if not all([owner, repo, rev]):
+            return None
+        query_parts = NixpkgsMetaSourceResolver._locked_query_parts(locked, rev=rev)
+        flakeref = f"github:{owner}/{repo}?{urlencode(query_parts, safe='/')}"
+        return {
+            "pkgs_expression": f"import (builtins.getFlake {json.dumps(flakeref)}) {{}}",
+            "flakeref": flakeref,
+            "rev": rev,
+        }
+
+    @staticmethod
+    def _locked_git_source_details(locked):
+        url = locked.get("url")
+        rev = locked.get("rev")
+        ref = locked.get("ref")
+        # Keep ref in the emitted git+ flakeref so the locked source still
+        # identifies the intended branch/tag context alongside the pinned rev.
+        if not all([url, rev]):
+            return None
+        query_parts = {}
+        if ref:
+            query_parts["ref"] = ref
+        query_parts["rev"] = rev
+        query_parts = NixpkgsMetaSourceResolver._locked_query_parts(
+            locked,
+            **query_parts,
+        )
+        flakeref = f"git+{url}?{urlencode(query_parts, safe='/')}"
+        return {
+            "pkgs_expression": f"import (builtins.getFlake {json.dumps(flakeref)}) {{}}",
+            "flakeref": flakeref,
+            "rev": rev,
+        }
+
+    @staticmethod
+    def _locked_tarball_source_details(locked):
+        url = locked.get("url")
+        if not url:
+            return None
+        flakeref = url
+        query_parts = NixpkgsMetaSourceResolver._locked_query_parts(locked)
+        if query_parts:
+            flakeref = NixpkgsMetaSourceResolver._append_query_params(
+                url,
+                query_parts,
+            )
+        return {
+            "pkgs_expression": f"import (builtins.getFlake {json.dumps(flakeref)}) {{}}",
+            "flakeref": flakeref,
+        }
+
+    @staticmethod
+    def _locked_path_source_details(
+        locked,
+        *,
+        node=None,
+        nodes=None,
+        root_source_details=None,
+        include_version=True,
+    ):
+        details = None
+        path = locked.get("path", "")
+        if not isinstance(path, str) or not path:
+            return None
+        if path.startswith("/"):
+            if path.startswith("/nix/store/"):
+                details = NixpkgsMetaSourceResolver._locked_path_source_from_root_path(
+                    locked,
+                    root_path=path,
+                    include_version=include_version,
+                )
+        else:
+            parent_source = (
+                NixpkgsMetaSourceResolver._locked_path_parent_source_details(
+                    node=node,
+                    nodes=nodes,
+                    root_source_details=root_source_details,
+                )
+            )
+            if parent_source is not None:
+                parent_path = parent_source.get("path")
+                root_path = NixpkgsMetaSourceResolver._join_source_path(
+                    parent_path,
+                    path,
+                )
+                if root_path is not None:
+                    details = (
+                        NixpkgsMetaSourceResolver._locked_path_source_from_root_path(
+                            locked,
+                            root_path=root_path,
+                            include_version=include_version,
+                        )
+                    )
+                else:
+                    parent_flakeref = parent_source.get("flakeref")
+                    child_dir = NixpkgsMetaSourceResolver._join_flake_dir(
+                        path,
+                        NixpkgsMetaSourceResolver._locked_dir(locked),
+                    )
+                    flakeref = NixpkgsMetaSourceResolver._append_flake_dir(
+                        parent_flakeref,
+                        child_dir,
+                    )
+                    if flakeref is not None:
+                        details = {
+                            "pkgs_expression": (
+                                f"import (builtins.getFlake {json.dumps(flakeref)}) {{}}"
+                            ),
+                            "flakeref": flakeref,
+                        }
+                        rev = parent_source.get("rev")
+                        if rev:
+                            details["rev"] = rev
+        return details
+
+    @staticmethod
+    def _locked_path_source_from_root_path(locked, *, root_path, include_version=True):
+        source_path_str = NixpkgsMetaSourceResolver._locked_source_path(
+            locked,
+            root_source_path=root_path,
+        )
+        if source_path_str is None:
+            return None
+        locked_dir = NixpkgsMetaSourceResolver._locked_dir(locked)
+        flakeref = f"path:{root_path}"
+        if locked_dir:
+            flakeref = NixpkgsMetaSourceResolver._append_query_params(
+                flakeref,
+                {"dir": locked_dir},
+            )
+        details = {
+            "pkgs_expression": f"import {json.dumps(source_path_str)} {{}}",
+            "flakeref": flakeref,
+            "path": source_path_str,
+        }
+        if include_version:
+            version = read_nixpkgs_version(source_path_str)
+            if version is not None:
+                details["version"] = version
+        return details
+
+    @staticmethod
+    def _locked_source_path(locked, *, root_source_path=None):
+        if not isinstance(root_source_path, str) or not root_source_path.startswith(
+            "/nix/store/"
+        ):
+            return None
+        source_path = pathlib.PurePosixPath(root_source_path)
+        locked_dir = NixpkgsMetaSourceResolver._locked_dir(locked)
+        if locked_dir:
+            source_path /= locked_dir
+        return source_path.as_posix()
+
+    @staticmethod
+    def _locked_path_parent_source_details(
+        *, node=None, nodes=None, root_source_details=None
+    ):
+        parent_source = (
+            root_source_details if isinstance(root_source_details, dict) else None
+        )
+        if not isinstance(node, dict):
+            return parent_source
+        parent_chain = node.get("parent")
+        if not isinstance(parent_chain, list) or not parent_chain:
+            return parent_source
+        if not isinstance(nodes, dict):
+            return None
+        parent_name = parent_chain[-1]
+        if not isinstance(parent_name, str):
+            return None
+        try:
+            parent_node = nodes[parent_name]
+            parent_locked = parent_node["locked"]
+        except (KeyError, TypeError):
+            parent_source = None
+        else:
+            parent_source = NixpkgsMetaSourceResolver._nixpkgs_locked_source_details(
+                parent_locked,
+                node=parent_node,
+                nodes=nodes,
+                root_source_details=root_source_details,
+                include_version=False,
+            )
+        return parent_source
+
+    @staticmethod
+    def _join_source_path(parent_path, relative_path):
+        if not isinstance(parent_path, str) or not parent_path.startswith(
+            "/nix/store/"
+        ):
+            return None
+        if not isinstance(relative_path, str) or not relative_path:
+            return None
+        if relative_path.startswith("/"):
+            return None
+        joined = pathlib.PurePosixPath(parent_path).joinpath(relative_path).as_posix()
+        resolved = posixpath.normpath(joined)
+        if resolved.startswith("/nix/store/"):
+            return resolved
+        return None
+
+    @staticmethod
+    def _join_flake_dir(*parts):
+        current = ""
+        for part in parts:
+            if not isinstance(part, str) or not part:
+                continue
+            candidate = posixpath.normpath(posixpath.join(current or ".", part))
+            if candidate in {"", "."}:
+                current = ""
+                continue
+            if (
+                candidate.startswith("/")
+                or candidate == ".."
+                or candidate.startswith("../")
+            ):
+                return None
+            current = candidate
+        return current
+
+    @staticmethod
+    def _append_flake_dir(flakeref, extra_dir):
+        if not isinstance(flakeref, str) or not flakeref:
+            return None
+        if extra_dir is None:
+            return None
+        base, separator, query = flakeref.partition("?")
+        query_pairs = (
+            dict(parse_qsl(query, keep_blank_values=True)) if separator else {}
+        )
+        combined_dir = NixpkgsMetaSourceResolver._join_flake_dir(
+            query_pairs.get("dir"),
+            extra_dir,
+        )
+        if combined_dir is None:
+            return None
+        if combined_dir:
+            query_pairs["dir"] = combined_dir
+        else:
+            query_pairs.pop("dir", None)
+        if not query_pairs:
+            return base
+        return f"{base}?{urlencode(query_pairs, safe='/')}"
 
     def resolve_flakeref_target_source(self, flakeref, *, impure=False):
-        """Resolve target-specific nixpkgs metadata for known flakeref outputs."""
+        """Resolve target-specific metadata for NixOS toplevel outputs."""
         parsed = self._parse_nixos_toplevel_flakeref(flakeref)
         if not parsed:
             return None
         flake, name = parsed
-        name_attr = quote_nix_attr_segment(name)
-        pkgs_path_ref = f"{flake}#nixosConfigurations.{name_attr}.pkgs.path"
+        locked_flake = self._flake_ref_for_expression(flake, impure=impure) or flake
+        attr_part = flakeref.partition("#")[2]
+        locked_ref = f"{locked_flake}#{attr_part}"
+        pkgs_expression = None
+        pkgs_path_ref = f"{locked_flake}#nixosConfigurations.{quote_nix_attr_segment(name)}.pkgs.path"
         pkgs_path = self._nix_eval_raw(pkgs_path_ref, impure=impure)
         if pkgs_path:
-            expression_flake = self._flake_ref_for_expression(
-                flake,
-                impure=impure,
-            )
-            return nixpkgs_meta_source_with_path(
-                NixpkgsMetaSource(
-                    method="flakeref-target",
-                    path=pkgs_path,
-                    flakeref=pkgs_path_ref,
-                    message="Scanning evaluated NixOS package set from flakeref",
-                    expression=self._nixos_pkgs_expression(expression_flake, name),
-                    expression_cache_key=self._nixos_pkgs_expression_cache_key(
-                        expression_flake,
-                        name,
-                        impure=impure,
-                    ),
-                    expression_impure=impure,
-                ),
-            )
-
-        return self._nixos_toplevel_without_source()
-
-    @staticmethod
-    def _nixos_toplevel_without_source():
+            pkgs_expression = self._nixos_pkgs_expression(locked_flake, name)
         return NixpkgsMetaSource(
-            method="none",
+            method="flake-meta",
+            flakeref=pkgs_path_ref,
+            path=pkgs_path,
+            version=read_nixpkgs_version(pkgs_path) if pkgs_path else None,
             message=(
-                "Failed resolving target-specific nixpkgs metadata source from "
-                "NixOS configuration flakeref. Skipping nixpkgs metadata. Re-run "
-                "with --meta-nixpkgs <nixpkgs-flakeref-or-path> to include metadata."
+                "Scanning evaluated NixOS package set from flakeref"
+                if pkgs_path
+                else None
             ),
-        )
-
-    @staticmethod
-    def _parse_nixos_toplevel_flakeref(flakeref):
-        return parse_nixos_configuration_ref(
-            flakeref,
-            suffix=NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
+            expression_cache_key=self._flake_meta_cache_key(locked_ref, impure=impure),
+            expression_impure=impure,
+            pkgs_expression=pkgs_expression,
         )
 
     @staticmethod
     def _nixos_pkgs_expression(flake, name):
         flake_json = json.dumps(flake)
         name_attr = quote_nix_attr_segment(name)
-        return (
-            "let\n"
-            f"  flake = builtins.getFlake {flake_json};\n"
-            "in\n"
-            f"  flake.nixosConfigurations.{name_attr}.pkgs\n"
+        return f"(builtins.getFlake {flake_json}).nixosConfigurations.{name_attr}.pkgs"
+
+    @staticmethod
+    def _nix_eval_raw(flakeref, *, impure=False):
+        ret = exec_cmd(
+            nix_cmd("eval", "--raw", flakeref, impure=impure),
+            raise_on_error=False,
+            return_error=True,
+            log_error=False,
+        )
+        if ret is None or ret.returncode != 0:
+            return None
+        return ret.stdout.strip() or None
+
+    @staticmethod
+    def _source_details_from_flake_ref(flake_ref):
+        """Return exportable source fields from a stable flake ref when possible."""
+        flake_part = flake_ref.partition("#")[0]
+        details = {"flakeref": flake_ref}
+        rev = NixpkgsMetaSourceResolver._rev_from_flake_ref(flake_part)
+        if rev:
+            details["rev"] = rev
+        path = NixpkgsMetaSourceResolver._store_path_from_flake_ref(flake_part)
+        if path:
+            details["path"] = path
+            details["version"] = read_nixpkgs_version(path)
+        return details
+
+    @staticmethod
+    def _rev_from_flake_ref(flake_ref):
+        query = flake_ref.partition("?")[2]
+        if not query:
+            return None
+        for key, value in parse_qsl(query, keep_blank_values=True):
+            if key == "rev" and value:
+                return value
+        return None
+
+    @staticmethod
+    def _store_path_from_flake_ref(flake_ref):
+        query = flake_ref.partition("?")[2]
+        locked_dir = None
+        if query:
+            for key, value in parse_qsl(query, keep_blank_values=True):
+                if key == "dir" and value:
+                    locked_dir = value
+                    break
+        if flake_ref.startswith("path:/nix/store/"):
+            source_path = pathlib.PurePosixPath(
+                flake_ref.removeprefix("path:").partition("?")[0]
+            )
+            if locked_dir:
+                source_path /= locked_dir
+            return source_path.as_posix()
+        if flake_ref.startswith("/nix/store/"):
+            source_path = pathlib.PurePosixPath(flake_ref.partition("?")[0])
+            if locked_dir:
+                source_path /= locked_dir
+            return source_path.as_posix()
+        return None
+
+    @classmethod
+    def _stable_flake_ref(cls, flake_part, *, impure=False):
+        """Return a stable (locked) ref for flake_part, or None if not determinable."""
+        if cls._flake_ref_has_stable_lock(flake_part):
+            return flake_part
+        return cls._locked_flake_ref_from_metadata(flake_part, impure=impure)
+
+    @classmethod
+    def _nixos_pkgs_from_attr(cls, stable, attr, *, impure=False):
+        """Return a pkgs expression by probing nixosConfigurations.ATTR.pkgs.
+
+        This handles targets like "ghaf#lenovo-x1-carbon-gen11-debug" where
+        ATTR is a NixOS configuration name in the flake.  Returns None when
+        the configuration or its pkgs attribute does not exist.
+        """
+        quoted = quote_nix_attr_segment(attr)
+        pkgs_path_ref = f"{stable}#nixosConfigurations.{quoted}.pkgs.path"
+        if cls._nix_eval_raw(pkgs_path_ref, impure=impure):
+            return cls._nixos_pkgs_expression(stable, attr)
+        return None
+
+    @classmethod
+    def _flake_meta_cache_key(cls, flake_str, *, impure=False):
+        flake_part, _, attr_part = flake_str.partition("#")
+        stable = cls._stable_flake_ref(flake_part, impure=impure)
+        if stable is None:
+            return None
+        return f"flake-meta:{stable}#{attr_part}"
+
+    @staticmethod
+    def _parse_nixos_toplevel_flakeref(flakeref):
+        return parse_nixos_configuration_ref(
+            flakeref,
+            suffix=NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
         )
 
     def _flake_ref_for_expression(self, flake, *, impure=False):
@@ -215,7 +744,7 @@ class NixpkgsMetaSourceResolver:
             nar_hash = locked["narHash"]
         except (KeyError, TypeError):
             return None
-        if not source_path or not nar_hash or not is_nix_store_path(source_path):
+        if not source_path or not nar_hash or not source_path.startswith("/nix/store/"):
             return None
         query = {"narHash": nar_hash}
         locked_dir = locked.get("dir")
@@ -255,140 +784,3 @@ class NixpkgsMetaSourceResolver:
         if path.exists() or flake.startswith((".", "/", "~")):
             return path.resolve().as_posix()
         return flake
-
-    @classmethod
-    def _nixos_pkgs_expression_cache_key(cls, flake, name, *, impure=False):
-        if impure:
-            return None
-        stable_ref = cls._stable_flake_ref_for_expression_cache(flake)
-        if not stable_ref:
-            return None
-        cache_parts = json.dumps([stable_ref, name], separators=(",", ":"))
-        return f"nixos-pkgs:{cache_parts}"
-
-    @staticmethod
-    def _stable_flake_ref_for_expression_cache(flake):
-        if flake.startswith("path:/nix/store/"):
-            return flake
-        if flake.startswith("/nix/store/"):
-            return flake
-        if re.search(r"(?:[?&])rev=", flake):
-            return flake
-        return None
-
-    @staticmethod
-    def _nix_eval_raw(flakeref, *, impure=False):
-        LOG.debug("Evaluating nixpkgs metadata helper flakeref '%s'", flakeref)
-        ret = exec_cmd(
-            nix_cmd("eval", "--raw", flakeref, impure=impure),
-            raise_on_error=False,
-            return_error=True,
-            log_error=False,
-        )
-        if ret is None or ret.returncode != 0:
-            LOG.debug(
-                "Failed evaluating nixpkgs metadata helper flakeref: %s", flakeref
-            )
-            return None
-        return ret.stdout.strip() or None
-
-    def resolve_explicit_source(self, meta_nixpkgs):
-        """Resolve an explicit --meta-nixpkgs path or flakeref."""
-        path = pathlib.Path(meta_nixpkgs)
-        if path.exists():
-            resolved_path = path.resolve()
-            if is_nix_store_path(resolved_path):
-                return nixpkgs_meta_source_with_path(
-                    NixpkgsMetaSource(
-                        method="explicit",
-                        path=resolved_path.as_posix(),
-                    ),
-                )
-            nixpath = self._try_normalize_mutable_path(resolved_path)
-            if nixpath:
-                return nixpkgs_meta_source_with_path(
-                    NixpkgsMetaSource(
-                        method="explicit",
-                        path=nixpath.as_posix(),
-                        flakeref=resolved_path.as_posix(),
-                    ),
-                )
-            raise SbomnixError(
-                "Explicit --meta-nixpkgs path must resolve to an immutable "
-                f"/nix/store source before scanning: '{meta_nixpkgs}'"
-            )
-        try:
-            nixpath = nixref_to_nixpkgs_path(meta_nixpkgs)
-        except _NIXREF_RESOLUTION_EXCEPTIONS as error:
-            raise SbomnixError(
-                f"Failed resolving --meta-nixpkgs source: '{meta_nixpkgs}'"
-            ) from error
-        if not nixpath:
-            raise SbomnixError(
-                f"Failed resolving --meta-nixpkgs source: '{meta_nixpkgs}'"
-            )
-        return nixpkgs_meta_source_with_path(
-            NixpkgsMetaSource(
-                method="explicit",
-                path=nixpath.as_posix(),
-                flakeref=meta_nixpkgs,
-            ),
-        )
-
-    @staticmethod
-    def _try_normalize_mutable_path(path):
-        try:
-            nixpath = nixref_to_nixpkgs_path(path.as_posix())
-        except _NIXREF_RESOLUTION_EXCEPTIONS:
-            LOG.debug(
-                "Failed normalizing mutable nixpkgs path: %s",
-                path.as_posix(),
-                exc_info=True,
-            )
-            return None
-        if nixpath and is_nix_store_path(nixpath):
-            return nixpath
-        return None
-
-    def resolve_flakeref_lock_source(self, nixref):
-        """Return the nixpkgs source selected by a flakeref lock graph."""
-        if nixref:
-            LOG.debug("Reading nixpkgs path from nixref: %s", nixref)
-            nixpath = nixref_to_nixpkgs_path(nixref)
-            if nixpath:
-                return nixpkgs_meta_source_with_path(
-                    NixpkgsMetaSource(
-                        method="flakeref-lock",
-                        path=nixpath.as_posix(),
-                        flakeref=nixref,
-                    ),
-                )
-        return NixpkgsMetaSource(method="none")
-
-    def resolve_default_source(self, nixref=None):
-        """Return the metadata source for the older direct Meta API."""
-        if nixref:
-            return self.resolve_flakeref_lock_source(nixref)
-        if "NIX_PATH" in os.environ:
-            return self.resolve_nix_path_source()
-        return NixpkgsMetaSource(method="none")
-
-    def resolve_nix_path_source(self, *, message=None, required=False):
-        """Return the nixpkgs source referenced by NIX_PATH."""
-        LOG.debug("Reading nixpkgs path from NIX_PATH environment")
-        nix_path = os.environ.get("NIX_PATH", "")
-        m_nixpkgs = re.search(r"(?:^|:)nixpkgs=([^:]+)", nix_path)
-        if m_nixpkgs:
-            return nixpkgs_meta_source_with_path(
-                NixpkgsMetaSource(
-                    method="nix-path",
-                    path=m_nixpkgs.group(1),
-                    message=message,
-                ),
-            )
-        if required:
-            raise SbomnixError(
-                "NIX_PATH does not contain a nixpkgs= entry required by "
-                "--meta-nixpkgs nix-path"
-            )
-        return NixpkgsMetaSource(method="none")

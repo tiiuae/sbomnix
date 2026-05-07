@@ -47,6 +47,18 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 # Namespace UUID (a UUIDv4) for stable UUIDv5 identifiers.
 # See RFC9562, *6.6.  Namespace ID Usage and Allocation*.
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
+_PUBLIC_META_JOIN_COLUMNS = [
+    cols.NAME,
+    "pname",
+    cols.VERSION,
+    "meta_homepage",
+    "meta_unfree",
+    "meta_description",
+    "meta_position",
+    "meta_license_short",
+    "meta_license_spdxid",
+    "meta_maintainers_email",
+]
 
 
 @dataclass(frozen=True)
@@ -75,6 +87,15 @@ def _mapped_runtime_output_paths(output_paths_by_load_path):
     return set().union(*output_paths_by_load_path.values())
 
 
+def _meta_flag_names(df_meta, flag_column):
+    if df_meta is None or df_meta.empty or flag_column not in df_meta.columns:
+        return []
+    names = (
+        df_meta[df_meta[flag_column] == "True"][cols.NAME].dropna().unique().tolist()
+    )
+    return sorted(names)
+
+
 class SbomBuilder:
     """Generate SBOMs in various formats."""
 
@@ -85,7 +106,6 @@ class SbomBuilder:
         depth=None,
         flakeref=None,
         original_ref=None,
-        meta_nixpkgs=None,
         impure=False,
         include_meta=True,
         include_vulns=False,
@@ -110,7 +130,6 @@ class SbomBuilder:
         self.dependency_index = None
         self.flakeref = flakeref
         self.original_ref = original_ref
-        self.meta_nixpkgs = meta_nixpkgs
         self.impure = impure
         self.meta = None
         # "disabled" records explicit opt-out; "none" means auto-selection
@@ -309,23 +328,23 @@ class SbomBuilder:
         """Join component rows with nixpkgs metadata."""
         if self.df_sbomdb is None:
             raise AssertionError("SBOM component metadata was not initialized")
+        store_names = self.df_sbomdb[cols.NAME].dropna().unique().tolist()
         self.meta = Meta()
         df_meta, source = self.meta.get_nixpkgs_meta_with_source(
             target_path=self.nix_path,
             flakeref=self.flakeref,
             original_ref=self.original_ref,
-            explicit_nixpkgs=self.meta_nixpkgs,
             impure=self.impure,
+            store_names=store_names,
+            buildtime=self.buildtime,
         )
         self.nixpkgs_meta_source = source
         if df_meta is None or df_meta.empty:
             if source.message:
-                LOG.info("%s", source.message)
-            if source.path:
-                LOG.warning(
-                    "Failed reading nix meta information: "
-                    "SBOM will include only minimum set of attributes"
-                )
+                if source.method == "flake-meta":
+                    LOG.warning("%s", source.message)
+                else:
+                    LOG.info("%s", source.message)
             else:
                 LOG.info(
                     "Skipping nix meta information: "
@@ -334,6 +353,17 @@ class SbomBuilder:
             return
         if is_debug_enabled():
             df_to_csv_file(df_meta, "meta.csv")
+        precise_names = _meta_flag_names(df_meta, "meta_precise_needed")
+        if precise_names:
+            LOG.verbose(
+                "Leaving nixpkgs metadata blank for %d ambiguous package name(s)",
+                len(precise_names),
+            )
+            df_meta = df_meta[~df_meta[cols.NAME].isin(precise_names)]
+        public_meta_columns = [
+            column for column in _PUBLIC_META_JOIN_COLUMNS if column in df_meta.columns
+        ]
+        df_meta = df_meta.loc[:, public_meta_columns]
         # Join based on package name including the version number
         self.df_sbomdb = self.df_sbomdb.merge(
             df_meta,
