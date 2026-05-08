@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from common import columns as cols
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
-from common.spdx import canonicalize_spdx_license_id
 from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency
 
 _NIXPKGS_META_SOURCE_FIELDS = (
@@ -114,19 +113,29 @@ def _str_to_spdxid(strval):
 
 
 def _drv_to_spdx_license_list(drv):
-    license_attr_name = "meta_license_spdxid"
-    if license_attr_name not in drv._asdict():
+    license_entries_json = getattr(drv, "meta_license_entries_json", "")
+    if not license_entries_json:
         return []
-    license_str = getattr(drv, license_attr_name)
-    if not license_str:
+    try:
+        license_entries = json.loads(license_entries_json)
+    except json.JSONDecodeError:
+        LOG.debug(
+            "Invalid meta_license_entries_json for '%s': %s",
+            drv.name,
+            license_entries_json,
+        )
         return []
-    license_strings = license_str.split(";")
     licenses = []
-    for license_string in license_strings:
-        canonical = canonicalize_spdx_license_id(license_string)
-        if not canonical:
-            continue
-        licenses.append(canonical)
+    for entry in license_entries:
+        normalized_entry = entry if isinstance(entry, dict) else {"raw": str(entry)}
+        license_value = (
+            normalized_entry.get("spdxId")
+            or normalized_entry.get("fullName")
+            or normalized_entry.get("shortName")
+            or normalized_entry.get("raw")
+        )
+        if license_value:
+            licenses.append(license_value)
     return licenses
 
 

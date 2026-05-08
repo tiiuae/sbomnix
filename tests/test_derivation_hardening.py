@@ -203,7 +203,7 @@ def test_cdx_license_exporter_preserves_authoritative_license_entries():
     ]
 
 
-def test_spdx_license_exporter_uses_canonical_spdx_ids():
+def test_spdx_license_exporter_preserves_authoritative_license_entries():
     drv_type = namedtuple(
         "Drv",
         [
@@ -213,6 +213,7 @@ def test_spdx_license_exporter_uses_canonical_spdx_ids():
             "purl",
             "cpe",
             "meta_description",
+            "meta_license_entries_json",
             "meta_license_spdxid",
             "meta_license_short",
             "patches",
@@ -231,6 +232,34 @@ def test_spdx_license_exporter_uses_canonical_spdx_ids():
         purl="pkg:nix/hello@2.12.3",
         cpe="",
         meta_description="Hello",
+        meta_license_entries_json=json.dumps(
+            [
+                {
+                    "spdxId": "GPL-3.0",
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": None,
+                },
+                {
+                    "spdxId": "GPL-3.0+",
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": "Public Domain",
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": "Custom-Scalar-License",
+                },
+            ]
+        ),
         meta_license_spdxid=(
             "GPL-3.0;GPL-3.0+;LGPL-2.1;LGPL-2.1+;LicenseRef-scancode-free-unknown"
         ),
@@ -247,12 +276,13 @@ def test_spdx_license_exporter_uses_canonical_spdx_ids():
     package = sbomnix_exporters._drv_to_spdx_package(drv)
 
     assert package["licenseInfoFromFiles"] == [
-        "GPL-3.0-only",
-        "GPL-3.0-or-later",
-        "LGPL-2.1-only",
-        "LGPL-2.1-or-later",
-        "LicenseRef-scancode-free-unknown",
+        "GPL-3.0",
+        "GPL-3.0+",
+        "Public Domain",
+        "Custom-Scalar-License",
     ]
+    assert package["licenseConcluded"] == "NOASSERTION"
+    assert package["licenseDeclared"] == "NOASSERTION"
 
 
 def test_cdx_uses_authoritative_license_names_without_spdx_ids():
@@ -324,6 +354,63 @@ def test_cdx_uses_authoritative_license_names_without_spdx_ids():
         {"license": {"name": "Public Domain"}},
         {"license": {"name": "Custom-Scalar-License"}},
     ]
+
+
+def test_spdx_uses_single_authoritative_license_name_without_spdx_id():
+    drv_type = namedtuple(
+        "Drv",
+        [
+            "name",
+            "pname",
+            "version",
+            "purl",
+            "cpe",
+            "meta_description",
+            "meta_license_entries_json",
+            "meta_license_spdxid",
+            "meta_license_short",
+            "patches",
+            "outputs",
+            "store_path",
+            "out",
+            "urls",
+            "meta_homepage",
+            "meta_position",
+        ],
+    )
+    drv = drv_type(
+        name="hello-2.12.3",
+        pname="hello",
+        version="2.12.3",
+        purl="pkg:nix/hello@2.12.3",
+        cpe="",
+        meta_description="Hello",
+        meta_license_entries_json=json.dumps(
+            [
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": "Public Domain",
+                    "raw": None,
+                }
+            ]
+        ),
+        meta_license_spdxid="not-a-license",
+        meta_license_short="Custom Short Name",
+        patches="",
+        outputs=["/nix/store/out"],
+        store_path="/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-2.12.3.drv",
+        out="/nix/store/out",
+        urls="",
+        meta_homepage="",
+        meta_position="",
+    )
+
+    package = sbomnix_exporters._drv_to_spdx_package(drv)
+
+    assert package["licenseInfoFromFiles"] == ["Public Domain"]
+    assert package["licenseConcluded"] == "Public Domain"
+    assert package["licenseDeclared"] == "Public Domain"
 
 
 def test_cdx_exports_homepage_as_external_reference():
