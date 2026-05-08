@@ -79,6 +79,8 @@ def test_try_resolve_flakeref_uses_argv_lists():
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
+        if cmd[1] == "path-info":
+            return SimpleNamespace(stdout="", stderr="not realised", returncode=1)
         return SimpleNamespace(stdout="/nix/store/resolved\n", stderr="", returncode=0)
 
     resolved = try_resolve_flakeref(
@@ -90,6 +92,19 @@ def test_try_resolve_flakeref_uses_argv_lists():
 
     assert resolved == "/nix/store/resolved"
     assert calls == [
+        (
+            [
+                "nix",
+                "path-info",
+                "/tmp/my flake#pkg",
+                "--extra-experimental-features",
+                "flakes",
+                "--extra-experimental-features",
+                "nix-command",
+                "--impure",
+            ],
+            {"raise_on_error": False, "return_error": True, "log_error": False},
+        ),
         (
             [
                 "nix",
@@ -106,6 +121,73 @@ def test_try_resolve_flakeref_uses_argv_lists():
             {"raise_on_error": False, "return_error": True, "log_error": False},
         ),
     ]
+
+
+def test_try_resolve_flakeref_reuses_realised_path_info():
+    calls = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        assert cmd[1] == "path-info"
+        return SimpleNamespace(
+            stdout="/nix/store/00000000000000000000000000000000-resolved\n",
+            stderr="",
+            returncode=0,
+        )
+
+    resolved = try_resolve_flakeref(
+        ".#hello",
+        force_realise=True,
+        exec_cmd_fn=fake_exec_cmd,
+    )
+
+    assert resolved == "/nix/store/00000000000000000000000000000000-resolved"
+    assert calls == [
+        (
+            [
+                "nix",
+                "path-info",
+                ".#hello",
+                "--extra-experimental-features",
+                "flakes",
+                "--extra-experimental-features",
+                "nix-command",
+            ],
+            {"raise_on_error": False, "return_error": True, "log_error": False},
+        )
+    ]
+
+
+def test_try_resolve_flakeref_rejects_invalid_explicit_output_selector():
+    calls = []
+
+    def fake_exec_cmd(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        if cmd[1] == "path-info":
+            return SimpleNamespace(
+                stdout="",
+                stderr="does not have output",
+                returncode=1,
+            )
+        if cmd[1] == "eval":
+            raise AssertionError("invalid output selectors must not use eval fallback")
+        return SimpleNamespace(
+            stdout="",
+            stderr="derivation does not have output 'missing'",
+            returncode=1,
+        )
+
+    with pytest.raises(
+        FlakeRefRealisationError,
+        match="derivation does not have output 'missing'",
+    ):
+        try_resolve_flakeref(
+            "nixpkgs#package^missing",
+            force_realise=True,
+            exec_cmd_fn=fake_exec_cmd,
+        )
+
+    assert [cmd[1] for cmd, _kwargs in calls] == ["path-info", "build"]
 
 
 def test_try_resolve_flakeref_can_return_derivation_path():
@@ -169,7 +251,7 @@ def test_try_resolve_flakeref_logs_flake_progress_at_info():
     assert resolved == "/nix/store/resolved"
     assert (
         "info",
-        "Realising flakeref '%s'",
+        "Evaluating flakeref '%s'",
         (".#hello",),
     ) in logger.records
 
@@ -197,7 +279,9 @@ def test_try_resolve_flakeref_keeps_plain_path_probe_verbose():
 
 
 def test_try_resolve_flakeref_raises_on_failed_force_realise():
-    def fake_exec_cmd(_cmd, **_kwargs):
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1] == "path-info":
+            return SimpleNamespace(stdout="", stderr="not realised", returncode=1)
         return SimpleNamespace(stdout="", stderr="build failed", returncode=1)
 
     with pytest.raises(FlakeRefRealisationError, match="build failed"):
@@ -209,7 +293,9 @@ def test_try_resolve_flakeref_raises_on_failed_force_realise():
 
 
 def test_try_resolve_flakeref_raises_when_force_realise_prints_no_path():
-    def fake_exec_cmd(_cmd, **_kwargs):
+    def fake_exec_cmd(cmd, **_kwargs):
+        if cmd[1] == "path-info":
+            return SimpleNamespace(stdout="", stderr="not realised", returncode=1)
         return SimpleNamespace(stdout="\n", stderr="", returncode=0)
 
     with pytest.raises(FlakeRefRealisationError, match="returned no output path"):

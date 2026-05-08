@@ -45,41 +45,20 @@ def try_resolve_flakeref(  # noqa: PLR0913
 
     looks_like_flakeref = _looks_like_flakeref(flakeref)
     if derivation and not force_realise and looks_like_flakeref:
-        log.info("Evaluating flakeref '%s'", flakeref)
-        cmd = nix_cmd("derivation", "show", flakeref, impure=impure)
-        ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
-        if ret is None or ret.returncode != 0:
-            raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
-        drv_paths = parse_nix_derivation_show(ret.stdout)
-        drv_path = next(iter(drv_paths), "")
-        if not drv_path:
-            raise FlakeRefResolutionError(
-                flakeref,
-                "nix derivation show returned no derivation path",
-            )
-        log.debug("flakeref='%s' maps to derivation='%s'", flakeref, drv_path)
-        return drv_path
-
-    if force_realise and looks_like_flakeref:
-        log.info("Realising flakeref '%s'", flakeref)
-        cmd = nix_cmd(
-            "build",
-            "--no-link",
-            "--print-out-paths",
+        return _resolve_flakeref_derivation(
             flakeref,
             impure=impure,
+            exec_cmd_fn=exec_cmd_fn,
+            log=log,
         )
-        ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
-        if ret is None or ret.returncode != 0:
-            raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
-        nixpath = _first_output_path(ret.stdout)
-        if not nixpath:
-            raise FlakeRefRealisationError(
-                flakeref,
-                "nix build returned no output path",
-            )
-        log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
-        return nixpath
+
+    if force_realise and looks_like_flakeref:
+        return _force_realise_flakeref(
+            flakeref,
+            impure=impure,
+            exec_cmd_fn=exec_cmd_fn,
+            log=log,
+        )
 
     if looks_like_flakeref:
         log.info("Evaluating flakeref '%s'", flakeref)
@@ -107,6 +86,76 @@ def try_resolve_flakeref(  # noqa: PLR0913
 def _first_output_path(stdout: str) -> str:
     """Return the first output path printed by ``nix build --print-out-paths``."""
     return next((line.strip() for line in stdout.splitlines() if line.strip()), "")
+
+
+def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
+    """Return the derivation path for a flakeref target."""
+    log.info("Evaluating flakeref '%s'", flakeref)
+    cmd = nix_cmd("derivation", "show", flakeref, impure=impure)
+    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    if ret is None or ret.returncode != 0:
+        raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
+    drv_paths = parse_nix_derivation_show(ret.stdout)
+    drv_path = next(iter(drv_paths), "")
+    if not drv_path:
+        raise FlakeRefResolutionError(
+            flakeref,
+            "nix derivation show returned no derivation path",
+        )
+    log.debug("flakeref='%s' maps to derivation='%s'", flakeref, drv_path)
+    return drv_path
+
+
+def _force_realise_flakeref(flakeref, *, impure, exec_cmd_fn, log):
+    """Return the realized output path for a runtime flakeref target."""
+    log.info("Evaluating flakeref '%s'", flakeref)
+    nixpath = _realised_flakeref_path(
+        flakeref,
+        impure=impure,
+        exec_cmd_fn=exec_cmd_fn,
+    )
+    if nixpath:
+        log.debug("flakeref='%s' maps to realised path='%s'", flakeref, nixpath)
+        return nixpath
+
+    return _build_flakeref_path(
+        flakeref,
+        impure=impure,
+        exec_cmd_fn=exec_cmd_fn,
+        log=log,
+    )
+
+
+def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
+    """Build a flakeref target and return the first printed output path."""
+    log.info("Realising flakeref '%s'", flakeref)
+    cmd = nix_cmd(
+        "build",
+        "--no-link",
+        "--print-out-paths",
+        flakeref,
+        impure=impure,
+    )
+    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    if ret is None or ret.returncode != 0:
+        raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
+    nixpath = _first_output_path(ret.stdout)
+    if not nixpath:
+        raise FlakeRefRealisationError(
+            flakeref,
+            "nix build returned no output path",
+        )
+    log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
+    return nixpath
+
+
+def _realised_flakeref_path(flakeref, *, impure, exec_cmd_fn):
+    """Return the already-realised output path for ``flakeref`` when available."""
+    cmd = nix_cmd("path-info", flakeref, impure=impure)
+    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    if ret is None or ret.returncode != 0:
+        return None
+    return _first_output_path(ret.stdout)
 
 
 def parse_nixos_configuration_ref(
