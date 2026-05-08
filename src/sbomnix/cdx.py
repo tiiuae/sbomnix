@@ -11,6 +11,7 @@ import re
 
 from common import columns as cols
 from common.log import LOG, LOG_SPAM
+from sbomnix.artifacts import is_non_package_artifact_name
 from vulnxscan.utils import _vuln_source, _vuln_url
 
 
@@ -105,29 +106,40 @@ def _cdx_component_add_external_references(component, drv):
         component["externalReferences"] = external_references
 
 
+def _drv_is_file_component(drv):
+    """Return True when a versionless derivation row represents a file artifact."""
+    if getattr(drv, "version", ""):
+        return False
+    candidates = [
+        getattr(drv, "name", ""),
+        getattr(drv, "pname", ""),
+        getattr(drv, "out", ""),
+    ]
+    outputs = getattr(drv, "outputs", []) or []
+    if isinstance(outputs, str):
+        candidates.append(outputs)
+    else:
+        candidates.extend(outputs)
+    return any(is_non_package_artifact_name(candidate) for candidate in candidates)
+
+
 def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
     """Convert one SBOM component row to a CycloneDX component."""
     component = {}
-    # Set the cdx component type based on the following heuristic:
-    # - Set the default component type to 'library'
-    # - Set the component type to 'file' if the drv version string is missing
-    #   and out-path matches the below pattern
-    component["type"] = "library"
-    if not drv.version:
-        if drv.out and re.search(r"(\.tar\.|\?|\.[a-z]+$)", drv.out):
-            component["type"] = "file"
+    component["type"] = "file" if _drv_is_file_component(drv) else "library"
     component["bom-ref"] = getattr(drv, uid)
     component["name"] = drv.pname
     component["version"] = drv.version
-    if drv.purl:
-        component["purl"] = drv.purl
-    if drv.cpe:
-        component["cpe"] = drv.cpe
-    if "meta_description" in drv._asdict() and drv.meta_description:
-        component["description"] = drv.meta_description
-    _cdx_component_add_licenses(component, drv)
-    _cdx_component_add_patches(component, drv)
-    _cdx_component_add_external_references(component, drv)
+    if component["type"] != "file":
+        if drv.purl:
+            component["purl"] = drv.purl
+        if drv.cpe:
+            component["cpe"] = drv.cpe
+        if "meta_description" in drv._asdict() and drv.meta_description:
+            component["description"] = drv.meta_description
+        _cdx_component_add_licenses(component, drv)
+        _cdx_component_add_patches(component, drv)
+        _cdx_component_add_external_references(component, drv)
     properties = []
     for output_path in drv.outputs:
         prop = {}
@@ -145,7 +157,11 @@ def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
         prop["name"] = "nix:fetch_url"
         prop["value"] = drv.urls
         properties.append(prop)
-    if "meta_position" in drv._asdict() and drv.meta_position:
+    if (
+        component["type"] != "file"
+        and "meta_position" in drv._asdict()
+        and drv.meta_position
+    ):
         prop = {}
         prop["name"] = "nix:position"
         prop["value"] = drv.meta_position

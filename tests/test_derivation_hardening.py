@@ -508,3 +508,93 @@ def test_cdx_keeps_semicolon_inside_single_homepage_url():
             "url": "https://git.samba.org/?p=uid_wrapper.git;a=summary;",
         }
     ]
+
+
+def test_cdx_file_artifact_omits_package_identifiers_and_metadata():
+    drv_type = namedtuple(
+        "Drv",
+        [
+            "name",
+            "pname",
+            "version",
+            "purl",
+            "cpe",
+            "meta_description",
+            "meta_license_entries_json",
+            "patches",
+            "outputs",
+            "store_path",
+            "out",
+            "urls",
+            "meta_homepage",
+            "meta_position",
+        ],
+    )
+    drv = drv_type(
+        name="polkit-1.pam",
+        pname="polkit-1.pam",
+        version="",
+        purl="pkg:nix/polkit-1.pam",
+        cpe="cpe:2.3:a:polkit-1.pam:polkit-1.pam::*:*:*:*:*:*:*",
+        meta_description="Toolkit for defining and handling policy",
+        meta_license_entries_json=json.dumps([{"spdxId": "LGPL-2.0-or-later"}]),
+        patches="",
+        outputs=["/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-polkit-1.pam"],
+        store_path="/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-polkit-1.pam.drv",
+        out="/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-polkit-1.pam",
+        urls="https://example.invalid/polkit-1.pam",
+        meta_homepage="https://github.com/polkit-org/polkit",
+        meta_position="/nix/store/src/pkgs/by-name/po/polkit/package.nix:187",
+    )
+
+    component = sbomnix_cdx._drv_to_cdx_component(drv)
+
+    assert component["type"] == "file"
+    assert "purl" not in component
+    assert "cpe" not in component
+    assert "description" not in component
+    assert "licenses" not in component
+    assert "externalReferences" not in component
+    assert {prop["name"] for prop in component["properties"]} == {
+        "nix:output_path",
+        "nix:drv_path",
+        "nix:fetch_url",
+    }
+
+
+def test_cdx_file_artifact_detection_handles_numeric_extensions():
+    drv_type = namedtuple(
+        "Drv",
+        [
+            "name",
+            "pname",
+            "version",
+            "purl",
+            "cpe",
+            "patches",
+            "outputs",
+            "store_path",
+            "out",
+            "urls",
+        ],
+    )
+    drv = drv_type(
+        name="MovText_capability_tester.mp4",
+        pname="MovText_capability_tester.mp4",
+        version="",
+        purl="pkg:nix/MovText_capability_tester.mp4",
+        cpe="cpe:2.3:a:MovText_capability_tester.mp4:MovText_capability_tester.mp4::*:*:*:*:*:*:*",
+        patches="",
+        outputs=[
+            "/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-MovText_capability_tester.mp4"
+        ],
+        store_path="/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-MovText_capability_tester.mp4.drv",
+        out="/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-MovText_capability_tester.mp4",
+        urls="",
+    )
+
+    component = sbomnix_cdx._drv_to_cdx_component(drv)
+
+    assert component["type"] == "file"
+    assert "purl" not in component
+    assert "cpe" not in component

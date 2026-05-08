@@ -7,7 +7,6 @@
 import functools
 import hashlib
 import pathlib
-import re
 from dataclasses import replace
 
 from filelock import FileLock
@@ -17,6 +16,7 @@ from nixmeta import metadata_json
 from nixmeta import scanner as nixmeta_scanner
 from nixmeta.resources import meta_nix_path
 from nixmeta.scanner import NixMetaScanner
+from sbomnix.artifacts import is_non_package_artifact_name
 from sbomnix.cache_paths import meta_lock_path
 from sbomnix.dfcache import LockedDfCache
 from sbomnix.meta_source import (
@@ -30,10 +30,6 @@ from sbomnix.meta_source import (
 # Update locally generated nixpkgs meta-info every 30 days or when local cache
 # is cleaned.
 _NIXMETA_NIXPKGS_TTL = 60 * 60 * 24 * 30
-_NON_PACKAGE_ARTIFACT_NAME_RE = re.compile(
-    r".*(?:[.](?:patch|diff)(?:[.][a-zA-Z0-9]+)?|[.]tar(?:[.][a-zA-Z0-9]+)?|[.](?:tgz|tbz2?|txz|zip|whl|gem|cabal))(?:[?].*)?$",
-    re.IGNORECASE,
-)
 _META_CACHE_SCHEMA = "v2"
 
 __all__ = [
@@ -82,7 +78,7 @@ def _with_buildtime_suffix(source, buildtime):
 
 def _filter_store_names_for_meta_scan(names):
     """Drop non-package artifact names before exact nixpkgs metadata lookup."""
-    filtered = [name for name in names if not _NON_PACKAGE_ARTIFACT_NAME_RE.match(name)]
+    filtered = [name for name in names if not is_non_package_artifact_name(name)]
     skipped = len(names) - len(filtered)
     if skipped:
         LOG.debug(

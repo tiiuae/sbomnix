@@ -582,7 +582,7 @@ def test_flake_meta_empty_scan_reports_no_matches(monkeypatch):
         pkgs_expression="import /nix/store/abc-nixpkgs {}",
     )
     df_meta, out_source = sbomnix_meta.Meta()._scan_source_with_source(
-        source, store_names=["ghaf.iso"]
+        source, store_names=["ghaf-image-1.0"]
     )
 
     assert df_meta is None
