@@ -68,16 +68,34 @@ def query_path_hashes(paths, *, exec_cmd_fn=exec_cmd):
             exec_cmd_fn=exec_cmd_fn,
         )
     if path_infos is None:
-        return []
-    return [nar_hash_for_path(path_infos, path) for path in paths]
+        return [None for _path in paths]
+    return [optional_nar_hash_for_path(path_infos, path) for path in paths]
 
 
 def nar_hash_for_path(path_infos, path):
     """Return the NAR hash for one path-info record."""
-    info = path_infos.get(path)
-    if info is None:
+    if path not in path_infos:
         raise InvalidNixJsonError(
             NIX_PATH_INFO_JSON,
             f"missing path-info record for `{path}`",
         )
+    info = path_infos[path]
+    if info is None:
+        raise InvalidNixJsonError(
+            NIX_PATH_INFO_JSON,
+            f"path-info record for `{path}` is unrealized",
+        )
+    return nix_path_info_nar_hash(info, path)
+
+
+def optional_nar_hash_for_path(path_infos, path):
+    """Return the NAR hash for a realized path, or None for unrealized paths."""
+    if path not in path_infos:
+        raise InvalidNixJsonError(
+            NIX_PATH_INFO_JSON,
+            f"missing path-info record for `{path}`",
+        )
+    info = path_infos[path]
+    if info is None:
+        return None
     return nix_path_info_nar_hash(info, path)
