@@ -72,11 +72,16 @@ def dependency_paths(drv_path, recursive=False, outputs_by_path=None, hooks=None
                 paths.append(path)
         return paths
 
-    drv_info = path_infos.get(drv_path)
-    if drv_info is None:
+    if drv_path not in path_infos:
         raise InvalidNixJsonError(
             NIX_PATH_INFO_JSON,
             f"missing path-info record for `{drv_path}`",
+        )
+    drv_info = path_infos[drv_path]
+    if drv_info is None:
+        raise InvalidNixJsonError(
+            NIX_PATH_INFO_JSON,
+            f"path-info record for `{drv_path}` is unrealized",
         )
     return list(nix_path_info_references(drv_info, drv_path))
 
@@ -92,7 +97,7 @@ def dependency_package(drv, output_hash, infos, outputs_by_path, hooks=None):
     if digest is None:
         digest = hooks.normalize_digest_fn(output_hash)
     if digest is None:
-        hooks.log.warning("Cannot determine digest for dependency '%s'", drv)
+        hooks.log.log(LOG_VERBOSE, "Cannot determine digest for dependency '%s'", drv)
         return None
 
     package = {

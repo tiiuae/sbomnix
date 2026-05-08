@@ -75,7 +75,11 @@ def get_subjects(
                 exec_cmd_fn=hooks.exec_cmd_fn,
                 raise_on_error=False,
             )
-            if path_infos is None or resolved_output_path not in path_infos:
+            if (
+                path_infos is None
+                or resolved_output_path not in path_infos
+                or path_infos[resolved_output_path] is None
+            ):
                 hooks.log.warning(
                     "Derivation output '%s' was not found in the nix store, "
                     "assuming it was not built.",

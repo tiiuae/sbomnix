@@ -317,6 +317,10 @@ def normalize_nix_path_info(path_info, *, command=NIX_PATH_INFO_JSON):
                     command,
                     "expected path-info object keys to be non-empty strings",
                 )
+            if info is None:
+                # Nix can emit null for substitutable paths that are not local.
+                normalized[path] = info
+                continue
             if not isinstance(info, dict):
                 raise InvalidNixJsonError(
                     command,
