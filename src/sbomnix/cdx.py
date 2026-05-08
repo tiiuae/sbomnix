@@ -14,6 +14,19 @@ from common.spdx import canonicalize_spdx_license_id
 from vulnxscan.utils import _vuln_source, _vuln_url
 
 
+def _split_meta_homepage(homepage_value):
+    """Split flattened homepage metadata into URLs.
+
+    Nix metadata may flatten homepage lists into a single semicolon-separated
+    string, but literal homepage URLs can also contain semicolons. Only split
+    when the next entry looks like a new URI.
+    """
+    if not homepage_value:
+        return []
+    entries = re.split(r";(?=[A-Za-z][A-Za-z0-9+.-]*:)", homepage_value)
+    return [entry.strip() for entry in entries if entry.strip()]
+
+
 def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
     """Parse license entries of type cdx_license_type from column_name"""
     licenses = []
@@ -85,6 +98,16 @@ def _cdx_component_add_patches(component, drv):
             component["pedigree"] = pedigree
 
 
+def _cdx_component_add_external_references(component, drv):
+    """Add CycloneDX external references to a component (if any)."""
+    external_references = []
+    if "meta_homepage" in drv._asdict() and drv.meta_homepage:
+        for homepage_url in _split_meta_homepage(drv.meta_homepage):
+            external_references.append({"type": "website", "url": homepage_url})
+    if external_references:
+        component["externalReferences"] = external_references
+
+
 def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
     """Convert one SBOM component row to a CycloneDX component."""
     component = {}
@@ -107,6 +130,7 @@ def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
         component["description"] = drv.meta_description
     _cdx_component_add_licenses(component, drv)
     _cdx_component_add_patches(component, drv)
+    _cdx_component_add_external_references(component, drv)
     properties = []
     for output_path in drv.outputs:
         prop = {}
@@ -123,11 +147,6 @@ def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
         prop = {}
         prop["name"] = "nix:fetch_url"
         prop["value"] = drv.urls
-        properties.append(prop)
-    if "meta_homepage" in drv._asdict() and drv.meta_homepage:
-        prop = {}
-        prop["name"] = "homepage"
-        prop["value"] = drv.meta_homepage
         properties.append(prop)
     if "meta_position" in drv._asdict() and drv.meta_position:
         prop = {}

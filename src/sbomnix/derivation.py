@@ -211,6 +211,21 @@ def destructure(env):
     return {}
 
 
+def _structured_attr_map(value):
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _reconstruct_pname(name, pname):
+    if not pname:
+        return name
+    prefix, sep, _suffix = name.partition(pname)
+    if sep:
+        return prefix + pname
+    return pname
+
+
 class Derive:
     """Nix derivation as found as .drv files in the Nix store."""
 
@@ -233,26 +248,42 @@ class Derive:
         if envVars is None:
             envVars = {}
         envVars = dict(envVars)
+        structured_env = _structured_attr_map(destructure(envVars))
         LOG.log(LOG_SPAM, envVars)
-        self.name = name or envVars.get("name")
+        self.name = (
+            name
+            or envVars.get("name")
+            or _coerce_derivation_string(structured_env.get("name"))
+        )
         if not self.name:
             self.name = destructure(envVars)["name"]
 
-        pname = envVars.get("pname", self.name)
+        pname = (
+            envVars.get("pname")
+            or _coerce_derivation_string(structured_env.get("pname"))
+            or self.name
+        )
         # pname read from envVars might not match the pname in nixpkgs.
         # As an example 'Authen-SASL' full pname is 'perl5.36.0-Authen-SASL'
         # Below, we reconstruct the full pname based on self.name which
         # contains the full pname:
-        self.pname = self.name.partition(pname)[0] + pname
-        self.version = envVars.get("version", "")
+        self.pname = _reconstruct_pname(self.name, pname)
+        self.version = envVars.get("version", "") or _coerce_derivation_string(
+            structured_env.get("version")
+        )
         self.patches = patches or envVars.get("patches", "")
         self.system = envVars.get("system", "")
-        self.out = envVars.get("out", "")
+        self.out = envVars.get("out", "") or _coerce_derivation_string(
+            structured_env.get("out")
+        )
         self.outputs = []
         self.store_path = None
-        outputs = envVars.get("outputs", "").split()
+        outputs = str(
+            envVars.get("outputs", "")
+            or _coerce_derivation_string(structured_env.get("outputs"))
+        ).split()
         for output in outputs:
-            path = envVars.get(output, None)
+            path = envVars.get(output, None) or structured_env.get(output)
             self.add_output_path(path)
         LOG.log(LOG_SPAM, "%s outputs: %s", self, self.outputs)
         # pname 'source' in Nix has special meaning - it is the default name
@@ -268,7 +299,12 @@ class Derive:
     def from_nix_derivation_info(cls, path, drv_info, outpath=None):
         """Create a derivation from normalized `nix derivation show` JSON."""
         env_vars = dict(drv_info.get("env", {}))
-        name = _coerce_derivation_string(drv_info.get("name")) or env_vars.get("name")
+        structured_attrs = _structured_attr_map(drv_info.get("structuredAttrs"))
+        name = (
+            _coerce_derivation_string(drv_info.get("name"))
+            or env_vars.get("name")
+            or _coerce_derivation_string(structured_attrs.get("name"))
+        )
         if not name:
             name = destructure(env_vars).get("name")
         outputs = drv_info.get("outputs", {})
@@ -277,13 +313,25 @@ class Derive:
         drv = cls(
             envVars=env_vars,
             name=name,
-            patches=env_vars.get("patches", ""),
+            patches=env_vars.get("patches", "")
+            or _coerce_derivation_string(structured_attrs.get("patches")),
         )
         drv.system = _coerce_derivation_string(drv_info.get("system")) or drv.system
-        drv.version = env_vars.get("version", "")
-        if not drv.version:
-            drv.version = _coerce_derivation_string(drv_info.get("version"))
-        drv.out = drv.out or _derivation_output_path(outputs, "out")
+        pname = env_vars.get("pname") or _coerce_derivation_string(
+            structured_attrs.get("pname")
+        )
+        if pname:
+            drv.pname = _reconstruct_pname(drv.name, pname)
+        drv.version = (
+            env_vars.get("version", "")
+            or _coerce_derivation_string(structured_attrs.get("version"))
+            or drv.version
+        )
+        drv.out = (
+            drv.out
+            or _derivation_output_path(outputs, "out")
+            or _coerce_derivation_string(structured_attrs.get("out"))
+        )
         drv._refresh_purl()
         drv.outputs = []
         _set_derivation_output_paths(drv, outputs, env_vars)
