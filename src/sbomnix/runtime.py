@@ -61,6 +61,8 @@ def runtime_closure_from_path_info(path_info):
     rows = []
     output_paths_by_drv = {}
     for target_path, info in normalize_nix_path_info(path_info).items():
+        if info is None:
+            continue
         deriver = nix_path_info_deriver(info, target_path)
         if deriver:
             output_paths_by_drv.setdefault(deriver, set()).add(target_path)

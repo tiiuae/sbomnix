@@ -14,7 +14,7 @@ import pytest
 from common.errors import InvalidNixJsonError, NixCommandError
 from common.nix_utils import normalize_nix_path_info
 from provenance.dependencies import DependencyHooks, dependency_paths
-from provenance.path_info import nar_hash_for_path, query_path_info
+from provenance.path_info import nar_hash_for_path, query_path_hashes, query_path_info
 
 
 def test_normalize_path_info_rejects_malformed_list_records():
@@ -24,7 +24,13 @@ def test_normalize_path_info_rejects_malformed_list_records():
 
 def test_normalize_path_info_rejects_malformed_object_records():
     with pytest.raises(InvalidNixJsonError, match="expected path-info record"):
-        normalize_nix_path_info({"/nix/store/target": None})
+        normalize_nix_path_info({"/nix/store/target": "not-a-record"})
+
+
+def test_normalize_path_info_preserves_unrealized_object_records():
+    target = "/nix/store/11111111111111111111111111111111-target"
+
+    assert normalize_nix_path_info({target: None}) == {target: None}
 
 
 def test_normalize_path_info_supports_list_records():
@@ -50,6 +56,45 @@ def test_nar_hash_for_path_rejects_missing_hash():
 def test_nar_hash_for_path_rejects_missing_record():
     with pytest.raises(InvalidNixJsonError, match="missing path-info record"):
         nar_hash_for_path({}, "/nix/store/target")
+
+
+def test_nar_hash_for_path_rejects_unrealized_record():
+    with pytest.raises(InvalidNixJsonError, match="is unrealized"):
+        nar_hash_for_path({"/nix/store/target": None}, "/nix/store/target")
+
+
+def test_query_path_hashes_preserves_unrealized_records():
+    realized = "/nix/store/11111111111111111111111111111111-realized"
+    unrealized = "/nix/store/22222222222222222222222222222222-source"
+    nar_hash = "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert realized in cmd
+        assert unrealized in cmd
+        return SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    realized: {"narHash": nar_hash},
+                    unrealized: None,
+                }
+            )
+        )
+
+    assert query_path_hashes(
+        [realized, unrealized],
+        exec_cmd_fn=fake_exec_cmd,
+    ) == [nar_hash, None]
+
+
+def test_query_path_hashes_rejects_omitted_records():
+    requested = "/nix/store/11111111111111111111111111111111-requested"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert requested in cmd
+        return SimpleNamespace(stdout=json.dumps({}))
+
+    with pytest.raises(InvalidNixJsonError, match="missing path-info record"):
+        query_path_hashes([requested], exec_cmd_fn=fake_exec_cmd)
 
 
 def test_dependency_paths_rejects_mismatched_path_info_record():
@@ -95,6 +140,31 @@ def test_dependency_paths_recursive_includes_derivation_outputs():
         root_drv,
         dep_drv,
         root_out,
+        dep_out,
+    ]
+
+
+def test_dependency_paths_recursive_keeps_unrealized_path_records():
+    root_drv = "/nix/store/11111111111111111111111111111111-root.drv"
+    dep_out = "/nix/store/22222222222222222222222222222222-source"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert "--recursive" in cmd
+        return SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    root_drv: {"references": [dep_out]},
+                    dep_out: None,
+                }
+            )
+        )
+
+    assert dependency_paths(
+        root_drv,
+        recursive=True,
+        hooks=DependencyHooks(exec_cmd_fn=fake_exec_cmd),
+    ) == [
+        root_drv,
         dep_out,
     ]
 

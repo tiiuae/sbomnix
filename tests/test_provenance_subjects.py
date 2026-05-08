@@ -17,7 +17,7 @@ from common.errors import (
     MissingNixDerivationMetadataError,
     NixCommandError,
 )
-from common.log import LOG
+from common.log import LOG, LOG_VERBOSE
 from common.nix_utils import parse_nix_derivation_show
 from provenance import main as provenance_main
 from provenance.dependencies import (
@@ -148,7 +148,25 @@ def test_dependency_package_skips_non_normalized_digest(caplog):
         )
 
     assert package is None
+    assert "Cannot determine digest" not in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(LOG_VERBOSE, logger=LOG.name):
+        package = dependency_package(
+            drv_path,
+            "sha999:abc",
+            {},
+            {},
+            hooks=DependencyHooks(
+                normalize_digest_fn=normalize_digest,
+                output_digest_fn=output_digest,
+                log=LOG,
+            ),
+        )
+
+    assert package is None
     assert "Cannot determine digest" in caplog.text
+    assert caplog.records[0].levelno == LOG_VERBOSE
 
 
 def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
@@ -202,6 +220,85 @@ def test_get_dependencies_prefers_fixed_output_digest_for_output_paths():
             "annotations": {"version": "1.2.3"},
         }
     ]
+
+
+def test_get_dependencies_uses_fixed_output_digest_for_unrealized_path_info():
+    drv_path = "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+    drv_basename = "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-root.drv"
+    dep_drv_basename = "1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-source.drv"
+    root_out_path = "/nix/store/3ddddddddddddddddddddddddddddddd-root"
+    dep_out_basename = "2ccccccccccccccccccccccccccccccc-source"
+    dep_out_path = f"/nix/store/{dep_out_basename}"
+    metadata_digest = "77a94a83ccab42a68278ac5d3e340dcefecd736dd4feff1de71dec137b6b44ce"
+    root_nar_hash = "sha256:1b8m03r63zqhnjf7l5wnldhh7c134ap5vpj0850ymkq1iyzicy5s"
+
+    def fake_exec_cmd(cmd, **kwargs):
+        if cmd[:4] == ["nix", "derivation", "show", "-r"]:
+            return SimpleNamespace(
+                stdout=json.dumps(
+                    {
+                        "derivations": {
+                            drv_basename: {
+                                "name": "root",
+                                "outputs": {"out": {"path": root_out_path}},
+                                "env": {"out": root_out_path},
+                            },
+                            dep_drv_basename: {
+                                "name": "source",
+                                "outputs": {
+                                    "out": {
+                                        "path": dep_out_basename,
+                                        "hash": metadata_digest,
+                                        "hashAlgo": "r:sha256",
+                                    }
+                                },
+                                "env": {
+                                    "out": dep_out_basename,
+                                    "version": "1.2.3",
+                                },
+                            },
+                        },
+                        "version": 4,
+                    }
+                )
+            )
+        if cmd[:5] == ["nix", "path-info", "--json", "--json-format", "1"]:
+            args = cmd[5:]
+            if "--extra-experimental-features" in args:
+                args = args[: args.index("--extra-experimental-features")]
+            recursive = "--recursive" in args
+            paths = [arg for arg in args if arg != "--recursive"]
+            if recursive and paths == [drv_path]:
+                return SimpleNamespace(
+                    stdout=json.dumps(
+                        {
+                            drv_path: {"references": [dep_out_path]},
+                            dep_out_path: None,
+                        }
+                    )
+                )
+            if not recursive and paths == [drv_path, dep_out_path, root_out_path]:
+                return SimpleNamespace(
+                    stdout=json.dumps(
+                        {
+                            drv_path: {"narHash": root_nar_hash},
+                            dep_out_path: None,
+                            root_out_path: {"narHash": root_nar_hash},
+                        }
+                    )
+                )
+        raise AssertionError(f"unexpected command: {cmd} kwargs={kwargs}")
+
+    assert {
+        "name": "source",
+        "uri": dep_out_path,
+        "digest": {"sha256": metadata_digest},
+        "annotations": {"version": "1.2.3"},
+    } in get_dependencies(
+        drv_path,
+        recursive=True,
+        hooks=_dependency_hooks(exec_cmd_fn=fake_exec_cmd),
+    )
 
 
 def test_get_dependencies_maps_env_only_output_paths_back_to_derivations():
@@ -369,6 +466,20 @@ def test_get_subjects_skips_unrealized_outputs_without_digest():
 
     def fake_exec_cmd(cmd, **_kwargs):
         assert _path_info_paths(cmd) == [output_path_value]
+
+    assert not get_subjects(
+        {"out": {"method": "nar"}},
+        env={"out": output_path_value},
+        hooks=_subject_hooks(fake_exec_cmd),
+    )
+
+
+def test_get_subjects_skips_null_path_info_outputs_without_digest():
+    output_path_value = "/custom/store/2ccccccccccccccccccccccccccccccc-nghttp2-doc"
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert _path_info_paths(cmd) == [output_path_value]
+        return SimpleNamespace(stdout=json.dumps({output_path_value: None}))
 
     assert not get_subjects(
         {"out": {"method": "nar"}},

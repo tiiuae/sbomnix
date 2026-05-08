@@ -68,6 +68,28 @@ def test_runtime_closure_from_path_info_supports_list_payloads():
     }
 
 
+def test_runtime_closure_from_path_info_skips_unrealized_records():
+    closure = runtime_closure_from_path_info(
+        {
+            "/nix/store/11111111111111111111111111111111-target-1.0": {
+                "deriver": None,
+                "references": ["/nix/store/22222222222222222222222222222222-source"],
+            },
+            "/nix/store/22222222222222222222222222222222-source": None,
+        }
+    )
+
+    assert closure.df_deps.to_dict("records") == [
+        {
+            "src_path": "/nix/store/22222222222222222222222222222222-source",
+            "src_pname": "source",
+            "target_path": "/nix/store/11111111111111111111111111111111-target-1.0",
+            "target_pname": "target-1.0",
+        }
+    ]
+    assert closure.output_paths_by_drv == {}
+
+
 def test_runtime_closure_from_path_info_rejects_missing_references():
     with pytest.raises(InvalidNixJsonError, match="missing `references`"):
         runtime_closure_from_path_info(
