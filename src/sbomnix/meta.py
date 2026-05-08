@@ -4,15 +4,13 @@
 
 """Cache and scan nixpkgs meta information."""
 
-import pathlib
-import tempfile
 from dataclasses import replace
-from getpass import getuser
 
 from filelock import FileLock
 
 from common.log import LOG
 from nixmeta.scanner import NixMetaScanner
+from sbomnix.cache_paths import meta_lock_path
 from sbomnix.dfcache import LockedDfCache
 from sbomnix.meta_source import (
     META_NIXPKGS_NIX_PATH,
@@ -28,11 +26,6 @@ from sbomnix.meta_source import (
 # is cleaned.
 _NIXMETA_NIXPKGS_TTL = 60 * 60 * 24 * 30
 
-# FileLock lock path
-_FLOCK = pathlib.Path(tempfile.gettempdir()) / f"{getuser()}_sbomnix_meta.lock"
-
-###############################################################################
-
 __all__ = [
     "META_NIXPKGS_NIX_PATH",
     "Meta",
@@ -45,7 +38,7 @@ class Meta:
     """Cache nixpkgs meta information."""
 
     def __init__(self):
-        self.lock = FileLock(_FLOCK)
+        self.lock = FileLock(str(meta_lock_path()))
         self.cache = LockedDfCache()
         self.source_resolver = NixpkgsMetaSourceResolver()
 
