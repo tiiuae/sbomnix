@@ -51,8 +51,10 @@ def _run_meta_nix(names: list[str]) -> dict:
 def _license(result: dict, name: str) -> str:
     """Return shortName of the license for *name* in the result dict."""
     meta = result.get(name, {}).get("meta", {})
-    lic = meta.get("license", {})
-    return lic.get("shortName", "")
+    licenses = meta.get("licenseEntries", [])
+    if licenses:
+        return licenses[0].get("shortName") or licenses[0].get("raw") or ""
+    return ""
 
 
 def _description(result: dict, name: str) -> str:
@@ -290,12 +292,12 @@ def test_exact_name_match_beats_cross_set_pname_collision():
     assert top_level["ambiguous"] is False
     assert top_level["preciseNeeded"] is False
     assert top_level["meta"]["description"] == "Fixture: top-level hello"
-    assert top_level["meta"]["license"]["shortName"] == "Top-Level-Hello"
+    assert _license(result, "hello-2.12.3") == "Top-Level-Hello"
 
     assert haskell["ambiguous"] is False
     assert haskell["preciseNeeded"] is False
     assert haskell["meta"]["description"] == "Fixture: haskell hello"
-    assert haskell["meta"]["license"]["shortName"] == "Haskell-Hello"
+    assert _license(result, "hello-1.0.0.2") == "Haskell-Hello"
 
 
 def test_split_output_name_beats_cross_set_pname_collision():
@@ -306,7 +308,7 @@ def test_split_output_name_beats_cross_set_pname_collision():
     assert entry["ambiguous"] is False
     assert entry["preciseNeeded"] is False
     assert entry["meta"]["description"] == "Fixture: top-level split-demo"
-    assert entry["meta"]["license"]["shortName"] == "Top-Level-Split-Demo"
+    assert _license(result, "split-demo-1.0-doc") == "Top-Level-Split-Demo"
 
 
 def test_unprefixed_name_marks_cross_set_name_collisions_as_ambiguous():
@@ -317,7 +319,7 @@ def test_unprefixed_name_marks_cross_set_name_collisions_as_ambiguous():
     assert entry["ambiguous"] is True
     assert entry["preciseNeeded"] is True
     assert entry["meta"]["description"] == "Fixture: top-level cornelis"
-    assert entry["meta"]["license"]["shortName"] == "Top-Level-Cornelis"
+    assert _license(result, "cornelis-0.2.0.1") == "Top-Level-Cornelis"
 
 
 def test_metadata_equivalent_cross_set_collision_skips_precise_flag():
@@ -328,3 +330,12 @@ def test_metadata_equivalent_cross_set_collision_skips_precise_flag():
     assert entry["ambiguous"] is True
     assert entry["preciseNeeded"] is False
     assert entry["meta"]["description"] == "Fixture: same metadata collision"
+
+
+def test_license_entries_keep_cross_set_collision_precise():
+    """Full license metadata differences must still force preciseNeeded=True."""
+    result = _run_meta_nix(["license-detail-1.0"])
+    entry = result["license-detail-1.0"]
+
+    assert entry["ambiguous"] is True
+    assert entry["preciseNeeded"] is True

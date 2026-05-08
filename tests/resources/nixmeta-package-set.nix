@@ -108,6 +108,8 @@ let
       homepage,
       licenseShort ? "Apache-2.0",
       licenseSpdxId ? "Apache-2.0",
+      licenseFullName ? null,
+      licenseMeta ? null,
       outputs ? null,
     }:
     builtins.derivation (
@@ -121,10 +123,15 @@ let
         ];
         meta = {
           inherit description homepage;
-          license = {
-            shortName = licenseShort;
-            spdxId = licenseSpdxId;
-          };
+          license =
+            if licenseMeta != null then
+              licenseMeta
+            else
+              {
+                shortName = licenseShort;
+                spdxId = licenseSpdxId;
+                fullName = licenseFullName;
+              };
         };
       }
       // (if outputs == null then { } else { inherit outputs; })
@@ -162,6 +169,16 @@ in
       homepage = "https://example.test/haskell-hello";
       licenseShort = "Haskell-Hello";
       licenseSpdxId = "LicenseRef-Haskell-Hello";
+    };
+    "license-detail" = mkPackage {
+      name = "license-detail-1.0";
+      pname = "license-detail";
+      version = "1.0";
+      description = "Fixture: same name with differing full license metadata";
+      homepage = "https://example.test/license-detail";
+      licenseShort = "License-Detail";
+      licenseSpdxId = "LicenseRef-License-Detail";
+      licenseFullName = "Fixture License Detail Haskell";
     };
     "same-meta" = mkPackage {
       name = "same-meta-1.0";
@@ -460,6 +477,17 @@ in
     homepage = "https://example.test/top-level-hello";
     licenseShort = "Top-Level-Hello";
     licenseSpdxId = "LicenseRef-Top-Level-Hello";
+  };
+
+  "license-detail" = mkPackage {
+    name = "license-detail-1.0";
+    pname = "license-detail";
+    version = "1.0";
+    description = "Fixture: same name with differing full license metadata";
+    homepage = "https://example.test/license-detail";
+    licenseShort = "License-Detail";
+    licenseSpdxId = "LicenseRef-License-Detail";
+    licenseFullName = "Fixture License Detail Top Level";
   };
 
   cornelis = mkPackage {

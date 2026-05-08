@@ -309,6 +309,41 @@ let
 
   _explicitAttrRewrite = pname: if pname == "nss-cacert" then "cacert" else null;
 
+  _normalizeLicenseEntry =
+    license:
+    if license == null then
+      null
+    else if lib.isAttrs license then
+      if builtins.attrNames license == [ ] then
+        null
+      else
+        {
+          spdxId = license.spdxId or null;
+          shortName = license.shortName or null;
+          fullName = license.fullName or null;
+          raw = if (license.raw or null) == null then null else builtins.toString license.raw;
+        }
+    else
+      {
+        spdxId = null;
+        shortName = null;
+        fullName = null;
+        raw = builtins.toString license;
+      };
+
+  _normalizeLicenseEntries =
+    license:
+    lib.filter (entry: entry != null) (
+      map _normalizeLicenseEntry (
+        if license == null then
+          [ ]
+        else if builtins.isList license then
+          license
+        else
+          [ license ]
+      )
+    );
+
   # Strip the last dash-word suffix from a pname, e.g.
   # "bash-interactive" maps to "bash", and "ghostscript-with-X" maps to
   # "ghostscript-with".
@@ -676,7 +711,7 @@ let
     homepage = meta.homepage or null;
     unfree = meta.unfree or false;
     position = meta.position or null;
-    license = meta.license or { };
+    licenseEntries = _normalizeLicenseEntries (meta.license or null);
     maintainers = map (m: { email = m.email or ""; }) (
       lib.filter lib.isAttrs (meta.maintainers or [ ])
     );

@@ -38,6 +38,7 @@ def test_join_meta_leaves_precise_needed_rows_blank(monkeypatch):
                 "meta_precise_needed": "False",
                 "meta_description": "hello package",
                 "meta_homepage": "https://example.invalid/hello",
+                "meta_license_entries_json": '[{"spdxId":"MIT","shortName":"MIT","fullName":"MIT License","raw":null}]',
                 "meta_debug_private": "do-not-export",
             },
             {
@@ -47,6 +48,7 @@ def test_join_meta_leaves_precise_needed_rows_blank(monkeypatch):
                 "meta_ambiguous": "True",
                 "meta_precise_needed": "True",
                 "meta_description": "top-level cornelis",
+                "meta_license_entries_json": '[{"spdxId":"BSD-3-Clause","shortName":"BSD-3-Clause","fullName":null,"raw":null}]',
                 "meta_debug_private": "do-not-export",
             },
         ]
@@ -85,6 +87,10 @@ def test_join_meta_leaves_precise_needed_rows_blank(monkeypatch):
     assert pd.isna(by_store["/nix/store/cornelis-top.drv"])
     assert pd.isna(by_store["/nix/store/cornelis-hs.drv"])
     assert builder.df_sbomdb.loc[0, "meta_homepage"] == "https://example.invalid/hello"
+    assert builder.df_sbomdb.loc[0, "meta_license_entries_json"] == (
+        '[{"spdxId":"MIT","shortName":"MIT","fullName":"MIT License","raw":null}]'
+    )
+    assert pd.isna(builder.df_sbomdb.loc[1, "meta_license_entries_json"])
     assert "meta_ambiguous" not in builder.df_sbomdb.columns
     assert "meta_precise_needed" not in builder.df_sbomdb.columns
     assert "meta_debug_private" not in builder.df_sbomdb.columns

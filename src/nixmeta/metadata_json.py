@@ -29,6 +29,45 @@ def _stringify_meta_scalar(value):
     return "" if value is None else str(value)
 
 
+def _normalize_license_entry(entry):
+    """Normalize one nixpkgs license entry to a lossless JSON-safe dict."""
+    if entry is None:
+        return None
+    if isinstance(entry, dict):
+        if not entry:
+            return None
+        return {
+            "spdxId": entry.get("spdxId"),
+            "shortName": entry.get("shortName"),
+            "fullName": entry.get("fullName"),
+            "raw": entry.get("raw"),
+        }
+    return {
+        "spdxId": None,
+        "shortName": None,
+        "fullName": None,
+        "raw": str(entry),
+    }
+
+
+def _normalize_license_entries(entries):
+    """Preserve per-license ordering and raw scalar forms."""
+    if entries is None:
+        return []
+    if isinstance(entries, list):
+        normalized = [_normalize_license_entry(entry) for entry in entries]
+    else:
+        normalized = [_normalize_license_entry(entries)]
+    return [entry for entry in normalized if entry is not None]
+
+
+def _flatten_license_field(entries, key):
+    """Keep legacy flattened license columns for compatibility only."""
+    return ";".join(
+        str(value) for entry in entries if (value := entry.get(key)) not in (None, "")
+    )
+
+
 def parse_json_metadata(json_filename, *, log=LOG):
     """Parse package metadata from a ``nix-env --json`` output file."""
     with open(json_filename, "r", encoding="utf-8") as inf:
@@ -55,12 +94,17 @@ def parse_json_metadata(json_filename, *, log=LOG):
         setcol("meta_position", []).append(
             _stringify_meta_scalar(meta.get("position", ""))
         )
-        meta_license = meta.get("license", {})
+        meta_license = _normalize_license_entries(
+            meta.get("licenseEntries", meta.get("license"))
+        )
+        setcol("meta_license_entries_json", []).append(
+            json.dumps(meta_license, sort_keys=True, separators=(",", ":"))
+        )
         setcol("meta_license_short", []).append(
-            parse_meta_entry(meta_license, key="shortName")
+            _flatten_license_field(meta_license, "shortName")
         )
         setcol("meta_license_spdxid", []).append(
-            parse_meta_entry(meta_license, key="spdxId")
+            _flatten_license_field(meta_license, "spdxId")
         )
         meta_maintainers = meta.get("maintainers", {})
         setcol("meta_maintainers_email", []).append(

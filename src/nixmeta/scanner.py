@@ -115,6 +115,7 @@ class NixMetaScanner:
             "version",
             "meta_ambiguous",
             "meta_precise_needed",
+            "meta_license_entries_json",
             "meta_license_short",
             "meta_license_spdxid",
             "meta_homepage",

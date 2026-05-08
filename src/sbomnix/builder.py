@@ -55,6 +55,7 @@ _PUBLIC_META_JOIN_COLUMNS = [
     "meta_unfree",
     "meta_description",
     "meta_position",
+    "meta_license_entries_json",
     "meta_license_short",
     "meta_license_spdxid",
     "meta_maintainers_email",

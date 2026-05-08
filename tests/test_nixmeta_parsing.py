@@ -58,11 +58,71 @@ def test_parse_json_metadata_flattens_nested_fields(tmp_path):
             "meta_unfree": "False",
             "meta_description": "GNU hello",
             "meta_position": "pkgs/tools/misc/hello/default.nix:1",
+            "meta_license_entries_json": '[{"fullName":null,"raw":null,"shortName":"GPLv3+","spdxId":"GPL-3.0-or-later"}]',
             "meta_license_short": "GPLv3+",
             "meta_license_spdxid": "GPL-3.0-or-later",
             "meta_maintainers_email": "maintainer@example.invalid",
         }
     ]
+
+
+def test_parse_json_metadata_preserves_lossless_license_entries(tmp_path):
+    json_path = tmp_path / "meta.json"
+    json_path.write_text(
+        json.dumps(
+            {
+                "mixed-license": {
+                    "name": "mixed-license-1.0",
+                    "pname": "mixed-license",
+                    "version": "1.0",
+                    "meta": {
+                        "licenseEntries": [
+                            {
+                                "shortName": "MIT",
+                                "spdxId": "MIT",
+                                "fullName": "MIT License",
+                                "raw": None,
+                            },
+                            {
+                                "shortName": None,
+                                "spdxId": None,
+                                "fullName": "Public Domain",
+                                "raw": None,
+                            },
+                            "Custom-Scalar-License",
+                        ]
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    df = metadata_json.parse_json_metadata(json_path)
+    row = df.to_dict(orient="records")[0]
+
+    assert json.loads(row["meta_license_entries_json"]) == [
+        {
+            "spdxId": "MIT",
+            "shortName": "MIT",
+            "fullName": "MIT License",
+            "raw": None,
+        },
+        {
+            "spdxId": None,
+            "shortName": None,
+            "fullName": "Public Domain",
+            "raw": None,
+        },
+        {
+            "spdxId": None,
+            "shortName": None,
+            "fullName": None,
+            "raw": "Custom-Scalar-License",
+        },
+    ]
+    assert row["meta_license_short"] == "MIT"
+    assert row["meta_license_spdxid"] == "MIT"
 
 
 def test_scan_store_names_preserves_successful_empty_result(monkeypatch):
