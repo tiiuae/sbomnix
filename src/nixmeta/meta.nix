@@ -183,7 +183,10 @@ let
     in
     suffix != null && suffix != "" && _isSimpleOutputName suffix && builtins.elem suffix outputs;
 
-  _narrowCandidatesByCanonicalIdentity =
+  # Return only candidates that prove identity by exact drv.name or declared
+  # split-output suffix. Empty means "keep searching"; the final loose fallback
+  # handles older pname-only matches after all identity-preserving tiers fail.
+  _canonicalCandidatesByIdentity =
     inputName: candidates:
     let
       exactNameMatches = builtins.filter (drv: (drv.name or null) == inputName) candidates;
@@ -196,11 +199,115 @@ let
     else if _hasMatches splitOutputMatches then
       splitOutputMatches
     else
-      candidates;
+      [ ];
+
+  _narrowCandidatesByCanonicalIdentity =
+    inputName: candidates:
+    let
+      canonicalCandidates = _canonicalCandidatesByIdentity inputName candidates;
+    in
+    if _hasMatches canonicalCandidates then canonicalCandidates else candidates;
+
+  # Low-loss attr-name rewrites should only be accepted when the candidate is
+  # still canonically tied to the package identity for the current lookup pass
+  # rather than merely sharing a rewritten attr name.
+  _candidateMatchesExpectedPnameOrName =
+    inputName: expectedPname: drv:
+    (drv.name or null) == inputName || (drv.pname or null) == expectedPname;
+
+  _lookupRewrittenCandidates =
+    inputName: expectedPname: rewrittenPname: sets:
+    if rewrittenPname == null || rewrittenPname == expectedPname then
+      [ ]
+    else
+      builtins.filter (_candidateMatchesExpectedPnameOrName inputName expectedPname) (
+        _lookupAllInSets rewrittenPname sets
+      );
+
+  _lookupLowLossRewriteCandidates =
+    inputName: currentPname: sets:
+    let
+      cRewriteExplicit =
+        _lookupRewrittenCandidates inputName currentPname (_explicitAttrRewrite currentPname)
+          sets;
+      cRewriteUnderscore =
+        if !_hasMatches cRewriteExplicit then
+          _lookupRewrittenCandidates inputName currentPname (lib.replaceStrings [ "-" ] [ "_" ]
+            currentPname
+          ) sets
+        else
+          [ ];
+      cRewriteCamel =
+        if !_hasMatches cRewriteExplicit && !_hasMatches cRewriteUnderscore then
+          _lookupRewrittenCandidates inputName currentPname (_dashToCamelCase currentPname) sets
+        else
+          [ ];
+    in
+    _firstMatchingCandidates [
+      cRewriteExplicit
+      cRewriteUnderscore
+      cRewriteCamel
+    ];
 
   # Try heuristic tiers in order and stop at the first tier that yields at
   # least one candidate. Later tiers are only fallbacks for total misses.
   _firstMatchingCandidates = candidateLists: lib.findFirst _hasMatches [ ] candidateLists;
+
+  _uppercaseAsciiFirst =
+    str:
+    let
+      first = builtins.substring 0 1 str;
+      rest = builtins.substring 1 (builtins.stringLength str - 1) str;
+      upperTable = {
+        a = "A";
+        b = "B";
+        c = "C";
+        d = "D";
+        e = "E";
+        f = "F";
+        g = "G";
+        h = "H";
+        i = "I";
+        j = "J";
+        k = "K";
+        l = "L";
+        m = "M";
+        n = "N";
+        o = "O";
+        p = "P";
+        q = "Q";
+        r = "R";
+        s = "S";
+        t = "T";
+        u = "U";
+        v = "V";
+        w = "W";
+        x = "X";
+        y = "Y";
+        z = "Z";
+      };
+    in
+    if str == "" then "" else "${upperTable.${first} or first}${rest}";
+
+  _dashToCamelCase =
+    pname:
+    let
+      m = builtins.match "([^-]+)-(.*)" pname;
+      restToCamel =
+        rest:
+        let
+          next = builtins.match "([^-]+)-(.*)" rest;
+        in
+        if rest == "" then
+          ""
+        else if next == null then
+          _uppercaseAsciiFirst rest
+        else
+          "${_uppercaseAsciiFirst (lib.head next)}${restToCamel (lib.last next)}";
+    in
+    if m == null then null else "${lib.head m}${restToCamel (lib.last m)}";
+
+  _explicitAttrRewrite = pname: if pname == "nss-cacert" then "cacert" else null;
 
   # Strip the last dash-word suffix from a pname, e.g.
   # "bash-interactive" maps to "bash", and "ghostscript-with-X" maps to
@@ -225,7 +332,10 @@ let
 
   # Find derivations whose pname matches. Lookup order:
   #   1. Exact pname in the language-prefixed search sets
-  #   2. Strip trailing dash-word suffixes (up to two levels). For python/perl/ruby
+  #   2. Low-loss pre-strip rewrites. For explicit python/perl/ruby prefixes,
+  #      these may search the language sub-set before pkgs. Unprefixed names
+  #      are restricted to pkgs only to avoid cross-set false positives.
+  #   3. Strip trailing dash-word suffixes (up to two levels). For python/ruby
   #      prefixes, also try the language sub-set before pkgs:
   #      "python3.13-gyp-unstable-2024-02-07" maps to python3Packages.gyp
   #      "ruby3.3-kramdown-parser-gfm-1.1.0" maps to rubyPackages.kramdown-parser-gfm
@@ -235,9 +345,9 @@ let
   #      (restricted for non-language names to prevent language sub-sets from producing
   #      false positives, e.g. "speech-dispatcher" stripped to "speech"
   #      matching rPackages.speech)
-  #   3. Named convention fallbacks (Perl, C++, GTK, webkitgtk, dash to underscore)
-  #   4. Attr-name divergence fallbacks: lowercase, dash-removed, digit-suffix,
-  #      underscore-major-version, dot to dash, plus to "plus". All of these
+  #   4. Named convention fallbacks (C++, GTK, webkitgtk)
+  #   5. Attr-name divergence fallbacks: lowercase, dash-removed, digit-suffix,
+  #      underscore-version, dot to dash, plus to "plus". All of these
   #      run against the language-prefixed sets to preserve package-set
   #      disambiguation.
   _findByStoreName =
@@ -245,54 +355,88 @@ let
     let
       pname = _pnameFromName name;
       sets = _prefixedSearchSets name;
+      isPythonName = builtins.match "python[23][.][0-9]+-.+" name != null;
       isPerlName =
         builtins.match "perl[0-9]+[.][0-9]+[.][0-9]+-.+" name != null
         || builtins.match "perl[0-9]+[.][0-9]+-.+" name != null;
-      stripSets =
-        if
-          builtins.match "python[23][.][0-9]+-.+" name != null
-          || builtins.match "ruby[0-9]+[.][0-9]+-.+" name != null
-        then
-          sets
-        else
-          [ pkgs ];
+      isRubyName = builtins.match "ruby[0-9]+[.][0-9]+-.+" name != null;
+      rewriteSets = if isPythonName || isPerlName || isRubyName then sets else [ pkgs ];
+      stripSets = if isPythonName || isRubyName then sets else [ pkgs ];
     in
     if _isPatchLikeName name || _isSourceArtifactName name || pname == null then
       null
     else
       let
         c0 = _lookupAllInSets pname sets;
+        c0Identity = _canonicalCandidatesByIdentity name c0;
         # Perl: "Authen-SASL" maps to perlPackages.AuthenSASL after dash
         # removal.
         # Try this before suffix stripping to avoid false positives like
         # "CGI-Fast" mapping to "CGI" and "IO-HTML" mapping to "IO".
         cPerl =
-          if isPerlName && !_hasMatches c0 then
+          if isPerlName && !_hasMatches c0Identity then
             let
               noDash = lib.replaceStrings [ "-" ] [ "" ] pname;
             in
             if noDash != pname then _lookupAllInSets noDash [ _perlPkgs ] else [ ]
           else
             [ ];
+        cPerlIdentity = _canonicalCandidatesByIdentity name cPerl;
+        # Run low-loss attr-name rewrites before suffix stripping so packages
+        # such as "libcap-ng" and "linux-headers" resolve to the right nixpkgs
+        # attr without broadening unprefixed names beyond pkgs.
+        cRewrite =
+          if !_hasMatches c0Identity && !_hasMatches cPerlIdentity then
+            _lookupLowLossRewriteCandidates name pname rewriteSets
+          else
+            [ ];
+        cRewriteIdentity = _canonicalCandidatesByIdentity name cRewrite;
         # Suffix-strip cascade: only explicit python/ruby names keep their
         # language sub-set here. Non-language names strip against pkgs only to
         # avoid false positives from unrelated top-level fragments; Perl uses
-        # its own dash-removal fallback above instead of this cascade.
-        p1 = if !_hasMatches c0 && !_hasMatches cPerl then _stripSuffix pname else null;
+        # its own dash-removal fallback above instead of this cascade. After
+        # each strip, retry the same low-loss rewrites before stripping again.
+        preStripFailed =
+          !_hasMatches c0Identity && !_hasMatches cPerlIdentity && !_hasMatches cRewriteIdentity;
+        p1 = if preStripFailed then _stripSuffix pname else null;
         c1 = if p1 != null then _lookupAllInSets p1 stripSets else [ ];
-        p2 = if !_hasMatches c1 && p1 != null then _stripSuffix p1 else null;
+        c1Identity = _canonicalCandidatesByIdentity name c1;
+        c1Rewrite =
+          if p1 != null && !_hasMatches c1Identity then
+            _lookupLowLossRewriteCandidates name p1 stripSets
+          else
+            [ ];
+        c1RewriteIdentity = _canonicalCandidatesByIdentity name c1Rewrite;
+        p2 =
+          if !_hasMatches c1Identity && !_hasMatches c1RewriteIdentity && p1 != null then
+            _stripSuffix p1
+          else
+            null;
         c2 = if p2 != null then _lookupAllInSets p2 stripSets else [ ];
-        allFailed = !_hasMatches c0 && !_hasMatches c1 && !_hasMatches c2;
+        c2Identity = _canonicalCandidatesByIdentity name c2;
+        c2Rewrite =
+          if p2 != null && !_hasMatches c2Identity then
+            _lookupLowLossRewriteCandidates name p2 stripSets
+          else
+            [ ];
+        c2RewriteIdentity = _canonicalCandidatesByIdentity name c2Rewrite;
+        allFailed =
+          preStripFailed
+          && !_hasMatches c1Identity
+          && !_hasMatches c1RewriteIdentity
+          && !_hasMatches c2Identity
+          && !_hasMatches c2RewriteIdentity;
         # C++ libs: "libsigc++" maps to pkgs.libsigcxx, and "libxml++" maps
         # to pkgs.libxmlxx.
         cXx =
-          if allFailed && !_hasMatches cPerl && lib.hasSuffix "++" pname then
+          if allFailed && lib.hasSuffix "++" pname then
             _lookupAllInSets ((lib.removeSuffix "++" pname) + "xx") [ pkgs ]
           else
             [ ];
+        cXxIdentity = _canonicalCandidatesByIdentity name cXx;
         # GTK: "gtk+" maps to pkgs.gtk2, and "gtk+3" maps to pkgs.gtk3.
         cGtk =
-          if allFailed && !_hasMatches cPerl && !_hasMatches cXx then
+          if allFailed && !_hasMatches cXxIdentity then
             let
               gtkAttr =
                 if pname == "gtk+" then
@@ -305,9 +449,10 @@ let
             if gtkAttr != null then _lookupAllInSets gtkAttr [ pkgs ] else [ ]
           else
             [ ];
+        cGtkIdentity = _canonicalCandidatesByIdentity name cGtk;
         # webkitgtk: "webkitgtk-2.52.2+abi=4.1" maps to pkgs.webkitgtk_4_1.
         cWk =
-          if allFailed && !_hasMatches cPerl && !_hasMatches cXx && !_hasMatches cGtk then
+          if allFailed && !_hasMatches cXxIdentity && !_hasMatches cGtkIdentity then
             let
               m = builtins.match "[^+]*[+]abi=([0-9]+)[.]([0-9]+).*" name;
               attr = if m != null then "webkitgtk_${lib.head m}_${lib.last m}" else null;
@@ -315,26 +460,12 @@ let
             if attr != null then _lookupAllInSets attr [ pkgs ] else [ ]
           else
             [ ];
-        # Dash to underscore: "cyrus-sasl" maps to pkgs.cyrus_sasl, and
-        # "lm-sensors" maps to pkgs.lm_sensors.
-        cUs =
-          if allFailed && !_hasMatches cPerl && !_hasMatches cXx && !_hasMatches cGtk && !_hasMatches cWk then
-            let
-              uscore = lib.replaceStrings [ "-" ] [ "_" ] pname;
-            in
-            if uscore != pname then _lookupAllInSets uscore sets else [ ]
-          else
-            [ ];
+        cWkIdentity = _canonicalCandidatesByIdentity name cWk;
         # Lowercase: "CUnit" maps to pkgs.cunit, and "ldacBT" maps to
         # pkgs.ldacbt.
         cLower =
           if
-            allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
+            allFailed && !_hasMatches cXxIdentity && !_hasMatches cGtkIdentity && !_hasMatches cWkIdentity
           then
             let
               lc = lib.toLower pname;
@@ -342,17 +473,16 @@ let
             if lc != pname then _lookupAllInSets lc sets else [ ]
           else
             [ ];
+        cLowerIdentity = _canonicalCandidatesByIdentity name cLower;
         # Leading digit attrs are often underscore-prefixed in nixpkgs:
         # "3proxy" maps to pkgs._3proxy.
         cLeadingDigit =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
           then
             let
               attr = if builtins.match "^[0-9].*" pname != null then "_${pname}" else null;
@@ -360,18 +490,17 @@ let
             if attr != null then _lookupAllInSets attr sets else [ ]
           else
             [ ];
+        cLeadingDigitIdentity = _canonicalCandidatesByIdentity name cLeadingDigit;
         # Dash removed: "boehm-gc" maps to pkgs.boehmgc, and
         # "wireless-tools" maps to pkgs.wirelesstools.
         cNoDash =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
-            && !_hasMatches cLeadingDigit
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
+            && !_hasMatches cLeadingDigitIdentity
           then
             let
               noDash = lib.replaceStrings [ "-" ] [ "" ] pname;
@@ -379,20 +508,19 @@ let
             if noDash != pname then _lookupAllInSets noDash sets else [ ]
           else
             [ ];
+        cNoDashIdentity = _canonicalCandidatesByIdentity name cNoDash;
         # Digit suffix: "grub" maps to pkgs.grub2, "geoclue" maps to
         # pkgs.geoclue2, "libusb" maps to pkgs.libusb1, and "liblqr" maps to
         # pkgs.liblqr1.
         cDigit =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
-            && !_hasMatches cLeadingDigit
-            && !_hasMatches cNoDash
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
+            && !_hasMatches cLeadingDigitIdentity
+            && !_hasMatches cNoDashIdentity
           then
             lib.findFirst _hasMatches [ ] (
               map (n: _lookupAllInSets (pname + toString n) sets) [
@@ -404,42 +532,51 @@ let
             )
           else
             [ ];
-        # Underscore-major-version: "libsoup-3.6.6" maps to pkgs.libsoup_3,
-        # and "spidermonkey-140.7.1" maps to pkgs.spidermonkey_140.
-        cUnderscoreMajor =
+        cDigitIdentity = _canonicalCandidatesByIdentity name cDigit;
+        # Underscore-version attrs: "openssl-1.1.1w" maps to pkgs.openssl_1_1,
+        # "libsoup-3.6.6" maps to pkgs.libsoup_3, and
+        # "spidermonkey-140.7.1" maps to pkgs.spidermonkey_140.
+        cUnderscoreVersion =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
-            && !_hasMatches cLeadingDigit
-            && !_hasMatches cNoDash
-            && !_hasMatches cDigit
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
+            && !_hasMatches cLeadingDigitIdentity
+            && !_hasMatches cNoDashIdentity
+            && !_hasMatches cDigitIdentity
           then
             let
-              m = builtins.match "${pname}-([0-9]+).*" name;
-              attr = if m != null then "${pname}_${lib.head m}" else null;
+              mMajorMinor = builtins.match "${pname}-([0-9]+)[.]([0-9]+).*" name;
+              mMajor = builtins.match "${pname}-([0-9]+).*" name;
+              attrs =
+                if mMajorMinor != null then
+                  [
+                    "${pname}_${lib.head mMajorMinor}_${builtins.elemAt mMajorMinor 1}"
+                    "${pname}_${lib.head mMajorMinor}"
+                  ]
+                else if mMajor != null then
+                  [ "${pname}_${lib.head mMajor}" ]
+                else
+                  [ ];
             in
-            if attr != null then _lookupAllInSets attr sets else [ ]
+            lib.findFirst _hasMatches [ ] (map (attr: _lookupAllInSets attr sets) attrs)
           else
             [ ];
+        cUnderscoreVersionIdentity = _canonicalCandidatesByIdentity name cUnderscoreVersion;
         # Dot to dash in attr: "vid.stab" maps to pkgs.vid-stab.
         cDotDash =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
-            && !_hasMatches cLeadingDigit
-            && !_hasMatches cNoDash
-            && !_hasMatches cDigit
-            && !_hasMatches cUnderscoreMajor
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
+            && !_hasMatches cLeadingDigitIdentity
+            && !_hasMatches cNoDashIdentity
+            && !_hasMatches cDigitIdentity
+            && !_hasMatches cUnderscoreVersionIdentity
           then
             let
               dotDash = lib.replaceStrings [ "." ] [ "-" ] pname;
@@ -447,21 +584,20 @@ let
             if dotDash != pname then _lookupAllInSets dotDash sets else [ ]
           else
             [ ];
+        cDotDashIdentity = _canonicalCandidatesByIdentity name cDotDash;
         # Plus to "plus": "memtest86+" maps to pkgs.memtest86plus.
         cPlus =
           if
             allFailed
-            && !_hasMatches cPerl
-            && !_hasMatches cXx
-            && !_hasMatches cGtk
-            && !_hasMatches cWk
-            && !_hasMatches cUs
-            && !_hasMatches cLower
-            && !_hasMatches cLeadingDigit
-            && !_hasMatches cNoDash
-            && !_hasMatches cDigit
-            && !_hasMatches cUnderscoreMajor
-            && !_hasMatches cDotDash
+            && !_hasMatches cXxIdentity
+            && !_hasMatches cGtkIdentity
+            && !_hasMatches cWkIdentity
+            && !_hasMatches cLowerIdentity
+            && !_hasMatches cLeadingDigitIdentity
+            && !_hasMatches cNoDashIdentity
+            && !_hasMatches cDigitIdentity
+            && !_hasMatches cUnderscoreVersionIdentity
+            && !_hasMatches cDotDashIdentity
           then
             let
               plusName = lib.replaceStrings [ "+" ] [ "plus" ] pname;
@@ -469,27 +605,54 @@ let
             if plusName != pname then _lookupAllInSets plusName sets else [ ]
           else
             [ ];
+        cPlusIdentity = _canonicalCandidatesByIdentity name cPlus;
         # Heuristic tiers are ordered from direct/safe matches to progressively
-        # lossy attr-name rewrites. Keep only the first non-empty tier so later
-        # fallbacks do not pile onto an already plausible candidate set.
-        rawCandidates = _firstMatchingCandidates [
+        # lossy attr-name rewrites. Prefer the first identity-preserving tier
+        # across the whole cascade before falling back to older pname-only
+        # evidence, so a wrong direct attr cannot block a later exact match.
+        canonicalCandidates = _firstMatchingCandidates [
+          c0Identity
+          cPerlIdentity
+          cRewriteIdentity
+          c1Identity
+          c1RewriteIdentity
+          c2Identity
+          c2RewriteIdentity
+          cXxIdentity
+          cGtkIdentity
+          cWkIdentity
+          cLowerIdentity
+          cLeadingDigitIdentity
+          cNoDashIdentity
+          cDigitIdentity
+          cUnderscoreVersionIdentity
+          cDotDashIdentity
+          cPlusIdentity
+        ];
+        looseCandidates = _firstMatchingCandidates [
           c0
-          c1
-          c2
           cPerl
+          cRewrite
+          c1
+          c1Rewrite
+          c2
+          c2Rewrite
           cXx
           cGtk
           cWk
-          cUs
           cLower
           cLeadingDigit
           cNoDash
           cDigit
-          cUnderscoreMajor
+          cUnderscoreVersion
           cDotDash
           cPlus
         ];
-        candidates = _narrowCandidatesByCanonicalIdentity name rawCandidates;
+        candidates =
+          if _hasMatches canonicalCandidates then
+            canonicalCandidates
+          else
+            _narrowCandidatesByCanonicalIdentity name looseCandidates;
         # Compare only the metadata we export. If two candidates differ only in
         # internal attrs that never leave this helper, the builder can safely
         # keep the first-pass result instead of treating the name as

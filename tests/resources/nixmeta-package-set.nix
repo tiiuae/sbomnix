@@ -136,6 +136,15 @@ in
   # Mostly empty sub-package sets; a few contain targeted fixtures used by
   # meta.nix unit tests.
   haskellPackages = {
+    camelCrossSet = mkPackage {
+      name = "camel-cross-set-1.0";
+      pname = "camel-cross-set";
+      version = "1.0";
+      description = "Fixture: cross-set false positive for dash-to-camelCase";
+      homepage = "https://example.test/haskell-camel-cross-set";
+      licenseShort = "Haskell-Camel-Cross-Set";
+      licenseSpdxId = "LicenseRef-Haskell-Camel-Cross-Set";
+    };
     cornelis = mkPackage {
       name = "cornelis-0.2.0.1";
       pname = "cornelis";
@@ -266,7 +275,17 @@ in
     };
   };
   ocamlPackages = { };
-  rPackages = { };
+  rPackages = {
+    speech_dispatcher = mkPackage {
+      name = "speech-dispatcher-1.0";
+      pname = "speech-dispatcher";
+      version = "1.0";
+      description = "Fixture: cross-set false positive for dash-to-underscore";
+      homepage = "https://example.test/r-speech-dispatcher";
+      licenseShort = "R-Speech-Dispatcher";
+      licenseSpdxId = "LicenseRef-R-Speech-Dispatcher";
+    };
+  };
   nodePackages = { };
   qt6 = { };
 
@@ -307,6 +326,56 @@ in
     homepage = "https://example.test/test-dashremoved";
   };
 
+  libcap = mkPackage {
+    name = "libcap-2.76";
+    pname = "libcap";
+    version = "2.76";
+    description = "Fixture: wrong suffix-strip target for libcap-ng";
+    homepage = "https://example.test/libcap";
+    licenseShort = "Wrong-Libcap";
+    licenseSpdxId = "LicenseRef-Wrong-Libcap";
+  };
+
+  libcap_ng = mkPackage {
+    name = "libcap-ng-0.9";
+    pname = "libcap-ng";
+    version = "0.9";
+    description = "Fixture: correct dash-to-underscore lookup for libcap-ng";
+    homepage = "https://example.test/libcap-ng";
+    licenseShort = "Correct-Libcap-Ng";
+    licenseSpdxId = "LicenseRef-Correct-Libcap-Ng";
+  };
+
+  linux = mkPackage {
+    name = "linux-6.18.7";
+    pname = "linux";
+    version = "6.18.7";
+    description = "Fixture: wrong suffix-strip target for linux-headers";
+    homepage = "https://example.test/linux";
+    licenseShort = "Wrong-Linux";
+    licenseSpdxId = "LicenseRef-Wrong-Linux";
+  };
+
+  linuxHeaders = mkPackage {
+    name = "linux-headers-6.18.7";
+    pname = "linux-headers";
+    version = "6.18.7";
+    description = "Fixture: correct dash-to-camelCase lookup for linux-headers";
+    homepage = "https://example.test/linux-headers";
+    licenseShort = "Correct-Linux-Headers";
+    licenseSpdxId = "LicenseRef-Correct-Linux-Headers";
+  };
+
+  cacert = mkPackage {
+    name = "nss-cacert-3.121";
+    pname = "nss-cacert";
+    version = "3.121";
+    description = "Fixture: explicit rename lookup for nss-cacert";
+    homepage = "https://example.test/nss-cacert";
+    licenseShort = "Correct-Nss-Cacert";
+    licenseSpdxId = "LicenseRef-Correct-Nss-Cacert";
+  };
+
   # digit-suffix fallback: pname "test-digitsuffix", attr "test-digitsuffix2"
   "test-digitsuffix2" = mkPackage {
     name = "test-digitsuffix2-1.0";
@@ -316,7 +385,28 @@ in
     homepage = "https://example.test/test-digitsuffix";
   };
 
-  # underscore-major-version fallback: pname "libsoup", attr "libsoup_3"
+  # underscore-version fallback: pname "openssl", attrs "openssl" and "openssl_1_1"
+  openssl = mkPackage {
+    name = "openssl-3.0.0";
+    pname = "openssl";
+    version = "3.0.0";
+    description = "Fixture: wrong direct attr for older OpenSSL store names";
+    homepage = "https://example.test/openssl-3";
+    licenseShort = "Wrong-OpenSSL-3";
+    licenseSpdxId = "LicenseRef-Wrong-OpenSSL-3";
+  };
+
+  openssl_1_1 = mkPackage {
+    name = "openssl-1.1.1w";
+    pname = "openssl";
+    version = "1.1.1w";
+    description = "Fixture: correct underscore major-minor OpenSSL attr";
+    homepage = "https://example.test/openssl-1-1";
+    licenseShort = "Correct-OpenSSL-1-1";
+    licenseSpdxId = "LicenseRef-Correct-OpenSSL-1-1";
+  };
+
+  # underscore-version fallback: pname "libsoup", attr "libsoup_3"
   libsoup_3 = mkPackage {
     name = "libsoup-3.6.6";
     pname = "libsoup";

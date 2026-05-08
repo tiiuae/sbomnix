@@ -13,7 +13,7 @@ They are fast (no network, no builds) and exercise the lookup paths in meta.nix:
   - lowercase fallback (case-divergent pnames)
   - dash-removed fallback (attr name has no dashes)
   - digit-suffix fallback (attr name has trailing digit)
-  - underscore-major-version fallback (attr name embeds major version)
+  - underscore-version fallback (attr name embeds major/minor version)
   - dot→dash fallback (dot in pname maps to dash in attr)
   - plus→"plus" fallback (+ sign in pname)
   - dot-in-pname pname extraction ("test.dot-1.0" → pname "test.dot")
@@ -83,6 +83,53 @@ def test_dash_removed_fallback():
     )
 
 
+def test_dash_to_underscore_rewrite_runs_before_suffix_strip():
+    """Store name "libcap-ng-0.9" should resolve to attr "libcap_ng", not "libcap"."""
+    result = _run_meta_nix(["libcap-ng-0.9"])
+    assert _license(result, "libcap-ng-0.9") == "Correct-Libcap-Ng"
+    assert (
+        _description(result, "libcap-ng-0.9")
+        == "Fixture: correct dash-to-underscore lookup for libcap-ng"
+    )
+
+
+def test_dash_to_camel_case_rewrite_runs_before_suffix_strip():
+    """Store name "linux-headers-6.18.7" should resolve to attr "linuxHeaders"."""
+    result = _run_meta_nix(["linux-headers-6.18.7"])
+    assert _license(result, "linux-headers-6.18.7") == "Correct-Linux-Headers"
+    assert (
+        _description(result, "linux-headers-6.18.7")
+        == "Fixture: correct dash-to-camelCase lookup for linux-headers"
+    )
+
+
+def test_dash_to_camel_case_rewrite_runs_after_one_strip_before_second_strip():
+    """Store name "linux-headers-static-6.18.7" should rewrite to linuxHeaders after one strip."""
+    result = _run_meta_nix(["linux-headers-static-6.18.7"])
+    assert _license(result, "linux-headers-static-6.18.7") == "Correct-Linux-Headers"
+    assert (
+        _description(result, "linux-headers-static-6.18.7")
+        == "Fixture: correct dash-to-camelCase lookup for linux-headers"
+    )
+
+
+def test_explicit_attr_override_handles_irreducible_rename():
+    """Store name "nss-cacert-3.121" should resolve to attr "cacert"."""
+    result = _run_meta_nix(["nss-cacert-3.121"])
+    assert _license(result, "nss-cacert-3.121") == "Correct-Nss-Cacert"
+    assert (
+        _description(result, "nss-cacert-3.121")
+        == "Fixture: explicit rename lookup for nss-cacert"
+    )
+
+
+def test_unprefixed_dash_rewrites_do_not_search_cross_sets():
+    """Unprefixed early rewrites should stay in pkgs and not pull from other sets."""
+    result = _run_meta_nix(["speech-dispatcher-1.0", "camel-cross-set-1.0"])
+    assert "speech-dispatcher-1.0" not in result
+    assert "camel-cross-set-1.0" not in result
+
+
 def test_digit_suffix_fallback():
     """Store name "test-digitsuffix-1.0": pname "test-digitsuffix", attr "test-digitsuffix2"."""
     result = _run_meta_nix(["test-digitsuffix-1.0"])
@@ -96,6 +143,20 @@ def test_underscore_major_version_fallback():
     result = _run_meta_nix(["libsoup-3.6.6"])
     assert _license(result, "libsoup-3.6.6") == "Apache-2.0", (
         'underscore-major fallback should find libsoup_3 via pname + "_" + major'
+    )
+
+
+def test_underscore_major_minor_fallback_beats_wrong_direct_attr():
+    """A wrong base attr must not block a more specific versioned attr."""
+    result = _run_meta_nix(["openssl-1.1.1w"])
+    entry = result["openssl-1.1.1w"]
+
+    assert entry["ambiguous"] is False
+    assert entry["preciseNeeded"] is False
+    assert _license(result, "openssl-1.1.1w") == "Correct-OpenSSL-1-1"
+    assert (
+        _description(result, "openssl-1.1.1w")
+        == "Fixture: correct underscore major-minor OpenSSL attr"
     )
 
 
