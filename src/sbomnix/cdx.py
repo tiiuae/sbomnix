@@ -6,11 +6,11 @@
 
 """CycloneDX utils"""
 
+import json
 import re
 
 from common import columns as cols
 from common.log import LOG, LOG_SPAM
-from common.spdx import canonicalize_spdx_license_id
 from vulnxscan.utils import _vuln_source, _vuln_url
 
 
@@ -27,42 +27,39 @@ def _split_meta_homepage(homepage_value):
     return [entry.strip() for entry in entries if entry.strip()]
 
 
-def _drv_to_cdx_licenses_entry(drv, column_name, cdx_license_type):
-    """Parse license entries of type cdx_license_type from column_name"""
+def _drv_to_cdx_license_entries(drv):
+    """Convert authoritative nixpkgs license entries to CycloneDX licenses."""
+    license_entries_json = getattr(drv, "meta_license_entries_json", "")
+    if not license_entries_json:
+        return []
+    try:
+        entries = json.loads(license_entries_json)
+    except json.JSONDecodeError:
+        LOG.debug(
+            "Invalid meta_license_entries_json for '%s': %s",
+            drv.name,
+            license_entries_json,
+        )
+        return []
     licenses = []
-    if column_name not in drv._asdict():
-        # Return empty list if column name is not in drv
-        return licenses
-    license_str = getattr(drv, column_name)
-    if not license_str:
-        # Return empty list if license string is empty
-        return licenses
-    # Parse the ";" separated licenses to cdx license format
-    license_strings = license_str.split(";")
-    for license_string in license_strings:
-        license_value = license_string
-        # Give up generating the 'licenses' entry if license id should be
-        # spdx but it's not:
-        if "spdxid" in column_name:
-            canonical = canonicalize_spdx_license_id(license_value)
-            if not canonical:
-                LOG.debug("Invalid spdxid license '%s':'%s'", drv.name, license_string)
-                return []
-            license_value = canonical
-        license_dict = {"license": {cdx_license_type: license_value}}
-        licenses.append(license_dict)
+    for entry in entries:
+        normalized_entry = entry if isinstance(entry, dict) else {"raw": str(entry)}
+        license_id = normalized_entry.get("spdxId")
+        license_name = (
+            normalized_entry.get("fullName")
+            or normalized_entry.get("shortName")
+            or normalized_entry.get("raw")
+        )
+        if license_id:
+            licenses.append({"license": {"id": license_id}})
+        elif license_name:
+            licenses.append({"license": {"name": license_name}})
     return licenses
 
 
 def _cdx_component_add_licenses(component, drv):
     """Add licenses array to cdx component (if any)"""
-    licenses = []
-    # First, try reading the license in spdxid-format
-    licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_spdxid", "id")
-    # If it fails, try reading the license short name
-    if not licenses:
-        licenses = _drv_to_cdx_licenses_entry(drv, "meta_license_short", "name")
-    # Give up if package does not have license information associated
+    licenses = _drv_to_cdx_license_entries(drv)
     if not licenses:
         LOG.log(LOG_SPAM, "No license info found for '%s'", drv.name)
         return

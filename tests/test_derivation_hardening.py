@@ -123,7 +123,87 @@ def test_canonicalize_spdx_license_id_canonicalizes_aliases():
     assert common_spdx.canonicalize_spdx_license_id("not-a-license") is None
 
 
-def test_cdx_and_spdx_license_exporters_use_canonical_spdx_ids():
+def test_cdx_license_exporter_preserves_authoritative_license_entries():
+    drv_type = namedtuple(
+        "Drv",
+        [
+            "name",
+            "pname",
+            "version",
+            "purl",
+            "cpe",
+            "meta_description",
+            "meta_license_entries_json",
+            "meta_license_spdxid",
+            "meta_license_short",
+            "patches",
+            "outputs",
+            "store_path",
+            "out",
+            "urls",
+            "meta_homepage",
+            "meta_position",
+        ],
+    )
+    drv = drv_type(
+        name="hello-2.12.3",
+        pname="hello",
+        version="2.12.3",
+        purl="pkg:nix/hello@2.12.3",
+        cpe="",
+        meta_description="Hello",
+        meta_license_entries_json=json.dumps(
+            [
+                {
+                    "spdxId": "GPL-3.0",
+                    "shortName": "GPL2+",
+                    "fullName": None,
+                    "raw": None,
+                },
+                {
+                    "spdxId": "GPL-3.0+",
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": "Public Domain",
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": "Custom-Scalar-License",
+                },
+            ]
+        ),
+        meta_license_spdxid=(
+            "GPL-3.0;GPL-3.0+;LGPL-2.1;LGPL-2.1+;LicenseRef-scancode-free-unknown"
+        ),
+        meta_license_short="GPL2+",
+        patches="",
+        outputs=["/nix/store/out"],
+        store_path="/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-2.12.3.drv",
+        out="/nix/store/out",
+        urls="",
+        meta_homepage="",
+        meta_position="",
+    )
+
+    component = sbomnix_cdx._drv_to_cdx_component(drv)
+
+    assert component["licenses"] == [
+        {"license": {"id": "GPL-3.0"}},
+        {"license": {"id": "GPL-3.0+"}},
+        {"license": {"name": "Public Domain"}},
+        {"license": {"name": "Custom-Scalar-License"}},
+    ]
+
+
+def test_spdx_license_exporter_uses_canonical_spdx_ids():
     drv_type = namedtuple(
         "Drv",
         [
@@ -164,16 +244,8 @@ def test_cdx_and_spdx_license_exporters_use_canonical_spdx_ids():
         meta_position="",
     )
 
-    component = sbomnix_cdx._drv_to_cdx_component(drv)
     package = sbomnix_exporters._drv_to_spdx_package(drv)
 
-    assert component["licenses"] == [
-        {"license": {"id": "GPL-3.0-only"}},
-        {"license": {"id": "GPL-3.0-or-later"}},
-        {"license": {"id": "LGPL-2.1-only"}},
-        {"license": {"id": "LGPL-2.1-or-later"}},
-        {"license": {"id": "LicenseRef-scancode-free-unknown"}},
-    ]
     assert package["licenseInfoFromFiles"] == [
         "GPL-3.0-only",
         "GPL-3.0-or-later",
@@ -183,7 +255,7 @@ def test_cdx_and_spdx_license_exporters_use_canonical_spdx_ids():
     ]
 
 
-def test_cdx_falls_back_to_license_short_name_when_spdx_id_is_invalid():
+def test_cdx_uses_authoritative_license_names_without_spdx_ids():
     drv_type = namedtuple(
         "Drv",
         [
@@ -193,6 +265,7 @@ def test_cdx_falls_back_to_license_short_name_when_spdx_id_is_invalid():
             "purl",
             "cpe",
             "meta_description",
+            "meta_license_entries_json",
             "meta_license_spdxid",
             "meta_license_short",
             "patches",
@@ -211,6 +284,28 @@ def test_cdx_falls_back_to_license_short_name_when_spdx_id_is_invalid():
         purl="pkg:nix/hello@2.12.3",
         cpe="",
         meta_description="Hello",
+        meta_license_entries_json=json.dumps(
+            [
+                {
+                    "spdxId": None,
+                    "shortName": "Custom Short Name",
+                    "fullName": None,
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": "Public Domain",
+                    "raw": None,
+                },
+                {
+                    "spdxId": None,
+                    "shortName": None,
+                    "fullName": None,
+                    "raw": "Custom-Scalar-License",
+                },
+            ]
+        ),
         meta_license_spdxid="not-a-license",
         meta_license_short="Custom Short Name",
         patches="",
@@ -223,11 +318,12 @@ def test_cdx_falls_back_to_license_short_name_when_spdx_id_is_invalid():
     )
 
     component = sbomnix_cdx._drv_to_cdx_component(drv)
-    package = sbomnix_exporters._drv_to_spdx_package(drv)
 
-    assert component["licenses"] == [{"license": {"name": "Custom Short Name"}}]
-    assert "licenseInfoFromFiles" not in package
-    assert package["licenseConcluded"] == "NOASSERTION"
+    assert component["licenses"] == [
+        {"license": {"name": "Custom Short Name"}},
+        {"license": {"name": "Public Domain"}},
+        {"license": {"name": "Custom-Scalar-License"}},
+    ]
 
 
 def test_cdx_exports_homepage_as_external_reference():
