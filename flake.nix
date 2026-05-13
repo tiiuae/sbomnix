@@ -8,6 +8,15 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-root.url = "github:srid/flake-root";
+    vulnix = {
+      url = "github:nix-community/vulnix/master";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-compat.follows = "flake-compat";
+        flake-parts.follows = "flake-parts";
+        flake-root.follows = "flake-root";
+      };
+    };
     # For preserving compatibility with non-Flake users
     flake-compat = {
       url = "github:nix-community/flake-compat";
