@@ -6,6 +6,7 @@
   perSystem =
     {
       pkgs,
+      inputs',
       lib,
       config,
       self',
@@ -38,7 +39,7 @@
         grype
         nix
         nix-visualize
-        vulnix
+        inputs'.vulnix.packages.vulnix
       ];
       check_inputs = with pp; [
         hypothesis
