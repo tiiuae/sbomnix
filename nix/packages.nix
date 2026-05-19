@@ -103,7 +103,6 @@
         ++ [
           (mkDevEntry "sbomnix" "sbomnix.main")
           (mkDevEntry "nixgraph" "nixgraph.main")
-          (mkDevEntry "nixmeta" "nixmeta.main")
           (mkDevEntry "nix_outdated" "nixupdate.nix_outdated")
           (mkDevEntry "vulnxscan" "vulnxscan.vulnxscan_cli")
           (mkDevEntry "repology_cli" "repology.repology_cli")

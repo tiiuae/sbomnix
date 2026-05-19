@@ -29,9 +29,6 @@
           # nix run .#nixgraph
           nixgraph = mkApp "${sbomnix}/bin/nixgraph" "Visualize nix package dependencies";
 
-          # nix run .#nixmeta
-          nixmeta = mkApp "${sbomnix}/bin/nixmeta" "Summarize nixpkgs meta-attributes";
-
           # nix run .#vulnxscan
           vulnxscan = mkApp "${sbomnix}/bin/vulnxscan" "Scan nix artifacts or SBOMs for vulnerabilities";
 
