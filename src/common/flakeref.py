@@ -136,6 +136,7 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
             flakeref,
             "nix build returned no output path",
         )
+    log.log(LOG_VERBOSE, "Resolved flakeref to built path '%s'", nixpath)
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     return nixpath
 
