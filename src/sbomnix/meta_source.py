@@ -2,17 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Resolve nixpkgs metadata sources from target context and CLI options."""
+"""Resolve nixpkgs metadata sources from target context."""
 
 import json
-import os
 import pathlib
 import re
 from dataclasses import dataclass, replace
-from subprocess import CalledProcessError
 from urllib.parse import urlencode
 
-from common.errors import SbomnixError
 from common.flakeref import (
     NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
     parse_nixos_configuration_ref,
@@ -25,13 +22,6 @@ from sbomnix.flake_metadata import (
     normalize_current_flake_shorthand,
     normalize_local_flake_ref,
 )
-
-META_NIXPKGS_NIX_PATH = "nix-path"
-
-RESERVED_META_NIXPKGS_MODES = frozenset({META_NIXPKGS_NIX_PATH})
-
-SCAN_EXCEPTIONS = (KeyError, OSError, CalledProcessError, TypeError, ValueError)
-_NIXREF_RESOLUTION_EXCEPTIONS = (AttributeError, *SCAN_EXCEPTIONS)
 
 
 @dataclass(frozen=True)
@@ -48,13 +38,6 @@ class NixpkgsMetaSource:
     expression: str | None = None
     expression_cache_key: str | None = None
     expression_impure: bool = False
-
-
-def classify_meta_nixpkgs(value):
-    """Classify a --meta-nixpkgs value as a reserved mode or explicit source."""
-    if value in RESERVED_META_NIXPKGS_MODES:
-        return value
-    return "explicit"
 
 
 def read_nixpkgs_version(nixpkgs_path):
@@ -105,25 +88,10 @@ class NixpkgsMetaSourceResolver:
         return NixpkgsMetaSource(
             method="none",
             message=(
-                "No nixpkgs metadata source was provided for store-path target. "
-                "Skipping nixpkgs metadata. Re-run with "
-                "--meta-nixpkgs <nixpkgs-flakeref-or-path> to include metadata."
+                "No nixpkgs metadata source is available for store-path targets. "
+                "Skipping nixpkgs metadata. Use a flakeref target instead."
             ),
         )
-
-    def resolve_meta_nixpkgs_option(self, meta_nixpkgs, *, target_path=None):
-        """Resolve an explicit --meta-nixpkgs source or reserved mode."""
-        LOG.debug(
-            "Resolving explicit nixpkgs metadata source for target path=%s",
-            target_path,
-        )
-        mode = classify_meta_nixpkgs(meta_nixpkgs)
-        if mode == META_NIXPKGS_NIX_PATH:
-            return self.resolve_nix_path_source(
-                message="NIX_PATH metadata source may not match the target",
-                required=True,
-            )
-        return self.resolve_explicit_source(meta_nixpkgs)
 
     def resolve_flakeref_target_source(self, flakeref, *, impure=False):
         """Resolve target-specific nixpkgs metadata for known flakeref outputs."""
@@ -173,8 +141,7 @@ class NixpkgsMetaSourceResolver:
             method="none",
             message=(
                 "Failed resolving target-specific nixpkgs metadata source from "
-                "NixOS configuration flakeref. Skipping nixpkgs metadata. Re-run "
-                "with --meta-nixpkgs <nixpkgs-flakeref-or-path> to include metadata."
+                "NixOS configuration flakeref. Skipping nixpkgs metadata."
             ),
         )
 
@@ -315,64 +282,6 @@ class NixpkgsMetaSourceResolver:
             return None
         return ret.stdout.strip() or None
 
-    def resolve_explicit_source(self, meta_nixpkgs):
-        """Resolve an explicit --meta-nixpkgs path or flakeref."""
-        path = pathlib.Path(meta_nixpkgs)
-        if path.exists():
-            resolved_path = path.resolve()
-            if is_nix_store_path(resolved_path):
-                return nixpkgs_meta_source_with_path(
-                    NixpkgsMetaSource(
-                        method="explicit",
-                        path=resolved_path.as_posix(),
-                    ),
-                )
-            nixpath = self._try_normalize_mutable_path(resolved_path)
-            if nixpath:
-                return nixpkgs_meta_source_with_path(
-                    NixpkgsMetaSource(
-                        method="explicit",
-                        path=nixpath.as_posix(),
-                        flakeref=resolved_path.as_posix(),
-                    ),
-                )
-            raise SbomnixError(
-                "Explicit --meta-nixpkgs path must resolve to an immutable "
-                f"/nix/store source before scanning: '{meta_nixpkgs}'"
-            )
-        try:
-            nixpath = nixref_to_nixpkgs_path(meta_nixpkgs)
-        except _NIXREF_RESOLUTION_EXCEPTIONS as error:
-            raise SbomnixError(
-                f"Failed resolving --meta-nixpkgs source: '{meta_nixpkgs}'"
-            ) from error
-        if not nixpath:
-            raise SbomnixError(
-                f"Failed resolving --meta-nixpkgs source: '{meta_nixpkgs}'"
-            )
-        return nixpkgs_meta_source_with_path(
-            NixpkgsMetaSource(
-                method="explicit",
-                path=nixpath.as_posix(),
-                flakeref=meta_nixpkgs,
-            ),
-        )
-
-    @staticmethod
-    def _try_normalize_mutable_path(path):
-        try:
-            nixpath = nixref_to_nixpkgs_path(path.as_posix())
-        except _NIXREF_RESOLUTION_EXCEPTIONS:
-            LOG.debug(
-                "Failed normalizing mutable nixpkgs path: %s",
-                path.as_posix(),
-                exc_info=True,
-            )
-            return None
-        if nixpath and is_nix_store_path(nixpath):
-            return nixpath
-        return None
-
     def resolve_flakeref_lock_source(self, nixref, *, impure=False):
         """Return the nixpkgs source selected by a flakeref lock graph."""
         if nixref:
@@ -393,32 +302,4 @@ class NixpkgsMetaSourceResolver:
                 )
                 log_nixpkgs_meta_source(source)
                 return source
-        return NixpkgsMetaSource(method="none")
-
-    def resolve_default_source(self, nixref=None):
-        """Return the metadata source for the older direct Meta API."""
-        if nixref:
-            return self.resolve_flakeref_lock_source(nixref)
-        if "NIX_PATH" in os.environ:
-            return self.resolve_nix_path_source()
-        return NixpkgsMetaSource(method="none")
-
-    def resolve_nix_path_source(self, *, message=None, required=False):
-        """Return the nixpkgs source referenced by NIX_PATH."""
-        LOG.debug("Reading nixpkgs path from NIX_PATH environment")
-        nix_path = os.environ.get("NIX_PATH", "")
-        m_nixpkgs = re.search(r"(?:^|:)nixpkgs=([^:]+)", nix_path)
-        if m_nixpkgs:
-            return nixpkgs_meta_source_with_path(
-                NixpkgsMetaSource(
-                    method="nix-path",
-                    path=m_nixpkgs.group(1),
-                    message=message,
-                ),
-            )
-        if required:
-            raise SbomnixError(
-                "NIX_PATH does not contain a nixpkgs= entry required by "
-                "--meta-nixpkgs nix-path"
-            )
         return NixpkgsMetaSource(method="none")

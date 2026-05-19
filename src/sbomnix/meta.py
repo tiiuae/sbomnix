@@ -57,7 +57,6 @@ class Meta:
         target_path=None,
         flakeref=None,
         original_ref=None,
-        explicit_nixpkgs=None,
         impure=False,
     ):
         """Return exact component metadata and selected metadata source."""
@@ -65,7 +64,6 @@ class Meta:
             target_path=target_path,
             flakeref=flakeref,
             original_ref=original_ref,
-            explicit_nixpkgs=explicit_nixpkgs,
             impure=impure,
         )
         component_count = 0 if components is None else len(components)
@@ -178,14 +176,8 @@ class Meta:
         target_path=None,
         flakeref=None,
         original_ref=None,
-        explicit_nixpkgs=None,
         impure=False,
     ):
-        if explicit_nixpkgs:
-            return self.source_resolver.resolve_meta_nixpkgs_option(
-                explicit_nixpkgs,
-                target_path=target_path,
-            )
         if flakeref:
             source = self.source_resolver.resolve_flakeref_target_source(
                 flakeref,
