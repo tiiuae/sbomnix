@@ -9,7 +9,6 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 This repository is home to various command line tools and Python libraries that aim to help with software supply chain challenges:
 - [`sbomnix`](#generate-sbom) is a utility that generates SBOMs given a [Nix](https://nixos.org/) flake reference or store path.
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) packages.
-- [`nixmeta`](./doc/nixmeta.md) summarizes nixpkgs meta-attributes from the given nixpkgs version.
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans.
 - [`repology_cli`](./doc/repology_cli.md) and [`repology_cve`](./doc/repology_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
@@ -71,7 +70,10 @@ $ cd sbomnix
 $ nix develop
 ```
 
-The devshell adds all CLI entry points (`sbomnix`, `nixgraph`, `nixmeta`, `vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`, `provenance`) to `PATH`. They run against the local source tree, so any edits are picked up immediately without reinstalling.
+The devshell adds all CLI entry points (`sbomnix`, `nixgraph`,
+`vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`,
+`provenance`) to `PATH`. They run against the local source tree, so any
+edits are picked up immediately without reinstalling.
 
 All tools support a consistent verbosity flag: no flag or `--verbose=0`
 shows INFO output, `-v` or `--verbose=1` enables VERBOSE progress

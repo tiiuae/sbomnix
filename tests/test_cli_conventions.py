@@ -13,7 +13,6 @@ import pytest
 
 from common.pkgmeta import _dev_version, get_py_pkg_version
 from nixgraph import main as nixgraph_main
-from nixmeta import main as nixmeta_main
 from nixupdate import nix_outdated
 from provenance import main as provenance_main
 from repology import repology_cli, repology_cve
@@ -31,7 +30,6 @@ def _stringify(value):
 CLI_ARG_CASES = [
     (sbomnix_main.getargs, [".#pkg"]),
     (nixgraph_main.getargs, [".#pkg"]),
-    (nixmeta_main._getargs, []),
     (nix_outdated.getargs, [".#pkg"]),
     (vulnxscan_cli.getargs, [".#pkg"]),
     (osv_cli.getargs, ["sbom.json"]),
@@ -49,7 +47,6 @@ CLI_ARG_CASES = [
     [
         sbomnix_main.getargs,
         nixgraph_main.getargs,
-        nixmeta_main._getargs,
         nix_outdated.getargs,
         vulnxscan_cli.getargs,
         osv_cli.getargs,
@@ -112,7 +109,6 @@ def test_cli_verbose_level_two_forms_match(getargs, base_argv, verbose_argv):
     ("getargs", "argv", "expected_out"),
     [
         (nixgraph_main.getargs, ["-o", "graph.dot", ".#pkg"], "graph.dot"),
-        (nixmeta_main._getargs, ["-o", "meta.csv"], "meta.csv"),
         (nix_outdated.getargs, ["-o", "nix_outdated.csv", ".#pkg"], "nix_outdated.csv"),
         (vulnxscan_cli.getargs, ["-o", "vulns.csv", ".#pkg"], "vulns.csv"),
         (osv_cli.getargs, ["-o", "osv.csv", "sbom.json"], "osv.csv"),
