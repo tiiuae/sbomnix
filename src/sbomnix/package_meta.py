@@ -250,7 +250,11 @@ def package_meta_lookup_keys_for_components(
         lookup = _lookup_key_for_component(component)
         if lookup is None:
             continue
-        if target_attr and _component_matches_target_path(component, target_path):
+        if (
+            target_attr
+            and lookup["version"]
+            and _component_matches_target_path(component, target_path)
+        ):
             lookup["candidateAttrs"] = [target_attr]
         key = (
             lookup["name"],
@@ -313,6 +317,8 @@ def _flake_package_attr(flakeref):
     if not separator:
         return ""
     parts = attr.split(".")
+    if len(parts) == 1:
+        return parts[0]
     if (
         len(parts) < 3
         or parts[0] not in {"packages", "legacyPackages"}

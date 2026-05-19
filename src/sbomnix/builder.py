@@ -47,6 +47,9 @@ from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 # Namespace UUID (a UUIDv4) for stable UUIDv5 identifiers.
 # See RFC9562, *6.6.  Namespace ID Usage and Allocation*.
 SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
+_PACKAGE_META_PRIVATE_COLUMNS = [
+    cols.NAME,
+]
 
 
 @dataclass(frozen=True)
@@ -170,6 +173,7 @@ class SbomBuilder:
         """Load build-time dependencies from recursive derivation JSON."""
         if self.target_deriver is None:
             raise MissingNixDeriverError(self.nix_path)
+        LOG.verbose("Loading build-time closure for '%s'", self.target_deriver)
         derivations, drv_infos = load_recursive(self.target_deriver)
         df_deps = derivation_dependencies_df(drv_infos)
         if self.depth:
@@ -178,6 +182,9 @@ class SbomBuilder:
                 self.target_deriver,
                 self.depth,
             )
+        LOG.verbose(
+            "Loaded build-time closure with %d dependency edge(s)", len(df_deps)
+        )
         return StructuredClosure(
             df_deps=df_deps,
             recursive_buildtime_derivations=derivations,
@@ -185,6 +192,7 @@ class SbomBuilder:
 
     def _load_runtime_path_info_closure(self, nix_path):
         """Load runtime dependencies from structured path-info JSON."""
+        LOG.verbose("Loading runtime closure for '%s'", nix_path)
         runtime_closure = load_runtime_closure(nix_path)
         output_paths_by_load_path = _runtime_output_paths_by_load_path(
             runtime_closure.output_paths_by_drv
@@ -207,6 +215,7 @@ class SbomBuilder:
                 nix_path,
                 self.depth,
             )
+        LOG.verbose("Loaded runtime closure with %d dependency edge(s)", len(df_deps))
         return StructuredClosure(
             df_deps=df_deps,
             runtime_output_paths_by_load_path=output_paths_by_load_path,
@@ -250,6 +259,7 @@ class SbomBuilder:
         else:
             # _load_structured_closure always selects exactly one metadata source.
             raise AssertionError("Structured dependency metadata was not initialized")
+        LOG.verbose("Initialized %d SBOM component(s)", len(self.df_sbomdb))
         # Join with meta information
         if include_meta:
             self._join_meta()
@@ -259,6 +269,10 @@ class SbomBuilder:
         self.df_sbomdb.sort_values(by=[cols.NAME, self.uid], inplace=True)
         self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode(cols.OUTPUTS)
         self._init_dependency_index()
+        LOG.verbose(
+            "Prepared SBOM database with %d component(s)",
+            len(self.df_sbomdb),
+        )
 
     def _sbom_component_paths(self):
         if self.df_deps is None or self.df_deps.empty:
@@ -310,7 +324,9 @@ class SbomBuilder:
         if self.df_sbomdb is None:
             raise AssertionError("SBOM component metadata was not initialized")
         self.meta = Meta()
-        df_meta, source = self.meta.get_nixpkgs_meta_with_source(
+        df_meta, source = self.meta.get_package_meta_with_source(
+            components=self.df_sbomdb,
+            buildtime=self.buildtime,
             target_path=self.nix_path,
             flakeref=self.flakeref,
             original_ref=self.original_ref,
@@ -334,14 +350,21 @@ class SbomBuilder:
             return
         if is_debug_enabled():
             df_to_csv_file(df_meta, "meta.csv")
-        # Join based on package name including the version number
+        # Join only metadata that matched component drvPath/outPath exactly.
+        df_meta = df_meta.drop(
+            columns=[
+                column
+                for column in _PACKAGE_META_PRIVATE_COLUMNS
+                if column in df_meta.columns
+            ]
+        )
         self.df_sbomdb = self.df_sbomdb.merge(
             df_meta,
             how="left",
-            left_on=[cols.NAME],
-            right_on=[cols.NAME],
+            on=[cols.STORE_PATH],
             suffixes=("", "_meta"),
         )
+        LOG.verbose("Joined nixpkgs metadata for %d component(s)", len(df_meta))
 
     def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
         """Return indexed dependency values for one SBOM component."""

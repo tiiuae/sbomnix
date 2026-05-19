@@ -13,6 +13,7 @@ from common.errors import MissingNixDerivationMetadataError, SbomnixError
 from sbomnix import builder as sbomnix_builder
 from sbomnix.builder import SbomBuilder
 from sbomnix.closure import dependency_rows_to_dataframe
+from sbomnix.meta import NixpkgsMetaSource
 from sbomnix.runtime import RuntimeClosure
 
 TARGET_PATH = "/nix/store/11111111111111111111111111111111-target-1.0"
@@ -257,3 +258,55 @@ def test_target_component_ref_rejects_missing_runtime_target_metadata():
 
     with pytest.raises(MissingNixDerivationMetadataError, match=TARGET_PATH):
         builder._resolve_target_component_ref()
+
+
+def test_join_meta_uses_package_component_identity(monkeypatch):
+    class FakeMeta:
+        def get_package_meta_with_source(self, **kwargs):
+            assert kwargs["components"].equals(builder.df_sbomdb)
+            return (
+                pd.DataFrame(
+                    [
+                        {
+                            cols.STORE_PATH: TARGET_DERIVER,
+                            cols.NAME: "target-from-meta",
+                            cols.PNAME: "target-pname-from-meta",
+                            cols.VERSION: "1.0-from-meta",
+                            "meta_description": "package target metadata",
+                        }
+                    ]
+                ),
+                NixpkgsMetaSource(method="package-meta-nix"),
+            )
+
+    monkeypatch.setattr(sbomnix_builder, "Meta", FakeMeta)
+    builder = _builder_double()
+    builder.flakeref = "nixpkgs#target"
+    builder.original_ref = "nixpkgs#target"
+    builder.impure = False
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: TARGET_DERIVER,
+                cols.NAME: "target",
+                cols.PNAME: "target",
+                cols.VERSION: "1.0",
+                cols.OUTPUTS: [TARGET_PATH],
+            },
+            {
+                cols.STORE_PATH: "/nix/store/other.drv",
+                cols.NAME: "target",
+                cols.PNAME: "target",
+                cols.VERSION: "1.0",
+                cols.OUTPUTS: ["/nix/store/other"],
+            },
+        ]
+    )
+
+    builder._join_meta()
+
+    assert builder.df_sbomdb["meta_description"].isna().to_list() == [False, True]
+    assert builder.df_sbomdb["meta_description"].iloc[0] == "package target metadata"
+    assert builder.df_sbomdb["pname_meta"].iloc[0] == "target-pname-from-meta"
+    assert builder.df_sbomdb["version_meta"].iloc[0] == "1.0-from-meta"
+    assert "name_meta" not in builder.df_sbomdb.columns

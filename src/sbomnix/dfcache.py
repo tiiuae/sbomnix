@@ -28,6 +28,12 @@ class LockedDfCache:
             dfcache = DataFrameDiskCache(cache_dir_path=dfcache_dir())
             return _cache_local_set(dfcache, key, value, ttl=ttl)
 
+    def get_many(self, keys):
+        """Return multiple dataframe cache entries using one cache connection."""
+        with self.dflock:
+            dfcache = DataFrameDiskCache(cache_dir_path=dfcache_dir())
+            return {key: dfcache.get(key) for key in keys}
+
     def __getattr__(self, name):
         def wrap(*a, **k):
             with self.dflock:
