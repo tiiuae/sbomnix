@@ -59,6 +59,9 @@ version = { file = ["VERSION"] }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+sbomnix = ["*.nix"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"
