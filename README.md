@@ -103,7 +103,7 @@ $ sbomnix github:NixOS/nixpkgs?ref=nixos-unstable#wget
 ```
 
 #### Generate SBOM Based on Derivation File or Out-path
-Flake references are the recommended target for `sbomnix`. When the target is a flake reference, `sbomnix` can resolve the nixpkgs version used to build the package and enrich the SBOM with metadata such as descriptions, licenses, maintainers, and homepage links. When the target is a store path, there is no information about which nixpkgs version produced it, so metadata enrichment is skipped by default; see [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection).
+Flake references are the recommended target for `sbomnix`. When the target is a flake reference, `sbomnix` can resolve the nixpkgs version used to build the package and enrich the SBOM with metadata such as descriptions, licenses, maintainers, and homepage links. When the target is a store path, there is no information about which nixpkgs version produced it, so metadata enrichment is skipped; see [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection).
 
 By default `sbomnix` scans the given target and generates an SBOM including the runtime dependencies.
 Notice: determining the target runtime dependencies in Nix requires building the target.
@@ -135,7 +135,7 @@ $ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget --buildtime
 ```bash
 $ sbomnix /path/to/result
 ```
-Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped by default. Pass `--meta-nixpkgs` to supply a nixpkgs source explicitly, or see [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection).
+Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped. Use a flakeref target when nixpkgs metadata is required.
 
 #### Nixpkgs Metadata Source Selection
 `sbomnix` enriches packages with nixpkgs metadata, such as descriptions,
@@ -147,18 +147,17 @@ toplevel flakerefs are handled through the selected NixOS package set, so
 overlays, package overrides, nixpkgs config, and system-specific package-set
 changes can be represented.
 
-Store-path targets skip nixpkgs metadata by default; pass `--meta-nixpkgs` to
-choose the source explicitly.
-
-`--meta-nixpkgs <flakeref-or-path>` scans an explicit nixpkgs source.
-`--meta-nixpkgs nix-path` scans the `nixpkgs=` entry from `NIX_PATH` as an
-explicit opt-in source. `--exclude-meta` disables this enrichment and cannot be
-combined with `--meta-nixpkgs`.
+Store-path targets skip nixpkgs metadata because the store path does not
+identify the nixpkgs source that produced it. `--exclude-meta` disables metadata
+enrichment.
 
 CycloneDX and SPDX outputs record the selected metadata source in document
 metadata, including fields such as `nixpkgs:metadata_source_method`,
 `nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:flakeref`, `nixpkgs:version`, and
 `nixpkgs:message`.
+
+See [sbomnix metadata enrichment](./doc/sbomnix_metadata.md) for a short
+overview of source selection, component matching, and metadata caching.
 
 #### Visualize Package Dependencies
 `sbomnix` uses structured Nix JSON to find package dependencies where

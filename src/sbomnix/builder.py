@@ -88,7 +88,6 @@ class SbomBuilder:
         depth=None,
         flakeref=None,
         original_ref=None,
-        meta_nixpkgs=None,
         impure=False,
         include_meta=True,
         include_vulns=False,
@@ -113,7 +112,6 @@ class SbomBuilder:
         self.dependency_index = None
         self.flakeref = flakeref
         self.original_ref = original_ref
-        self.meta_nixpkgs = meta_nixpkgs
         self.impure = impure
         self.meta = None
         # "disabled" records explicit opt-out; "none" means auto-selection
@@ -330,7 +328,6 @@ class SbomBuilder:
             target_path=self.nix_path,
             flakeref=self.flakeref,
             original_ref=self.original_ref,
-            explicit_nixpkgs=self.meta_nixpkgs,
             impure=self.impure,
         )
         self.nixpkgs_meta_source = source
