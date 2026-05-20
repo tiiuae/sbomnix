@@ -25,6 +25,9 @@ class CapturingLogger:
     def info(self, msg, *args):
         self.records.append(("info", msg, args))
 
+    def verbose(self, _msg, *_args):
+        pass
+
     def fatal(self, msg, *args):
         self.records.append(("fatal", msg, args))
 

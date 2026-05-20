@@ -8,6 +8,7 @@ import logging
 import os
 import shlex
 import subprocess
+import time
 from collections.abc import Callable, Sequence
 from shutil import which
 from typing import IO, Literal, overload
@@ -18,6 +19,18 @@ from common.log import LOG, LOG_VERBOSE
 CommandPart = str | os.PathLike[str]
 ExecCmdResult = subprocess.CompletedProcess[str] | subprocess.CalledProcessError | None
 ExecCmdFn = Callable[..., ExecCmdResult]
+
+
+def _stream_summary(value: str | None) -> str:
+    if value is None:
+        return "not captured"
+    return f"{len(value)} byte(s), {value.count(chr(10))} line(s)"
+
+
+def _stream_preview(value: str, limit: int = 4000) -> str:
+    if len(value) <= limit:
+        return value.rstrip()
+    return f"{value[:limit].rstrip()}\n... truncated {len(value) - limit} byte(s)"
 
 
 @overload
@@ -62,6 +75,7 @@ def exec_cmd(
         raise TypeError("cmd must be an argv sequence, not a string-like value")
     argv = [os.fspath(part) for part in cmd]
     command_str = shlex.join(argv)
+    started = time.perf_counter()
     LOG.debug("Running: %s", command_str)
     try:
         if stdout:
@@ -73,8 +87,26 @@ def exec_cmd(
                 encoding="utf-8",
                 check=True,
             )
+        LOG.debug(
+            "Finished in %.3fs (rc=%s, stdout=%s, stderr=%s): %s",
+            time.perf_counter() - started,
+            ret.returncode,
+            _stream_summary(ret.stdout),
+            _stream_summary(ret.stderr),
+            command_str,
+        )
+        if ret.stderr:
+            LOG.debug("Command stderr:\n%s", _stream_preview(ret.stderr))
         return ret
     except subprocess.CalledProcessError as error:
+        LOG.debug(
+            "Failed in %.3fs (rc=%s, stdout=%s, stderr=%s): %s",
+            time.perf_counter() - started,
+            error.returncode,
+            _stream_summary(error.stdout),
+            _stream_summary(error.stderr),
+            command_str,
+        )
         if log_error:
             LOG.error(
                 "Error running shell command:\n cmd:   '%s'\n stdout: %s\n stderr: %s",

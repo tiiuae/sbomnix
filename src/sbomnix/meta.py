@@ -5,6 +5,7 @@
 """Cache and scan nixpkgs meta information."""
 
 import re
+import time
 from dataclasses import replace
 
 import pandas as pd
@@ -60,11 +61,17 @@ class Meta:
         impure=False,
     ):
         """Return exact component metadata and selected metadata source."""
+        started = time.perf_counter()
         source = self._resolve_source(
             target_path=target_path,
             flakeref=flakeref,
             original_ref=original_ref,
             impure=impure,
+        )
+        LOG.verbose(
+            "Resolved nixpkgs metadata source method '%s' in %.3fs",
+            source.method,
+            time.perf_counter() - started,
         )
         component_count = 0 if components is None else len(components)
         LOG.verbose("Resolving package metadata for %d component(s)", component_count)
@@ -121,7 +128,11 @@ class Meta:
                     "or output paths. Skipping nixpkgs metadata."
                 ),
             )
-        LOG.verbose("Matched nixpkgs metadata for %d component(s)", len(df))
+        LOG.verbose(
+            "Matched nixpkgs metadata for %d component(s) in %.3fs",
+            len(df),
+            time.perf_counter() - started,
+        )
         return df, out_source
 
     def _add_flake_input_package_meta(  # noqa: PLR0913
@@ -152,6 +163,7 @@ class Meta:
             len(lookup_keys),
         )
 
+        started = time.perf_counter()
         df_candidates = self._scan_package_source(
             source,
             lookup_keys,
@@ -163,6 +175,11 @@ class Meta:
             unmatched,
             df_candidates,
             buildtime=buildtime,
+        )
+        LOG.verbose(
+            "Matched flake input metadata for %d component(s) in %.3fs",
+            len(df_input),
+            time.perf_counter() - started,
         )
         if df_input.empty:
             return df
@@ -205,7 +222,13 @@ class Meta:
         impure=False,
     ):
         scan_impure = impure or source.expression_impure
+        lock_started = time.perf_counter()
+        LOG.debug("Acquiring package metadata cache lock: %s", self.lock.lock_file)
         with self.lock:
+            LOG.verbose(
+                "Acquired package metadata cache lock in %.3fs",
+                time.perf_counter() - lock_started,
+            )
             cache_scope = self._package_cache_scope(
                 source,
                 flakeref=flakeref,
@@ -276,6 +299,7 @@ class Meta:
                     "cache disabled, scanning package metadata for %d lookup(s)",
                     len(lookup_keys),
                 )
+            scan_started = time.perf_counter()
             df = try_scan_package_meta(
                 missing_lookup_keys,
                 flakeref=_package_scan_flakeref(source, flakeref),
@@ -283,6 +307,12 @@ class Meta:
                 pkgs_expression=source.expression,
                 input_roots_only=input_roots_only,
                 impure=scan_impure,
+            )
+            row_count = "failed" if df is None else len(df)
+            LOG.verbose(
+                "Package metadata scan returned %s candidate row(s) in %.3fs",
+                row_count,
+                time.perf_counter() - scan_started,
             )
             if df is None:
                 return None
@@ -294,13 +324,15 @@ class Meta:
                     df,
                 )
                 if hit_count and exact_cache_key is not None:
+                    cache_started = time.perf_counter()
                     self.cache.set(
                         key=exact_cache_key,
                         value=result,
                         ttl=_PACKAGE_META_TTL,
                     )
                     LOG.debug(
-                        "Stored combined package metadata cache entry: %s",
+                        "Stored combined package metadata cache entry in %.3fs: %s",
+                        time.perf_counter() - cache_started,
                         exact_cache_key,
                     )
             return result
@@ -349,12 +381,14 @@ class Meta:
     def _store_package_metadata(self, cache_scope, lookup_keys, df):
         if not lookup_keys:
             return
+        cache_started = time.perf_counter()
         scan_cache_key = self._package_scan_cache_key(cache_scope, lookup_keys)
         self.cache.set(key=scan_cache_key, value=df, ttl=_PACKAGE_META_TTL)
         self._store_package_lookup_index(cache_scope, lookup_keys, scan_cache_key)
         LOG.debug(
-            "Stored package metadata cache group for %d lookup(s): %s",
+            "Stored package metadata cache group for %d lookup(s) in %.3fs: %s",
             len(lookup_keys),
+            time.perf_counter() - cache_started,
             scan_cache_key,
         )
 

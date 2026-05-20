@@ -18,6 +18,7 @@ import platform
 import re
 import shutil
 import subprocess
+import time
 from tempfile import TemporaryDirectory
 
 import pandas as pd
@@ -85,6 +86,13 @@ def nix_system():
 
 def _eval_package_meta_request(request, *, pkgs_expression=None, impure=False):
     request_json = json.dumps(request, sort_keys=True)
+    LOG.debug(
+        "Evaluating package metadata request for system=%s lookup_count=%d input_roots_only=%s json_bytes=%d",
+        request.get("system"),
+        len(request.get("lookupKeys") or []),
+        request.get("inputRootsOnly"),
+        len(request_json),
+    )
     if len(request_json) <= 30_000:
         return _eval_request(
             f"request = {_nix_string_literal(request_json)};",
@@ -126,6 +134,7 @@ def _nix_string_literal(value):
 
 
 def _eval_request(request_arg, *, pkgs_expression=None, impure=False):
+    started = time.perf_counter()
     ret = exec_cmd(
         _eval_command(
             _apply_expression(request_arg, pkgs_expression),
@@ -133,15 +142,28 @@ def _eval_request(request_arg, *, pkgs_expression=None, impure=False):
         ),
         log_error=False,
     )
-    return parse_package_metadata(ret.stdout)
+    df = parse_package_metadata(ret.stdout)
+    LOG.verbose(
+        "Evaluated inline package metadata request with %d row(s) in %.3fs",
+        len(df),
+        time.perf_counter() - started,
+    )
+    return df
 
 
 def _eval_file(eval_file, *, impure=False):
+    started = time.perf_counter()
     ret = exec_cmd(
         _eval_file_command(eval_file, impure),
         log_error=False,
     )
-    return parse_package_metadata(ret.stdout)
+    df = parse_package_metadata(ret.stdout)
+    LOG.verbose(
+        "Evaluated file-backed package metadata request with %d row(s) in %.3fs",
+        len(df),
+        time.perf_counter() - started,
+    )
+    return df
 
 
 def _eval_command(apply_expression, impure):
@@ -879,6 +901,7 @@ def try_scan_package_meta(  # noqa: PLR0913
 ):
     """Return package metadata dataframe, or None on failure."""
     try:
+        started = time.perf_counter()
         lookup_keys = _normalized_lookup_keys(lookup_keys)
         if not lookup_keys:
             return pd.DataFrame()
@@ -907,7 +930,13 @@ def try_scan_package_meta(  # noqa: PLR0913
                     impure=impure,
                 )
             )
-        return _concat_metadata_frames(frames)
+        df = _concat_metadata_frames(frames)
+        LOG.verbose(
+            "Read package metadata with %d candidate row(s) in %.3fs",
+            len(df),
+            time.perf_counter() - started,
+        )
+        return df
     except (
         FileNotFoundError,
         KeyError,

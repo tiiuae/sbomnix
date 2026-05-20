@@ -7,6 +7,7 @@
 """SBOM builder orchestration."""
 
 import logging
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -96,6 +97,14 @@ class SbomBuilder:
         # self.uid specifies the attribute that identifies SBOM components.
         # See the column names in
         # self.df_sbomdb (sbom.csv) for a list of all components' attributes.
+        started = time.perf_counter()
+        LOG.verbose(
+            "Initializing SBOM builder for '%s' (buildtime=%s, meta=%s, cpe=%s)",
+            nix_path,
+            buildtime,
+            include_meta,
+            include_cpe,
+        )
         self.uid = cols.STORE_PATH
         self.nix_path = nix_path
         self.buildtime = buildtime
@@ -135,12 +144,30 @@ class SbomBuilder:
         self.sbom_type = "runtime_and_buildtime"
         if not self.buildtime:
             self.sbom_type = "runtime_only"
+        LOG.verbose(
+            "Initialized SBOM builder in %.3fs",
+            time.perf_counter() - started,
+        )
 
     def _resolve_target_deriver(self, nix_path):
+        started = time.perf_counter()
+        LOG.verbose("Resolving target deriver for '%s'", nix_path)
         if self.buildtime:
-            return require_deriver(nix_path)
+            drv_path = require_deriver(nix_path)
+            LOG.verbose(
+                "Resolved build-time target deriver in %.3fs: %s",
+                time.perf_counter() - started,
+                drv_path,
+            )
+            return drv_path
         try:
-            return find_deriver(nix_path)
+            drv_path = find_deriver(nix_path)
+            LOG.verbose(
+                "Resolved runtime target deriver in %.3fs: %s",
+                time.perf_counter() - started,
+                drv_path,
+            )
+            return drv_path
         except SbomnixError:
             raise
         except RuntimeError:
@@ -148,6 +175,10 @@ class SbomBuilder:
                 "Runtime target has no loadable deriver: %s",
                 nix_path,
                 exc_info=True,
+            )
+            LOG.verbose(
+                "No loadable runtime target deriver found in %.3fs",
+                time.perf_counter() - started,
             )
             return None
 
@@ -171,8 +202,14 @@ class SbomBuilder:
         """Load build-time dependencies from recursive derivation JSON."""
         if self.target_deriver is None:
             raise MissingNixDeriverError(self.nix_path)
+        started = time.perf_counter()
         LOG.verbose("Loading build-time closure for '%s'", self.target_deriver)
         derivations, drv_infos = load_recursive(self.target_deriver)
+        LOG.verbose(
+            "Loaded %d recursive derivation record(s) in %.3fs",
+            len(drv_infos),
+            time.perf_counter() - started,
+        )
         df_deps = derivation_dependencies_df(drv_infos)
         if self.depth:
             df_deps = self._filter_dependencies_to_depth(
@@ -181,7 +218,9 @@ class SbomBuilder:
                 self.depth,
             )
         LOG.verbose(
-            "Loaded build-time closure with %d dependency edge(s)", len(df_deps)
+            "Loaded build-time closure with %d dependency edge(s) in %.3fs",
+            len(df_deps),
+            time.perf_counter() - started,
         )
         return StructuredClosure(
             df_deps=df_deps,
@@ -190,8 +229,15 @@ class SbomBuilder:
 
     def _load_runtime_path_info_closure(self, nix_path):
         """Load runtime dependencies from structured path-info JSON."""
+        started = time.perf_counter()
         LOG.verbose("Loading runtime closure for '%s'", nix_path)
         runtime_closure = load_runtime_closure(nix_path)
+        LOG.verbose(
+            "Loaded raw runtime closure with %d dependency edge(s) and %d deriver(s) in %.3fs",
+            len(runtime_closure.df_deps),
+            len(runtime_closure.output_paths_by_drv),
+            time.perf_counter() - started,
+        )
         output_paths_by_load_path = _runtime_output_paths_by_load_path(
             runtime_closure.output_paths_by_drv
         )
@@ -213,7 +259,11 @@ class SbomBuilder:
                 nix_path,
                 self.depth,
             )
-        LOG.verbose("Loaded runtime closure with %d dependency edge(s)", len(df_deps))
+        LOG.verbose(
+            "Loaded runtime closure with %d dependency edge(s) in %.3fs",
+            len(df_deps),
+            time.perf_counter() - started,
+        )
         return StructuredClosure(
             df_deps=df_deps,
             runtime_output_paths_by_load_path=output_paths_by_load_path,
@@ -244,7 +294,9 @@ class SbomBuilder:
 
     def _init_components(self, include_meta):
         """Initialize the SBOM component dataframe."""
+        started = time.perf_counter()
         paths = self._sbom_component_paths()
+        LOG.verbose("Initializing SBOM components from %d path(s)", len(paths))
         # Populate store based on the dependencies
         if self._recursive_buildtime_derivations is not None:
             self.df_sbomdb = recursive_derivations_to_dataframe(
@@ -257,7 +309,11 @@ class SbomBuilder:
         else:
             # _load_structured_closure always selects exactly one metadata source.
             raise AssertionError("Structured dependency metadata was not initialized")
-        LOG.verbose("Initialized %d SBOM component(s)", len(self.df_sbomdb))
+        LOG.verbose(
+            "Initialized %d SBOM component(s) in %.3fs",
+            len(self.df_sbomdb),
+            time.perf_counter() - started,
+        )
         # Join with meta information
         if include_meta:
             self._join_meta()
@@ -268,8 +324,9 @@ class SbomBuilder:
         self.df_sbomdb_outputs_exploded = self.df_sbomdb.explode(cols.OUTPUTS)
         self._init_dependency_index()
         LOG.verbose(
-            "Prepared SBOM database with %d component(s)",
+            "Prepared SBOM database with %d component(s) in %.3fs",
             len(self.df_sbomdb),
+            time.perf_counter() - started,
         )
 
     def _sbom_component_paths(self):
@@ -321,6 +378,7 @@ class SbomBuilder:
         """Join component rows with nixpkgs metadata."""
         if self.df_sbomdb is None:
             raise AssertionError("SBOM component metadata was not initialized")
+        started = time.perf_counter()
         self.meta = Meta()
         df_meta, source = self.meta.get_package_meta_with_source(
             components=self.df_sbomdb,
@@ -331,6 +389,10 @@ class SbomBuilder:
             impure=self.impure,
         )
         self.nixpkgs_meta_source = source
+        LOG.verbose(
+            "Resolved nixpkgs metadata candidates in %.3fs",
+            time.perf_counter() - started,
+        )
         if df_meta is None or df_meta.empty:
             if source.message:
                 LOG.info("%s", source.message)
@@ -362,6 +424,10 @@ class SbomBuilder:
             suffixes=("", "_meta"),
         )
         LOG.verbose("Joined nixpkgs metadata for %d component(s)", len(df_meta))
+        LOG.verbose(
+            "Joined nixpkgs metadata in %.3fs",
+            time.perf_counter() - started,
+        )
 
     def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
         """Return indexed dependency values for one SBOM component."""

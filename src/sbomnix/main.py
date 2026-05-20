@@ -7,6 +7,7 @@
 """Python script that generates SBOMs from nix packages"""
 
 import argparse
+import time
 
 from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
@@ -83,10 +84,19 @@ def main():
 
 
 def _run(args):
+    started = time.perf_counter()
+    resolve_started = time.perf_counter()
     target = resolve_nix_target(
         args.NIXREF, buildtime=args.buildtime, impure=args.impure
     )
+    LOG.verbose(
+        "Resolved CLI target in %.3fs: path='%s', flakeref='%s'",
+        time.perf_counter() - resolve_started,
+        target.path,
+        target.flakeref,
+    )
     LOG.info("Generating SBOM for target '%s'", target.path)
+    build_started = time.perf_counter()
     sbom = SbomBuilder(
         nix_path=target.path,
         buildtime=args.buildtime,
@@ -98,15 +108,35 @@ def _run(args):
         include_vulns=args.include_vulns,
         include_cpe=not args.exclude_cpe_matching,
     )
+    LOG.verbose(
+        "Constructed SBOM model in %.3fs",
+        time.perf_counter() - build_started,
+    )
     if args.cdx:
+        export_started = time.perf_counter()
         cdx = sbom.to_cdx_data()
         if args.include_vulns:
             sbom.enrich_cdx_with_vulnerabilities(cdx)
         sbom.write_json(args.cdx, cdx, printinfo=True)
+        LOG.verbose(
+            "Wrote CycloneDX output in %.3fs",
+            time.perf_counter() - export_started,
+        )
     if args.spdx:
+        export_started = time.perf_counter()
         sbom.to_spdx(args.spdx)
+        LOG.verbose(
+            "Wrote SPDX output in %.3fs",
+            time.perf_counter() - export_started,
+        )
     if args.csv:
+        export_started = time.perf_counter()
         sbom.to_csv(args.csv)
+        LOG.verbose(
+            "Wrote CSV output in %.3fs",
+            time.perf_counter() - export_started,
+        )
+    LOG.verbose("Completed sbomnix run in %.3fs", time.perf_counter() - started)
 
 
 ################################################################################

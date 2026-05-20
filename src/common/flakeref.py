@@ -7,6 +7,7 @@
 import logging
 import pathlib
 import re
+import time
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.log import LOG, LOG_VERBOSE
@@ -65,21 +66,29 @@ def try_resolve_flakeref(  # noqa: PLR0913
     else:
         log.log(LOG_VERBOSE, "Evaluating '%s'", flakeref)
     cmd = nix_cmd("eval", "--raw", flakeref, impure=impure)
+    started = time.perf_counter()
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    elapsed = time.perf_counter() - started
     if ret is None or ret.returncode != 0:
+        log.debug("nix eval failed for '%s' after %.3fs", flakeref, elapsed)
         if looks_like_flakeref:
             raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
         log.debug("not a flakeref: '%s'", flakeref)
         return None
     nixpath = ret.stdout.strip()
+    log.log(LOG_VERBOSE, "Evaluated '%s' in %.3fs", flakeref, elapsed)
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     if not force_realise:
         return nixpath
     log.info("Realising flakeref '%s'", flakeref)
     cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
+    started = time.perf_counter()
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    elapsed = time.perf_counter() - started
     if ret is None or ret.returncode != 0:
+        log.debug("nix build failed for '%s' after %.3fs", flakeref, elapsed)
         raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
+    log.log(LOG_VERBOSE, "Realised flakeref '%s' in %.3fs", flakeref, elapsed)
     return nixpath
 
 
@@ -92,8 +101,15 @@ def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
     """Return the derivation path for a flakeref target."""
     log.info("Evaluating flakeref '%s'", flakeref)
     cmd = nix_cmd("derivation", "show", flakeref, impure=impure)
+    started = time.perf_counter()
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    elapsed = time.perf_counter() - started
     if ret is None or ret.returncode != 0:
+        log.debug(
+            "nix derivation show failed for flakeref '%s' after %.3fs",
+            flakeref,
+            elapsed,
+        )
         raise FlakeRefResolutionError(flakeref, ret.stderr if ret else "")
     drv_paths = parse_nix_derivation_show(ret.stdout)
     drv_path = next(iter(drv_paths), "")
@@ -102,6 +118,12 @@ def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
             flakeref,
             "nix derivation show returned no derivation path",
         )
+    log.log(
+        LOG_VERBOSE,
+        "Resolved flakeref derivation in %.3fs to '%s'",
+        elapsed,
+        drv_path,
+    )
     log.debug("flakeref='%s' maps to derivation='%s'", flakeref, drv_path)
     return drv_path
 
@@ -127,8 +149,11 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
         flakeref,
         impure=impure,
     )
+    started = time.perf_counter()
     ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    elapsed = time.perf_counter() - started
     if ret is None or ret.returncode != 0:
+        log.debug("nix build failed for flakeref '%s' after %.3fs", flakeref, elapsed)
         raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
     nixpath = _first_output_path(ret.stdout)
     if not nixpath:
@@ -136,7 +161,12 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
             flakeref,
             "nix build returned no output path",
         )
-    log.log(LOG_VERBOSE, "Resolved flakeref to built path '%s'", nixpath)
+    log.log(
+        LOG_VERBOSE,
+        "Resolved flakeref to built path '%s' in %.3fs",
+        nixpath,
+        elapsed,
+    )
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     return nixpath
 
