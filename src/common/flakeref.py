@@ -109,15 +109,6 @@ def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
 def _force_realise_flakeref(flakeref, *, impure, exec_cmd_fn, log):
     """Return the realized output path for a runtime flakeref target."""
     log.info("Evaluating flakeref '%s'", flakeref)
-    nixpath = _realised_flakeref_path(
-        flakeref,
-        impure=impure,
-        exec_cmd_fn=exec_cmd_fn,
-    )
-    if nixpath:
-        log.debug("flakeref='%s' maps to realised path='%s'", flakeref, nixpath)
-        return nixpath
-
     return _build_flakeref_path(
         flakeref,
         impure=impure,
@@ -147,15 +138,6 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
         )
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
     return nixpath
-
-
-def _realised_flakeref_path(flakeref, *, impure, exec_cmd_fn):
-    """Return the already-realised output path for ``flakeref`` when available."""
-    cmd = nix_cmd("path-info", flakeref, impure=impure)
-    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
-    if ret is None or ret.returncode != 0:
-        return None
-    return _first_output_path(ret.stdout)
 
 
 def parse_nixos_configuration_ref(
