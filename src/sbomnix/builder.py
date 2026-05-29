@@ -423,11 +423,25 @@ class SbomBuilder:
             on=[cols.STORE_PATH],
             suffixes=("", "_meta"),
         )
+        self._apply_meta_cpe_overrides()
         LOG.verbose("Joined nixpkgs metadata for %d component(s)", len(df_meta))
         LOG.verbose(
             "Joined nixpkgs metadata in %.3fs",
             time.perf_counter() - started,
         )
+
+    def _apply_meta_cpe_overrides(self):
+        """Prefer exact nixpkgs metadata CPEs over heuristic CPEs."""
+        if self.df_sbomdb is None or "meta_cpe" not in self.df_sbomdb.columns:
+            return
+        if cols.CPE not in self.df_sbomdb.columns:
+            self.df_sbomdb[cols.CPE] = ""
+        meta_cpe = self.df_sbomdb["meta_cpe"].fillna("").astype(str).to_numpy()
+        override_mask = meta_cpe != ""
+        if not bool(np.any(override_mask)):
+            return
+        current_cpe = self.df_sbomdb[cols.CPE].fillna("").astype(str).to_numpy()
+        self.df_sbomdb[cols.CPE] = np.where(override_mask, meta_cpe, current_cpe)
 
     def lookup_dependencies(self, drv, uid=cols.STORE_PATH):
         """Return indexed dependency values for one SBOM component."""

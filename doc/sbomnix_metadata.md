@@ -40,6 +40,18 @@ primary nixpkgs package set. After scanning the selected package set, `sbomnix`
 may scan package roots exported by the target flake inputs for components that
 remain unmatched.
 
+## CPE sources
+
+When nixpkgs metadata is available, `sbomnix` prefers exact CPE identifiers
+from nixpkgs metadata and falls back to heuristic CPE matching only when
+nixpkgs metadata does not provide a canonical CPE. The heuristic fallback can
+be disabled with `--exclude-cpe-matching`, while `--exclude-meta` disables
+nixpkgs metadata entirely, including metadata-derived CPEs.
+
+Nixpkgs may also expose `possibleCPEs` guesses alongside its canonical CPE
+metadata. `sbomnix` keeps those guesses diagnostic-only and does not export them
+as the final component CPE.
+
 ## Caching and diagnostics
 
 Package metadata lookups are cached by metadata source identity, lookup set,

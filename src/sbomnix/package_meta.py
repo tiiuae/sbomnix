@@ -36,6 +36,8 @@ _META_DERIVATION_PATH = "_meta_derivation_path"
 _RICH_META_COLUMNS = (
     "meta_homepage",
     "meta_description",
+    "meta_cpe",
+    "meta_possible_cpes",
     "meta_license_short",
     "meta_license_spdxid",
 )
@@ -236,6 +238,11 @@ def _metadata_row(drv):
         "meta_unfree": meta.get("unfree", ""),
         "meta_description": meta.get("description", "") or "",
         "meta_position": meta.get("position", "") or "",
+        "meta_cpe": _parse_optional_meta_entry(meta, key="cpe"),
+        "meta_possible_cpes": _parse_optional_meta_entry(
+            meta.get("possibleCPEs", []),
+            key="cpe",
+        ),
         "meta_license_short": _parse_optional_meta_entry(meta_license, key="shortName"),
         "meta_license_spdxid": _parse_optional_meta_entry(meta_license, key="spdxId"),
         "meta_maintainers_email": _parse_optional_meta_entry(

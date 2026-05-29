@@ -47,11 +47,11 @@ def getargs(args=None):
     add_verbose_argument(parser)
     helps = "Include vulnerabilities in the output of CyloneDX SBOM"
     parser.add_argument("--include-vulns", help=helps, action="store_true")
-    helps = "Exclude Nixpkgs metadata information in the output"
+    helps = "Exclude nixpkgs metadata enrichment, including metadata-derived CPEs"
     parser.add_argument(
         "--exclude-meta", help=helps, action="store_true", default=False
     )
-    helps = "Exclude using heuristics-based CPE matches in the output"
+    helps = "Exclude heuristic CPE matching; keep exact nixpkgs metadata CPEs"
     parser.add_argument(
         "--exclude-cpe-matching", help=helps, action="store_true", default=False
     )

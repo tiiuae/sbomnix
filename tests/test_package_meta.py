@@ -491,9 +491,14 @@ def test_parse_package_metadata_records_identity_fields():
                         "pname": "pkg",
                         "version": "1.0",
                         "meta": {
+                            "cpe": "cpe:2.3:a:pkg_vendor:pkg:1.0:*:*:*:*:*:*:*",
                             "description": "Package",
                             "license": [{"spdxId": "MIT", "shortName": "MIT"}],
                             "maintainers": [{"email": "maintainer@example.invalid"}],
+                            "possibleCPEs": [
+                                {"cpe": "cpe:2.3:a:pkg_vendor:pkg:1.0:*:*:*:*:*:*:*"},
+                                {"cpe": "cpe:2.3:a:pkg_vendor:pkg:1:*:*:*:*:*:*:*"},
+                            ],
                         },
                     }
                 ]
@@ -505,6 +510,11 @@ def test_parse_package_metadata_records_identity_fields():
     assert record[cols.STORE_PATH] == "/nix/store/pkg.drv"
     assert record[package_meta.META_OUTPUT_PATH] == "/nix/store/pkg-out"
     assert record["meta_description"] == "Package"
+    assert record["meta_cpe"] == "cpe:2.3:a:pkg_vendor:pkg:1.0:*:*:*:*:*:*:*"
+    assert record["meta_possible_cpes"] == (
+        "cpe:2.3:a:pkg_vendor:pkg:1.0:*:*:*:*:*:*:*;"
+        "cpe:2.3:a:pkg_vendor:pkg:1:*:*:*:*:*:*:*"
+    )
     assert record["meta_license_spdxid"] == "MIT"
 
 
@@ -526,6 +536,12 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
   pname = "shadow";
   version = "1.0";
   meta.description = description;
+  meta.identifiers = {
+    cpe = "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*";
+    possibleCPEs = [
+      { cpe = "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"; }
+    ];
+  };
 }
 """
     package_set = """{ system, config ? { } }: {
@@ -568,6 +584,12 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
       pname = "input-shadow";
       version = "1.0";
       meta.description = "flake-input";
+      meta.identifiers = {
+        cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*";
+        possibleCPEs = [
+          { cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*"; }
+        ];
+      };
     };
   };
 }
@@ -593,6 +615,10 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
 
     assert df is not None
     assert df["meta_description"].to_list() == ["flake-root", "flake-root"]
+    assert df["meta_cpe"].to_list() == [
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
+    ]
     assert df[cols.PNAME].to_list() == ["shadow", "shadow"]
     assert df[cols.VERSION].to_list() == ["1.0", "1.0"]
 
@@ -605,6 +631,10 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
 
     assert df_fallback is not None
     assert df_fallback["meta_description"].to_list() == ["flake-root", "flake-root"]
+    assert df_fallback["meta_cpe"].to_list() == [
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
+    ]
     assert df_fallback[cols.PNAME].to_list() == ["shadow", "shadow"]
     assert df_fallback[cols.VERSION].to_list() == ["1.0", "1.0"]
 
@@ -624,8 +654,148 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
 
     assert df_input is not None
     assert df_input["meta_description"].to_list() == ["flake-input", "flake-input"]
+    assert df_input["meta_cpe"].to_list() == [
+        "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*",
+        "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*",
+    ]
     assert df_input[cols.PNAME].to_list() == ["input-shadow", "input-shadow"]
     assert df_input[cols.VERSION].to_list() == ["1.0", "1.0"]
+
+
+def test_package_meta_preserves_top_level_possible_cpes(tmp_path):
+    if shutil.which("nix") is None:
+        pytest.skip("nix is not available")
+
+    system = package_meta.nix_system()
+    flake = """
+{
+  outputs = { self }:
+  let
+    system = "__SYSTEM__";
+  in
+    {
+    packages.${system}.shadow = (derivation {
+      name = "shadow-1.0";
+      inherit system;
+      builder = "/bin/sh";
+      args = [ "-c" "echo out > $out" ];
+    }) // {
+      pname = "shadow";
+      version = "1.0";
+      meta.possibleCPEs = [
+        { cpe = "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"; }
+      ];
+    };
+  };
+}
+""".replace("__SYSTEM__", system)
+    flake_dir = tmp_path / "flake"
+    flake_dir.mkdir()
+    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+
+    df = package_meta.try_scan_package_meta(
+        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        flakeref=flake_dir.as_posix(),
+        impure=True,
+    )
+
+    assert df is not None
+    assert df["meta_possible_cpes"].to_list() == [
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"
+    ]
+
+
+def test_package_meta_ignores_unreadable_identifier_attrs(tmp_path):
+    if shutil.which("nix") is None:
+        pytest.skip("nix is not available")
+
+    system = package_meta.nix_system()
+    flake = """
+{
+  outputs = { self }:
+  let
+    system = "__SYSTEM__";
+  in
+    {
+    packages.${system}.shadow = (derivation {
+      name = "shadow-1.0";
+      inherit system;
+      builder = "/bin/sh";
+      args = [ "-c" "echo out > $out" ];
+    }) // {
+      pname = "shadow";
+      version = "1.0";
+      meta.description = "shadow description";
+      meta.identifiers = throw "bad";
+    };
+  };
+}
+""".replace("__SYSTEM__", system)
+    flake_dir = tmp_path / "flake"
+    flake_dir.mkdir()
+    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+
+    df = package_meta.try_scan_package_meta(
+        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        flakeref=flake_dir.as_posix(),
+        impure=True,
+    )
+
+    assert df is not None
+    assert df["meta_description"].to_list() == ["shadow description"]
+    assert df["meta_cpe"].to_list() == [""]
+    assert df["meta_possible_cpes"].to_list() == [""]
+
+
+def test_package_meta_falls_back_from_empty_legacy_cpe_fields(tmp_path):
+    if shutil.which("nix") is None:
+        pytest.skip("nix is not available")
+
+    system = package_meta.nix_system()
+    flake = """
+{
+  outputs = { self }:
+  let
+    system = "__SYSTEM__";
+  in
+    {
+    packages.${system}.shadow = (derivation {
+      name = "shadow-1.0";
+      inherit system;
+      builder = "/bin/sh";
+      args = [ "-c" "echo out > $out" ];
+    }) // {
+      pname = "shadow";
+      version = "1.0";
+      meta.cpe = "";
+      meta.possibleCPEs = [ ];
+      meta.identifiers = {
+        cpe = "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*";
+        possibleCPEs = [
+          { cpe = "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"; }
+        ];
+      };
+    };
+  };
+}
+""".replace("__SYSTEM__", system)
+    flake_dir = tmp_path / "flake"
+    flake_dir.mkdir()
+    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+
+    df = package_meta.try_scan_package_meta(
+        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        flakeref=flake_dir.as_posix(),
+        impure=True,
+    )
+
+    assert df is not None
+    assert df["meta_cpe"].to_list() == [
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"
+    ]
+    assert df["meta_possible_cpes"].to_list() == [
+        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*"
+    ]
 
 
 def test_package_meta_scans_target_flake_attr_when_name_differs(tmp_path):

@@ -310,3 +310,44 @@ def test_join_meta_uses_package_component_identity(monkeypatch):
     assert builder.df_sbomdb["pname_meta"].iloc[0] == "target-pname-from-meta"
     assert builder.df_sbomdb["version_meta"].iloc[0] == "1.0-from-meta"
     assert "name_meta" not in builder.df_sbomdb.columns
+
+
+def test_join_meta_cpe_resolution_prefers_exact_nixpkgs_value(monkeypatch):
+    class FakeMeta:
+        def get_package_meta_with_source(self, **kwargs):
+            assert kwargs["components"].equals(builder.df_sbomdb)
+            return (
+                pd.DataFrame(
+                    [
+                        {
+                            cols.STORE_PATH: TARGET_DERIVER,
+                            "meta_cpe": ("cpe:2.3:a:nixpkgs:target:1.0:*:*:*:*:*:*:*"),
+                        }
+                    ]
+                ),
+                NixpkgsMetaSource(method="package-meta-nix"),
+            )
+
+    monkeypatch.setattr(sbomnix_builder, "Meta", FakeMeta)
+    builder = _builder_double()
+    builder.flakeref = "nixpkgs#target"
+    builder.original_ref = "nixpkgs#target"
+    builder.impure = False
+    builder.df_sbomdb = pd.DataFrame(
+        [
+            {
+                cols.STORE_PATH: TARGET_DERIVER,
+                cols.NAME: "target",
+                cols.PNAME: "target",
+                cols.VERSION: "1.0",
+                cols.CPE: "cpe:2.3:a:heuristic:target:1.0:*:*:*:*:*:*:*",
+                cols.OUTPUTS: [TARGET_PATH],
+            }
+        ]
+    )
+
+    builder._join_meta()
+
+    assert builder.df_sbomdb[cols.CPE].iloc[0] == (
+        "cpe:2.3:a:nixpkgs:target:1.0:*:*:*:*:*:*:*"
+    )

@@ -283,16 +283,69 @@ let
     # attr name cannot be inferred exactly.
     if hasMatches canonicalCandidates then canonicalCandidates else plausibleCandidates;
 
-  filteredMeta = meta: {
-    description = meta.description or null;
-    homepage = meta.homepage or null;
-    unfree = meta.unfree or false;
-    position = meta.position or null;
-    license = meta.license or { };
-    maintainers = builtins.map (maintainer: { email = maintainer.email or ""; }) (
-      builtins.filter isAttrs (meta.maintainers or [ ])
-    );
-  };
+  normalizedIdentifiers =
+    meta:
+    let
+      hasNonEmptyString = value: builtins.isString value && value != "";
+      hasNonEmptyList = value: builtins.isList value && value != [ ];
+      metaIdentifiers = safeAttr meta "identifiers";
+      identifiers = if isAttrs metaIdentifiers then metaIdentifiers else { };
+      identifiersV1Value = safeAttr identifiers "v1";
+      identifiersV1 = if isAttrs identifiersV1Value then identifiersV1Value else { };
+      topLevelPossibleCPEs = safeAttr meta "possibleCPEs";
+      nestedPossibleCPEs = safeAttr identifiers "possibleCPEs";
+      nestedV1PossibleCPEs = safeAttr identifiersV1 "possibleCPEs";
+      possibleCPEs =
+        if hasNonEmptyList topLevelPossibleCPEs then
+          topLevelPossibleCPEs
+        else if hasNonEmptyList nestedPossibleCPEs then
+          nestedPossibleCPEs
+        else if hasNonEmptyList nestedV1PossibleCPEs then
+          nestedV1PossibleCPEs
+        else if builtins.isList topLevelPossibleCPEs then
+          topLevelPossibleCPEs
+        else if builtins.isList nestedPossibleCPEs then
+          nestedPossibleCPEs
+        else if builtins.isList nestedV1PossibleCPEs then
+          nestedV1PossibleCPEs
+        else
+          [ ];
+      metaCPE = safeAttr meta "cpe";
+      identifiersCPE = safeAttr identifiers "cpe";
+      identifiersV1CPE = safeAttr identifiersV1 "cpe";
+    in
+    {
+      cpe =
+        if hasNonEmptyString metaCPE then
+          metaCPE
+        else if hasNonEmptyString identifiersCPE then
+          identifiersCPE
+        else if hasNonEmptyString identifiersV1CPE then
+          identifiersV1CPE
+        else
+          null;
+      possibleCPEs = builtins.filter (
+        candidate: isAttrs candidate && safeAttr candidate "cpe" != null
+      ) possibleCPEs;
+    };
+
+  filteredMeta =
+    meta:
+    let
+      identifiers = normalizedIdentifiers meta;
+    in
+    {
+      description = meta.description or null;
+      homepage = meta.homepage or null;
+      unfree = meta.unfree or false;
+      position = meta.position or null;
+      cpe = identifiers.cpe;
+      possibleCPEs = identifiers.possibleCPEs;
+      license = meta.license or { };
+      maintainers = builtins.map (maintainer: { email = maintainer.email or ""; }) (
+        builtins.filter isAttrs (meta.maintainers or [ ])
+      );
+    };
 
   drvOutputs =
     drv: if drv ? outputs then builtins.map (output: drv.${output}) drv.outputs else [ drv ];

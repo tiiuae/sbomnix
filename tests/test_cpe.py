@@ -57,3 +57,9 @@ def test_cpe_ambiguous_product_falls_back_to_product_name(monkeypatch):
     generated = cpe.CPE().generate("openssl", "3.0.0")
 
     assert generated == "cpe:2.3:a:openssl:openssl:3.0.0:*:*:*:*:*:*:*"
+
+
+def test_cpe_disabled_returns_empty_string():
+    generated = cpe.CPE(include_cpe=False).generate("openssl", "3.0.0")
+
+    assert generated == ""
