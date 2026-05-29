@@ -153,6 +153,14 @@ Store-path targets skip nixpkgs metadata because the store path does not
 identify the nixpkgs source that produced it. `--exclude-meta` disables metadata
 enrichment.
 
+When nixpkgs metadata is available, `sbomnix` prefers exact CPE identifiers
+from nixpkgs metadata and falls back to heuristic CPE matching only when no
+exact nixpkgs CPE is present. `--exclude-cpe-matching` disables only the
+heuristic fallback, while `--exclude-meta` disables nixpkgs metadata entirely,
+including metadata-derived CPEs. Using both flags results in no CPE output.
+Store-path targets have no nixpkgs metadata source, so `--exclude-cpe-matching`
+usually removes all CPEs for store-path targets.
+
 CycloneDX and SPDX outputs record the selected metadata source in document
 metadata, including fields such as `nixpkgs:metadata_source_method`,
 `nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:flakeref`, `nixpkgs:version`, and

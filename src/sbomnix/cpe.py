@@ -28,6 +28,7 @@ class CPE:
         self,
         include_cpe=True,
     ):
+        self.include_cpe = include_cpe
         self._product_vendor = {}
         self._ambiguous_products = set()
         # Let's initialize the fields anyway.
@@ -120,6 +121,9 @@ class CPE:
 
     def generate(self, name, version):
         """Generate CPE identifier, given the product name and version"""
+        if not self.include_cpe:
+            LOG.log(LOG_SPAM, "CPE generation disabled")
+            return ""
         cpe_vendor = self._candidate_vendor(name.strip())
         cpe_product = name.strip()
         cpe_version = version.strip()
