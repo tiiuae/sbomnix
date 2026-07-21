@@ -87,17 +87,6 @@ def exec_cmd(
                 encoding="utf-8",
                 check=True,
             )
-        LOG.debug(
-            "Finished in %.3fs (rc=%s, stdout=%s, stderr=%s): %s",
-            time.perf_counter() - started,
-            ret.returncode,
-            _stream_summary(ret.stdout),
-            _stream_summary(ret.stderr),
-            command_str,
-        )
-        if ret.stderr:
-            LOG.debug("Command stderr:\n%s", _stream_preview(ret.stderr))
-        return ret
     except subprocess.CalledProcessError as error:
         LOG.debug(
             "Failed in %.3fs (rc=%s, stdout=%s, stderr=%s): %s",
@@ -119,6 +108,17 @@ def exec_cmd(
         if return_error:
             return error
         return None
+    LOG.debug(
+        "Finished in %.3fs (rc=%s, stdout=%s, stderr=%s): %s",
+        time.perf_counter() - started,
+        ret.returncode,
+        _stream_summary(ret.stdout),
+        _stream_summary(ret.stderr),
+        command_str,
+    )
+    if ret.stderr:
+        LOG.debug("Command stderr:\n%s", _stream_preview(ret.stderr))
+    return ret
 
 
 def exit_unless_command_exists(
