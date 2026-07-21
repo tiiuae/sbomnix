@@ -102,6 +102,11 @@ def _normalize_nixos_configuration_ref(nixref):
     return f"{flake}#nixosConfigurations.{attr}{NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX}"
 
 
+def _temp_sbom_path(prefix, suffix):
+    with NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix) as fobj:
+        return pathlib.Path(fobj.name)
+
+
 def generate_temp_sbom(
     target_path,
     buildtime=False,
@@ -115,19 +120,14 @@ def generate_temp_sbom(
     cdx_path = None
     csv_path = None
     try:
-        with NamedTemporaryFile(delete=False, prefix=prefix, suffix=cdx_suffix) as fcdx:
-            cdx_path = pathlib.Path(fcdx.name)
-            if not include_csv:
-                sbom.to_cdx(cdx_path, printinfo=False)
-                return GeneratedSbom(cdx_path=cdx_path)
-            with NamedTemporaryFile(delete=False, prefix=prefix, suffix=".csv") as fcsv:
-                csv_path = pathlib.Path(fcsv.name)
-                sbom.to_cdx(cdx_path, printinfo=False)
-                sbom.to_csv(csv_path, loglevel=logging.DEBUG)
-        return GeneratedSbom(cdx_path=cdx_path, csv_path=csv_path)
-    except Exception:
-        if cdx_path is not None:
-            cdx_path.unlink(missing_ok=True)
+        cdx_path = _temp_sbom_path(prefix, cdx_suffix)
+        csv_path = _temp_sbom_path(prefix, ".csv") if include_csv else None
+        sbom.to_cdx(cdx_path, printinfo=False)
         if csv_path is not None:
-            csv_path.unlink(missing_ok=True)
+            sbom.to_csv(csv_path, loglevel=logging.DEBUG)
+    except Exception:
+        for path in (cdx_path, csv_path):
+            if path is not None:
+                path.unlink(missing_ok=True)
         raise
+    return GeneratedSbom(cdx_path=cdx_path, csv_path=csv_path)

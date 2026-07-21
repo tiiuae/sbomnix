@@ -897,6 +897,53 @@ def _concat_metadata_frames(frames):
     return pd.concat(frames, ignore_index=True)
 
 
+def _scan_package_meta(  # noqa: PLR0913
+    lookup_keys,
+    *,
+    flakeref=None,
+    nixpkgs_path=None,
+    pkgs_expression=None,
+    input_roots_only=False,
+    impure=False,
+):
+    started = time.perf_counter()
+    lookup_keys = _normalized_lookup_keys(lookup_keys)
+    if not lookup_keys:
+        return pd.DataFrame()
+    flakeref = normalize_flakeref_for_nix_eval(flakeref)
+    LOG.debug("Reading package metadata for flakeref: %s", flakeref)
+    frames = []
+    for request_system, system_lookup_keys in _request_system_groups(
+        flakeref, lookup_keys
+    ):
+        LOG.verbose(
+            "Evaluating package metadata for %d lookup(s) on system '%s'",
+            len(system_lookup_keys),
+            request_system,
+        )
+        request = {
+            "flakeref": flakeref or None,
+            "system": request_system,
+            "nixpkgsPath": str(nixpkgs_path) if nixpkgs_path else None,
+            "lookupKeys": _request_lookup_keys(system_lookup_keys),
+            "inputRootsOnly": bool(input_roots_only),
+        }
+        frames.append(
+            _eval_package_meta_request(
+                request,
+                pkgs_expression=pkgs_expression,
+                impure=impure,
+            )
+        )
+    df = _concat_metadata_frames(frames)
+    LOG.verbose(
+        "Read package metadata with %d candidate row(s) in %.3fs",
+        len(df),
+        time.perf_counter() - started,
+    )
+    return df
+
+
 def try_scan_package_meta(  # noqa: PLR0913
     lookup_keys,
     *,
@@ -908,42 +955,14 @@ def try_scan_package_meta(  # noqa: PLR0913
 ):
     """Return package metadata dataframe, or None on failure."""
     try:
-        started = time.perf_counter()
-        lookup_keys = _normalized_lookup_keys(lookup_keys)
-        if not lookup_keys:
-            return pd.DataFrame()
-        flakeref = normalize_flakeref_for_nix_eval(flakeref)
-        LOG.debug("Reading package metadata for flakeref: %s", flakeref)
-        frames = []
-        for request_system, system_lookup_keys in _request_system_groups(
-            flakeref, lookup_keys
-        ):
-            LOG.verbose(
-                "Evaluating package metadata for %d lookup(s) on system '%s'",
-                len(system_lookup_keys),
-                request_system,
-            )
-            request = {
-                "flakeref": flakeref or None,
-                "system": request_system,
-                "nixpkgsPath": str(nixpkgs_path) if nixpkgs_path else None,
-                "lookupKeys": _request_lookup_keys(system_lookup_keys),
-                "inputRootsOnly": bool(input_roots_only),
-            }
-            frames.append(
-                _eval_package_meta_request(
-                    request,
-                    pkgs_expression=pkgs_expression,
-                    impure=impure,
-                )
-            )
-        df = _concat_metadata_frames(frames)
-        LOG.verbose(
-            "Read package metadata with %d candidate row(s) in %.3fs",
-            len(df),
-            time.perf_counter() - started,
+        return _scan_package_meta(
+            lookup_keys,
+            flakeref=flakeref,
+            nixpkgs_path=nixpkgs_path,
+            pkgs_expression=pkgs_expression,
+            input_roots_only=input_roots_only,
+            impure=impure,
         )
-        return df
     except (
         FileNotFoundError,
         KeyError,
