@@ -110,14 +110,28 @@ This patch auto-detection works in the similar way as the [patch auto-detection 
 ```
 $ csvlook whitelist.csv
 
-| vuln_id        | package   | comment                                                                 |
-| -------------- | --------- | ----------------------------------------------------------------------- |
-| MAL-2022-4301  |           | Incorrect package: Issue refers npm libidn2, not libidn2.               |
-| CVE-2016-2781  | coreutils | NVD data issue: CPE entry does not correctly state the version numbers. |
-| CVE-20.*       | git       | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| vuln_id        | package   | version_local | version_local_regex | comment                                                                 |
+| -------------- | --------- | ------------- | ------------------- | ----------------------------------------------------------------------- |
+| MAL-2022-4301  |           |               |                     | Incorrect package: Issue refers npm libidn2, not libidn2.               |
+| CVE-2016-2781  | coreutils | 9.5           |                     | NVD data issue: CPE entry does not correctly state the version numbers. |
+| CVE-20.*       | git       |               |                     | Incorrect package: Impacts Jenkins git plugin, not git.                 |
+| CVE-2025-.*    | go        |               | .*-linux-amd64-bootstrap | Build-time bootstrap Go artifact.                                       |
 ```
 
-`vuln_id` and `comment` are mandatory columns. `vuln_id` specifies a regular expression that will be used to match the vulnerability identification (`vuln_id`) against that of the `vulnxscan` output. Vulnerabilities that match the regular expression are excluded from the `vulnxscan` console output. If the whitelist includes a `package` column, in addition to matching `vuln_id`, a strict match is required against the `package` field in `vulnxscan` output.
+`vuln_id` and `comment` are mandatory columns. Empty optional match
+columns do not restrict the rule.
+
+| column                | required | behavior                                                                                  |
+| --------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `vuln_id`             | yes      | Regular expression full match against the finding `vuln_id`.                              |
+| `comment`             | yes      | Copied to the finding `whitelist_comment` field.                                          |
+| `package`             | no       | Exact match against the finding `package` when non-empty.                                 |
+| `version_local`       | no       | Exact match against the finding local version when non-empty.                             |
+| `version_local_regex` | no       | Regular expression full match against the finding local version when non-empty.           |
+| `whitelist`           | no       | Defaults to `True`; `False` or `0` annotates matching rows without suppressing them.      |
+
+When both `version_local` and `version_local_regex` are set, both
+filters must match.
 
 In case many rules match a vulnerability, rules on top of the whitelist are given higher priority.
 
@@ -126,10 +140,11 @@ To be able to verify which vulnerabilities are whitelisted, `vulnxscan` csv outp
 ```bash
 # Given the whitelist.csv contents:
 $ cat whitelist.csv
-"vuln_id","package","comment"
-"MAL-2022-4301",,"Incorrect package: Issue refers npm libidn2, not libidn2."
-"CVE-2016-2781","coreutils","NVD data issue: CPE entry does not correctly state the version numbers."
-"CVE-20.* ","git","Incorrect package: Impacts Jenkins git plugin, not git."
+"vuln_id","package","version_local","version_local_regex","comment"
+"MAL-2022-4301",,,,"Incorrect package: Issue refers npm libidn2, not libidn2."
+"CVE-2016-2781","coreutils","9.5",,"NVD data issue: CPE entry does not correctly state the version numbers."
+"CVE-20.*","git",,,"Incorrect package: Impacts Jenkins git plugin, not git."
+"CVE-2025-.*","go",,".*-linux-amd64-bootstrap","Build-time bootstrap Go artifact."
 
 # Apply the whitelist to git vulnxscan output
 $ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git --whitelist=whitelist.csv

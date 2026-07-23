@@ -12,10 +12,17 @@ Utility functions when dealing with whitelists
 
 # Whitelist
 
+import pandas as pd
+
 from common import columns as cols
 from common.df import df_from_csv_file, df_log
 from common.errors import WhitelistApplicationError
 from common.log import LOG, LOG_SPAM
+
+
+def _has_filter_value(value):
+    """Return whether an optional whitelist filter value is present."""
+    return value is not None and not pd.isna(value) and str(value).strip() != ""
 
 
 def load_whitelist(whitelist_csv_path):
@@ -50,6 +57,11 @@ def df_apply_whitelist(df_whitelist, df_vulns):
     on whitelisting regular expressions in column df_whitelist["vuln_id"].
     If df_whitelist["package"] exists and is not empty, require strict
     match in df_whitelist["package"] and df_vulns["package"].
+    If df_whitelist["version_local"] exists and is not empty, require strict
+    match against df_vulns["version_local"], or df_vulns["version"] before the
+    final report column rename.
+    If df_whitelist["version_local_regex"] exists and is not empty, require a
+    regular expression full match against the same local version column.
     If df_whitelist["whitelist"] exists and is False, do *not* whitelist
     the entry even if the rule matches, but only apply the column
     "whitelist_comment" to matching entries.
@@ -65,6 +77,18 @@ def df_apply_whitelist(df_whitelist, df_vulns):
     check_pkg_name = False
     if cols.PACKAGE in df_whitelist.columns and cols.PACKAGE in df_vulns.columns:
         check_pkg_name = True
+    vuln_version_col = None
+    if cols.VERSION_LOCAL in df_vulns.columns:
+        vuln_version_col = cols.VERSION_LOCAL
+    elif cols.VERSION in df_vulns.columns:
+        vuln_version_col = cols.VERSION
+    check_version_local = (
+        cols.VERSION_LOCAL in df_whitelist.columns and vuln_version_col is not None
+    )
+    check_version_local_regex = (
+        cols.VERSION_LOCAL_REGEX in df_whitelist.columns
+        and vuln_version_col is not None
+    )
     check_whitelist = False
     if cols.WHITELIST in df_whitelist.columns:
         check_whitelist = True
@@ -80,6 +104,25 @@ def df_apply_whitelist(df_whitelist, df_vulns):
             LOG.log(LOG_SPAM, "filtering by package name: %s", whitelist_entry.package)
             df_matches = df_matches & (
                 df_vulns[cols.PACKAGE] == whitelist_entry.package
+            )
+        if check_version_local and _has_filter_value(whitelist_entry.version_local):
+            LOG.log(
+                LOG_SPAM,
+                "filtering by local version: %s",
+                whitelist_entry.version_local,
+            )
+            df_matches = df_matches & (
+                df_vulns[vuln_version_col] == whitelist_entry.version_local
+            )
+        if check_version_local_regex and _has_filter_value(
+            whitelist_entry.version_local_regex
+        ):
+            version_regex = str(whitelist_entry.version_local_regex).strip()
+            LOG.log(LOG_SPAM, "filtering by local version regex: %s", version_regex)
+            df_matches = df_matches & (
+                df_vulns[vuln_version_col]
+                .astype(str)
+                .str.fullmatch(version_regex, na=False)
             )
         df_vulns.loc[df_matches, cols.WHITELIST] = True
         if check_whitelist:
