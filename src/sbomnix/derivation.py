@@ -271,11 +271,12 @@ class Derive:
         self.version = envVars.get("version", "") or _coerce_derivation_string(
             structured_env.get("version")
         )
-        self.patches = (
-            _coerce_derivation_patch_list(patches)
-            or _coerce_derivation_patch_list(envVars.get("patches", ""))
-            or _coerce_derivation_patch_list(structured_env.get("patches"))
+        self.patch_paths = (
+            _coerce_derivation_patch_paths(patches)
+            or _coerce_derivation_patch_paths(envVars.get("patches", ""))
+            or _coerce_derivation_patch_paths(structured_env.get("patches"))
         )
+        self.patches = " ".join(self.patch_paths)
         self.system = envVars.get("system", "")
         self.out = envVars.get("out", "") or _coerce_derivation_string(
             structured_env.get("out")
@@ -317,8 +318,8 @@ class Derive:
         drv = cls(
             envVars=env_vars,
             name=name,
-            patches=_coerce_derivation_patch_list(env_vars.get("patches", ""))
-            or _coerce_derivation_patch_list(structured_attrs.get("patches")),
+            patches=_coerce_derivation_patch_paths(env_vars.get("patches", ""))
+            or _coerce_derivation_patch_paths(structured_attrs.get("patches")),
         )
         drv.system = _coerce_derivation_string(drv_info.get("system")) or drv.system
         pname = env_vars.get("pname") or _coerce_derivation_string(
@@ -395,12 +396,12 @@ def _coerce_derivation_string(value):
     return ""
 
 
-def _coerce_derivation_patch_list(value):
+def _coerce_derivation_patch_paths(value):
     if isinstance(value, str):
-        return value
+        return [item for item in value.split() if item]
     if isinstance(value, list):
-        return " ".join(item for item in value if isinstance(item, str))
-    return ""
+        return [item for item in value if isinstance(item, str) and item]
+    return []
 
 
 def _set_derivation_output_paths(drv, outputs, env_vars):
