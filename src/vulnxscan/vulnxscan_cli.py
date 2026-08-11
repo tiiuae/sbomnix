@@ -66,6 +66,11 @@ def getargs(args=None):
     )
     parser.add_argument("--whitelist", help=helps, type=pathlib.Path)
     helps = (
+        "Path to optional component-evidence JSON output. When omitted, "
+        "only the existing CSV report files are written."
+    )
+    parser.add_argument("--evidence-out", help=helps, type=pathlib.Path)
+    helps = (
         "Add more information to vulnxscan output by querying "
         "repology.org for available package versions in nix-unstable and "
         "package upstream. This option is intended to help manual analysis. "
