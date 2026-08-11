@@ -7,80 +7,37 @@
 """Reporting helpers for vulnxscan findings."""
 
 import pathlib
-from typing import cast
 
-import pandas as pd
 from tabulate import tabulate
 
 from common import columns as cols
-from common.df import df_from_csv_file, df_to_csv_file
-from common.log import LOG, LOG_VERBOSE
-from vulnxscan.utils import _is_patched, _reformat_scanner, _vuln_sortcol, _vuln_url
+from common.df import df_to_csv_file
+from common.log import LOG
+from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
 from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist
 
+# Columns whose values are version strings and are truncated for display.
+# Named explicitly rather than matched on a "version" substring: evidence
+# counts such as `package_version_only_count` also contain that substring but
+# hold integers.
+_VERSION_DISPLAY_COLUMNS = (
+    cols.VERSION,
+    cols.VERSION_LOCAL,
+    cols.VERSION_NIXPKGS,
+    cols.VERSION_REPOLOGY,
+    cols.VERSION_SBOM,
+    cols.VERSION_UPSTREAM,
+)
 
-def build_report_dataframe(df_vulnix, df_grype, df_osv, *, log=LOG):
-    """Combine scanner findings into the final report dataframe."""
-    scanner_dfs = [df for df in [df_vulnix, df_grype, df_osv] if df is not None]
-    if not scanner_dfs:
-        log.debug("No scanners reported any findings")
-        return pd.DataFrame()
-    df = pd.concat(scanner_dfs, ignore_index=True)
-    if df.empty:
-        log.debug("No scanners reported any findings")
-        return pd.DataFrame()
-    if cols.MODIFIED not in df.columns:
-        df[cols.MODIFIED] = pd.NaT
-    df[cols.SORTCOL] = df.apply(_vuln_sortcol, axis=1)
-    df[cols.COUNT] = 1
-    group_cols = [
-        cols.VULN_ID,
-        cols.PACKAGE,
-        cols.SEVERITY,
-        cols.VERSION,
-        cols.SORTCOL,
-    ]
-    df = df.pivot_table(index=group_cols, columns=cols.SCANNER, values=cols.COUNT)
-    df.reset_index(drop=False, inplace=True)
+_CONSOLE_HIDDEN_COLUMNS = (cols.SORTCOL, *EVIDENCE_REPORT_COLUMNS)
+
+
+def scanner_columns(df_vulnix):
+    """Return scanner presence columns for the current scan mode."""
     scanners = ["grype", "osv"]
     if df_vulnix is not None:
         scanners.append("vulnix")
-    df.reindex(group_cols + scanners, axis=1)
-    for scanner_col in scanners:
-        if scanner_col not in df:
-            df[scanner_col] = 0
-    df[cols.SUM] = df[scanners].sum(axis=1).astype(int)
-    df["grype"] = df.apply(lambda row: _reformat_scanner(row.grype), axis=1)
-    df["osv"] = df.apply(lambda row: _reformat_scanner(row.osv), axis=1)
-    if "vulnix" in scanners:
-        df["vulnix"] = df.apply(lambda row: _reformat_scanner(row.vulnix), axis=1)
-    df[cols.URL] = df.apply(_vuln_url, axis=1)
-    sort_cols = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION]
-    df.sort_values(by=sort_cols, ascending=False, inplace=True)
-    report_cols = (
-        [cols.VULN_ID, cols.URL, cols.PACKAGE, cols.VERSION, cols.SEVERITY]
-        + scanners
-        + [cols.SUM, cols.SORTCOL]
-    )
-    return df[report_cols]
-
-
-def filter_patched_report(df_report, sbom_csv, *, log=LOG):
-    """Filter out vulnerabilities that are marked as patched in the SBOM CSV."""
-    log.log(LOG_VERBOSE, "Filtering patched vulnerabilities")
-    df_sbom_csv = df_from_csv_file(sbom_csv)
-    df = pd.merge(
-        left=df_report,
-        right=df_sbom_csv,
-        how="left",
-        left_on=[cols.PACKAGE, cols.VERSION],
-        right_on=[cols.PNAME, cols.VERSION],
-        suffixes=("", "_sbom_csv"),
-    )
-    df[cols.PATCHED] = df.apply(_is_patched, axis=1)
-    df = df[~df[cols.PATCHED]]
-    df = cast(pd.DataFrame, df[list(df_report.columns)])
-    return df.drop_duplicates(keep="first")
+    return scanners
 
 
 def apply_whitelist_annotations(df_report, whitelist_csv):
@@ -102,14 +59,16 @@ def render_console_report(df_report, *, df_triaged=None, log=LOG):
             df = df.drop(cols.PACKAGE_REPOLOGY, axis=1)
     else:
         df = df_report.copy()
-    df = df.drop(cols.SORTCOL, axis=1)
+    df = df.drop(
+        columns=[column for column in _CONSOLE_HIDDEN_COLUMNS if column in df.columns]
+    )
     df = df_drop_whitelisted(df)
     if df.empty:
         log.info("Whitelisted all vulnerabilities")
         return
-    version_cols = [col for col in df.columns if "version" in col]
-    for col in version_cols:
-        df[col] = df[col].str.slice(0, 16)
+    for col in _VERSION_DISPLAY_COLUMNS:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.slice(0, 16)
     table = tabulate(
         df,
         headers="keys",

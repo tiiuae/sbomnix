@@ -43,10 +43,11 @@ class OSV:
             setcol(cols.MODIFIED, []).append(vuln["modified"])
             setcol(cols.PACKAGE, []).append(package["package"]["name"])
             setcol(cols.VERSION, []).append(package["version"])
+            setcol(cols.COMPONENT_REF, []).append(package.get(cols.COMPONENT_REF, ""))
 
-    def _parse_batch_response(self, query, results):
+    def _parse_batch_response(self, packages, results):
         # Preserve the previous tolerant behavior if the API returns fewer results.
-        for package, vulns in zip(query["queries"], results, strict=False):
+        for package, vulns in zip(packages, results, strict=False):
             if not package or not vulns:
                 continue
             LOG.debug("package: %s", package)
@@ -55,7 +56,7 @@ class OSV:
                 continue
             self._parse_vulns(package, vulns)
 
-    def _post_batch_query(self, query):
+    def _post_batch_query(self, query, packages):
         LOG.log(LOG_SPAM, "query: %s", query)
         LOG.log(LOG_SPAM, "sending request to '%s'", OSV_QUERY_URL)
         resp = self.session.post(
@@ -67,7 +68,7 @@ class OSV:
         LOG.log(LOG_SPAM, "resp.json: %s", resp.json())
         resp.raise_for_status()
         payload = resp.json()
-        self._parse_batch_response(query, payload.get("results", []))
+        self._parse_batch_response(packages, payload.get("results", []))
 
     def _parse_sbom(self, path):
         LOG.debug("Parsing sbom: %s", path)
@@ -79,6 +80,7 @@ class OSV:
         for component in components:
             setcol(cols.NAME, []).append(component["name"])
             setcol(cols.VERSION, []).append(component["version"])
+            setcol(cols.COMPONENT_REF, []).append(component.get("bom-ref", ""))
         df_components = pd.DataFrame(components_dict)
         df_components.fillna("", inplace=True)
         df_components = df_components.astype(str)
@@ -96,6 +98,7 @@ class OSV:
         df_sbom = self._parse_sbom(sbom_path)
         max_queries = 1000
         batchquery = {"queries": []}
+        packages = []
         if ecosystems is None:
             ecosystems = ["GIT", "OSS-Fuzz"]
         for component in df_sbom.to_dict("records"):
@@ -113,11 +116,15 @@ class OSV:
                     },
                 }
                 batchquery["queries"].append(query)
+                packages.append(
+                    {**query, cols.COMPONENT_REF: component[cols.COMPONENT_REF]}
+                )
                 if len(batchquery["queries"]) >= max_queries:
-                    self._post_batch_query(batchquery)
+                    self._post_batch_query(batchquery, packages)
                     batchquery["queries"] = []
+                    packages = []
         if batchquery["queries"]:
-            self._post_batch_query(batchquery)
+            self._post_batch_query(batchquery, packages)
 
     def to_dataframe(self):
         """Return found vulnerabilities as a pandas dataframe."""

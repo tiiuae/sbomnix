@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "observation_id": "observation:0",
+      "finding_id": "sha256:c6730ac0b5c54e6de2a4aeb6d3920c5e707ffafd1a0949a42092c8040f06295c",
+      "scanner": "grype",
+      "vuln_id": "CVE-2024-1",
+      "package": "hello",
+      "version": "1.0",
+      "severity": "high",
+      "component_ref": "",
+      "resolution": "expanded"
+    },
+    {
+      "observation_id": "observation:1",
+      "finding_id": "sha256:c6730ac0b5c54e6de2a4aeb6d3920c5e707ffafd1a0949a42092c8040f06295c",
+      "scanner": "osv",
+      "vuln_id": "CVE-2024-1",
+      "package": "hello",
+      "version": "1.0",
+      "severity": "medium",
+      "component_ref": "",
+      "resolution": "expanded"
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "sha256:c6730ac0b5c54e6de2a4aeb6d3920c5e707ffafd1a0949a42092c8040f06295c",
+      "vuln_id": "CVE-2024-1",
+      "package": "hello",
+      "version": "1.0",
+      "severity": "high",
+      "scanners": [
+        "grype",
+        "osv"
+      ],
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1",
+      "sortcol": "2024A0000000001",
+      "evidence_scope": "component_expanded",
+      "patch_state": "mixed_component_evidence",
+      "resolved_component_count": 2,
+      "vuln_id_patch_name_match_count": 1,
+      "no_vuln_id_patch_name_match_count": 1,
+      "metadata_unavailable_count": 0,
+      "package_version_only_count": 0,
+      "suppressed_by_patch_evidence": false
+    }
+  ],
+  "components": [
+    {
+      "finding_id": "sha256:c6730ac0b5c54e6de2a4aeb6d3920c5e707ffafd1a0949a42092c8040f06295c",
+      "component_id": "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-a.drv",
+      "identity_sources": [
+        "sbom_package_version_join"
+      ],
+      "drv_path": "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-a.drv",
+      "output_paths": [
+        "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-a"
+      ],
+      "pname": "hello",
+      "version": "1.0",
+      "patches": [
+        "/nix/store/cccccccccccccccccccccccccccccccc-CVE-2024-1.patch"
+      ],
+      "patch_evidence_state": "vuln_id_patch_name_match",
+      "matching_patch_paths": [
+        "/nix/store/cccccccccccccccccccccccccccccccc-CVE-2024-1.patch"
+      ],
+      "suppressed_by_patch_evidence": true
+    },
+    {
+      "finding_id": "sha256:c6730ac0b5c54e6de2a4aeb6d3920c5e707ffafd1a0949a42092c8040f06295c",
+      "component_id": "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-hello-b.drv",
+      "identity_sources": [
+        "sbom_package_version_join"
+      ],
+      "drv_path": "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-hello-b.drv",
+      "output_paths": [
+        "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-hello-b"
+      ],
+      "pname": "hello",
+      "version": "1.0",
+      "patches": [],
+      "patch_evidence_state": "no_vuln_id_patch_name_match",
+      "matching_patch_paths": [],
+      "suppressed_by_patch_evidence": false
+    }
+  ]
+}

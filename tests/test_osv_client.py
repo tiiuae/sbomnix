@@ -77,5 +77,6 @@ def test_osv_client_posts_with_timeout_and_parses_results(tmp_path):
             "modified": "2024-01-01",
             "package": "hello",
             "version": "1.0",
+            "component_ref": "",
         }
     ]
