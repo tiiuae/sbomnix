@@ -10,6 +10,7 @@ from common import columns as cols
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
 from common.versioning import parse_version
+from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
 from vulnxscan.github_prs import GitHubPrLookup
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
 
@@ -88,6 +89,9 @@ def triage_vulnerabilities(
     if cols.WHITELIST in df.columns:
         uids.append(cols.WHITELIST)
         uids.append(cols.WHITELIST_COMMENT)
+    for column in EVIDENCE_REPORT_COLUMNS:
+        if column in df.columns:
+            uids.append(column)
     df_vuln_pkgs = df.groupby(by=uids).size().reset_index(name=cols.COUNT)
     LOG.debug("Number of vulnerable packages: %s", df_vuln_pkgs.shape[0])
     if df_vuln_pkgs.empty:

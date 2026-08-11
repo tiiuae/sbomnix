@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
+from common import columns as cols
 from vulnxscan.github_prs import GitHubPrLookup
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
 from vulnxscan.triage import classify_vulnerability, triage_vulnerabilities
@@ -208,6 +209,100 @@ def test_query_repology_versions_prefers_exact_version_match():
             "sortcol": "2024A0000000002",
         }
     ]
+
+
+def test_query_repology_versions_preserves_evidence_columns_without_match():
+    class EmptyAdapter:
+        def query(self, _repology_query):
+            return None
+
+    lookup = RepologyVulnerabilityLookup(
+        adapter=EmptyAdapter(),
+        cve_query=lambda *_args: None,
+    )
+    df_vuln_pkgs = pd.DataFrame(
+        [
+            {
+                cols.VULN_ID: "CVE-2024-1",
+                cols.URL: "https://nvd.nist.gov/vuln/detail/CVE-2024-1",
+                cols.PACKAGE: "openssl",
+                cols.SEVERITY: "7.0",
+                cols.VERSION: "1.0.0",
+                cols.SORTCOL: "2024A0000000001",
+                cols.FINDING_ID: "sha256:test",
+                cols.EVIDENCE_SCOPE: "component_expanded",
+                cols.PATCH_STATE: "mixed_component_evidence",
+                cols.RESOLVED_COMPONENT_COUNT: 2,
+                cols.VULN_ID_PATCH_NAME_MATCH_COUNT: 1,
+                cols.NO_VULN_ID_PATCH_NAME_MATCH_COUNT: 1,
+                cols.METADATA_UNAVAILABLE_COUNT: 0,
+                cols.PACKAGE_VERSION_ONLY_COUNT: 0,
+            }
+        ]
+    )
+
+    result = lookup.query_repology_versions(df_vuln_pkgs)
+
+    assert result[cols.FINDING_ID].tolist() == ["sha256:test"]
+    assert result[cols.PATCH_STATE].tolist() == ["mixed_component_evidence"]
+    assert result[cols.RESOLVED_COMPONENT_COUNT].tolist() == [2]
+
+
+def test_query_repology_versions_repeats_evidence_on_every_candidate_row():
+    """One finding may expand into several rows; each repeats its evidence."""
+
+    class TwoCandidateAdapter:
+        def query(self, _repology_query):
+            return pd.DataFrame(
+                [
+                    {
+                        "package": "openssl",
+                        "version": "1.1.0",
+                        "status": "newest",
+                        "newest_upstream_release": "1.2.0",
+                    },
+                    {
+                        "package": "openssl-legacy",
+                        "version": "1.1.0",
+                        "status": "newest",
+                        "newest_upstream_release": "1.1.9",
+                    },
+                ]
+            )
+
+    lookup = RepologyVulnerabilityLookup(
+        adapter=TwoCandidateAdapter(),
+        cve_query=lambda *_args: None,
+    )
+    df_vuln_pkgs = pd.DataFrame(
+        [
+            {
+                cols.VULN_ID: "CVE-2024-1",
+                cols.URL: "https://nvd.nist.gov/vuln/detail/CVE-2024-1",
+                cols.PACKAGE: "openssl",
+                cols.SEVERITY: "7.0",
+                cols.VERSION: "1.0.0",
+                cols.SORTCOL: "2024A0000000001",
+                cols.FINDING_ID: "sha256:test",
+                cols.EVIDENCE_SCOPE: "component_expanded",
+                cols.PATCH_STATE: "mixed_component_evidence",
+                cols.RESOLVED_COMPONENT_COUNT: 2,
+                cols.VULN_ID_PATCH_NAME_MATCH_COUNT: 1,
+                cols.NO_VULN_ID_PATCH_NAME_MATCH_COUNT: 1,
+                cols.METADATA_UNAVAILABLE_COUNT: 0,
+                cols.PACKAGE_VERSION_ONLY_COUNT: 0,
+            }
+        ]
+    )
+
+    result = lookup.query_repology_versions(df_vuln_pkgs)
+
+    assert len(result) == 2
+    assert result[cols.PACKAGE_REPOLOGY].tolist() == ["openssl", "openssl-legacy"]
+    assert result[cols.FINDING_ID].tolist() == ["sha256:test"] * 2
+    assert result[cols.PATCH_STATE].tolist() == ["mixed_component_evidence"] * 2
+    assert result[cols.RESOLVED_COMPONENT_COUNT].tolist() == [2, 2]
+    assert result[cols.VULN_ID_PATCH_NAME_MATCH_COUNT].tolist() == [1, 1]
 
 
 def test_query_repology_rejects_unknown_match_type():
