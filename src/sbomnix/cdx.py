@@ -72,9 +72,12 @@ def _cdx_component_add_licenses(component, drv):
 
 def _cdx_component_add_patches(component, drv):
     """Add security patch information to cdx component (if any)"""
-    if drv.patches:
+    patch_paths = getattr(drv, "patch_paths", None)
+    if patch_paths is None:
+        patch_paths = str(drv.patches).split()
+    if patch_paths:
         security_patches = []
-        for p in drv.patches.split(" "):
+        for p in patch_paths:
             ids = re.findall(r"CVE-\d{4}-\d+", p, re.IGNORECASE)
             if ids:
                 resolves = []

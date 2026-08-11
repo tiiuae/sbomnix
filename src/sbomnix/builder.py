@@ -6,6 +6,7 @@
 
 """SBOM builder orchestration."""
 
+import json
 import logging
 import time
 import uuid
@@ -51,6 +52,7 @@ SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
 _PACKAGE_META_PRIVATE_COLUMNS = [
     cols.NAME,
 ]
+_PATCH_PATHS = "patch_paths"
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,18 @@ def _mapped_runtime_output_paths(output_paths_by_load_path):
     if not output_paths_by_load_path:
         return set()
     return set().union(*output_paths_by_load_path.values())
+
+
+def _string_list(value):
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, str) and value:
+        return [value]
+    return []
+
+
+def _json_string_list(value):
+    return json.dumps(_string_list(value), ensure_ascii=False)
 
 
 class SbomBuilder:
@@ -478,4 +492,26 @@ class SbomBuilder:
 
     def to_csv(self, csv_path, loglevel=logging.INFO):
         """Export SBOM components to a CSV file."""
-        df_to_csv_file(self.df_sbomdb, csv_path, loglevel)
+        df_to_csv_file(self._csv_dataframe(), csv_path, loglevel)
+
+    def _csv_dataframe(self):
+        """Return the public SBOM CSV dataframe."""
+        if self.df_sbomdb is None:
+            raise AssertionError("SBOM component metadata was not initialized")
+        df = self.df_sbomdb.copy(deep=True)
+        if cols.OUTPUTS in df.columns:
+            df[cols.OUTPUT_PATHS_JSON] = df[cols.OUTPUTS].apply(_json_string_list)
+        else:
+            df[cols.OUTPUT_PATHS_JSON] = "[]"
+        if _PATCH_PATHS in df.columns:
+            patch_source = df[_PATCH_PATHS]
+        elif cols.PATCHES in df.columns:
+            patch_source = df[cols.PATCHES].apply(
+                lambda value: str(value).split() if value else []
+            )
+        else:
+            patch_source = pd.Series([[] for _ in range(len(df))], index=df.index)
+        df[cols.PATCH_PATHS_JSON] = patch_source.apply(_json_string_list)
+        if _PATCH_PATHS in df.columns:
+            df = df.drop(columns=[_PATCH_PATHS])
+        return df
