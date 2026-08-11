@@ -15,6 +15,42 @@ from common import columns as cols
 from common.log import LOG, LOG_SPAM
 
 
+def _first_string(*values):
+    for value in values:
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _vulnix_component_ref(package):
+    return _first_string(
+        package.get("component_ref"),
+        package.get("componentRef"),
+        package.get("bom-ref"),
+        package.get("bomRef"),
+        package.get("store_path"),
+        package.get("derivation"),
+        package.get("drv_path"),
+    )
+
+
+def _grype_component_ref(vuln):
+    artifact = vuln.get("artifact", {})
+    metadata = artifact.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    return _first_string(
+        artifact.get("component_ref"),
+        artifact.get("componentRef"),
+        artifact.get("bom-ref"),
+        artifact.get("bomRef"),
+        metadata.get("component_ref"),
+        metadata.get("componentRef"),
+        metadata.get("bom-ref"),
+        metadata.get("bomRef"),
+    )
+
+
 def _severity_from_cache(cvss_cache, vuln_id):
     if cvss_cache is None:
         return ""
@@ -39,6 +75,7 @@ def parse_vulnix_json(json_str, *, cvss_cache=None, log=LOG):
             setcol(cols.VULN_ID, []).append(cve)
             setcol(cols.SEVERITY, []).append(severity)
             setcol(cols.SCANNER, []).append("vulnix")
+            setcol(cols.COMPONENT_REF, []).append(_vulnix_component_ref(package))
     df_vulnix = pd.DataFrame.from_dict(vulnix_vulns_dict)
     if not df_vulnix.empty:
         log.debug("Vulnix found vulnerabilities")
@@ -76,6 +113,7 @@ def parse_grype_json(json_str, *, cvss_cache=None, log=LOG, log_spam=LOG_SPAM):
         setcol(cols.VULN_ID, []).append(vuln["vulnerability"]["id"])
         setcol(cols.SEVERITY, []).append(severity)
         setcol(cols.SCANNER, []).append("grype")
+        setcol(cols.COMPONENT_REF, []).append(_grype_component_ref(vuln))
     df_grype = pd.DataFrame.from_dict(grype_vulns_dict)
     if not df_grype.empty:
         log.debug("Grype found vulnerabilities")
@@ -91,6 +129,8 @@ def normalize_osv_dataframe(df_osv, *, cvss_cache=None, log=LOG, log_spam=LOG_SP
     df_osv = df_osv.copy(deep=True)
     if not df_osv.empty:
         df_osv[cols.SCANNER] = "osv"
+        if cols.COMPONENT_REF not in df_osv.columns:
+            df_osv[cols.COMPONENT_REF] = ""
         df_osv.replace(np.nan, "", regex=True, inplace=True)
         df_osv.drop_duplicates(keep="first", inplace=True)
         df_osv[cols.MODIFIED] = pd.to_datetime(

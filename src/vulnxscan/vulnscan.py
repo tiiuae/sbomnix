@@ -18,8 +18,12 @@ from common.proc import exec_cmd
 from vulnxscan import parsers as vulnxscan_parsers
 from vulnxscan import reporting as vulnxscan_reporting
 from vulnxscan import scanners as vulnxscan_scanners
+from vulnxscan.evidence import (
+    build_evidence_report,
+    empty_evidence_document,
+    write_evidence_document,
+)
 from vulnxscan.triage import triage_vulnerabilities
-from vulnxscan.utils import _vuln_sortcol
 
 
 class VulnScan:
@@ -31,6 +35,7 @@ class VulnScan:
         self.df_osv = None
         self.df_report = None
         self.df_triaged = None
+        self.evidence_document = empty_evidence_document()
         # Key:vuln_id, value:severity
         self.cvss = {}
 
@@ -97,38 +102,21 @@ class VulnScan:
         df_osv = vulnxscan_scanners.run_osv_scan(sbom_path, log=LOG)
         self._parse_osv(df_osv)
 
-    def _generate_report(self):
-        self.df_report = vulnxscan_reporting.build_report_dataframe(
-            self.df_vulnix,
-            self.df_grype,
-            self.df_osv,
+    def _generate_report(self, sbom_csv=None):
+        result = build_evidence_report(
+            [self.df_vulnix, self.df_grype, self.df_osv],
+            sbom_csv=sbom_csv,
+            scanner_columns=vulnxscan_reporting.scanner_columns(self.df_vulnix),
             log=LOG,
         )
-        if self.df_report.empty:
+        self.df_report = result.report
+        self.evidence_document = result.document
+        observations = result.observations
+        if observations.empty:
             self.df_report = None
             return
         if is_debug_enabled():
-            df_report_raw = pd.concat(
-                [
-                    df
-                    for df in [self.df_vulnix, self.df_grype, self.df_osv]
-                    if df is not None
-                ],
-                ignore_index=True,
-            )
-            if not df_report_raw.empty:
-                df_report_raw[cols.SORTCOL] = df_report_raw.apply(
-                    _vuln_sortcol,
-                    axis=1,
-                )
-                df_to_csv_file(df_report_raw, "df_report_raw.csv")
-
-    def _filter_patched(self, sbom_csv):
-        self.df_report = vulnxscan_reporting.filter_patched_report(
-            self.df_report,
-            sbom_csv,
-            log=LOG,
-        )
+            df_to_csv_file(observations, "df_report_raw.csv")
 
     def _apply_whitelist(self, whitelist_csv):
         vulnxscan_reporting.apply_whitelist_annotations(self.df_report, whitelist_csv)
@@ -142,12 +130,13 @@ class VulnScan:
 
     def report(self, args, sbom_csv):
         """Generate the vulnerability reports: csv file and a table to console"""
-        self._generate_report()
-        if self.df_report is None or self.df_report.empty:
+        self._generate_report(sbom_csv)
+        evidence_out = getattr(args, "evidence_out", None)
+        if self.df_report is None:
+            if evidence_out is not None:
+                write_evidence_document(self.evidence_document, evidence_out)
             LOG.info("No vulnerabilities found")
             return
-        if sbom_csv:
-            self._filter_patched(sbom_csv)
         if args.whitelist:
             LOG.verbose("Applying whitelist '%s'", args.whitelist)
             self._apply_whitelist(args.whitelist)
@@ -169,3 +158,5 @@ class VulnScan:
             args.out,
             df_triaged=self.df_triaged if args.triage else None,
         )
+        if evidence_out is not None:
+            write_evidence_document(self.evidence_document, evidence_out)
