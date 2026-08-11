@@ -23,6 +23,7 @@ Table of Contents
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
    * [Using Whitelist to Record Manual Analysis Results](#using-whitelist-to-record-manual-analysis-results)
    * [Triage to Help Manual Analysis](#triage-to-help-manual-analysis)
+   * [Component Patch Evidence](#component-patch-evidence)
 * [Footnotes and Future Work](#footnotes-and-future-work)
 
 ## Getting Started
@@ -102,6 +103,8 @@ INFO     Wrote: vulns.csv
 
 It is worth mentioning that `vulnxscan` filters out vulnerabilities that it detects are patched, as printed out in the console output on lines like '`CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']`'.
 This patch auto-detection works in the similar way as the [patch auto-detection on vulnix](https://github.com/nix-community/vulnix#cve-patch-auto-detection), that is, it is based on detecting vulnerability identifiers from the patch filenames.
+
+A finding is filtered out only when *every* derivation it resolves to carries such a patch. When a closure contains several derivations with the same package name and version but different patch metadata, the finding stays in the report and its patch evidence is summarized in the output columns described in [Component Patch Evidence](#component-patch-evidence).
 
 
 ### Whitelisting Vulnerabilities
@@ -342,6 +345,67 @@ Potential vulnerabilities impacting version_local:
 ```
 
 `vulnxscan` option `--nixprs` adds the column `nixpkgs_pr` to the output, to help manual analysis by listing PRs that appear relevant for the given issue.
+
+### Component Patch Evidence
+
+Patch filtering answers "is this vulnerability patched?" with a single yes or no. That answer is ambiguous when a Nix closure contains several derivations that share a package name and version but differ in patch metadata: one may carry a patch naming the vulnerability while another does not. Component patch evidence records which derivations a finding resolved to, and what the patch metadata of each one says.
+
+Every report row therefore carries these columns, in both the normal and the `--triage` CSV:
+
+| Column | Meaning |
+| --- | --- |
+| `finding_id` | Stable `sha256:` digest of the canonical `(vuln_id, package, version)` tuple. |
+| `evidence_scope` | How the finding was resolved to components: `component_exact`, `component_expanded`, `component_mixed`, or `package_version_only`. |
+| `patch_state` | Aggregate verdict: `all_components_match`, `mixed_component_evidence`, `no_component_match`, `metadata_unavailable`, or `package_version_only`. |
+| `resolved_component_count` | Number of derivations the finding resolved to. |
+| `vuln_id_patch_name_match_count` | How many of those carry a patch whose file name names the vulnerability. |
+| `no_vuln_id_patch_name_match_count` | How many carry no such patch. |
+| `metadata_unavailable_count` | How many have missing or unusable patch metadata. |
+| `package_version_only_count` | `1` when no derivation could be resolved at all, otherwise `0`. |
+
+A matching patch file name is evidence that a fix was applied, not proof; equally, an absent patch name is not proof of exposure. Only `all_components_match` suppresses a finding from the report.
+
+#### Writing the evidence report
+
+Option `--evidence-out PATH` writes the full per-component evidence as JSON. Omitting it leaves the existing CSV behavior untouched.
+
+```bash
+# Scan buildtime dependencies and record component evidence next to the CSVs
+$ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git --buildtime --triage \
+    --out=vulns.csv --evidence-out=evidence.json
+...
+INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/...-CVE-2023-2975.patch']
+INFO     Wrote: vulns.csv
+INFO     Wrote: vulns.triage.csv
+INFO     Wrote: evidence.json
+```
+
+The document is written atomically and validated first, so a partial or internally inconsistent file is never left behind. A successful scan with no findings still writes a valid document with empty arrays, so an empty file can never be confused with a scan that did not run. The top-level shape is:
+
+```json
+{
+  "schema_version": 1,
+  "observations": [],
+  "findings": [],
+  "components": []
+}
+```
+
+- `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
+- `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.
+- `components` holds one entry per resolved derivation: `finding_id`, `component_id`, sorted `identity_sources` (`scanner_component_ref`, `sbom_package_version_join`, or `unresolved`), `drv_path`, `output_paths`, `pname`, `version`, `patches`, `patch_evidence_state` (`vuln_id_patch_name_match`, `no_vuln_id_patch_name_match`, `metadata_unavailable`, or `package_version_only`), `matching_patch_paths`, and `suppressed_by_patch_evidence`.
+
+Unlike the CSV reports, the evidence document also contains the findings that patch filtering suppressed, marked `suppressed_by_patch_evidence: true`, so a suppression can be audited rather than silently trusted.
+
+A complete example document is kept as a contract fixture in [tests/resources/vulnxscan_evidence_v1.json](../tests/resources/vulnxscan_evidence_v1.json) and asserted by the test suite.
+
+All counts are non-negative integers, suppression fields are JSON booleans, path and scanner collections are arrays of strings, and unavailable scalars are empty strings rather than `null`.
+
+When the input is an SBOM (`--sbom`) rather than a Nix target, there is no Nix component table to resolve against, so findings are reported as `package_version_only`.
+
+#### Schema evolution
+
+Readers must ignore unknown object fields; every field listed above is required in schema version 1. Adding an optional field keeps version 1. Removing or renaming a required field, changing a field type, changing identity or count semantics, or adding or changing the meaning of an enum value requires incrementing `schema_version`.
 
 ## Footnotes and Future Work
 
