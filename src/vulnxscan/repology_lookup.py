@@ -18,6 +18,7 @@ from common.versioning import version_distance
 from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.exceptions import RepologyNoMatchingPackages
 from repology.repology_cve import query_cve
+from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
 
 
 def select_newest(df):
@@ -32,6 +33,12 @@ def select_newest(df):
     if not selected:
         return pd.DataFrame()
     return pd.concat(selected, ignore_index=True)
+
+
+def _add_evidence_columns(out_dict, vuln):
+    for column in EVIDENCE_REPORT_COLUMNS:
+        if hasattr(vuln, column):
+            out_dict.setdefault(column, []).append(getattr(vuln, column))
 
 
 def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
@@ -50,6 +57,7 @@ def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
             out_dict.setdefault(cols.WHITELIST_COMMENT, []).append(
                 vuln.whitelist_comment
             )
+        _add_evidence_columns(out_dict, vuln)
         return
     for item in df_repo.itertuples():
         out_dict.setdefault(cols.VULN_ID, []).append(vuln.vuln_id)
@@ -70,6 +78,7 @@ def _add_triage_item(out_dict, vuln, whitelist_cols, df_repo=None):
             out_dict.setdefault(cols.WHITELIST_COMMENT, []).append(
                 vuln.whitelist_comment
             )
+        _add_evidence_columns(out_dict, vuln)
 
 
 def _version_similarity(row):
