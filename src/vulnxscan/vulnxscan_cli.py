@@ -37,8 +37,15 @@ def getargs(args=None):
     )
     parser.add_argument("TARGET", help=helps, type=str)
     add_verbose_argument(parser)
-    helps = "Path to output file (default: ./vulns.csv)"
-    parser.add_argument("-o", "--out", nargs="?", help=helps, default="vulns.csv")
+    helps = "Path to output file (default: ./vulns.csv or ./vulns.sarif)"
+    parser.add_argument("-o", "--out", nargs="?", help=helps)
+    helps = "Output format (default: csv)"
+    parser.add_argument("--format", choices=("csv", "sarif"), default="csv", help=helps)
+    helps = (
+        "Repository-relative file genuinely responsible for the scanned closure. "
+        "Adds a file-level SARIF location without inventing a line number."
+    )
+    parser.add_argument("--sarif-location", type=pathlib.PurePosixPath, help=helps)
     helps = (
         "Scan target buildtime instead of runtime dependencies. This option "
         "has no impact if the scan target is SBOM (ref: --sbom)."
@@ -65,13 +72,13 @@ def getargs(args=None):
     helps = (
         "Path to whitelist file. Vulnerabilities that match any whitelisted "
         "entries will not be included to the console output and are annotated "
-        "accordingly in the output csv. See more details in the vulnxscan "
-        "README.md."
+        "accordingly in CSV output. SARIF output omits them. See more details "
+        "in the vulnxscan README.md."
     )
     parser.add_argument("--whitelist", help=helps, type=pathlib.Path)
     helps = (
         "Path to optional component-evidence JSON output. When omitted, "
-        "only the existing CSV report files are written."
+        "only the selected report files are written."
     )
     parser.add_argument("--evidence-out", help=helps, type=pathlib.Path)
     helps = (
@@ -95,7 +102,19 @@ def getargs(args=None):
     )
     triagegr.add_argument("--nixprs", help=helps, action="store_true")
     add_version_argument(parser)
-    return parser.parse_args(args)
+    parsed = parser.parse_args(args)
+    if parsed.out is None:
+        parsed.out = "vulns.sarif" if parsed.format == "sarif" else "vulns.csv"
+    if parsed.sarif_location is not None:
+        if parsed.format != "sarif":
+            parser.error("--sarif-location requires --format sarif")
+        if (
+            parsed.sarif_location == pathlib.PurePosixPath(".")
+            or parsed.sarif_location.is_absolute()
+            or ".." in parsed.sarif_location.parts
+        ):
+            parser.error("--sarif-location must be repository-relative")
+    return parsed
 
 
 ################################################################################

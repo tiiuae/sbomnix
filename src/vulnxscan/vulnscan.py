@@ -35,6 +35,7 @@ class VulnScan:
         self.df_osv = None
         self.df_report = None
         self.df_triaged = None
+        self.observations = pd.DataFrame()
         self.evidence_document = empty_evidence_document()
         # Key:vuln_id, value:severity
         self.cvss = {}
@@ -111,12 +112,12 @@ class VulnScan:
         )
         self.df_report = result.report
         self.evidence_document = result.document
-        observations = result.observations
-        if observations.empty:
+        self.observations = result.observations
+        if self.observations.empty:
             self.df_report = None
             return
         if is_debug_enabled():
-            df_to_csv_file(observations, "df_report_raw.csv")
+            df_to_csv_file(self.observations, "df_report_raw.csv")
 
     def _apply_whitelist(self, whitelist_csv):
         vulnxscan_reporting.apply_whitelist_annotations(self.df_report, whitelist_csv)
@@ -129,10 +130,19 @@ class VulnScan:
         )
 
     def report(self, args, sbom_csv):
-        """Generate the vulnerability reports: csv file and a table to console"""
+        """Generate the vulnerability file report and console table."""
         self._generate_report(sbom_csv)
         evidence_out = getattr(args, "evidence_out", None)
+        output_format = getattr(args, "format", "csv")
         if self.df_report is None:
+            if output_format == "sarif":
+                vulnxscan_reporting.write_reports(
+                    pd.DataFrame(),
+                    args.out,
+                    output_format=output_format,
+                    evidence_document=self.evidence_document,
+                    sarif_location=getattr(args, "sarif_location", None),
+                )
             if evidence_out is not None:
                 write_evidence_document(self.evidence_document, evidence_out)
             LOG.info("No vulnerabilities found")
@@ -157,6 +167,10 @@ class VulnScan:
             self.df_report,
             args.out,
             df_triaged=self.df_triaged if args.triage else None,
+            output_format=output_format,
+            evidence_document=self.evidence_document,
+            scanner_observations=self.observations,
+            sarif_location=getattr(args, "sarif_location", None),
         )
         if evidence_out is not None:
             write_evidence_document(self.evidence_document, evidence_out)

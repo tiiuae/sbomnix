@@ -85,6 +85,9 @@ _BASE_OBSERVATION_COLUMNS = [
     cols.SCANNER,
     cols.COMPONENT_REF,
     cols.MODIFIED,
+    cols.DESCRIPTION,
+    cols.FIX_STATE,
+    cols.FIX_VERSIONS,
 ]
 
 _REPORT_SORT_COLUMNS = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION]

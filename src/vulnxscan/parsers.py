@@ -98,22 +98,30 @@ def parse_grype_json(json_str, *, cvss_cache=None, log=LOG, log_spam=LOG_SPAM):
                 vuln["artifact"]["name"],
             )
             continue
-        vid = vuln["vulnerability"]["id"]
+        vulnerability = vuln["vulnerability"]
+        vid = vulnerability["id"]
         severity = _severity_from_cache(cvss_cache, vid)
-        if not severity and vuln["vulnerability"]["cvss"]:
-            for cvss in vuln["vulnerability"]["cvss"]:
+        if not severity and vulnerability.get("cvss"):
+            for cvss in vulnerability["cvss"]:
                 if float(cvss["version"]) >= 3:
                     log.log(log_spam, "selected cvss: %s", cvss)
                     severity = cvss["metrics"]["baseScore"]
                     if cvss_cache is not None:
                         cvss_cache[vid] = severity
                     break
+        fix = vulnerability.get("fix") or {}
+        fix_versions = fix.get("versions") or []
+        if not isinstance(fix_versions, list):
+            fix_versions = []
         setcol(cols.PACKAGE, []).append(vuln["artifact"]["name"])
         setcol(cols.VERSION, []).append(vuln["artifact"]["version"])
-        setcol(cols.VULN_ID, []).append(vuln["vulnerability"]["id"])
+        setcol(cols.VULN_ID, []).append(vid)
         setcol(cols.SEVERITY, []).append(severity)
         setcol(cols.SCANNER, []).append("grype")
         setcol(cols.COMPONENT_REF, []).append(_grype_component_ref(vuln))
+        setcol(cols.DESCRIPTION, []).append(vulnerability.get("description", ""))
+        setcol(cols.FIX_STATE, []).append(fix.get("state", ""))
+        setcol(cols.FIX_VERSIONS, []).append(", ".join(map(str, fix_versions)))
     df_grype = pd.DataFrame.from_dict(grype_vulns_dict)
     if not df_grype.empty:
         log.debug("Grype found vulnerabilities")

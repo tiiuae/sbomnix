@@ -18,6 +18,7 @@ result
 *.py[cod]
 *.sqlite
 *.csv
+*.sarif
 /*.log
 /*.json
 !/pyrightconfig.json
