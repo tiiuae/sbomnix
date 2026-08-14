@@ -14,6 +14,7 @@ from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG
 from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
+from vulnxscan.sarif import findings_to_sarif, write_sarif
 from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_whitelist
 
 # Columns whose values are version strings and are truncated for display.
@@ -84,11 +85,32 @@ def render_console_report(df_report, *, df_triaged=None, log=LOG):
     )
 
 
-def write_reports(df_report, out_path, *, df_triaged=None):
-    """Write the main CSV report and optional triage report."""
+def write_reports(  # noqa: PLR0913
+    df_report,
+    out_path,
+    *,
+    df_triaged=None,
+    output_format="csv",
+    evidence_document=None,
+    scanner_observations=None,
+    sarif_location=None,
+):
+    """Write the selected main report and optional triage CSV report."""
     out_path = pathlib.Path(out_path)
-    df_to_csv_file(df_report, out_path.resolve().as_posix())
+    if output_format == "sarif":
+        active_findings = df_drop_whitelisted(df_report.copy())
+        document = findings_to_sarif(
+            active_findings,
+            evidence_document=evidence_document,
+            scanner_observations=scanner_observations,
+            triage_findings=df_triaged,
+            location=sarif_location,
+        )
+        write_sarif(document, out_path)
+    else:
+        df_to_csv_file(df_report, out_path.resolve().as_posix())
     if df_triaged is not None:
         parents = out_path.parents[0].resolve().as_posix()
-        triage_out = f"{parents}/{out_path.stem}.triage{out_path.suffix}"
+        suffix = ".csv" if output_format == "sarif" else out_path.suffix
+        triage_out = f"{parents}/{out_path.stem}.triage{suffix}"
         df_to_csv_file(df_triaged, triage_out)

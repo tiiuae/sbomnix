@@ -63,10 +63,13 @@ def test_parse_grype_json_prefers_cvss_v3_scores():
           "artifact": {"id": "90c611e7b23a5240", "name": "hello", "version": "1.0"},
           "vulnerability": {
             "id": "CVE-2",
+            "description": "Remote code execution in hello.",
+            "severity": "Critical",
             "cvss": [
               {"version": "2.0", "metrics": {"baseScore": 4.0}},
               {"version": "3.1", "metrics": {"baseScore": 9.8}}
-            ]
+            ],
+            "fix": {"state": "fixed", "versions": ["1.1", "1.2"]}
           }
         }
       ]
@@ -83,9 +86,34 @@ def test_parse_grype_json_prefers_cvss_v3_scores():
             "severity": 9.8,
             "scanner": "grype",
             "component_ref": "",
+            "description": "Remote code execution in hello.",
+            "fix_state": "fixed",
+            "fix_versions": "1.1, 1.2",
         }
     ]
     assert cvss_cache == {"CVE-2": 9.8}
+
+
+def test_parse_grype_json_keeps_missing_cvss_empty():
+    """Do not change the CSV severity contract when Grype has only a label."""
+    json_str = """
+    {
+      "matches": [
+        {
+          "artifact": {"name": "hello", "version": "1.0"},
+          "vulnerability": {
+            "id": "CVE-3",
+            "severity": "Negligible",
+            "cvss": []
+          }
+        }
+      ]
+    }
+    """
+
+    df = parse_grype_json(json_str)
+
+    assert df.iloc[0][cols.SEVERITY] == ""
 
 
 def test_build_evidence_report_merges_scanner_counts():

@@ -23,6 +23,7 @@ Table of Contents
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
    * [Using Whitelist to Record Manual Analysis Results](#using-whitelist-to-record-manual-analysis-results)
    * [Triage to Help Manual Analysis](#triage-to-help-manual-analysis)
+   * [SARIF Output](#sarif-output)
    * [Component Patch Evidence](#component-patch-evidence)
 * [Footnotes and Future Work](#footnotes-and-future-work)
 
@@ -347,6 +348,70 @@ Potential vulnerabilities impacting version_local:
 ```
 
 `vulnxscan` option `--nixprs` adds the column `nixpkgs_pr` to the output, to help manual analysis by listing PRs that appear relevant for the given issue.
+
+### SARIF Output
+
+Use `--format sarif` to write the final normalized findings as SARIF 2.1.0. The default output name for this format is `vulns.sarif`; `--out` selects another path.
+
+```bash
+$ vulnxscan nixpkgs#git --format sarif --out vulnxscan.sarif
+```
+
+SARIF is a vulnerability-result interchange format. It does not replace the CycloneDX or SPDX SBOM that describes the scanned components.
+
+Each SARIF rule is a vulnerability identifier such as a CVE, GHSA, or OSV identifier. Each result is one active normalized `(vulnerability ID, package, version)` finding after the existing cross-scanner aggregation, patch filtering, and whitelist suppression. Multiple scanners are recorded in the result's sorted `sources` property instead of producing duplicate results.
+
+Rule help contains explicit triage links. Canonical CVE rules link to both NVD and the Nixpkgs Security Tracker's stable `by-cve` route, GHSA rules link to the GitHub Advisory Database and OSV, and other identifiers retain their available vulnerability-record link. These links are constructed offline and do not assert that the tracker has classified the exact package or overlay. A tracker URL is only a candidate link and may return 404 when no suggestion exists.
+
+Grype descriptions become rule `fullDescription` text and are repeated in rule help because GitHub ingests `fullDescription` without rendering it on the alert page. No extra advisory requests are made for SARIF output.
+
+Original severity is retained in `properties.severity`, and a numeric value is also retained as `properties.cvssScore`. SARIF levels are mapped as follows:
+
+| vulnxscan severity | SARIF level |
+| --- | --- |
+| `critical`, `high`, or numeric score 7.0-10.0 | `error` |
+| `medium`, `moderate`, unknown/missing, or numeric score 4.0-6.9 | `warning` |
+| `low`, `none`, or numeric score 0.0-3.9 | `note` |
+
+When a numeric score is available, the rule also carries GitHub's supported `security-severity` property so Code Scanning displays its critical/high/medium/low security classification instead of only the generic SARIF level. `vulnxscan` does not emit a `precision` value because its scanners do not provide one and inventing confidence would be misleading.
+
+Grype fix state and fixed versions, scanner provenance, selected severity, Nix patch-evidence state, and resolved derivation paths are included in each result message so GitHub displays them. The same values remain in result properties for generic SARIF consumers. Vulnix currently provides CVSS data but no description or fix versions; the OSV batch endpoint used by `vulnxscan` currently returns identifiers and modification dates rather than full advisory details.
+
+Each result has a SHA-256 partial fingerprint over the canonical `(vulnerability ID, package, version)` tuple. Including the package version keeps concurrent vulnerable versions distinct. Derivation paths, output paths, Nix store hashes, scanner database state, timestamps, and result order are excluded so rebuilds retain alert identity. Nix paths remain available as result metadata when component evidence provides them.
+
+#### Locations and GitHub Code Scanning
+
+A Nix closure vulnerability does not inherently identify a source line. By default, `vulnxscan` therefore emits no SARIF location rather than pointing every result at a fabricated line such as `flake.lock:1`.
+
+GitHub Code Scanning currently requires every displayed result to have a physical artifact location. If the repository has a file that genuinely defines or introduces the scanned closure, pass its repository-relative path with `--sarif-location`. This creates a file-level location and deliberately omits a line region.
+
+```yaml
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+steps:
+...
+- name: Scan Nix closure
+  env:
+    GRYPE_DB_REQUIRE_UPDATE_CHECK: "true"
+  run: |
+    vulnxscan ./result \
+      --require-cpe-dictionary \
+      --format sarif --out vulnxscan.sarif \
+      --sarif-location flake.nix
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v4
+  with:
+    sarif_file: vulnxscan.sarif
+    category: vulnxscan
+```
+
+Replace `flake.nix` with a more precise repository-relative provenance file when available. If no truthful file exists, omit `--sarif-location`; the result remains valid generic SARIF, but GitHub Code Scanning will not display its location-free results. Upload and authentication remain the CI platform's responsibility; `vulnxscan` performs no GitHub API calls and requires no GitHub environment variables.
+
+When `--triage` is combined with SARIF, the main output is SARIF and the existing supplemental triage report remains CSV at `<stem>.triage.csv`. With `--nixprs`, matching Nixpkgs pull requests also appear as package-specific work-item links on each result and as labeled links in GitHub's rule-help panel.
 
 ### Component Patch Evidence
 
