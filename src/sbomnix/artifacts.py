@@ -9,7 +9,7 @@ import re
 _PATCH_OR_DIFF_RE = r"[.](?:patch|diff)(?:[.][a-zA-Z0-9]+)?"
 _SOURCE_ARCHIVE_RE = (
     r"[.]tar(?:[.][a-zA-Z0-9]+)?|"
-    r"[.](?:tgz|tbz2?|txz|zip|whl|gem|cabal|crate)"
+    r"[.](?:tgz|tbz2?|txz|zip|whl|gem|cabal|crate|deb|rpm|hpi)"
 )
 _CONFIG_OR_DATA_RE = (
     r"[.](?:"
@@ -29,7 +29,7 @@ _FONT_OR_MEDIA_RE = (
 _SOURCE_FILE_RE = (
     r"[.](?:"
     r"sh|bash|fish|py|pl|pm|lua|cgi|c|cc|cpp|h|hpp|java|js|ts|"
-    r"go|rs|hs|m4|in|cmake|mk|proto|css|scss|html"
+    r"go|rs|hs|m4|in|cmake|mk|proto|css|scss|html|dts"
     r")"
 )
 _GENERATED_CARGO_ARTIFACT_RE = re.compile(

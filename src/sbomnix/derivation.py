@@ -369,9 +369,7 @@ class Derive:
     def _refresh_purl(self):
         self.purl = ""
         if self.pname != "source":
-            self.purl = str(
-                PackageURL(type="nix", name=self.pname, version=self.version)
-            )
+            self.purl = nix_purl(self.pname, self.version)
 
     def to_dict(self):
         """Return derivation as dictionary"""
@@ -379,6 +377,11 @@ class Derive:
         for attr in vars(self):
             ret[attr] = getattr(self, attr)
         return ret
+
+
+def nix_purl(pname, version):
+    """Return the package URL identifying a Nix component."""
+    return str(PackageURL(type="nix", name=pname, version=version))
 
 
 def _derivation_output_path(outputs, output_name):

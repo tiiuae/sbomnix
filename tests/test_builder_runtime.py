@@ -17,6 +17,7 @@ from sbomnix.meta import NixpkgsMetaSource
 from sbomnix.runtime import RuntimeClosure
 
 TARGET_PATH = "/nix/store/11111111111111111111111111111111-target-1.0"
+TARGET_DEV_PATH = "/nix/store/22222222222222222222222222222222-target-1.0-dev"
 TARGET_DERIVER = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-target-1.0.drv"
 GRAPH_ONLY_PATH = "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-source"
 
@@ -110,18 +111,20 @@ def test_runtime_deriver_lookup_preserves_typed_errors(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "deriver",
+    ("deriver", "group_outputs"),
     [
-        "unknown-deriver",
-        "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-target-1.0",
-        "/nix/store/cccccccccccccccccccccccccccccccc-missing-1.0.drv",
+        ("unknown-deriver", False),
+        ("/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-target-1.0", True),
+        ("/nix/store/cccccccccccccccccccccccccccccccc-missing-1.0.drv", True),
     ],
 )
-def test_runtime_path_info_dependencies_uses_output_queries_for_unloadable_derivers(
+def test_runtime_path_info_dependencies_groups_outputs_for_unloadable_derivers(
     monkeypatch,
     deriver,
+    group_outputs,
 ):
-    closure = _runtime_closure({deriver: {TARGET_PATH}})
+    output_paths = {TARGET_PATH, TARGET_DEV_PATH}
+    closure = _runtime_closure({deriver: output_paths})
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
@@ -138,8 +141,13 @@ def test_runtime_path_info_dependencies_uses_output_queries_for_unloadable_deriv
     loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
     builder._init_dependencies(loaded)
 
-    assert loaded.runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
-    assert builder._runtime_output_paths_by_load_path == {TARGET_PATH: {TARGET_PATH}}
+    expected = (
+        {TARGET_PATH: output_paths}
+        if group_outputs
+        else {output_path: {output_path} for output_path in output_paths}
+    )
+    assert loaded.runtime_output_paths_by_load_path == expected
+    assert builder._runtime_output_paths_by_load_path == expected
     assert builder.df_deps.equals(closure.df_deps)
 
 
@@ -169,8 +177,12 @@ def test_runtime_path_info_dependencies_accepts_graph_only_references(monkeypatc
     loaded = builder._load_runtime_path_info_closure(TARGET_PATH)
     builder._init_dependencies(loaded)
 
-    assert loaded.runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
-    assert builder._runtime_output_paths_by_load_path == {TARGET_DERIVER: {TARGET_PATH}}
+    expected = {
+        TARGET_DERIVER: {TARGET_PATH},
+        GRAPH_ONLY_PATH: {GRAPH_ONLY_PATH},
+    }
+    assert loaded.runtime_output_paths_by_load_path == expected
+    assert builder._runtime_output_paths_by_load_path == expected
     assert builder.df_deps.equals(closure.df_deps)
 
 

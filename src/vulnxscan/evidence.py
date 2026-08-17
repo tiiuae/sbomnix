@@ -457,6 +457,9 @@ def _component_from_row(row, has_output_json, has_patch_json):
     version = _as_str(row.get(cols.VERSION))
     outputs, output_error = _output_paths_from_row(row, has_output_json)
     patches, patch_error = _patch_paths_from_row(row, has_patch_json)
+    metadata_unavailable = (
+        _as_str(row.get(cols.METADATA_UNAVAILABLE)).casefold() == "true"
+    )
     return Component(
         component_id=component_id,
         pname=pname,
@@ -464,7 +467,7 @@ def _component_from_row(row, has_output_json, has_patch_json):
         drv_path=component_id,
         output_paths=tuple(sorted(dict.fromkeys(outputs))),
         patch_paths=tuple(sorted(dict.fromkeys(patches))),
-        metadata_unavailable=output_error or patch_error,
+        metadata_unavailable=metadata_unavailable or output_error or patch_error,
     )
 
 
