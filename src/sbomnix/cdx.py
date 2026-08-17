@@ -140,7 +140,7 @@ def _drv_to_cdx_component(drv, uid=cols.STORE_PATH):
         prop["name"] = "nix:output_path"
         prop["value"] = output_path
         properties.append(prop)
-    if drv.store_path:
+    if isinstance(drv.store_path, str) and drv.store_path.endswith(".drv"):
         prop = {}
         prop["name"] = "nix:drv_path"
         prop["value"] = drv.store_path

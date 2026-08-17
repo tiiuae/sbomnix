@@ -24,6 +24,7 @@ from common.errors import (
     SbomnixError,
 )
 from common.log import LOG, is_debug_enabled
+from common.nix_utils import RE_NIX_STORE_PATH
 from sbomnix.closure import (
     DEPENDENCY_COLUMNS,
     dependencies_to_depth,
@@ -52,7 +53,6 @@ SBOMNIX_UUID_NAMESPACE = uuid.UUID("136af32e-0d0e-48bc-912c-31b26af294b9")
 _PACKAGE_META_PRIVATE_COLUMNS = [
     cols.NAME,
 ]
-_PATCH_PATHS = "patch_paths"
 
 
 @dataclass(frozen=True)
@@ -66,19 +66,18 @@ class StructuredClosure:
 
 def _runtime_output_paths_by_load_path(output_paths_by_drv):
     output_paths_by_load_path = {}
-    for drv_path, output_paths in output_paths_by_drv.items():
-        if is_loadable_deriver_path(drv_path):
-            output_paths_by_load_path.setdefault(drv_path, set()).update(output_paths)
+    for drv_path, drv_output_paths in output_paths_by_drv.items():
+        output_paths = set(drv_output_paths)
+        if not output_paths:
             continue
-        for output_path in output_paths:
-            output_paths_by_load_path.setdefault(output_path, set()).add(output_path)
+        if not isinstance(drv_path, str) or not RE_NIX_STORE_PATH.fullmatch(drv_path):
+            output_paths_by_load_path.update({path: {path} for path in output_paths})
+            continue
+        load_path = (
+            drv_path if is_loadable_deriver_path(drv_path) else min(output_paths)
+        )
+        output_paths_by_load_path[load_path] = output_paths
     return output_paths_by_load_path
-
-
-def _mapped_runtime_output_paths(output_paths_by_load_path):
-    if not output_paths_by_load_path:
-        return set()
-    return set().union(*output_paths_by_load_path.values())
 
 
 def _string_list(value):
@@ -255,7 +254,7 @@ class SbomBuilder:
         output_paths_by_load_path = _runtime_output_paths_by_load_path(
             runtime_closure.output_paths_by_drv
         )
-        mapped_paths = _mapped_runtime_output_paths(output_paths_by_load_path)
+        mapped_paths = set().union(*output_paths_by_load_path.values())
         if nix_path not in mapped_paths:
             load_path = self.target_deriver or nix_path
             output_paths_by_load_path.setdefault(load_path, set()).add(nix_path)
@@ -265,6 +264,9 @@ class SbomBuilder:
             LOG.debug(
                 "Runtime path-info references graph-only paths: %s",
                 sorted(graph_only_paths),
+            )
+            output_paths_by_load_path.update(
+                {output_path: {output_path} for output_path in graph_only_paths}
             )
         df_deps = runtime_closure.df_deps
         if self.depth:
@@ -503,8 +505,8 @@ class SbomBuilder:
             df[cols.OUTPUT_PATHS_JSON] = df[cols.OUTPUTS].apply(_json_string_list)
         else:
             df[cols.OUTPUT_PATHS_JSON] = "[]"
-        if _PATCH_PATHS in df.columns:
-            patch_source = df[_PATCH_PATHS]
+        if cols.PATCH_PATHS in df.columns:
+            patch_source = df[cols.PATCH_PATHS]
         elif cols.PATCHES in df.columns:
             patch_source = df[cols.PATCHES].apply(
                 lambda value: str(value).split() if value else []
@@ -512,6 +514,6 @@ class SbomBuilder:
         else:
             patch_source = pd.Series([[] for _ in range(len(df))], index=df.index)
         df[cols.PATCH_PATHS_JSON] = patch_source.apply(_json_string_list)
-        if _PATCH_PATHS in df.columns:
-            df = df.drop(columns=[_PATCH_PATHS])
+        if cols.PATCH_PATHS in df.columns:
+            df = df.drop(columns=[cols.PATCH_PATHS])
         return df

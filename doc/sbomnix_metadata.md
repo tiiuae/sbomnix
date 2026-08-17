@@ -48,6 +48,11 @@ nixpkgs metadata does not provide a canonical CPE. The heuristic fallback can
 be disabled with `--exclude-cpe-matching`, while `--exclude-meta` disables
 nixpkgs metadata entirely, including metadata-derived CPEs.
 
+The heuristic itself consults a small curated table of package names whose
+canonical CPE identity cannot be derived from the CPE dictionary, either
+because the name is absent from it or because the product name maps to several
+vendors. Nixpkgs metadata still takes precedence over the curated identity.
+
 Nixpkgs may also expose `possibleCPEs` guesses alongside its canonical CPE
 metadata. `sbomnix` keeps those guesses diagnostic-only and does not export them
 as the final component CPE.

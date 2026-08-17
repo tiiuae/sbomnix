@@ -799,6 +799,22 @@ def test_component_evidence_malformed_patch_json_is_metadata_unavailable(tmp_pat
     assert row[cols.METADATA_UNAVAILABLE_COUNT] == 1
 
 
+def test_component_evidence_metadata_unavailable_column_is_conservative(tmp_path):
+    row = _component_row("/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello.drv", [])
+    row[cols.METADATA_UNAVAILABLE] = True
+    sbom_csv = _write_sbom_csv(tmp_path, [row])
+
+    result = build_evidence_report(
+        [_scanner_df()],
+        sbom_csv=sbom_csv,
+        scanner_columns=["grype", "osv"],
+    )
+
+    row = result.report.iloc[0]
+    assert row[cols.PATCH_STATE] == "metadata_unavailable"
+    assert row[cols.METADATA_UNAVAILABLE_COUNT] == 1
+
+
 def test_component_evidence_patch_match_uses_vulnerability_id_token_boundary(tmp_path):
     sbom_csv = _write_sbom_csv(
         tmp_path,

@@ -357,10 +357,10 @@ Every report row therefore carries these columns, in both the normal and the `--
 | `finding_id` | Stable `sha256:` digest of the canonical `(vuln_id, package, version)` tuple. |
 | `evidence_scope` | How the finding was resolved to components: `component_exact`, `component_expanded`, `component_mixed`, or `package_version_only`. |
 | `patch_state` | Aggregate verdict: `all_components_match`, `mixed_component_evidence`, `no_component_match`, `metadata_unavailable`, or `package_version_only`. |
-| `resolved_component_count` | Number of derivations the finding resolved to. |
+| `resolved_component_count` | Number of components the finding resolved to. |
 | `vuln_id_patch_name_match_count` | How many of those carry a patch whose file name names the vulnerability. |
 | `no_vuln_id_patch_name_match_count` | How many carry no such patch. |
-| `metadata_unavailable_count` | How many have missing or unusable patch metadata. |
+| `metadata_unavailable_count` | How many have missing or unusable patch metadata, including components inferred without derivation metadata. |
 | `package_version_only_count` | `1` when no derivation could be resolved at all, otherwise `0`. |
 
 A matching patch file name is evidence that a fix was applied, not proof; equally, an absent patch name is not proof of exposure. Only `all_components_match` suppresses a finding from the report.
@@ -393,7 +393,7 @@ The document is written atomically and validated first, so a partial or internal
 
 - `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
 - `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.
-- `components` holds one entry per resolved derivation: `finding_id`, `component_id`, sorted `identity_sources` (`scanner_component_ref`, `sbom_package_version_join`, or `unresolved`), `drv_path`, `output_paths`, `pname`, `version`, `patches`, `patch_evidence_state` (`vuln_id_patch_name_match`, `no_vuln_id_patch_name_match`, `metadata_unavailable`, or `package_version_only`), `matching_patch_paths`, and `suppressed_by_patch_evidence`.
+- `components` holds one entry per resolved component: `finding_id`, `component_id`, sorted `identity_sources` (`scanner_component_ref`, `sbom_package_version_join`, or `unresolved`), `drv_path`, `output_paths`, `pname`, `version`, `patches`, `patch_evidence_state` (`vuln_id_patch_name_match`, `no_vuln_id_patch_name_match`, `metadata_unavailable`, or `package_version_only`), `matching_patch_paths`, and `suppressed_by_patch_evidence`. `drv_path` is the derivation path when metadata is available and the representative runtime output path for an inferred component.
 
 Unlike the CSV reports, the evidence document also contains the findings that patch filtering suppressed, marked `suppressed_by_patch_evidence: true`, so a suppression can be audited rather than silently trusted.
 

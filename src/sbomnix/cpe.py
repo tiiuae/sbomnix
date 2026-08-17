@@ -17,6 +17,39 @@ _CPE_CSV_URL = "https://github.com/tiiuae/cpedict/raw/main/data/cpes.csv"
 # Update local cached version of _CPE_CSV_URL once a day or when local cache
 # is cleaned:
 _CPE_CSV_CACHE_TTL = 60 * 60 * 24
+# Keep cups on its valid cups:cups fallback to avoid Apple's unrelated version
+# scale. util-linux has no unambiguous vendor identity to override.
+_CPE_OVERRIDES = {
+    "brave": ("a", "brave", "browser"),
+    "brave-browser": ("a", "brave", "browser"),
+    "cairo": ("a", "cairographics", "cairo"),
+    "cjson": ("a", "davegamble", "cjson"),
+    "curl": ("a", "haxx", "curl"),
+    "dhcpcd": ("a", "dhcpcd_project", "dhcpcd"),
+    "firefox-bin": ("a", "mozilla", "firefox"),
+    "firefox-esr": ("a", "mozilla", "firefox_esr"),
+    # Current gawk CVEs use the Fossies CPE identity rather than gnu:gawk.
+    "gawk": ("a", "fossies", "gawk"),
+    "gcc": ("a", "gnu", "gcc"),
+    "glibc": ("a", "gnu", "glibc"),
+    "google-chrome": ("a", "google", "chrome"),
+    "google-chrome-beta": ("a", "google", "chrome"),
+    "google-chrome-dev": ("a", "google", "chrome"),
+    "gzip": ("a", "gnu", "gzip"),
+    "jq": ("a", "jqlang", "jq"),
+    "libcap": ("a", "libcap_project", "libcap"),
+    "libsndfile": ("a", "libsndfile_project", "libsndfile"),
+    "linux": ("o", "linux", "linux_kernel"),
+    "microsoft-edge": ("a", "microsoft", "edge_chromium"),
+    "patch": ("a", "gnu", "patch"),
+    "python3": ("a", "python", "python"),
+    "tor-browser": ("a", "torproject", "tor_browser"),
+    "unbound": ("a", "nlnetlabs", "unbound"),
+    "unzip": ("a", "unzip_project", "unzip"),
+    "wget": ("a", "gnu", "wget"),
+    "xdg-utils": ("a", "freedesktop", "xdg-utils"),
+    "xwayland": ("a", "x.org", "xwayland"),
+}
 
 ###############################################################################
 
@@ -124,11 +157,16 @@ class CPE:
         if not self.include_cpe:
             LOG.log(LOG_SPAM, "CPE generation disabled")
             return ""
-        cpe_vendor = self._candidate_vendor(name.strip())
         cpe_product = name.strip()
         cpe_version = version.strip()
+        override = _CPE_OVERRIDES.get(cpe_product)
+        if override:
+            cpe_part, cpe_vendor, cpe_product = override
+        else:
+            cpe_part = "a"
+            cpe_vendor = self._candidate_vendor(cpe_product)
         cpe_end = "*:*:*:*:*:*:*"
-        ret = f"cpe:2.3:a:{cpe_vendor}:{cpe_product}:{cpe_version}:{cpe_end}"
+        ret = f"cpe:2.3:{cpe_part}:{cpe_vendor}:{cpe_product}:{cpe_version}:{cpe_end}"
         LOG.log(LOG_SPAM, "CPE: '%s'", ret)
         return ret
 
