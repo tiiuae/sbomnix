@@ -4,10 +4,14 @@
 
 """Generate CPE (Common Platform Enumeration) identifiers"""
 
+import io
 import string
+
+from requests import RequestException, Session
 
 from common.df import df_from_csv_file, df_log
 from common.errors import InvalidCpeDictionaryError
+from common.http import mount_retries
 from common.log import LOG, LOG_SPAM
 from sbomnix.dfcache import LockedDfCache
 
@@ -75,7 +79,16 @@ class CPE:
             LOG.debug("read CPE dictionary from cache")
         else:
             LOG.debug("CPE cache miss, downloading: %s", _CPE_CSV_URL)
-            self.df_cpedict = df_from_csv_file(_CPE_CSV_URL, exit_on_error=False)
+            try:
+                with mount_retries(Session()) as session:
+                    response = session.get(_CPE_CSV_URL, timeout=30)
+                    response.raise_for_status()
+                    self.df_cpedict = df_from_csv_file(
+                        io.StringIO(response.text), exit_on_error=False
+                    )
+            except RequestException as error:
+                LOG.debug("Error downloading cpedict: %s", error)
+                self.df_cpedict = None
             if self.df_cpedict is None or self.df_cpedict.empty:
                 LOG.warning(
                     "Failed downloading cpedict: CPE information might not be accurate"
