@@ -106,6 +106,7 @@ class SbomBuilder:
         include_meta=True,
         include_vulns=False,
         include_cpe=True,
+        require_cpe_dictionary=False,
     ):
         # self.uid specifies the attribute that identifies SBOM components.
         # See the column names in
@@ -140,6 +141,7 @@ class SbomBuilder:
         # found no source.
         self.nixpkgs_meta_source = NixpkgsMetaSource(method="disabled")
         self.include_cpe = include_cpe
+        self.require_cpe_dictionary = require_cpe_dictionary
         self._init_components(include_meta)
         target_component_ref = self._resolve_target_component_ref()
         self.target_component_ref = target_component_ref
@@ -292,6 +294,7 @@ class SbomBuilder:
             paths,
             self._runtime_output_paths_by_load_path,
             include_cpe=self.include_cpe,
+            require_cpe_dictionary=self.require_cpe_dictionary,
         )
         if df_components.empty:
             raise MissingNixDerivationMetadataError(self.nix_path)
@@ -319,6 +322,7 @@ class SbomBuilder:
                 paths,
                 self._recursive_buildtime_derivations,
                 include_cpe=self.include_cpe,
+                require_cpe_dictionary=self.require_cpe_dictionary,
             )
         elif self._runtime_output_paths_by_load_path is not None:
             self.df_sbomdb = self._init_runtime_components(paths)

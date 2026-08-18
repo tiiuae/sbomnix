@@ -6,8 +6,10 @@
 """Focused tests for CPE generation."""
 
 import pandas as pd
+import pytest
 from requests import HTTPError
 
+from common.errors import CsvLoadError
 from sbomnix import cpe
 
 
@@ -52,6 +54,30 @@ def test_cpe_download_uses_retries_before_fallback(monkeypatch):
 
     assert mounted == [session]
     assert generated == "cpe:2.3:a:openssl:openssl:3.0.0:*:*:*:*:*:*:*"
+
+
+def test_cpe_required_dictionary_fails_after_download_retries(monkeypatch):
+    class FailingResponse:
+        def raise_for_status(self):
+            raise HTTPError("503 Server Error")
+
+    class FailingSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def get(self, _url, timeout):
+            assert timeout == 30
+            return FailingResponse()
+
+    monkeypatch.setattr(cpe, "LockedDfCache", lambda: FakeCache(None))
+    monkeypatch.setattr(cpe, "Session", FailingSession)
+    monkeypatch.setattr(cpe, "mount_retries", lambda session: session)
+
+    with pytest.raises(CsvLoadError, match="503 Server Error"):
+        cpe.CPE(require_dictionary=True)
 
 
 def test_cpe_uses_indexed_unique_product_vendor(monkeypatch):

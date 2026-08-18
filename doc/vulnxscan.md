@@ -52,6 +52,8 @@ Also, it is worth mentioning that OSV queries without ecosystem are undocumented
 ### Nix and Grype
 [Grype](https://github.com/anchore/grype) is a vulnerability scanner targeted for container images. It uses the vulnerability data from [a variety of publicly available data sources](https://github.com/anchore/grype#grypes-database). Grype also [supports input from CycloneDX SBOM](https://github.com/anchore/grype#supported-sources) which makes it possible to use Grype with SBOM input from `sbomnix`, thus, allowing Grype scans against Nix targets.
 
+When the CPE dictionary cannot be loaded, `sbomnix` and `vulnxscan` warn and fall back to less accurate CPE identifiers. Pass `--require-cpe-dictionary` to either command to fail instead when generating an SBOM for vulnerability scanning. This option has no effect when `vulnxscan --sbom` uses an existing SBOM.
+
 ### Vulnix
 [Vulnix](https://github.com/nix-community/vulnix) is a vulnerability scanner intended for Nix targets. It uses [NIST NVD](https://nvd.nist.gov/vuln) vulnerability database.
 
