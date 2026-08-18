@@ -51,9 +51,14 @@ def getargs(args=None):
     parser.add_argument(
         "--exclude-meta", help=helps, action="store_true", default=False
     )
+    cpe_options = parser.add_mutually_exclusive_group()
     helps = "Exclude heuristic CPE matching; keep exact nixpkgs metadata CPEs"
-    parser.add_argument(
+    cpe_options.add_argument(
         "--exclude-cpe-matching", help=helps, action="store_true", default=False
+    )
+    helps = "Fail if the CPE dictionary cannot be loaded"
+    cpe_options.add_argument(
+        "--require-cpe-dictionary", help=helps, action="store_true", default=False
     )
 
     group = parser.add_argument_group("output arguments")
@@ -107,6 +112,7 @@ def _run(args):
         include_meta=not args.exclude_meta,
         include_vulns=args.include_vulns,
         include_cpe=not args.exclude_cpe_matching,
+        require_cpe_dictionary=args.require_cpe_dictionary,
     )
     LOG.verbose(
         "Constructed SBOM model in %.3fs",

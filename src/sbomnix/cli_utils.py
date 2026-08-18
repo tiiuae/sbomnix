@@ -107,16 +107,22 @@ def _temp_sbom_path(prefix, suffix):
         return pathlib.Path(fobj.name)
 
 
-def generate_temp_sbom(
+def generate_temp_sbom(  # noqa: PLR0913, PLR0917
     target_path,
     buildtime=False,
     prefix="sbomnix_",
     cdx_suffix=".cdx.json",
     include_csv=False,
+    require_cpe_dictionary=False,
 ):
     """Generate temporary SBOM artifact files for downstream CLI workflows."""
     LOG.info("Generating SBOM for target '%s'", target_path)
-    sbom = SbomBuilder(target_path, buildtime, include_meta=False)
+    sbom = SbomBuilder(
+        target_path,
+        buildtime,
+        include_meta=False,
+        require_cpe_dictionary=require_cpe_dictionary,
+    )
     cdx_path = None
     csv_path = None
     try:

@@ -44,6 +44,10 @@ def getargs(args=None):
         "has no impact if the scan target is SBOM (ref: --sbom)."
     )
     parser.add_argument("--buildtime", help=helps, action="store_true")
+    helps = "Fail if the generated SBOM's CPE dictionary cannot be loaded"
+    parser.add_argument(
+        "--require-cpe-dictionary", help=helps, action="store_true", default=False
+    )
     helps = (
         "Indicate that TARGET is a cdx SBOM instead of path to nix artifact. "
         "This allows running vulnxscan using input SBOMs from any tool "
@@ -131,6 +135,7 @@ def _run(args):
             prefix="vulnxscan_",
             cdx_suffix=".json",
             include_csv=True,
+            require_cpe_dictionary=args.require_cpe_dictionary,
         )
         sbom_cdx_path = sbom_artifact.cdx_path
         sbom_csv_path = sbom_artifact.csv_path

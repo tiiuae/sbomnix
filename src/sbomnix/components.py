@@ -28,7 +28,9 @@ _VERSIONED_NAME_RE = re.compile(
 )
 
 
-def recursive_derivations_to_dataframe(paths, derivations, include_cpe=True):
+def recursive_derivations_to_dataframe(
+    paths, derivations, include_cpe=True, require_cpe_dictionary=False
+):
     """Return component rows from an already-loaded derivation closure."""
     drvs = []
     for path in sorted(paths):
@@ -37,11 +39,20 @@ def recursive_derivations_to_dataframe(paths, derivations, include_cpe=True):
             LOG.debug("Recursive buildtime closure missing path: %s", path)
             continue
         drvs.append(drv)
-    return _derivations_to_dataframe(drvs, CPE(include_cpe=include_cpe))
+    return _derivations_to_dataframe(
+        drvs,
+        CPE(
+            include_cpe=include_cpe,
+            require_dictionary=require_cpe_dictionary,
+        ),
+    )
 
 
 def runtime_derivations_to_dataframe(
-    paths, output_paths_by_load_path, include_cpe=True
+    paths,
+    output_paths_by_load_path,
+    include_cpe=True,
+    require_cpe_dictionary=False,
 ):
     """Return component rows from runtime output-to-load-path mappings."""
     filtered_outputs_by_load_path = filter_runtime_outputs_by_load_path(
@@ -56,7 +67,10 @@ def runtime_derivations_to_dataframe(
             ignore_missing=True,
         ).values()
     )
-    cpe_generator = CPE(include_cpe=include_cpe)
+    cpe_generator = CPE(
+        include_cpe=include_cpe,
+        require_dictionary=require_cpe_dictionary,
+    )
     df_derivations = _derivations_to_dataframe(derivations, cpe_generator)
     rows = _inferred_component_rows(
         load_paths,

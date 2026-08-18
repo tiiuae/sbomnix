@@ -32,7 +32,10 @@ class CapturingLogger:
         self.records.append(("fatal", msg, args))
 
 
-def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypatch):
+@pytest.mark.parametrize("require_cpe_dictionary", [False, True])
+def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(
+    monkeypatch, require_cpe_dictionary
+):
     args = SimpleNamespace(
         NIXREF=".#target",
         buildtime=False,
@@ -41,6 +44,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
         include_vulns=True,
         exclude_meta=False,
         exclude_cpe_matching=False,
+        require_cpe_dictionary=require_cpe_dictionary,
         csv=None,
         cdx="sbom.cdx.json",
         spdx=None,
@@ -96,6 +100,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(monkeypa
                 "include_meta": True,
                 "include_vulns": True,
                 "include_cpe": True,
+                "require_cpe_dictionary": require_cpe_dictionary,
             },
         ),
         ("to_cdx_data",),
@@ -118,6 +123,7 @@ def test_sbomnix_main_logs_generation_before_initializing_builder(monkeypatch):
         include_vulns=False,
         exclude_meta=False,
         exclude_cpe_matching=False,
+        require_cpe_dictionary=False,
         csv=None,
         cdx=None,
         spdx=None,
@@ -159,6 +165,7 @@ def test_sbomnix_main_logs_generation_before_initializing_builder(monkeypatch):
                 "include_meta": True,
                 "include_vulns": False,
                 "include_cpe": True,
+                "require_cpe_dictionary": False,
             },
         )
     ]

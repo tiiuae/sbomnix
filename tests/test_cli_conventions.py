@@ -72,6 +72,27 @@ def test_cli_verbose_default_is_normal_info(getargs, base_argv):
 
 
 @pytest.mark.parametrize(
+    ("getargs", "target"),
+    [
+        (sbomnix_main.getargs, ".#pkg"),
+        (vulnxscan_cli.getargs, ".#pkg"),
+    ],
+)
+def test_require_cpe_dictionary_is_opt_in(getargs, target):
+    assert getargs([target]).require_cpe_dictionary is False
+    assert getargs(["--require-cpe-dictionary", target]).require_cpe_dictionary is True
+
+
+def test_sbomnix_cpe_matching_options_are_mutually_exclusive():
+    with pytest.raises(SystemExit) as excinfo:
+        sbomnix_main.getargs(
+            ["--exclude-cpe-matching", "--require-cpe-dictionary", ".#pkg"]
+        )
+
+    assert excinfo.value.code == 2
+
+
+@pytest.mark.parametrize(
     ("getargs", "base_argv"),
     CLI_ARG_CASES,
 )

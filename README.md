@@ -161,6 +161,10 @@ including metadata-derived CPEs. Using both flags results in no CPE output.
 Store-path targets have no nixpkgs metadata source, so `--exclude-cpe-matching`
 usually removes all CPEs for store-path targets.
 
+If the CPE dictionary cannot be loaded, `sbomnix` warns and falls back to less
+accurate CPE identifiers. `--require-cpe-dictionary` makes this condition fatal
+and cannot be combined with `--exclude-cpe-matching`.
+
 CycloneDX and SPDX outputs record the selected metadata source in document
 metadata, including fields such as `nixpkgs:metadata_source_method`,
 `nixpkgs:path`, `nixpkgs:rev`, `nixpkgs:flakeref`, `nixpkgs:version`, and
