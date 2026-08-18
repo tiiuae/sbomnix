@@ -6,6 +6,7 @@
 """Focused tests for CPE generation."""
 
 import pandas as pd
+from requests import HTTPError
 
 from sbomnix import cpe
 
@@ -19,6 +20,38 @@ class FakeCache:
 
     def set(self, *_args, **_kwargs):
         raise AssertionError("cache set should not be called for populated data")
+
+
+def test_cpe_download_uses_retries_before_fallback(monkeypatch):
+    class FailingResponse:
+        def raise_for_status(self):
+            raise HTTPError("503 Server Error")
+
+    class FailingSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def get(self, url, timeout):
+            assert (url, timeout) == (cpe._CPE_CSV_URL, 30)
+            return FailingResponse()
+
+    session = FailingSession()
+    mounted = []
+    monkeypatch.setattr(cpe, "LockedDfCache", lambda: FakeCache(None))
+    monkeypatch.setattr(cpe, "Session", lambda: session)
+    monkeypatch.setattr(
+        cpe,
+        "mount_retries",
+        lambda candidate: mounted.append(candidate) or candidate,
+    )
+
+    generated = cpe.CPE().generate("openssl", "3.0.0")
+
+    assert mounted == [session]
+    assert generated == "cpe:2.3:a:openssl:openssl:3.0.0:*:*:*:*:*:*:*"
 
 
 def test_cpe_uses_indexed_unique_product_vendor(monkeypatch):
