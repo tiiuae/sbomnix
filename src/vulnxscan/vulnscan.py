@@ -169,7 +169,6 @@ class VulnScan:
             df_triaged=self.df_triaged if args.triage else None,
             output_format=output_format,
             evidence_document=self.evidence_document,
-            scanner_observations=self.observations,
             sarif_location=getattr(args, "sarif_location", None),
         )
         if evidence_out is not None:

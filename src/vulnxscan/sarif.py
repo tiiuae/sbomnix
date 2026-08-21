@@ -17,6 +17,7 @@ import pandas as pd
 from common import columns as cols
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
+from common.versioning import parse_version
 from vulnxscan.evidence import finding_id
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -25,11 +26,10 @@ _SCANNERS = ("grype", "osv", "vulnix")
 _CVE_ID_RE = re.compile(r"CVE-\d{4}-\d{4,19}", re.IGNORECASE)
 
 
-def findings_to_sarif(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+def findings_to_sarif(  # noqa: PLR0912, PLR0914, PLR0915
     findings,
     *,
     evidence_document=None,
-    scanner_observations=None,
     triage_findings=None,
     tool_version=None,
     location=None,
@@ -44,9 +44,11 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             _version(row),
         ),
     )
-    observation_metadata, descriptions = _scanner_metadata(scanner_observations)
-    nixpkgs_prs = _nixpkgs_prs_by_finding(triage_findings)
     evidence_document = evidence_document or {}
+    observation_metadata, descriptions = _scanner_metadata(
+        evidence_document.get("observations", [])
+    )
+    nixpkgs_prs = _nixpkgs_prs_by_finding(triage_findings)
     evidence_findings = {
         item.get(cols.FINDING_ID): item
         for item in evidence_document.get("findings", [])
@@ -116,7 +118,7 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             {"fix_states": set(), "fix_versions": set()},
         )
         fix_states = sorted(metadata["fix_states"])
-        fix_versions = sorted(metadata["fix_versions"])
+        fix_versions = sorted(metadata["fix_versions"], key=_version_sort_key)
         for values, name in (
             (fix_states, "fixStates"),
             (fix_versions, "fixVersions"),
@@ -198,13 +200,10 @@ def _fingerprint(vuln_id, package, version):
     return finding_id(vuln_id, package, version).removeprefix("sha256:")
 
 
-def _scanner_metadata(scanner_observations):
-    observations = (
-        scanner_observations if scanner_observations is not None else pd.DataFrame()
-    )
+def _scanner_metadata(observations):
     metadata_by_finding = {}
     descriptions = {}
-    for observation in observations.to_dict("records"):
+    for observation in observations:
         key = (
             _text(observation.get(cols.VULN_ID)),
             _text(observation.get(cols.PACKAGE)),
@@ -307,7 +306,7 @@ def _result_message(
     fix_states = properties.get("fixStates", [])
     if fix_versions:
         parts.append(f"Fixed versions reported by scanners: {', '.join(fix_versions)}.")
-    elif fix_states:
+    if fix_states:
         parts.append(f"Scanner fix state: {', '.join(fix_states)}.")
     patch_state = properties.get("patchState")
     if patch_state:
@@ -321,6 +320,11 @@ def _truncate(value, limit):
     if len(value) <= limit:
         return value
     return f"{value[: limit - 3]}..."
+
+
+def _version_sort_key(value):
+    parsed = parse_version(value)
+    return parsed is None, parsed, value
 
 
 def _rule_links(rule_id, existing_url):
@@ -339,8 +343,12 @@ def _rule_links(rule_id, existing_url):
     encoded_id = quote(rule_id, safe="")
     if rule_id.casefold().startswith("ghsa-"):
         links = [("GitHub Advisory", f"https://github.com/advisories/{encoded_id}")]
-        if existing_url:
-            links.append(("OSV record", existing_url))
+        links.append(
+            (
+                "OSV record",
+                existing_url or f"https://osv.dev/vulnerability/{encoded_id}",
+            )
+        )
         return links
     return [("Vulnerability record", existing_url)] if existing_url else []
 

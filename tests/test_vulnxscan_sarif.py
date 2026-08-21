@@ -31,7 +31,6 @@ def _sarif(report, **kwargs):
     return findings_to_sarif(
         report.report,
         evidence_document=report.document,
-        scanner_observations=report.observations,
         tool_version="1.8.0",
         **kwargs,
     )
@@ -206,6 +205,14 @@ def test_rule_help_requires_a_canonical_cve_for_tracker_links():
     }
     assert "helpUri" not in rule
 
+    ghsa_finding = findings.assign(vuln_id="GHSA-abcd-1234-5678")
+    ghsa_rule = findings_to_sarif(ghsa_finding, tool_version="1.8.0")["runs"][0][
+        "tool"
+    ]["driver"]["rules"][0]
+    assert ghsa_rule["help"]["markdown"].endswith(
+        "[OSV record](https://osv.dev/vulnerability/GHSA-abcd-1234-5678)"
+    )
+
 
 def test_nixpkgs_prs_are_clickable_and_remain_package_specific():
     report = _normalized(
@@ -272,7 +279,7 @@ def test_grype_metadata_is_visible_in_github_supported_fields():
                 cols.SCANNER: "grype",
                 cols.DESCRIPTION: description,
                 cols.FIX_STATE: "fixed",
-                cols.FIX_VERSIONS: "3.0.15, 3.1.7",
+                cols.FIX_VERSIONS: ("3.0.15, not-a-version-b, 3.0.9, not-a-version-a"),
             }
         ],
         scanner_columns=("grype",),
@@ -291,11 +298,23 @@ def test_grype_metadata_is_visible_in_github_supported_fields():
     }
     assert result["message"]["text"] == (
         "CVE-2026-12345 affects openssl 3.0.14. Severity: 9.8. "
-        "Detected by: grype. Fixed versions reported by scanners: 3.0.15, "
-        "3.1.7. Nix patch evidence: package_version_only."
+        "Detected by: grype. Fixed versions reported by scanners: 3.0.9, "
+        "3.0.15, not-a-version-a, not-a-version-b. Scanner fix state: fixed. "
+        "Nix patch evidence: package_version_only."
     )
     assert result["properties"]["fixStates"] == ["fixed"]
-    assert result["properties"]["fixVersions"] == ["3.0.15", "3.1.7"]
+    assert result["properties"]["fixVersions"] == [
+        "3.0.9",
+        "3.0.15",
+        "not-a-version-a",
+        "not-a-version-b",
+    ]
+    observation = report.document["observations"][0]
+    assert observation[cols.DESCRIPTION] == description
+    assert observation[cols.FIX_STATE] == "fixed"
+    assert observation[cols.FIX_VERSIONS] == (
+        "3.0.15, not-a-version-b, 3.0.9, not-a-version-a"
+    )
 
 
 @pytest.mark.parametrize(
