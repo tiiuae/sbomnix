@@ -92,7 +92,6 @@ def write_reports(  # noqa: PLR0913
     df_triaged=None,
     output_format="csv",
     evidence_document=None,
-    scanner_observations=None,
     sarif_location=None,
 ):
     """Write the selected main report and optional triage CSV report."""
@@ -102,7 +101,6 @@ def write_reports(  # noqa: PLR0913
         document = findings_to_sarif(
             active_findings,
             evidence_document=evidence_document,
-            scanner_observations=scanner_observations,
             triage_findings=df_triaged,
             location=sarif_location,
         )

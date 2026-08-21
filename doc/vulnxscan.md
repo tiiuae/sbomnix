@@ -373,7 +373,7 @@ Original severity is retained in `properties.severity`, and a numeric value is a
 | `medium`, `moderate`, unknown/missing, or numeric score 4.0-6.9 | `warning` |
 | `low`, `none`, or numeric score 0.0-3.9 | `note` |
 
-When a numeric score is available, the rule also carries GitHub's supported `security-severity` property so Code Scanning displays its critical/high/medium/low security classification instead of only the generic SARIF level. `vulnxscan` does not emit a `precision` value because its scanners do not provide one and inventing confidence would be misleading.
+Numeric scores are preserved in `cvssScore`, including `0.0`. For scores above `0.0`, the rule also carries GitHub's supported `security-severity` property so Code Scanning displays its critical/high/medium/low security classification instead of only the generic SARIF level. `vulnxscan` does not emit a `precision` value because its scanners do not provide one and inventing confidence would be misleading.
 
 Grype fix state and fixed versions, scanner provenance, selected severity, Nix patch-evidence state, and resolved derivation paths are included in each result message so GitHub displays them. The same values remain in result properties for generic SARIF consumers. Vulnix currently provides CVSS data but no description or fix versions; the OSV batch endpoint used by `vulnxscan` currently returns identifiers and modification dates rather than full advisory details.
 
@@ -458,7 +458,7 @@ The document is written atomically and validated first, so a partial or internal
 }
 ```
 
-- `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
+- `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Optional `description`, `fix_state`, and `fix_versions` fields retain scanner metadata when available. Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
 - `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.
 - `components` holds one entry per resolved component: `finding_id`, `component_id`, sorted `identity_sources` (`scanner_component_ref`, `sbom_package_version_join`, or `unresolved`), `drv_path`, `output_paths`, `pname`, `version`, `patches`, `patch_evidence_state` (`vuln_id_patch_name_match`, `no_vuln_id_patch_name_match`, `metadata_unavailable`, or `package_version_only`), `matching_patch_paths`, and `suppressed_by_patch_evidence`. `drv_path` is the derivation path when metadata is available and the representative runtime output path for an inferred component.
 
@@ -472,7 +472,7 @@ When the input is an SBOM (`--sbom`) rather than a Nix target, there is no Nix c
 
 #### Schema evolution
 
-Readers must ignore unknown object fields; every field listed above is required in schema version 1. Adding an optional field keeps version 1. Removing or renaming a required field, changing a field type, changing identity or count semantics, or adding or changing the meaning of an enum value requires incrementing `schema_version`.
+Readers must ignore unknown object fields. The fields listed above are required in schema version 1 except for the optional scanner metadata. Adding an optional field keeps version 1. Removing or renaming a required field, changing a field type, changing identity or count semantics, or adding or changing the meaning of an enum value requires incrementing `schema_version`.
 
 ## Footnotes and Future Work
 

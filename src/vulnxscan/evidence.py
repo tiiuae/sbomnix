@@ -589,18 +589,21 @@ def _resolve_finding(finding_key, fid, df_finding, components):
                 {"component": component, "identity_sources": set()},
             )
             entry["identity_sources"].add(_identity_source_for_resolution(resolution))
-        observation_docs.append(
-            {
-                cols.FINDING_ID: fid,
-                cols.SCANNER: _as_str(observation.get(cols.SCANNER)),
-                cols.VULN_ID: vuln_id,
-                cols.PACKAGE: package,
-                cols.VERSION: version,
-                cols.SEVERITY: _as_str(observation.get(cols.SEVERITY)),
-                cols.COMPONENT_REF: _as_str(observation.get(cols.COMPONENT_REF)),
-                "resolution": resolution,
-            }
-        )
+        observation_doc = {
+            cols.FINDING_ID: fid,
+            cols.SCANNER: _as_str(observation.get(cols.SCANNER)),
+            cols.VULN_ID: vuln_id,
+            cols.PACKAGE: package,
+            cols.VERSION: version,
+            cols.SEVERITY: _as_str(observation.get(cols.SEVERITY)),
+            cols.COMPONENT_REF: _as_str(observation.get(cols.COMPONENT_REF)),
+            "resolution": resolution,
+        }
+        for column in (cols.DESCRIPTION, cols.FIX_STATE, cols.FIX_VERSIONS):
+            value = _as_str(observation.get(column))
+            if value:
+                observation_doc[column] = value
+        observation_docs.append(observation_doc)
     return {
         "components": _component_docs(fid, vuln_id, resolved, has_unresolved),
         "observations": observation_docs,
