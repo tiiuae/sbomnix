@@ -338,6 +338,9 @@ class Derive:
             or _coerce_derivation_string(structured_attrs.get("out"))
         )
         drv._refresh_purl()
+        # Experimental Nix derivation-meta exposes nixpkgs identifiers here.
+        # Keep the existing heuristic only when no usable explicit PURL exists.
+        drv.purl = _metadata_purl(drv_info.get("meta")) or drv.purl
         drv.outputs = []
         _set_derivation_output_paths(drv, outputs, env_vars)
         drv.init(path, outpath)
@@ -377,6 +380,24 @@ class Derive:
         for attr in vars(self):
             ret[attr] = getattr(self, attr)
         return ret
+
+
+def _metadata_purl(meta):
+    """Read the primary PURL without rewriting its ecosystem or qualifiers."""
+    if not isinstance(meta, dict):
+        return ""
+    identifiers = meta.get("identifiers")
+    if not isinstance(identifiers, dict):
+        return ""
+    purl = identifiers.get("purl")
+    if not isinstance(purl, str) or not purl:
+        return ""
+    try:
+        PackageURL.from_string(purl)
+    except ValueError:
+        LOG.warning("Ignoring invalid derivation meta.identifiers.purl: %r", purl)
+        return ""
+    return purl
 
 
 def nix_purl(pname, version):
