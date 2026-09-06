@@ -122,6 +122,7 @@ class SbomBuilder:
         self.uid = cols.STORE_PATH
         self.nix_path = nix_path
         self.buildtime = buildtime
+        self.include_meta = include_meta
         self.target_deriver = self._resolve_target_deriver(nix_path)
         self.target_component_ref = None
         self._recursive_buildtime_derivations = None
@@ -219,7 +220,9 @@ class SbomBuilder:
             raise MissingNixDeriverError(self.nix_path)
         started = time.perf_counter()
         LOG.verbose("Loading build-time closure for '%s'", self.target_deriver)
-        derivations, drv_infos = load_recursive(self.target_deriver)
+        derivations, drv_infos = load_recursive(
+            self.target_deriver, include_meta=self.include_meta
+        )
         LOG.verbose(
             "Loaded %d recursive derivation record(s) in %.3fs",
             len(drv_infos),
@@ -293,6 +296,7 @@ class SbomBuilder:
         df_components = runtime_derivations_to_dataframe(
             paths,
             self._runtime_output_paths_by_load_path,
+            include_meta=self.include_meta,
             include_cpe=self.include_cpe,
             require_cpe_dictionary=self.require_cpe_dictionary,
         )

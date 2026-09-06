@@ -27,7 +27,7 @@ def _batched(iterable, size):
         yield batch
 
 
-def load(path, outpath):
+def load(path, outpath, *, include_meta=True):
     """Load derivation from path"""
     cmd = nix_cmd("derivation", "show", path)
     drv_infos = parse_nix_derivation_show(
@@ -45,13 +45,22 @@ def load(path, outpath):
         )
     if outpath is None and path != drv_path and not path.endswith(".drv"):
         outpath = path
-    d_obj = Derive.from_nix_derivation_info(drv_path, drv_info, outpath)
+    d_obj = Derive.from_nix_derivation_info(
+        drv_path, drv_info, outpath, include_meta=include_meta
+    )
     LOG.log(LOG_SPAM, "load derivation: %s", d_obj)
     LOG.log(LOG_SPAM, "derivation attrs: %s", d_obj.to_dict())
     return d_obj
 
 
-def load_many(paths, output_paths_by_drv=None, batch_size=200, ignore_missing=False):
+def load_many(
+    paths,
+    output_paths_by_drv=None,
+    batch_size=200,
+    ignore_missing=False,
+    *,
+    include_meta=True,
+):
     """Load many derivations with batched `nix derivation show` calls."""
     if not paths:
         return {}
@@ -84,6 +93,7 @@ def load_many(paths, output_paths_by_drv=None, batch_size=200, ignore_missing=Fa
                 drv_path,
                 drv_info,
                 sorted_output_paths[0] if sorted_output_paths else None,
+                include_meta=include_meta,
             )
             for outpath in sorted_output_paths[1:]:
                 drv.add_output_path(outpath)
@@ -98,6 +108,7 @@ def load_many(paths, output_paths_by_drv=None, batch_size=200, ignore_missing=Fa
             loaded[path] = load(
                 path,
                 next(iter(output_paths_by_drv.get(path, ())), None),
+                include_meta=include_meta,
             )
     return loaded
 
@@ -172,7 +183,7 @@ def _derivation_output_paths(drv_info):
     return output_paths
 
 
-def load_recursive(path):
+def load_recursive(path, *, include_meta=True):
     """Load a derivation and its recursive build-time closure."""
     cmd = nix_cmd("derivation", "show", "--recursive", path)
     drv_infos = parse_nix_derivation_show(
@@ -186,7 +197,9 @@ def load_recursive(path):
         )
     loaded = {}
     for drv_path, drv_info in drv_infos.items():
-        drv = Derive.from_nix_derivation_info(drv_path, drv_info)
+        drv = Derive.from_nix_derivation_info(
+            drv_path, drv_info, include_meta=include_meta
+        )
         LOG.log(LOG_SPAM, "load derivation: %s", drv)
         LOG.log(LOG_SPAM, "derivation attrs: %s", drv.to_dict())
         loaded[drv_path] = drv
@@ -291,17 +304,18 @@ class Derive:
             path = envVars.get(output, None) or structured_env.get(output)
             self.add_output_path(path)
         LOG.log(LOG_SPAM, "%s outputs: %s", self, self.outputs)
-        # pname 'source' in Nix has special meaning - it is the default name
-        # for all fetchFromGitHub derivations. As such, it should not be used
-        # to construct cpe or purl, rather, cpe and purl should be empty
-        # for such packages.
+        # The generic name 'source' does not identify a package, so do not
+        # generate CPEs or PURLs from it. An explicit metadata PURL can still
+        # identify the source when metadata is enabled.
         self.cpe = ""
         self.purl = ""
         self._refresh_purl()
         self.urls = envVars.get("urls", "")
 
     @classmethod
-    def from_nix_derivation_info(cls, path, drv_info, outpath=None):
+    def from_nix_derivation_info(
+        cls, path, drv_info, outpath=None, *, include_meta=True
+    ):
         """Create a derivation from normalized `nix derivation show` JSON."""
         env_vars = dict(drv_info.get("env", {}))
         structured_attrs = _structured_attr_map(drv_info.get("structuredAttrs"))
@@ -339,8 +353,9 @@ class Derive:
         )
         drv._refresh_purl()
         # Experimental Nix derivation-meta exposes nixpkgs identifiers here.
-        # Keep the existing heuristic only when no usable explicit PURL exists.
-        drv.purl = _metadata_purl(drv_info.get("meta")) or drv.purl
+        # Keep the heuristic if metadata is disabled or has no usable PURL.
+        if include_meta:
+            drv.purl = _metadata_purl(drv_info.get("meta")) or drv.purl
         drv.outputs = []
         _set_derivation_output_paths(drv, outputs, env_vars)
         drv.init(path, outpath)
@@ -383,7 +398,7 @@ class Derive:
 
 
 def _metadata_purl(meta):
-    """Read the primary PURL without rewriting its ecosystem or qualifiers."""
+    """Read and normalize the primary PURL using package-type rules."""
     if not isinstance(meta, dict):
         return ""
     identifiers = meta.get("identifiers")
@@ -393,11 +408,10 @@ def _metadata_purl(meta):
     if not isinstance(purl, str) or not purl:
         return ""
     try:
-        PackageURL.from_string(purl)
+        return str(PackageURL.from_string(purl))
     except ValueError:
         LOG.warning("Ignoring invalid derivation meta.identifiers.purl: %r", purl)
         return ""
-    return purl
 
 
 def nix_purl(pname, version):

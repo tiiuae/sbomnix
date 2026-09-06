@@ -68,7 +68,9 @@ def test_recursive_derivations_to_dataframe_skips_missing_paths():
 def test_runtime_derivations_to_dataframe_filters_outputs_before_loading(monkeypatch):
     load_calls = []
 
-    def fake_load_many(paths, output_paths_by_drv=None, ignore_missing=False):
+    def fake_load_many(
+        paths, output_paths_by_drv=None, ignore_missing=False, *, include_meta=True
+    ):
         load_calls.append((paths, output_paths_by_drv, ignore_missing))
         return {
             "/nix/store/first.drv": FakeDrv("/nix/store/first.drv", "first"),
@@ -136,7 +138,9 @@ def test_runtime_derivations_to_dataframe_infers_missing_runtime_components(
     }
     output_paths = set().union(*output_paths_by_load_path.values())
 
-    def fake_load_many(paths, output_paths_by_drv=None, ignore_missing=False):
+    def fake_load_many(
+        paths, output_paths_by_drv=None, ignore_missing=False, *, include_meta=True
+    ):
         assert paths == sorted(output_paths_by_load_path)
         assert output_paths_by_drv == output_paths_by_load_path
         assert ignore_missing is True

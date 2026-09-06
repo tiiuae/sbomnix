@@ -53,6 +53,8 @@ def runtime_derivations_to_dataframe(
     output_paths_by_load_path,
     include_cpe=True,
     require_cpe_dictionary=False,
+    *,
+    include_meta=True,
 ):
     """Return component rows from runtime output-to-load-path mappings."""
     filtered_outputs_by_load_path = filter_runtime_outputs_by_load_path(
@@ -65,6 +67,7 @@ def runtime_derivations_to_dataframe(
             load_paths,
             output_paths_by_drv=filtered_outputs_by_load_path,
             ignore_missing=True,
+            include_meta=include_meta,
         ).values()
     )
     cpe_generator = CPE(

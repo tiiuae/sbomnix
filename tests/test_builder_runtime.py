@@ -29,6 +29,7 @@ def _builder_double():
     builder.target_deriver = TARGET_DERIVER
     builder.target_component_ref = None
     builder.include_cpe = False
+    builder.include_meta = True
     builder.require_cpe_dictionary = False
     builder.depth = None
     builder.df_deps = None

@@ -137,7 +137,7 @@ $ sbomnix github:NixOS/nixpkgs/nixos-unstable#wget --buildtime
 ```bash
 $ sbomnix /path/to/result
 ```
-Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped. Use a flakeref target when nixpkgs metadata is required.
+Note: store paths carry no record of which nixpkgs version produced them, so nixpkgs metadata enrichment is skipped. Use a flakeref target when nixpkgs metadata enrichment is required. Explicit PURLs embedded in derivation JSON can still be used, as described below.
 
 #### Nixpkgs Metadata Source Selection
 `sbomnix` enriches packages with nixpkgs metadata, such as descriptions,
@@ -149,7 +149,7 @@ toplevel flakerefs are handled through the selected NixOS package set, so
 overlays, package overrides, nixpkgs config, and system-specific package-set
 changes can be represented.
 
-Store-path targets skip nixpkgs metadata because the store path does not
+Store-path targets skip nixpkgs metadata enrichment because the store path does not
 identify the nixpkgs source that produced it. `--exclude-meta` disables metadata
 enrichment.
 
@@ -157,7 +157,8 @@ When nixpkgs metadata is available, `sbomnix` prefers exact CPE identifiers
 from nixpkgs metadata and falls back to heuristic CPE matching only when no
 exact nixpkgs CPE is present. `--exclude-cpe-matching` disables only the
 heuristic fallback, while `--exclude-meta` disables nixpkgs metadata entirely,
-including metadata-derived CPEs. Using both flags results in no CPE output.
+including metadata-derived CPEs and embedded derivation PURLs. PURLs then use
+the existing name-and-version fallback. Using both flags results in no CPE output.
 Store-path targets have no nixpkgs metadata source, so `--exclude-cpe-matching`
 usually removes all CPEs for store-path targets.
 
@@ -172,6 +173,33 @@ metadata, including fields such as `nixpkgs:metadata_source_method`,
 
 See [sbomnix metadata enrichment](./doc/sbomnix_metadata.md) for a short
 overview of source selection, component matching, and metadata caching.
+
+#### PURLs from Derivation Metadata
+
+Experimental [Nix #16285](https://github.com/NixOS/nix/pull/16285), together with
+[nixpkgs #466932](https://github.com/NixOS/nixpkgs/pull/466932), exposes package
+identifiers in `nix derivation show` JSON. When available, `sbomnix` prefers
+`meta.identifiers.purl` over its generated name-and-version PURL, including for
+store-path targets without a nixpkgs enrichment source. The value is normalized
+using `packageurl-python`'s package-type rules before export to CycloneDX or SPDX.
+
+`--exclude-meta` disables this override for both runtime and build-time SBOMs.
+Missing, empty or malformed metadata also retains the existing generated PURL;
+ordinary Nix installations do not need the experimental changes. A generic
+`source` derivation has no generated fallback, but can have an explicit PURL
+when metadata is enabled.
+
+Only the singular `purl` is read. A populated `identifiers.purls` list without a
+usable singular value still falls back to the heuristic; selecting a primary
+identifier from that list is not implemented.
+
+Parsing and normalization do not verify package identity. Explicit identifiers
+take precedence even when their version is absent or is a tag or commit that
+differs from the derivation's version; `sbomnix` does not insert or replace it.
+Qualifiers such as `output=out` are retained, but do not split or filter a
+component's grouped outputs. Output-specific identity for multi-output components
+remains a limitation: retaining a qualifier does not establish that the PURL
+describes every grouped output.
 
 #### Visualize Package Dependencies
 `sbomnix` uses structured Nix JSON to find package dependencies where
