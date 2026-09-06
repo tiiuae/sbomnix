@@ -410,7 +410,7 @@ def _metadata_purl(meta):
     try:
         return str(PackageURL.from_string(purl))
     except ValueError:
-        LOG.warning("Ignoring invalid derivation meta.identifiers.purl: %r", purl)
+        LOG.warning("Ignoring invalid derivation meta.identifiers.purl")
         return ""
 
 

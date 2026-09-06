@@ -164,6 +164,21 @@ def test_missing_or_invalid_metadata_retains_existing_fallback(meta):
     assert load_component(meta).purl == "pkg:nix/bash@5.3p9"
 
 
+def test_invalid_metadata_purl_is_not_disclosed_in_logs(caplog):
+    marker = "example-private-marker"
+    purl = f"pkg:generic/?vcs_url=https://example.invalid/repo?token={marker}"
+    with caplog.at_level(derivation_module.LOG_SPAM, logger=derivation_module.LOG.name):
+        result = derivation_module._metadata_purl({"identifiers": {"purl": purl}})
+
+    assert result == ""
+    assert any(
+        record.levelname == "WARNING" and "meta.identifiers.purl" in record.message
+        for record in caplog.records
+    )
+    assert purl not in caplog.text
+    assert marker not in caplog.text
+
+
 def test_source_without_identifier_still_has_no_invented_purl():
     assert load_component({}, name="source", pname="source", version="").purl == ""
 
