@@ -263,7 +263,7 @@ $ csvlook vulns.csv
 | CVE-2016-2781    | https://nvd.nist.gov/vuln/detail/CVE-2016-2781    | coreutils | 9.3     |      6.5 |  True | False |  False |   1 | 2016A0000002781 |      True | NVD data issue: CPE entry does not correctly state the version numbers. |
 ```
 
-See ghafscan [manual_analysis.csv](https://github.com/tiiuae/ghafscan/blob/main/manual_analysis.csv) for a more complete example and usage of the vulnxscan whitelisting feature.
+See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/main/.github/flakevuln/manual_analysis.csv) for a more complete example and usage of the vulnxscan whitelisting feature.
 
 ### Find Vulnerabilities Given SBOM as Input
 This example shows how to use `vulnxscan` to summarize vulnerabilities impacting components in the given CycloneDX SBOM.
@@ -322,7 +322,7 @@ csvlook manual_analysis.csv
 
 The above example `manual_analysis.csv` includes two rules: one for `CVE-2022-0856` and one for `CVE-2021-32490`. For both, the `whitelist` column value is '`False`', indicating the rule is a non-whitelisting rule. This means, for both cases, we want to record the manual analysis results as detailed in the `comment` column, but we don't want to whitelist the matching vulnerabilities. Specifically, in the case of `CVE-2022-0856` we don't want to whitelist the issue since it's not fixed upstream, but we still want to record the link to the upstream PR to make it easier to follow the upstream progress. In the case of `CVE-2021-32490` we don't want to whitelist the issue since the nixpkgs PR is pending merge. In this case too, we still want to record the nixpkgs PR to allow following the progress.
 
-See ghafscan [manual_analysis.csv](https://github.com/tiiuae/ghafscan/blob/main/manual_analysis.csv) for a more complete example and usage of non-whitelisting rules to help manual analysis.
+See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/main/.github/flakevuln/manual_analysis.csv) for a more complete example and usage of non-whitelisting rules to help manual analysis.
 
 ### Triage to Help Manual Analysis
 `vulnxscan` can be used to help manual analysis with `--triage` and `--nixprs` command line options.
