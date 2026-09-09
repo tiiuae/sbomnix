@@ -14,7 +14,7 @@ This repository is home to various command line tools and Python libraries that 
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 - [`provenance`](./doc/provenance.md) is a command line tool to generate SLSA v1.0 compliant [provenance](https://slsa.dev/spec/v1.0/provenance) attestation files in json format for any nix flake or derivation.
 
-For an example of how to use the tooling provided in this repository to automate daily vulnerability scans for a nix flake project, see: [ghafscan](https://github.com/tiiuae/ghafscan).
+To automate daily vulnerability scans for a Nix flake project using the tooling provided in this repository, see [flakevuln](https://github.com/tiiuae/flakevuln), available as a reusable GitHub Action and local CLI.
 
 The [CycloneDX](https://cyclonedx.org/) and [SPDX](https://spdx.github.io/spdx-spec/v2.3/) SBOMs for each release of sbomnix tooling is available in the [release assets](https://github.com/tiiuae/sbomnix/releases/latest).
 
