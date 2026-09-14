@@ -10,6 +10,7 @@ from grype, vulnix, and osv databases
 """
 
 import pandas as pd
+from requests import RequestException
 
 from common import columns as cols
 from common.df import df_to_csv_file
@@ -152,7 +153,12 @@ class VulnScan:
             self._apply_whitelist(args.whitelist)
         if args.triage:
             LOG.verbose("Running vulnerability triage")
-            self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
+            try:
+                self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
+            except RequestException as error:
+                LOG.debug("Error running triage: %s", error)
+                self.df_triaged = None
+                LOG.warning("Failed running triage: fix availability not included")
         # Rename 'version' to 'version_local'
         self.df_report.columns = [
             cols.VERSION_LOCAL if col == cols.VERSION else col
