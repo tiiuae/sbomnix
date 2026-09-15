@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pandas as pd
 import pytest
+from requests import HTTPError
 
 from common import columns as cols
 from vulnxscan.github_prs import GitHubPrLookup
@@ -50,6 +51,39 @@ class FakeGitHubLookup:
 
     def find_nixpkgs_prs(self, row):
         self.rows.append(row)
+        return "https://github.com/NixOS/nixpkgs/pull/1"
+
+
+class TwoRowRepologyLookup(FakeRepologyLookup):
+    def query_repology_versions(self, df_vuln_pkgs):
+        self.query_inputs.append(df_vuln_pkgs.copy(deep=True))
+        return pd.DataFrame(
+            [
+                {
+                    "vuln_id": f"CVE-2024-{index}",
+                    "url": f"https://nvd.nist.gov/vuln/detail/CVE-2024-{index}",
+                    "package": "openssl",
+                    "severity": "7.0",
+                    "version_local": "1.0.0",
+                    "version_nixpkgs": "1.1.0",
+                    "version_upstream": "1.2.0",
+                    "package_repology": "openssl",
+                    "sortcol": f"2024A000000000{index}",
+                }
+                for index in (1, 2)
+            ]
+        )
+
+
+class FailingGitHubLookup:
+    def __init__(self, fail_after=0):
+        self.fail_after = fail_after
+        self.calls = 0
+
+    def find_nixpkgs_prs(self, row):
+        self.calls += 1
+        if self.calls > self.fail_after:
+            raise HTTPError("503 Server Error: Service Unavailable")
         return "https://github.com/NixOS/nixpkgs/pull/1"
 
 
@@ -130,6 +164,37 @@ def test_triage_vulnerabilities_groups_rows_and_adds_nixpkgs_prs():
     assert repology_lookup.query_inputs[0]["count"].tolist() == [2]
     assert triaged["classify"].tolist() == ["fix_update_to_version_nixpkgs"]
     assert triaged["nixpkgs_pr"].tolist() == ["https://github.com/NixOS/nixpkgs/pull/1"]
+
+
+@pytest.mark.parametrize("fail_after", [0, 1])
+def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(fail_after):
+    """Retain the completed repology triage when github enrichment fails."""
+    repology_lookup = TwoRowRepologyLookup()
+    github_lookup = FailingGitHubLookup(fail_after=fail_after)
+    df_report = pd.DataFrame(
+        [
+            {
+                "vuln_id": "CVE-2024-1",
+                "package": "openssl",
+                "severity": "7.0",
+                "version": "1.0.0",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1",
+                "sortcol": "2024A0000000001",
+            }
+        ]
+    )
+
+    triaged = triage_vulnerabilities(
+        df_report,
+        True,
+        repology_lookup=repology_lookup,
+        github_lookup=github_lookup,
+    )
+
+    assert triaged["classify"].tolist() == ["fix_update_to_version_nixpkgs"] * 2
+    assert triaged["version_nixpkgs"].tolist() == ["1.1.0"] * 2
+    assert triaged[cols.NIXPKGS_PR].tolist() == ["", ""]
+    assert github_lookup.calls == fail_after + 1
 
 
 def test_github_pr_lookup_queries_vuln_and_version_matches():
