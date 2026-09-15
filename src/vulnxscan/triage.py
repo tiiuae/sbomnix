@@ -6,6 +6,8 @@
 
 """Vulnerability triage helpers."""
 
+from requests import RequestException
+
 from common import columns as cols
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
@@ -106,10 +108,17 @@ def triage_vulnerabilities(
     )
     if search_nix_prs:
         LOG.verbose("Querying nixpkgs github PRs")
-        df_vuln_pkgs[cols.NIXPKGS_PR] = df_vuln_pkgs.apply(
-            github_lookup.find_nixpkgs_prs,
-            axis=1,
-        )
+        try:
+            df_vuln_pkgs[cols.NIXPKGS_PR] = df_vuln_pkgs.apply(
+                github_lookup.find_nixpkgs_prs,
+                axis=1,
+            )
+        except RequestException as error:
+            # Repology classification is already complete; keep it. Emptied
+            # for every row, since a partial column reads as "no PRs found".
+            LOG.debug("Error querying nixpkgs github PRs: %s", error)
+            df_vuln_pkgs[cols.NIXPKGS_PR] = ""
+            LOG.warning("Failed querying nixpkgs github PRs: column left empty")
     sort_cols = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION_LOCAL]
     df_vuln_pkgs.sort_values(by=sort_cols, ascending=False, inplace=True)
     return df_vuln_pkgs
