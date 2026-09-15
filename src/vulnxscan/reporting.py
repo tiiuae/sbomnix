@@ -85,16 +85,28 @@ def render_console_report(df_report, *, df_triaged=None, log=LOG):
     )
 
 
+def triage_report_path(out_path, output_format="csv"):
+    """Return the triage CSV path that accompanies ``out_path``."""
+    out_path = pathlib.Path(out_path)
+    parents = out_path.parents[0].resolve().as_posix()
+    suffix = ".csv" if output_format == "sarif" else out_path.suffix
+    return f"{parents}/{out_path.stem}.triage{suffix}"
+
+
 def write_reports(  # noqa: PLR0913
     df_report,
     out_path,
     *,
     df_triaged=None,
+    triage_unavailable=False,
     output_format="csv",
     evidence_document=None,
     sarif_location=None,
 ):
-    """Write the selected main report and optional triage CSV report."""
+    """Write the main report, and the triage report if triage produced one.
+
+    ``triage_unavailable`` additionally removes a stale triage report.
+    """
     out_path = pathlib.Path(out_path)
     if output_format == "sarif":
         active_findings = df_drop_whitelisted(df_report.copy())
@@ -108,7 +120,9 @@ def write_reports(  # noqa: PLR0913
     else:
         df_to_csv_file(df_report, out_path.resolve().as_posix())
     if df_triaged is not None:
-        parents = out_path.parents[0].resolve().as_posix()
-        suffix = ".csv" if output_format == "sarif" else out_path.suffix
-        triage_out = f"{parents}/{out_path.stem}.triage{suffix}"
-        df_to_csv_file(df_triaged, triage_out)
+        df_to_csv_file(df_triaged, triage_report_path(out_path, output_format))
+    elif triage_unavailable:
+        stale = pathlib.Path(triage_report_path(out_path, output_format))
+        if stale.is_file():
+            LOG.debug("Removing stale triage report: %s", stale)
+            stale.unlink()

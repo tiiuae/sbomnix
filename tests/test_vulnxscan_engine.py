@@ -973,6 +973,64 @@ def test_write_reports_writes_triage_report(tmp_path):
     assert Path(main_out).read_text(encoding="utf-8")
 
 
+def test_write_reports_removes_stale_triage_report_on_rerun(tmp_path):
+    """Drop a previous run's triage report when triage could not complete."""
+    main_out = tmp_path / "vulns.csv"
+    triage_out = tmp_path / "vulns.triage.csv"
+    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
+    write_reports(
+        df_report,
+        main_out,
+        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
+    )
+    assert triage_out.exists()
+
+    write_reports(df_report, main_out, df_triaged=None, triage_unavailable=True)
+
+    assert main_out.exists()
+    assert not triage_out.exists()
+
+
+def test_write_reports_keeps_triage_report_when_triage_not_requested(tmp_path):
+    """Leave an existing triage report alone when triage was never run."""
+    main_out = tmp_path / "vulns.csv"
+    triage_out = tmp_path / "vulns.triage.csv"
+    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
+    write_reports(
+        df_report,
+        main_out,
+        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
+    )
+
+    write_reports(df_report, main_out, df_triaged=None)
+
+    assert triage_out.exists()
+
+
+def test_write_reports_removes_stale_sarif_triage_report(tmp_path):
+    """Use the SARIF triage suffix when removing a stale triage report."""
+    main_out = tmp_path / "vulns.sarif"
+    triage_out = tmp_path / "vulns.triage.csv"
+    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
+    write_reports(
+        df_report,
+        main_out,
+        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
+        output_format="sarif",
+    )
+    assert triage_out.exists()
+
+    write_reports(
+        df_report,
+        main_out,
+        df_triaged=None,
+        triage_unavailable=True,
+        output_format="sarif",
+    )
+
+    assert not triage_out.exists()
+
+
 @pytest.mark.parametrize(
     ("buildtime", "expected_cmd"),
     [

@@ -151,6 +151,7 @@ class VulnScan:
         if args.whitelist:
             LOG.verbose("Applying whitelist '%s'", args.whitelist)
             self._apply_whitelist(args.whitelist)
+        triage_unavailable = False
         if args.triage:
             LOG.verbose("Running vulnerability triage")
             try:
@@ -158,6 +159,7 @@ class VulnScan:
             except RequestException as error:
                 LOG.debug("Error running triage: %s", error)
                 self.df_triaged = None
+                triage_unavailable = True
                 LOG.warning("Failed running triage: fix availability not included")
         # Rename 'version' to 'version_local'
         self.df_report.columns = [
@@ -173,6 +175,7 @@ class VulnScan:
             self.df_report,
             args.out,
             df_triaged=self.df_triaged if args.triage else None,
+            triage_unavailable=triage_unavailable,
             output_format=output_format,
             evidence_document=self.evidence_document,
             sarif_location=getattr(args, "sarif_location", None),
