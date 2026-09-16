@@ -134,7 +134,7 @@ def fixture_test_nix_drv():
 
 @pytest.fixture(name="test_nix_result", scope="session")
 def fixture_test_nix_result(test_nix_drv, tmp_path_factory):
-    """Build nixpkgs.hello once per test session."""
+    """Build the local test derivation chain once per test session."""
     build_dir = tmp_path_factory.mktemp("nix-build")
     result = build_dir / "result"
     cmd = ["nix-build", test_nix_drv.as_posix(), "-o", result.as_posix()]

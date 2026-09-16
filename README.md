@@ -229,8 +229,9 @@ Before opening a pull request, run at minimum:
 $ ./scripts/check-fast.sh
 ```
 This runs the formatter, a fast flake eval, and the fast test lane.
-CI runs `./scripts/check-full.sh`, which validates the flake and runs the full
-test lane with coverage.
+CI runs `./scripts/check-full.sh`, which validates the flake and runs all
+deterministic tests with coverage. Tests against live third-party services run
+separately in a scheduled, non-required CI lane.
 
 To deactivate the Nix devshell, run `exit` in your shell.
 To see other Nix flake targets, run `nix flake show`.

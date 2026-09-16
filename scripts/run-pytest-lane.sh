@@ -7,26 +7,28 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 {fast|full}" >&2
+  echo "usage: $0 {fast|full|live}" >&2
   exit 2
 }
 
 lane="${1:-}"
 marker_expr=""
 coverage=false
-pytest_args=(
-  -n auto
-  -x
-)
+pytest_args=()
 
 case "$lane" in
   fast)
     marker_expr="not slow and not network"
-    pytest_args+=(-v --durations=10)
+    pytest_args+=(-x -n auto -v --durations=10)
     ;;
   full)
+    marker_expr="not network"
     coverage=true
-    pytest_args+=(-v --durations=20)
+    pytest_args+=(-x -n auto -v --durations=20)
+    ;;
+  live)
+    marker_expr="network"
+    pytest_args+=(-v -rs --durations=20)
     ;;
   *)
     usage

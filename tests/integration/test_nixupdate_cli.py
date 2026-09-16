@@ -18,7 +18,9 @@ def test_nix_outdated_help(_run_python_script):
 @pytest.mark.network
 @pytest.mark.slow
 def test_nix_outdated_result(
-    _run_python_script_retry_on_repology_network_error, test_nix_result, test_work_dir
+    _run_python_script_retry_on_repology_network_error,
+    test_nix_result,
+    test_work_dir,
 ):
     """Test nix_outdated with the nix result as input."""
     out_path_nix_outdated = test_work_dir / "nix_outdated.csv"
