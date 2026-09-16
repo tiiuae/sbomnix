@@ -17,6 +17,9 @@ def test_repology_cli_help(_run_python_script):
 
 @pytest.mark.network
 @pytest.mark.slow
+@pytest.mark.skip(
+    reason="repology.org is suspended; re-enable when its public DNS is restored"
+)
 def test_repology_cli_sbom(
     _run_python_script_retry_on_repology_network_error,
     test_cdx_sbom,
