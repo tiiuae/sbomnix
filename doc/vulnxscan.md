@@ -118,6 +118,13 @@ and [Grype DB architecture](https://oss.anchore.com/docs/architecture/grype-db/)
 
 `osv.py` sends queries to [OSV API](https://osv.dev/docs/) without specifying the ecosystem, only the target package name and version. At the time of writing, such queries to OSV API return vulnerabilities that match the given package and version across all ecosystems. As a result, the OSV vulnerabilities for Nix ecosystem will include false positives.
 
+Pass `--skip-osv` to omit OSV API queries. This allows `vulnxscan` to run
+without network access when the Grype database and any Vulnix data are already
+available locally and `--triage` is not requesting Repology lookups. Reports
+omit the `osv` scanner column when OSV was not run. For a fully air-gapped
+scan, pre-populate the other scanner data and disable Grype database updates
+with `GRYPE_DB_AUTO_UPDATE=false`.
+
 Also, it is worth mentioning that OSV queries without ecosystem are undocumented in the [API specification](https://osv.dev/docs/#tag/api/operation/OSV_QueryAffected) currently.
 
 ### Nix and Grype

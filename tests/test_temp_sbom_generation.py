@@ -14,6 +14,44 @@ from sbomnix import cli_utils as sbomnix_cli_utils
 from vulnxscan import vulnxscan_cli
 
 
+@pytest.mark.parametrize(("skip_osv", "expected_osv_calls"), [(False, 1), (True, 0)])
+def test_vulnxscan_skip_osv_controls_api_scan(
+    tmp_path, monkeypatch, skip_osv, expected_osv_calls
+):
+    sbom_path = tmp_path / "input.cdx.json"
+    sbom_path.write_text('{"bomFormat": "CycloneDX"}', encoding="utf-8")
+    calls = []
+
+    args = SimpleNamespace(
+        TARGET=sbom_path.as_posix(),
+        out="vulns.csv",
+        buildtime=False,
+        sbom=True,
+        skip_osv=skip_osv,
+    )
+
+    class CapturingScanner:
+        def scan_grype(self, path):
+            assert path == sbom_path.as_posix()
+
+        def scan_osv(self, path):
+            assert path == sbom_path.as_posix()
+            calls.append(path)
+
+        def report(self, report_args, sbom_csv_path):
+            assert report_args is args
+            assert sbom_csv_path is None
+
+    monkeypatch.setattr(
+        vulnxscan_cli, "exit_unless_command_exists", lambda _command: None
+    )
+    monkeypatch.setattr(vulnxscan_cli, "VulnScan", CapturingScanner)
+
+    vulnxscan_cli._run(args)
+
+    assert len(calls) == expected_osv_calls
+
+
 @pytest.mark.parametrize("require_cpe_dictionary", [False, True])
 def test_vulnxscan_cleans_generated_tempfiles_on_failure(
     tmp_path, monkeypatch, require_cpe_dictionary

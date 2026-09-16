@@ -89,6 +89,11 @@ def getargs(args=None):
         "by default: 'vulns.triage.csv'."
     )
     parser.add_argument("--triage", help=helps, action="store_true")
+    helps = (
+        "Skip OSV API queries. This permits offline scans with locally "
+        "available scanner data unless --triage requests Repology lookups."
+    )
+    parser.add_argument("--skip-osv", help=helps, action="store_true")
     triagegr = parser.add_argument_group("Other arguments")
     helps = (
         "Search nixpkgs github for PRs that might include more information "
@@ -164,7 +169,8 @@ def _run(args):
         if not args.sbom:
             scanner.scan_vulnix(target_path, args.buildtime)
         scanner.scan_grype(sbom_cdx_path)
-        scanner.scan_osv(sbom_cdx_path)
+        if not args.skip_osv:
+            scanner.scan_osv(sbom_cdx_path)
         scanner.report(args, sbom_csv_path)
     finally:
         if (

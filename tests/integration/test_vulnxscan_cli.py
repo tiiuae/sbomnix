@@ -20,7 +20,6 @@ def test_vulnxscan_help(_run_python_script):
     _run_python_script([VULNXSCAN, "--help"])
 
 
-@pytest.mark.network
 @pytest.mark.grype
 def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_work_dir):
     """Test vulnxscan scan with the nix result as input."""
@@ -29,21 +28,39 @@ def test_vulnxscan_scan_nix_result(_run_python_script, test_nix_result, test_wor
         [
             VULNXSCAN,
             test_nix_result.as_posix(),
+            "--skip-osv",
             "--out",
             out_path_vulns.as_posix(),
         ]
     )
     df = pd.read_csv(out_path_vulns)
+    assert "osv" not in df.columns
     assert _SYNTHETIC_CVE in df["vuln_id"].values, (
         f"{_SYNTHETIC_CVE} not found in scan output — "
         "check grype-test-db.tar.gz matches the test fixture packages"
     )
 
 
-@pytest.mark.network
 @pytest.mark.grype
 def test_vulnxscan_scan_sbom(_run_python_script, test_cdx_sbom, test_work_dir):
     """Test vulnxscan scan with SBOM as input."""
+    out_path_vulns = test_work_dir / "vulnxscan_test.csv"
+    _run_python_script(
+        [
+            VULNXSCAN,
+            "--sbom",
+            "--skip-osv",
+            test_cdx_sbom.as_posix(),
+            "--out",
+            out_path_vulns.as_posix(),
+        ]
+    )
+
+
+@pytest.mark.network
+@pytest.mark.grype
+def test_vulnxscan_scan_sbom_live_osv(_run_python_script, test_cdx_sbom, test_work_dir):
+    """Smoke-test the default SBOM scan against the live OSV API."""
     out_path_vulns = test_work_dir / "vulnxscan_test.csv"
     _run_python_script(
         [
@@ -65,6 +82,7 @@ def test_vulnxscan_triage(_run_python_script, test_nix_result, test_work_dir):
         [
             VULNXSCAN,
             "--triage",
+            "--skip-osv",
             "--out",
             out_path_vulns.as_posix(),
             test_nix_result.as_posix(),
@@ -86,6 +104,7 @@ def test_vulnxscan_triage_whitelist(_run_python_script, test_nix_result, test_wo
         [
             VULNXSCAN,
             "--triage",
+            "--skip-osv",
             "--out",
             out_no_whitelist.as_posix(),
             test_nix_result.as_posix(),
@@ -105,6 +124,7 @@ def test_vulnxscan_triage_whitelist(_run_python_script, test_nix_result, test_wo
         [
             VULNXSCAN,
             "--triage",
+            "--skip-osv",
             "--whitelist",
             whitelist_csv.as_posix(),
             "--out",
