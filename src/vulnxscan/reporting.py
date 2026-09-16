@@ -33,9 +33,11 @@ _VERSION_DISPLAY_COLUMNS = (
 _CONSOLE_HIDDEN_COLUMNS = (cols.SORTCOL, *EVIDENCE_REPORT_COLUMNS)
 
 
-def scanner_columns(df_vulnix):
+def scanner_columns(df_vulnix, df_osv):
     """Return scanner presence columns for the current scan mode."""
-    scanners = ["grype", "osv"]
+    scanners = ["grype"]
+    if df_osv is not None:
+        scanners.append("osv")
     if df_vulnix is not None:
         scanners.append("vulnix")
     return scanners

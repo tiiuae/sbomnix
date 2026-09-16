@@ -108,7 +108,10 @@ class VulnScan:
         result = build_evidence_report(
             [self.df_vulnix, self.df_grype, self.df_osv],
             sbom_csv=sbom_csv,
-            scanner_columns=vulnxscan_reporting.scanner_columns(self.df_vulnix),
+            scanner_columns=vulnxscan_reporting.scanner_columns(
+                df_vulnix=self.df_vulnix,
+                df_osv=self.df_osv,
+            ),
             log=LOG,
         )
         self.df_report = result.report
