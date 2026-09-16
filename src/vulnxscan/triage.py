@@ -13,7 +13,7 @@ from common.df import df_log
 from common.log import LOG, LOG_SPAM
 from common.versioning import parse_version
 from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
-from vulnxscan.github_prs import GitHubPrLookup
+from vulnxscan.github_prs import GitHubPrLookup, GitHubUnexpectedResponse
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
 
 _DEFAULT_REPOLOGY_LOOKUP = None
@@ -65,6 +65,38 @@ def classify_vulnerability(row, repology_lookup=None):  # noqa: PLR0911
     return "fix_not_available"
 
 
+def unavailable_triage_report(df_report, search_nix_prs):
+    """Return the stable triage shape without external enrichment."""
+    columns = [
+        cols.VULN_ID,
+        cols.URL,
+        cols.PACKAGE,
+        cols.SEVERITY,
+        cols.VERSION_LOCAL,
+        cols.VERSION_NIXPKGS,
+        cols.VERSION_UPSTREAM,
+        cols.PACKAGE_REPOLOGY,
+        cols.SORTCOL,
+    ]
+    if cols.WHITELIST in df_report.columns:
+        columns.extend((cols.WHITELIST, cols.WHITELIST_COMMENT))
+    columns.extend(
+        column for column in EVIDENCE_REPORT_COLUMNS if column in df_report.columns
+    )
+    columns.append(cols.CLASSIFY)
+    if search_nix_prs:
+        columns.append(cols.NIXPKGS_PR)
+
+    return (
+        df_report.rename(columns={cols.VERSION: cols.VERSION_LOCAL})
+        .reindex(columns=columns, fill_value="")
+        .sort_values(
+            by=[cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION_LOCAL],
+            ascending=False,
+        )
+    )
+
+
 def triage_vulnerabilities(
     df_report,
     search_nix_prs,
@@ -113,12 +145,13 @@ def triage_vulnerabilities(
                 github_lookup.find_nixpkgs_prs,
                 axis=1,
             )
-        except RequestException as error:
+        except (RequestException, GitHubUnexpectedResponse) as error:
             # Repology classification is already complete; keep it. Emptied
             # for every row, since a partial column reads as "no PRs found".
-            LOG.debug("Error querying nixpkgs github PRs: %s", error)
             df_vuln_pkgs[cols.NIXPKGS_PR] = ""
-            LOG.warning("Failed querying nixpkgs github PRs: column left empty")
+            LOG.warning(
+                "Failed querying nixpkgs github PRs: column left empty: %s", error
+            )
     sort_cols = [cols.SORTCOL, cols.PACKAGE, cols.SEVERITY, cols.VERSION_LOCAL]
     df_vuln_pkgs.sort_values(by=sort_cols, ascending=False, inplace=True)
     return df_vuln_pkgs

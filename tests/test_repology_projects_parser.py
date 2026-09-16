@@ -71,3 +71,28 @@ def test_parse_projects_search_html_raises_for_malformed_table():
 
     with pytest.raises(RepologyUnexpectedResponse):
         parse_projects_search_html(malformed, "nix_unstable")
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "",
+        "<tr><td><a>hello</a></td><td></td><td></td></tr>",
+        """
+        <tr><td><a>hello</a></td><td></td><td>
+          <span class="version version-newest"> </span>
+        </td></tr>
+        """,
+    ],
+    ids=["empty-body", "no-selected-version", "blank-selected-version"],
+)
+def test_parse_projects_search_html_rejects_implicit_empty_results(body):
+    html = f"""
+    <table>
+      <thead><tr><th>Project</th><th>Newest</th><th>Selected</th></tr></thead>
+      <tbody>{body}</tbody>
+    </table>
+    """
+
+    with pytest.raises(RepologyUnexpectedResponse):
+        parse_projects_search_html(html, "nix_unstable")

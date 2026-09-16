@@ -16,15 +16,18 @@ from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, LOG_SPAM, is_debug_enabled
 from common.proc import exec_cmd
+from repology.exceptions import RepologyError
 from vulnxscan import parsers as vulnxscan_parsers
 from vulnxscan import reporting as vulnxscan_reporting
 from vulnxscan import scanners as vulnxscan_scanners
 from vulnxscan.evidence import (
+    TRIAGE_STATUS,
+    TRIAGE_STATUS_UNAVAILABLE,
     build_evidence_report,
     empty_evidence_document,
     write_evidence_document,
 )
-from vulnxscan.triage import triage_vulnerabilities
+from vulnxscan.triage import triage_vulnerabilities, unavailable_triage_report
 
 
 class VulnScan:
@@ -154,16 +157,16 @@ class VulnScan:
         if args.whitelist:
             LOG.verbose("Applying whitelist '%s'", args.whitelist)
             self._apply_whitelist(args.whitelist)
-        triage_unavailable = False
         if args.triage:
             LOG.verbose("Running vulnerability triage")
             try:
                 self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
-            except RequestException as error:
-                LOG.debug("Error running triage: %s", error)
-                self.df_triaged = None
-                triage_unavailable = True
-                LOG.warning("Failed running triage: fix availability not included")
+            except (RequestException, RepologyError) as error:
+                self.df_triaged = unavailable_triage_report(self.df_report, args.nixprs)
+                self.evidence_document[TRIAGE_STATUS] = TRIAGE_STATUS_UNAVAILABLE
+                LOG.warning(
+                    "Failed running triage: fix availability not included: %s", error
+                )
         # Rename 'version' to 'version_local'
         self.df_report.columns = [
             cols.VERSION_LOCAL if col == cols.VERSION else col
@@ -178,7 +181,6 @@ class VulnScan:
             self.df_report,
             args.out,
             df_triaged=self.df_triaged if args.triage else None,
-            triage_unavailable=triage_unavailable,
             output_format=output_format,
             evidence_document=self.evidence_document,
             sarif_location=getattr(args, "sarif_location", None),

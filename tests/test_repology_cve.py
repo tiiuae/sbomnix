@@ -5,6 +5,9 @@
 
 """Offline tests for Repology CVE queries."""
 
+import pytest
+
+from repology.exceptions import RepologyUnexpectedResponse
 from repology.repology_cve import query_cve
 from repology.session import REPOLOGY_REQUEST_TIMEOUT
 from tests.testpaths import RESOURCES_DIR
@@ -52,3 +55,37 @@ def test_query_cve_parses_fixture_and_uses_timeout():
     assert list(df["package"]) == ["openssl"]
     assert list(df["version"]) == ["3.1.0"]
     assert list(df["cve"]) == ["CVE-2024-1111"]
+
+
+def test_query_cve_accepts_explicit_empty_page():
+    url = "https://repology.org/project/openssl/cves?version=3.1.0"
+    session = MappingSession(
+        {
+            url: FakeResponse(
+                """
+                <div class="alert alert-success" role="alert">
+                  No CVEs known for this project. This is not reliable though
+                  and may be caused by lacking CPE information or our simplified
+                  CVE configurations parsing. Feel free to submit a report.
+                </div>
+                """
+            )
+        }
+    )
+
+    df = query_cve("openssl", "3.1.0", session=session)
+
+    assert df.empty
+    assert session.calls == [(url, REPOLOGY_REQUEST_TIMEOUT)]
+
+
+def test_query_cve_rejects_malformed_html():
+    url = "https://repology.org/project/openssl/cves?version=3.1.0"
+    session = MappingSession(
+        {url: FakeResponse("<html><body><h1>Maintenance</h1></body></html>")}
+    )
+
+    with pytest.raises(RepologyUnexpectedResponse):
+        query_cve("openssl", "3.1.0", session=session)
+
+    assert session.calls == [(url, REPOLOGY_REQUEST_TIMEOUT)]

@@ -11,11 +11,16 @@ from types import SimpleNamespace
 
 import pandas as pd
 import pytest
+from requests import RequestException
 
 from common import columns as cols
+from repology.exceptions import RepologyUnexpectedResponse
 from sbomnix.builder import SbomBuilder
 from tests.testpaths import VULNXSCAN_EVIDENCE_V1
 from vulnxscan.evidence import (
+    EVIDENCE_REPORT_COLUMNS,
+    TRIAGE_STATUS,
+    TRIAGE_STATUS_UNAVAILABLE,
     build_evidence_report,
     empty_evidence_document,
     finding_id,
@@ -804,6 +809,77 @@ def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path):
     assert not out.exists()
 
 
+@pytest.mark.parametrize(
+    "triage_error",
+    [
+        RequestException("repology connection refused"),
+        RepologyUnexpectedResponse("repology maintenance response"),
+    ],
+    ids=["request-error", "unexpected-response"],
+)
+def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
+    tmp_path, monkeypatch, caplog, triage_error
+):
+    """A Repology failure degrades enrichment without discarding scan results."""
+    out = tmp_path / "vulns.sarif"
+    evidence_out = tmp_path / "evidence.json"
+    whitelist = tmp_path / "whitelist.csv"
+    pd.DataFrame([{cols.VULN_ID: "CVE-2024-1", cols.COMMENT: "accepted risk"}]).to_csv(
+        whitelist, index=False
+    )
+    args = SimpleNamespace(
+        out=out,
+        format="sarif",
+        sarif_location=None,
+        evidence_out=evidence_out,
+        whitelist=whitelist,
+        triage=True,
+        nixprs=True,
+    )
+    triage_out = tmp_path / "vulns.triage.csv"
+    triage_out.write_text("stale\n", encoding="utf-8")
+    scanner = VulnScan()
+    scanner.df_grype = pd.concat(
+        [_scanner_df("CVE-2024-1"), _scanner_df("CVE-2024-2")], ignore_index=True
+    )
+
+    def fail_triage(_df_report, search_nix_prs):
+        assert search_nix_prs is True
+        raise triage_error
+
+    monkeypatch.setattr("vulnxscan.vulnscan.triage_vulnerabilities", fail_triage)
+
+    with caplog.at_level("WARNING"):
+        scanner.report(args, sbom_csv=None)
+
+    sarif = json.loads(out.read_text(encoding="utf-8"))
+    assert [result["ruleId"] for result in sarif["runs"][0]["results"]] == [
+        "CVE-2024-2"
+    ]
+    fallback = pd.read_csv(triage_out, keep_default_na=False)
+    fallback.set_index(cols.VULN_ID, inplace=True)
+    assert set(fallback.index) == {"CVE-2024-1", "CVE-2024-2"}
+    assert bool(fallback.loc["CVE-2024-1", cols.WHITELIST]) is True
+    assert fallback.loc["CVE-2024-1", cols.WHITELIST_COMMENT] == "accepted risk"
+    assert fallback.loc["CVE-2024-1", cols.FINDING_ID]
+    for column in (
+        cols.VERSION_NIXPKGS,
+        cols.VERSION_UPSTREAM,
+        cols.PACKAGE_REPOLOGY,
+        cols.CLASSIFY,
+        cols.NIXPKGS_PR,
+    ):
+        assert fallback[column].tolist() == ["", ""]
+    evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
+    assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
+    for finding in evidence["findings"]:
+        actual = fallback.loc[finding[cols.VULN_ID], list(EVIDENCE_REPORT_COLUMNS)]
+        assert actual.to_dict() == {
+            column: finding[column] for column in EVIDENCE_REPORT_COLUMNS
+        }
+    assert str(triage_error) in caplog.text
+
+
 def test_component_evidence_malformed_patch_json_is_metadata_unavailable(tmp_path):
     sbom_csv = _write_sbom_csv(
         tmp_path,
@@ -973,24 +1049,6 @@ def test_write_reports_writes_triage_report(tmp_path):
     assert Path(main_out).read_text(encoding="utf-8")
 
 
-def test_write_reports_removes_stale_triage_report_on_rerun(tmp_path):
-    """Drop a previous run's triage report when triage could not complete."""
-    main_out = tmp_path / "vulns.csv"
-    triage_out = tmp_path / "vulns.triage.csv"
-    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
-    write_reports(
-        df_report,
-        main_out,
-        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
-    )
-    assert triage_out.exists()
-
-    write_reports(df_report, main_out, df_triaged=None, triage_unavailable=True)
-
-    assert main_out.exists()
-    assert not triage_out.exists()
-
-
 def test_write_reports_keeps_triage_report_when_triage_not_requested(tmp_path):
     """Leave an existing triage report alone when triage was never run."""
     main_out = tmp_path / "vulns.csv"
@@ -1005,30 +1063,6 @@ def test_write_reports_keeps_triage_report_when_triage_not_requested(tmp_path):
     write_reports(df_report, main_out, df_triaged=None)
 
     assert triage_out.exists()
-
-
-def test_write_reports_removes_stale_sarif_triage_report(tmp_path):
-    """Use the SARIF triage suffix when removing a stale triage report."""
-    main_out = tmp_path / "vulns.sarif"
-    triage_out = tmp_path / "vulns.triage.csv"
-    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
-    write_reports(
-        df_report,
-        main_out,
-        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
-        output_format="sarif",
-    )
-    assert triage_out.exists()
-
-    write_reports(
-        df_report,
-        main_out,
-        df_triaged=None,
-        triage_unavailable=True,
-        output_format="sarif",
-    )
-
-    assert not triage_out.exists()
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,7 @@
 """Helpers for parsing Repology CVE pages."""
 
 import re
+from typing import NoReturn
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,15 @@ import repology.exceptions
 from common import columns as cols
 from common.log import LOG, LOG_SPAM
 from common.versioning import parse_version
+
+_REQUIRED_CVE_HEADERS = {"Affected version(s)", "CVE ID"}
+_EMPTY_CVE_RESPONSE_PREFIX = "No CVEs known for this project."
+
+
+def _raise_unexpected_response(log, error=None) -> NoReturn:
+    detail = "malformed Repology CVE response"
+    log.fatal("Unexpected response: %s", detail)
+    raise repology.exceptions.RepologyUnexpectedResponse(detail) from error
 
 
 def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
@@ -73,39 +83,51 @@ def parse_cve_html(html_text, pkg_name, pkg_version, *, log=LOG, log_spam=LOG_SP
     soup = BeautifulSoup(html_text, "html.parser")
     tables = soup.find_all("table")
     if not tables:
-        log.debug("Unexpected response: CVE table missing")
-        return pd.DataFrame()
+        empty_alert = soup.find("div", {"class": "alert alert-success"})
+        if empty_alert and empty_alert.get_text(" ", strip=True).startswith(
+            _EMPTY_CVE_RESPONSE_PREFIX
+        ):
+            log.debug("No CVEs known for this project")
+            return pd.DataFrame()
+        _raise_unexpected_response(log)
+
     cve_table = tables[0]
     if cve_table.thead is None or cve_table.tbody is None:
-        log.debug("Unexpected response: CVE table missing header or body")
-        return pd.DataFrame()
-    headers = {}
-    for idx, header in enumerate(cve_table.thead.find_all("th")):
-        headers[header.text] = idx
-    if not headers or "CVE ID" not in headers:
-        log.fatal("Unexpected response")
-        raise repology.exceptions.RepologyUnexpectedResponse
-    log.log(log_spam, headers)
+        _raise_unexpected_response(log)
+    headers = {
+        header.text: idx for idx, header in enumerate(cve_table.thead.find_all("th"))
+    }
+    try:
+        required_cells = max(headers[name] for name in _REQUIRED_CVE_HEADERS) + 1
+    except KeyError as error:
+        _raise_unexpected_response(log, error)
     cve_table_rows = cve_table.tbody.find_all("tr")
+    if not cve_table_rows:
+        _raise_unexpected_response(log)
+    log.log(log_spam, headers)
+
     cve_dict = {}
     for row in cve_table_rows:
+        cells = row.find_all("td")
+        if len(cells) < required_cells:
+            _raise_unexpected_response(log)
         affected_versions = row.find_all("span", {"class": "version version-outdated"})
         if not affected_versions:
             continue
-        cells = row.find_all("td")
-        if not cells:
-            continue
         cve_row = cells[headers["CVE ID"]]
-        log.log(log_spam, "CVE: %s", cve_row)
         ver_row = cells[headers["Affected version(s)"]]
+        log.log(log_spam, "CVE: %s", cve_row)
         log.log(log_spam, "Versions: %s", ver_row)
         if not is_affected(pkg_version, ver_row.text, log=log, log_spam=log_spam):
             continue
         cve_info = cve_row.text.strip().split("\n")
+        if not cve_info or not cve_info[0]:
+            _raise_unexpected_response(log)
         log.debug("CVE info: %s", cve_info)
         cve_dict.setdefault(cols.PACKAGE, []).append(pkg_name)
         cve_dict.setdefault(cols.VERSION, []).append(pkg_version)
         cve_dict.setdefault("cve", []).append(cve_info[0])
+
     df = pd.DataFrame.from_dict(cve_dict)
     df.replace(np.nan, "", regex=True, inplace=True)
     df.drop_duplicates(keep="first", inplace=True)
