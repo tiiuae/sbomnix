@@ -18,7 +18,7 @@ from common import columns as cols
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
 from common.versioning import parse_version
-from vulnxscan.evidence import finding_id
+from vulnxscan.evidence import finding_id, package_finding_id
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _INFORMATION_URI = "https://github.com/tiiuae/sbomnix"
@@ -143,10 +143,13 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0914, PLR0915
             },
             # GitHub currently consumes only primaryLocationLineHash. The
             # versioned key retains the producer-defined identity for other
-            # consumers. Both intentionally exclude Nix hashes.
+            # consumers, and the version-independent key lets them pair a
+            # finding across package version updates without parsing the
+            # message prose. All intentionally exclude Nix hashes.
             "partialFingerprints": {
                 "primaryLocationLineHash": fingerprint,
                 "vulnxscan/v1": fingerprint,
+                "vulnxscan/package-v1": _package_fingerprint(vuln_id, package),
             },
             "properties": properties,
         }
@@ -198,6 +201,16 @@ def write_sarif(document, path):
 def _fingerprint(vuln_id, package, version):
     """Identify a versioned vulnerability/package across rebuild changes."""
     return finding_id(vuln_id, package, version).removeprefix("sha256:")
+
+
+def _package_fingerprint(vuln_id, package):
+    """Identify a vulnerability/package pair across version changes.
+
+    A grouping key, not an identity: one pair commonly has several affected
+    versions, so collisions across versions are expected and exact matching
+    stays on the versioned fingerprint.
+    """
+    return package_finding_id(vuln_id, package).removeprefix("sha256:")
 
 
 def _scanner_metadata(observations):

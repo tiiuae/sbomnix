@@ -147,6 +147,21 @@ def finding_id(vuln_id, package, version):
     return f"sha256:{hashlib.sha256(payload).hexdigest()}"
 
 
+def package_finding_id(vuln_id, package):
+    """Return the version-independent identifier for a vulnerability/package.
+
+    One pair commonly carries several affected versions, so this is a
+    grouping key rather than an identity: collisions across versions are
+    expected, exact matching stays on the versioned `finding_id`.
+    """
+    payload = json.dumps(
+        [str(vuln_id), str(package)],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(payload).hexdigest()}"
+
+
 def empty_evidence_document():
     """Return an empty schema v1 evidence document."""
     return {

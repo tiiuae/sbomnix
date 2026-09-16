@@ -119,6 +119,9 @@ def test_golden_finding_merges_scanner_provenance_and_preserves_unicode():
                 "vulnxscan/v1": (
                     "ce19f4b0b432b4f7f12cd5e572a48ec0864cf34fe336985ced99abdaf44db81f"
                 ),
+                "vulnxscan/package-v1": (
+                    "a4f1d501f2e9a1dced3c05cc02038942708967b3577f3d6accc98d8047ccd2a7"
+                ),
             },
             "properties": {
                 "package": "openssl-ü",
@@ -489,6 +492,46 @@ def test_concurrent_package_versions_have_distinct_fingerprints():
     }
 
     assert len(results) == len(fingerprints) == 2
+
+
+def test_package_fingerprint_groups_versions_but_distinguishes_pairs():
+    report = _normalized(
+        [
+            {
+                cols.VULN_ID: vuln_id,
+                cols.PACKAGE: package,
+                cols.VERSION: version,
+                cols.SEVERITY: "high",
+                cols.SCANNER: "grype",
+            }
+            for vuln_id, package, version in (
+                ("CVE-1", "hello", "1.0"),
+                ("CVE-1", "hello", "2.0"),
+                ("CVE-1", "zlib", "1.0"),
+                ("CVE-2", "hello", "1.0"),
+            )
+        ],
+        scanner_columns=("grype",),
+    )
+
+    results = _sarif(report)["runs"][0]["results"]
+    keys = {
+        (result["ruleId"], result["properties"]["package"]): result[
+            "partialFingerprints"
+        ]["vulnxscan/package-v1"]
+        for result in results
+    }
+
+    assert keys[("CVE-1", "hello")] != keys[("CVE-1", "zlib")]
+    assert keys[("CVE-1", "hello")] != keys[("CVE-2", "hello")]
+    hello_versions = [
+        result["partialFingerprints"]["vulnxscan/package-v1"]
+        for result in results
+        if result["ruleId"] == "CVE-1" and result["properties"]["package"] == "hello"
+    ]
+    assert len(hello_versions) == 2
+    assert hello_versions[0] == hello_versions[1]
+    assert all(len(fingerprint) == 64 for fingerprint in keys.values())
 
 
 def test_optional_file_level_location_has_no_fake_region():
