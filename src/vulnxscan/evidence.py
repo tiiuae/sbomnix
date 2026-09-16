@@ -58,6 +58,9 @@ RESOLUTIONS = frozenset(
     }
 )
 
+TRIAGE_STATUS = "triage_status"
+TRIAGE_STATUS_UNAVAILABLE = "unavailable"
+
 IDENTITY_SCANNER_COMPONENT_REF = "scanner_component_ref"
 IDENTITY_SBOM_PACKAGE_VERSION_JOIN = "sbom_package_version_join"
 IDENTITY_UNRESOLVED = "unresolved"
@@ -314,6 +317,8 @@ def validate_evidence_document(document):
     """Raise AssertionError if the evidence document is internally inconsistent."""
     if document.get("schema_version") != 1:
         raise AssertionError("Unsupported evidence schema")
+    if document.get(TRIAGE_STATUS) not in (None, TRIAGE_STATUS_UNAVAILABLE):
+        raise AssertionError("Invalid triage_status")
     findings = document.get("findings", [])
     observations = document.get("observations", [])
     components = document.get("components", [])

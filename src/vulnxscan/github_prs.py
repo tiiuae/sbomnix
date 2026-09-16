@@ -18,6 +18,25 @@ GITHUB_API_REQUEST_TIMEOUT = 60
 GITHUB_API_USER_AGENT = "sbomnix-github-prs/0 (https://github.com/tiiuae/sbomnix/)"
 
 
+class GitHubUnexpectedResponse(Exception):
+    """Raised when the GitHub search API returns an unsupported response."""
+
+
+def _parse_search_response(text):
+    """Return a validated GitHub issues-search response."""
+    try:
+        response = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise GitHubUnexpectedResponse("malformed GitHub search response") from error
+    items = response.get("items") if isinstance(response, dict) else None
+    if not isinstance(items, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("html_url"), str)
+        for item in items
+    ):
+        raise GitHubUnexpectedResponse("malformed GitHub search response")
+    return response
+
+
 def append_search_results(prs, result, max_results=5):
     """Append GitHub issue search result URLs to ``result``."""
     for item in prs["items"]:
@@ -71,8 +90,8 @@ class GitHubPrLookup:
             LOG.debug("Re-requesting")
             return self.query(query_str, delay * 2)
         resp.raise_for_status()
-        resp_json = json.loads(resp.text)
-        LOG.log(LOG_SPAM, "total_count=%s", resp_json["total_count"])
+        resp_json = _parse_search_response(resp.text)
+        LOG.log(LOG_SPAM, "result_count=%s", len(resp_json["items"]))
         return resp_json
 
     def find_nixpkgs_prs(self, row):

@@ -12,7 +12,7 @@ import pytest
 from requests import HTTPError
 
 from common import columns as cols
-from vulnxscan.github_prs import GitHubPrLookup
+from vulnxscan.github_prs import GitHubPrLookup, GitHubUnexpectedResponse
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
 from vulnxscan.triage import classify_vulnerability, triage_vulnerabilities
 
@@ -76,14 +76,15 @@ class TwoRowRepologyLookup(FakeRepologyLookup):
 
 
 class FailingGitHubLookup:
-    def __init__(self, fail_after=0):
+    def __init__(self, error, fail_after=0):
+        self.error = error
         self.fail_after = fail_after
         self.calls = 0
 
     def find_nixpkgs_prs(self, row):
         self.calls += 1
         if self.calls > self.fail_after:
-            raise HTTPError("503 Server Error: Service Unavailable")
+            raise self.error
         return "https://github.com/NixOS/nixpkgs/pull/1"
 
 
@@ -166,11 +167,20 @@ def test_triage_vulnerabilities_groups_rows_and_adds_nixpkgs_prs():
     assert triaged["nixpkgs_pr"].tolist() == ["https://github.com/NixOS/nixpkgs/pull/1"]
 
 
-@pytest.mark.parametrize("fail_after", [0, 1])
-def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(fail_after):
+@pytest.mark.parametrize(
+    ("github_error", "fail_after"),
+    [
+        (HTTPError("503 Server Error: Service Unavailable"), 0),
+        (GitHubUnexpectedResponse("malformed GitHub search response"), 1),
+    ],
+    ids=["request-error", "unexpected-response"],
+)
+def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(
+    fail_after, github_error, caplog
+):
     """Retain the completed repology triage when github enrichment fails."""
     repology_lookup = TwoRowRepologyLookup()
-    github_lookup = FailingGitHubLookup(fail_after=fail_after)
+    github_lookup = FailingGitHubLookup(github_error, fail_after=fail_after)
     df_report = pd.DataFrame(
         [
             {
@@ -195,6 +205,28 @@ def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(fail_aft
     assert triaged["version_nixpkgs"].tolist() == ["1.1.0"] * 2
     assert triaged[cols.NIXPKGS_PR].tolist() == ["", ""]
     assert github_lookup.calls == fail_after + 1
+    assert str(github_error) in caplog.text
+
+
+@pytest.mark.parametrize(
+    "response_text",
+    [
+        "<html>",
+        '{"items": [null]}',
+    ],
+    ids=["invalid-json", "invalid-structure"],
+)
+def test_github_pr_lookup_rejects_malformed_response(response_text):
+    response = SimpleNamespace(
+        ok=True,
+        text=response_text,
+        raise_for_status=lambda: None,
+    )
+    session = SimpleNamespace(get=lambda *_args, **_kwargs: response)
+    lookup = GitHubPrLookup(session=session)
+
+    with pytest.raises(GitHubUnexpectedResponse, match="malformed GitHub"):
+        lookup.query("CVE-2024-1")
 
 
 def test_github_pr_lookup_queries_vuln_and_version_matches():

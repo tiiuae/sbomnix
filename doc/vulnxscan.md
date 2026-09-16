@@ -336,6 +336,13 @@ See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/m
 
 With command line option `--triage`, `vulnxscan` queries repology.org for nix-unstable and package upstream version information, as well as the CVE impacted versions. With the additional information from repology.org, `vulnxscan` classifies each vulnerability accordingly.
 
+If Repology cannot be reached, the scan still writes its main CSV or SARIF and
+a supplemental triage CSV. The fallback triage rows retain whitelist and
+component-evidence fields, while `package_repology`, `version_nixpkgs`,
+`version_upstream`, and `classify` are empty. When `--evidence-out` is used, its
+document also contains `"triage_status": "unavailable"` so automation can
+distinguish degraded enrichment from an empty or malformed triage report.
+
 Consider the following example, using [ghaf](https://github.com/tiiuae/ghaf) as target:
 
 ```bash
@@ -534,6 +541,9 @@ The document is written atomically and validated first, so a partial or internal
   "components": []
 }
 ```
+
+When requested triage enrichment is unavailable, the document additionally
+contains the optional top-level field `"triage_status": "unavailable"`.
 
 - `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Optional `description`, `fix_state`, and `fix_versions` fields retain scanner metadata when available. Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
 - `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.

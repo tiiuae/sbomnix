@@ -100,15 +100,11 @@ def write_reports(  # noqa: PLR0913
     out_path,
     *,
     df_triaged=None,
-    triage_unavailable=False,
     output_format="csv",
     evidence_document=None,
     sarif_location=None,
 ):
-    """Write the main report, and the triage report if triage produced one.
-
-    ``triage_unavailable`` additionally removes a stale triage report.
-    """
+    """Write the main report and optional supplemental triage report."""
     out_path = pathlib.Path(out_path)
     if output_format == "sarif":
         active_findings = df_drop_whitelisted(df_report.copy())
@@ -123,8 +119,3 @@ def write_reports(  # noqa: PLR0913
         df_to_csv_file(df_report, out_path.resolve().as_posix())
     if df_triaged is not None:
         df_to_csv_file(df_triaged, triage_report_path(out_path, output_format))
-    elif triage_unavailable:
-        stale = pathlib.Path(triage_report_path(out_path, output_format))
-        if stale.is_file():
-            LOG.debug("Removing stale triage report: %s", stale)
-            stale.unlink()

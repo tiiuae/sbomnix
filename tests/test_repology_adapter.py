@@ -10,7 +10,7 @@ import json
 import pytest
 
 from repology.adapter import RepologyAdapter, RepologyQuery
-from repology.exceptions import RepologyNoMatchingPackages
+from repology.exceptions import RepologyNoMatchingPackages, RepologyUnexpectedResponse
 from repology.session import REPOLOGY_REQUEST_TIMEOUT
 from tests.testpaths import RESOURCES_DIR
 
@@ -81,6 +81,24 @@ def test_repology_adapter_pkg_exact_raises_for_empty_results():
             RepologyQuery(
                 repository="nix_unstable",
                 pkg_exact="missing",
+            )
+        )
+
+    assert session.calls == [(url, REPOLOGY_REQUEST_TIMEOUT)]
+
+
+def test_repology_adapter_pkg_exact_rejects_malformed_html():
+    """Normalize malformed project pages before triage handles the failure."""
+    url = "https://repology.org/projects/?search=hello&inrepo=nix_unstable"
+    session = MappingSession(
+        {url: FakeResponse("<html><body><h1>Maintenance</h1></body></html>")}
+    )
+
+    with pytest.raises(RepologyUnexpectedResponse):
+        RepologyAdapter(session=session).query(
+            RepologyQuery(
+                repository="nix_unstable",
+                pkg_exact="hello",
             )
         )
 
