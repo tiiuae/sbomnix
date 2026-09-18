@@ -18,7 +18,7 @@ from provenance import main as provenance_main
 from repology import repology_cli, repology_cve
 from sbomnix import main as sbomnix_main
 from vulnxscan import osv as osv_cli
-from vulnxscan import vulnxscan_cli
+from vulnxscan import sarif_diff, vulnxscan_cli
 
 
 def _stringify(value):
@@ -32,6 +32,7 @@ CLI_ARG_CASES = [
     (nixgraph_main.getargs, [".#pkg"]),
     (nix_outdated.getargs, [".#pkg"]),
     (vulnxscan_cli.getargs, [".#pkg"]),
+    (sarif_diff.getargs, ["--current", "a.sarif", "--markdown", "b.md"]),
     (osv_cli.getargs, ["sbom.json"]),
     (
         repology_cli.getargs,
@@ -49,6 +50,7 @@ CLI_ARG_CASES = [
         nixgraph_main.getargs,
         nix_outdated.getargs,
         vulnxscan_cli.getargs,
+        sarif_diff.getargs,
         osv_cli.getargs,
         repology_cli.getargs,
         repology_cve.getargs,

@@ -463,6 +463,20 @@ Grype fix state and fixed versions, scanner provenance, selected severity, Nix p
 
 Each result has a SHA-256 partial fingerprint over the canonical `(vulnerability ID, package, version)` tuple. Including the package version keeps concurrent vulnerable versions distinct. Derivation paths, output paths, Nix store hashes, scanner database state, timestamps, and result order are excluded so rebuilds retain alert identity. Nix paths remain available as result metadata when component evidence provides them.
 
+A second partial fingerprint, `vulnxscan/package-v1`, covers the version-independent `(vulnerability ID, package)` pair. It is a grouping key rather than an identity — one pair commonly carries several affected versions — and lets consumers such as `vulnxscan-diff` recognize a finding that persists across a package version update.
+
+#### Diffing SARIF Documents
+
+`vulnxscan-diff` renders a markdown vulnerability diff between a current and a previous SARIF document, for example as a pull-request comment:
+
+```bash
+$ vulnxscan-diff --current vulns.sarif --previous previous.sarif --markdown diff.md
+```
+
+Exact matches pair on `primaryLocationLineHash`. Findings that persist across a package version update pair on the `vulnxscan/package-v1` group fingerprint and are reported as carried rather than as resolved plus added; within one group both sides pair one-to-one in version order and any remainder falls back to added or resolved. Detail changes (severity, scanners, fix state) compare result properties with Nix store paths, the version, and `github/*` metadata excluded. Omitting `--previous` or pointing it at a missing file renders a no-baseline report, matching a first run without a cached baseline.
+
+The diff expects raw producer documents. GitHub's code-scanning analyses API strips every `partialFingerprints` key except `primaryLocationLineHash` and all producer `properties` from accepted analyses, so a SARIF downloaded from GitHub cannot serve as the baseline; keep the raw file in CI cache or as an artifact instead. Output is unbounded by default; callers bound it for their medium with `--max-chars`, which omits excess entries with a note (a GitHub PR comment caps at 65536 characters).
+
 #### Locations and GitHub Code Scanning
 
 A Nix closure vulnerability does not inherently identify a source line. By default, `vulnxscan` therefore emits no SARIF location rather than pointing every result at a fabricated line such as `flake.lock:1`.

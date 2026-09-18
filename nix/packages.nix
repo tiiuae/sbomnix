@@ -105,6 +105,7 @@
           (mkDevEntry "nixgraph" "nixgraph.main")
           (mkDevEntry "nix_outdated" "nixupdate.nix_outdated")
           (mkDevEntry "vulnxscan" "vulnxscan.vulnxscan_cli")
+          (mkDevEntry "vulnxscan-diff" "vulnxscan.sarif_diff")
           (mkDevEntry "repology_cli" "repology.repology_cli")
           (mkDevEntry "repology_cve" "repology.repology_cve")
           (mkDevEntry "provenance" "provenance.main")

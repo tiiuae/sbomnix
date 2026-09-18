@@ -12,6 +12,7 @@ import pandas as pd
 from common.df import df_from_csv_file
 from repology import repology_cve
 from vulnxscan import osv as osv_cli
+from vulnxscan import sarif_diff
 
 
 def test_repology_cve_main_writes_output_csv(tmp_path, monkeypatch):
@@ -112,3 +113,31 @@ def test_osv_main_writes_output_csv_with_requested_ecosystems(tmp_path, monkeypa
             "version": "1.0",
         }
     ]
+
+
+def test_sarif_diff_main_writes_markdown(tmp_path, monkeypatch):
+    current_path = tmp_path / "current.sarif"
+    markdown_path = tmp_path / "diff.md"
+    current_path.write_text(
+        '{"version":"2.1.0","runs":[{"results":[]}]}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        sarif_diff,
+        "getargs",
+        lambda: SimpleNamespace(
+            current=current_path,
+            previous=None,
+            markdown=markdown_path,
+            max_chars=None,
+            verbose=0,
+        ),
+    )
+    monkeypatch.setattr(sarif_diff, "set_log_verbosity", lambda _verbosity: None)
+
+    sarif_diff.main()
+
+    assert "No previous SARIF baseline available (0 current)." in (
+        markdown_path.read_text(encoding="utf-8")
+    )

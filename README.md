@@ -71,7 +71,7 @@ $ nix develop
 ```
 
 The devshell adds all CLI entry points (`sbomnix`, `nixgraph`,
-`vulnxscan`, `repology_cli`, `repology_cve`, `nix_outdated`,
+`vulnxscan`, `vulnxscan-diff`, `repology_cli`, `repology_cve`, `nix_outdated`,
 `provenance`) to `PATH`. They run against the local source tree, so any
 edits are picked up immediately without reinstalling.
 
