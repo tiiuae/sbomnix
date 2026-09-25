@@ -23,6 +23,7 @@ import re
 from common.cli_args import add_verbose_argument, add_version_argument, check_positive
 from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
+from common.versioning import parse_version
 
 _GROUP_FINGERPRINT_KEY = "vulnxscan/package-v1"
 
@@ -283,16 +284,24 @@ def _sarif_semantic_details(result, *, ignore_version):
     return _sarif_level(result), details
 
 
+def _version_sort_key(result):
+    """Sort key for carried pairing: version order, unparsable last."""
+    version = _sarif_properties(result).get("version")
+    version = str(version) if isinstance(version, str) else ""
+    parsed = parse_version(version)
+    return parsed is None, parsed, version
+
+
 def _pair_sarif_results(current, previous):
     """Pair keyed current and previous results.
 
     Returns `(added, resolved, carried)`. Exact fingerprint matches pair
     directly and are not returned here. Leftovers pair through the
     version-independent vulnxscan/package-v1 group key: within one group
-    both sides are sorted by message and paired one-to-one in order, so
-    one-to-many and many-to-many groups pair their first min(n, m) members
-    and the unpaired remainder falls back to added/resolved. Results without
-    the group key can only be added or resolved.
+    both sides pair one-to-one in version order, so one-to-many and
+    many-to-many groups pair their first min(n, m) members and the
+    unpaired remainder falls back to added/resolved. Results without the
+    group key can only be added or resolved.
     """
     added_candidates = [r for k, r in current.items() if k not in previous]
     resolved_candidates = [r for k, r in previous.items() if k not in current]
@@ -302,11 +311,11 @@ def _pair_sarif_results(current, previous):
         if group is not None:
             previous_by_group.setdefault(group, []).append(index)
     for group in previous_by_group.values():
-        group.sort(key=lambda i: _sarif_semantic_message(resolved_candidates[i]))
+        group.sort(key=lambda i: _version_sort_key(resolved_candidates[i]))
     carried_indices = set()
     carried = []
     added = []
-    for result in sorted(added_candidates, key=_sarif_semantic_message):
+    for result in sorted(added_candidates, key=_version_sort_key):
         group = _sarif_group_fingerprint(result)
         candidates = previous_by_group.get(group) if group is not None else None
         if candidates:

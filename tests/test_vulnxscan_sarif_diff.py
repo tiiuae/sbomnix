@@ -108,6 +108,22 @@ def test_render_pairs_groups_one_to_one():
     assert "1 current, 0 added, 1 resolved, 0 changed; 1 persisted" in report
 
 
+def test_render_pairs_groups_in_version_order():
+    # Previous versions 1.0 and 10.0, current 2.0. Version order pairs the
+    # oldest previous version, leaving 10.0 resolved; message order would
+    # pair wrongly on the lexicographic "10.0" < "1.0" and resolve 1.0.
+    previous = _sarif_document(
+        _sarif_result("CVE-1", "pkg", "1.0", "a" * 64),
+        _sarif_result("CVE-1", "pkg", "10.0", "b" * 64),
+    )
+    current = _sarif_document(_sarif_result("CVE-1", "pkg", "2.0", "c" * 64))
+
+    report = render_sarif_diff(current, previous)
+
+    assert "CVE\\-1 affects pkg 10\\.0\\." in report
+    assert "CVE\\-1 affects pkg 1\\.0\\." not in report
+
+
 def test_render_without_group_key_cannot_carry():
     previous_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
     previous_result["partialFingerprints"].pop("vulnxscan/package-v1")
