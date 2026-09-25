@@ -188,6 +188,41 @@ def test_render_max_chars_bounds_output():
     assert report.index("omitted to fit the size limit") < report.index("### Added")
 
 
+def test_render_max_chars_returns_untrimmed_when_fitting():
+    current = _sarif_document(
+        *(
+            _sarif_result(f"CVE-2026-{index}", f"pkg{index}", "1.0", f"{index:064d}")
+            for index in range(3)
+        )
+    )
+
+    untrimmed = render_sarif_diff(current, _sarif_document())
+    bounded = render_sarif_diff(
+        current, _sarif_document(), max_chars=len(untrimmed) + 100
+    )
+
+    assert bounded == untrimmed
+    assert "omitted" not in bounded
+
+
+def test_render_max_chars_removes_emptied_sections():
+    current = _sarif_document(
+        *(
+            _sarif_result(f"CVE-2026-{index}", f"pkg{index}", "1.0", f"{index:064d}")
+            for index in range(50)
+        )
+    )
+    previous = _sarif_document(_sarif_result("CVE-1", "pkg", "1.0", "f" * 64))
+    # Bound the output so the trailing Resolved section's only entry is
+    # trimmed; its heading must not linger as an empty section.
+    bounded = render_sarif_diff(current, previous, max_chars=400)
+
+    assert "### Resolved" not in bounded
+    assert "CVE\\-1 affects pkg" not in bounded
+    assert "### Added" in bounded
+    assert "\n\n\n" not in bounded
+
+
 def test_compare_sarif_files_missing_previous_means_no_baseline(tmp_path):
     current = tmp_path / "current.sarif"
     current.write_text(json.dumps(_sarif_document()), encoding="utf-8")

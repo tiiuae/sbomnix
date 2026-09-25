@@ -15,6 +15,7 @@ paths excluded.
 
 import argparse
 import html
+import itertools
 import json
 import pathlib
 import re
@@ -313,25 +314,65 @@ def _bound_sarif_diff(lines, max_chars):
     """Trim trailing bullet entries until the rendered diff fits.
 
     Trimming only cuts at the end, so the omission note goes into the
-    summary at the top rather than after the cut point.
+    summary at the top rather than after the cut point. Sections whose
+    entries were all trimmed are removed along with their heading.
     """
     reserve = 120  # room for the omission note below
+
+    def render(lines):
+        return "\n".join(lines).rstrip() + "\n"
+
+    text = render(lines)
+    if len(text) <= max_chars:
+        return text  # fits as-is; no trimming, no omission note
     dropped = 0
-    text = "\n".join(lines).rstrip() + "\n"
     while len(text) > max_chars - reserve:
         for index in range(len(lines) - 1, -1, -1):
             if lines[index].startswith("- "):
                 del lines[index]
                 dropped += 1
+                lines = _remove_empty_sections(lines)
                 break
         else:
             break  # headers alone exceed the limit; nothing left to trim
-        text = "\n".join(lines).rstrip() + "\n"
+        text = render(lines)
     if dropped:
         noun = "entry" if dropped == 1 else "entries"
-        lines.insert(4, f"\n_{dropped} further {noun} omitted to fit the size limit._")
-        text = "\n".join(lines).rstrip() + "\n"
+        lines[4:4] = [
+            "",
+            f"_{dropped} further {noun} omitted to fit the size limit._",
+            "",
+        ]
+        lines = _collapse_blank_lines(lines)
+        text = render(lines)
     return text
+
+
+def _remove_empty_sections(lines):
+    """Drop section headings left without bullet entries after trimming."""
+    kept = []
+    for index, line in enumerate(lines):
+        if line.startswith("### "):
+            entries = itertools.takewhile(
+                lambda item: not item.startswith("### "), lines[index + 1 :]
+            )
+            if not any(item.startswith("- ") for item in entries):
+                # The removed heading leaves the blank line separating it
+                # from the previous section dangling; drop that too.
+                if kept and kept[-1] == "":
+                    kept.pop()
+                continue
+        kept.append(line)
+    return kept
+
+
+def _collapse_blank_lines(lines):
+    """Collapse consecutive blank lines into one."""
+    return [
+        line
+        for index, line in enumerate(lines)
+        if line != "" or index == 0 or lines[index - 1] != ""
+    ]
 
 
 def _format_finding(result):
