@@ -109,19 +109,33 @@ def test_render_pairs_groups_one_to_one():
 
 
 def test_render_pairs_groups_in_version_order():
-    # Previous versions 1.0 and 10.0, current 2.0. Version order pairs the
-    # oldest previous version, leaving 10.0 resolved; message order would
-    # pair wrongly on the lexicographic "10.0" < "1.0" and resolve 1.0.
+    # Previous versions 1.9 and 1.10, current 2.0. Version order pairs the
+    # oldest previous version, leaving 1.10 resolved; message order would
+    # pair wrongly on the lexicographic "1.10" < "1.9" and resolve 1.9.
     previous = _sarif_document(
-        _sarif_result("CVE-1", "pkg", "1.0", "a" * 64),
-        _sarif_result("CVE-1", "pkg", "10.0", "b" * 64),
+        _sarif_result("CVE-1", "pkg", "1.9", "a" * 64),
+        _sarif_result("CVE-1", "pkg", "1.10", "b" * 64),
     )
     current = _sarif_document(_sarif_result("CVE-1", "pkg", "2.0", "c" * 64))
 
     report = render_sarif_diff(current, previous)
 
-    assert "CVE\\-1 affects pkg 10\\.0\\." in report
-    assert "CVE\\-1 affects pkg 1\\.0\\." not in report
+    assert "CVE\\-1 affects pkg 1\\.10\\." in report
+    assert "CVE\\-1 affects pkg 1\\.9\\." not in report
+
+
+def test_render_preserves_document_order_for_unrelated_additions():
+    # Unrelated added findings keep their producer-emitted order rather
+    # than being reordered globally by version.
+    current = _sarif_document(
+        _sarif_result("CVE-1", "zlib", "1.0", "a" * 64),
+        _sarif_result("CVE-2", "bash", "5.2", "b" * 64),
+        _sarif_result("CVE-3", "curl", "8.1", "c" * 64),
+    )
+
+    report = render_sarif_diff(current, _sarif_document())
+
+    assert report.index("zlib") < report.index("bash") < report.index("curl")
 
 
 def test_render_without_group_key_cannot_carry():

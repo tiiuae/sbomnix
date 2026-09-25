@@ -358,7 +358,9 @@ def _pair_sarif_results(current, previous):
     both sides pair one-to-one in version order, so one-to-many and
     many-to-many groups pair their first min(n, m) members and the
     unpaired remainder falls back to added/resolved. Results without the
-    group key can only be added or resolved.
+    group key can only be added or resolved. The iteration itself follows
+    document order, so unrelated added and resolved findings keep their
+    producer-emitted order rather than being reordered by version.
     """
     added_candidates = [r for k, r in current.items() if k not in previous]
     resolved_candidates = [r for k, r in previous.items() if k not in current]
@@ -372,7 +374,7 @@ def _pair_sarif_results(current, previous):
     carried_indices = set()
     carried = []
     added = []
-    for result in sorted(added_candidates, key=_version_sort_key):
+    for result in added_candidates:
         group = _sarif_group_fingerprint(result)
         candidates = previous_by_group.get(group) if group is not None else None
         if candidates:
