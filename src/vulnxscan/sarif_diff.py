@@ -27,6 +27,27 @@ from common.versioning import parse_version
 
 _GROUP_FINGERPRINT_KEY = "vulnxscan/package-v1"
 
+# The documented producer properties that carry finding semantics, as
+# emitted by vulnxscan.sarif: severity, scanners, fix data, and Nix patch
+# evidence. Detail changes compare this allowlist rather than everything
+# except a fixed exclusion list, so a producer adding a property does not
+# mark all persisted findings as changed against an older baseline. Nix
+# store paths (drvPaths, storePaths) and GitHub alert metadata (github/*)
+# are intentionally absent.
+_SEMANTIC_PROPERTY_KEYS = frozenset(
+    {
+        "package",
+        "version",
+        "severity",
+        "cvssScore",
+        "sources",
+        "evidenceScope",
+        "patchState",
+        "fixStates",
+        "fixVersions",
+    }
+)
+
 ###############################################################################
 
 
@@ -267,17 +288,17 @@ def _sarif_semantic_message(result):
 def _sarif_semantic_details(result, *, ignore_version):
     """Detail key for change detection: (level, details).
 
-    Producer properties carry severity, scanners, and fix data; Nix store
-    paths and GitHub alert metadata are excluded, and carried findings also
-    drop the version.
+    Compare the documented semantic properties only (severity, scanners,
+    fix data, patch evidence), not everything except an exclusion list: a
+    producer adding a property must not mark all persisted findings as
+    changed against an older baseline. Carried findings also drop the
+    version.
     """
     cleaned = {
         key: value
         for key, value in _sarif_properties(result).items()
-        if not str(key).startswith("github/")
+        if key in _SEMANTIC_PROPERTY_KEYS
     }
-    cleaned.pop("drvPaths", None)
-    cleaned.pop("storePaths", None)
     if ignore_version:
         cleaned.pop("version", None)
     details = json.dumps(cleaned, sort_keys=True, separators=(",", ":"), default=str)

@@ -149,6 +149,32 @@ def test_render_ignores_github_properties_and_store_paths():
     assert "No finding additions, resolutions, or detail changes" in report
 
 
+def test_render_ignores_undocumented_properties():
+    # A producer-side property addition must not mark all persisted
+    # findings as changed against an older baseline lacking the property.
+    current_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    current_result["properties"]["newMetadata"] = "future producer addition"
+    previous_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+
+    report = render_sarif_diff(
+        _sarif_document(current_result), _sarif_document(previous_result)
+    )
+
+    assert "No finding additions, resolutions, or detail changes" in report
+
+
+def test_render_reports_semantic_property_changes():
+    current_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    current_result["properties"]["patchState"] = "fixed"
+    previous_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+
+    report = render_sarif_diff(
+        _sarif_document(current_result), _sarif_document(previous_result)
+    )
+
+    assert "1 changed" in report
+
+
 def test_render_escapes_apostrophes_without_double_escaping():
     current = _sarif_document(_sarif_result("CVE-1", "o'brien", "1.0", "a" * 64))
 
