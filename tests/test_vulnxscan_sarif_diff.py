@@ -201,6 +201,19 @@ def test_render_rejects_results_without_properties():
         render_sarif_diff(_sarif_document(stripped), _sarif_document())
 
 
+def test_render_rejects_github_only_properties():
+    # The documented GitHub download shape: properties containing only
+    # github/* alert metadata, no producer fields.
+    downloaded = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    downloaded["properties"] = {
+        "github/alertNumber": 7,
+        "github/alertUrl": "https://github.com/x/y/security/code-scanning/7",
+    }
+
+    with pytest.raises(ValueError, match="GitHub analyses download"):
+        render_sarif_diff(_sarif_document(downloaded), _sarif_document())
+
+
 def test_render_rejects_duplicate_fingerprints():
     document = _sarif_document(
         _sarif_result("CVE-1", "pkg", "1.0", "a" * 64),

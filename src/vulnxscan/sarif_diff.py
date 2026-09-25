@@ -249,19 +249,23 @@ def _sarif_group_fingerprint(result):
 def _sarif_properties(result):
     """The producer properties object.
 
-    Every vulnxscan SARIF result carries properties, while GitHub's
-    code-scanning analyses API strips them from accepted analyses. A
-    document without them was therefore likely downloaded from GitHub and
-    cannot serve as a baseline: its version-independent group fingerprints
-    are stripped too, so diffing it would silently report carried findings
-    as resolved plus added. Fail loudly instead of emitting such a
-    plausible but incorrect diff.
+    Every vulnxscan SARIF result carries properties with the package and
+    version, while GitHub's code-scanning analyses API strips producer
+    properties from accepted analyses and leaves only its own
+    github/alertNumber and github/alertUrl metadata. A document without
+    producer fields was therefore likely downloaded from GitHub and
+    cannot serve as a baseline: its version-independent group
+    fingerprints are stripped too, so diffing it would silently report
+    carried findings as resolved plus added. Fail loudly instead of
+    emitting such a plausible but incorrect diff.
     """
     properties = result.get("properties")
-    if not isinstance(properties, dict):
+    if not isinstance(properties, dict) or not all(
+        isinstance(properties.get(field), str) for field in ("package", "version")
+    ):
         raise ValueError(
-            f"missing properties for {_sarif_rule_id(result)}: the diff "
-            "requires raw vulnxscan SARIF, not a GitHub analyses download"
+            f"missing producer properties for {_sarif_rule_id(result)}: the "
+            "diff requires raw vulnxscan SARIF, not a GitHub analyses download"
         )
     return properties
 
