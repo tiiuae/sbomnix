@@ -406,6 +406,9 @@ def _bound_sarif_diff(lines, max_chars):
     text = render(lines)
     if len(text) <= max_chars:
         return text  # fits as-is; no trimming, no omission note
+    header = _remove_empty_sections(
+        [line for line in lines if not line.startswith("- ")]
+    )
     dropped = 0
     while len(text) > max_chars - reserve:
         for index in range(len(lines) - 1, -1, -1):
@@ -417,6 +420,17 @@ def _bound_sarif_diff(lines, max_chars):
         else:
             break  # headers alone exceed the limit; nothing left to trim
         text = render(lines)
+    if len(lines) == len(header):
+        # Every entry was trimmed and the summary with the omission note
+        # still does not fit: the limit is below the report's fixed
+        # overhead. Reject rather than returning an oversized result.
+        noun = "entry" if dropped == 1 else "entries"
+        note = f"_{dropped} further {noun} omitted to fit the size limit._"
+        overhead = len(render(header)) + len(note) + 2  # note + two blanks
+        raise ValueError(
+            f"max_chars {max_chars} is below the report overhead of "
+            f"{overhead} characters"
+        )
     if dropped:
         noun = "entry" if dropped == 1 else "entries"
         lines[4:4] = [

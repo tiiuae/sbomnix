@@ -320,6 +320,13 @@ def test_render_max_chars_removes_emptied_sections():
     assert "\n\n\n" not in bounded
 
 
+def test_render_max_chars_below_overhead_is_rejected():
+    current = _sarif_document(_sarif_result("CVE-1", "pkg", "1.0", "a" * 64))
+
+    with pytest.raises(ValueError, match="below the report overhead"):
+        render_sarif_diff(current, _sarif_document(), max_chars=100)
+
+
 def test_compare_sarif_files_missing_previous_means_no_baseline(tmp_path):
     current = tmp_path / "current.sarif"
     current.write_text(json.dumps(_sarif_document()), encoding="utf-8")
