@@ -133,6 +133,16 @@ def test_render_ignores_github_properties_and_store_paths():
     assert "No finding additions, resolutions, or detail changes" in report
 
 
+def test_render_escapes_apostrophes_without_double_escaping():
+    current = _sarif_document(_sarif_result("CVE-1", "o'brien", "1.0", "a" * 64))
+
+    report = render_sarif_diff(current, _sarif_document())
+
+    assert "o'brien" in report
+    assert "&#x27;" not in report
+    assert "&\\#x27;" not in report
+
+
 def test_render_rejects_run_without_results_array():
     with pytest.raises(ValueError, match="results array"):
         render_sarif_diff({"runs": [{}]})

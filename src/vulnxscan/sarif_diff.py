@@ -347,7 +347,9 @@ def _format_finding(result):
 def _safe_markdown_text(text):
     """Return inert plain text safe for untrusted markdown interpolation."""
     normalized = re.sub(r"[\x00-\x1f\x7f]+", " ", str(text)).strip()
-    escaped = html.escape(normalized)
+    # quote=False: escaping quotes would turn ' into &#x27;, which the
+    # markdown escaping below would corrupt into the literal &\#x27;.
+    escaped = html.escape(normalized, quote=False)
     return re.sub(r"([\\`*_{}\[\]()#+\-.!|>~])", r"\\\1", escaped)
 
 
