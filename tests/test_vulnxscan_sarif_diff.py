@@ -175,6 +175,23 @@ def test_render_reports_semantic_property_changes():
     assert "1 changed" in report
 
 
+def test_render_names_properties_changed_outside_the_message():
+    # evidenceScope is compared but absent from the message prose; without
+    # naming the differing properties the entry would render identical text
+    # on both sides of =>.
+    previous_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    previous_result["properties"]["evidenceScope"] = "runtime"
+    current_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    current_result["properties"]["evidenceScope"] = "buildtime"
+
+    report = render_sarif_diff(
+        _sarif_document(current_result), _sarif_document(previous_result)
+    )
+
+    assert "1 changed" in report
+    assert "(evidenceScope)" in report
+
+
 def test_render_escapes_apostrophes_without_double_escaping():
     current = _sarif_document(_sarif_result("CVE-1", "o'brien", "1.0", "a" * 64))
 

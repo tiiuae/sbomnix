@@ -116,7 +116,7 @@ def render_sarif_diff(current_document, previous_document=None, *, max_chars=Non
     previous = _keyed_sarif_results(previous_document)
     added, resolved, carried = _pair_sarif_results(current, previous)
     changed = [
-        (previous[key], result)
+        (previous[key], result, False)
         for key, result in current.items()
         if key in previous
         and _sarif_semantic_details(result, ignore_version=False)
@@ -125,7 +125,7 @@ def render_sarif_diff(current_document, previous_document=None, *, max_chars=Non
     # Carried pairs changed version by construction; only detail changes
     # beyond that (severity, scanners, fix state) are reported.
     carried_changed = [
-        (before, after)
+        (before, after, True)
         for before, after in carried
         if _sarif_semantic_details(after, ignore_version=True)
         != _sarif_semantic_details(before, ignore_version=True)
@@ -157,9 +157,15 @@ def render_sarif_diff(current_document, previous_document=None, *, max_chars=Non
         )
     if all_changed:
         lines.extend(("", "### Changed", ""))
-        for before, after in all_changed:
+        for before, after, is_carried in all_changed:
+            # Name the differing properties: some (e.g. evidenceScope) are
+            # not in the message prose, so their change would otherwise
+            # render identical text on both sides.
+            differing = _changed_properties(before, after, ignore_version=is_carried)
+            names = ", ".join(_safe_markdown_text(name) for name in differing)
             lines.append(
-                f"- **{_safe_markdown_text(_sarif_rule_id(after))}**: "
+                f"- **{_safe_markdown_text(_sarif_rule_id(after))}** "
+                f"({names}): "
                 f"[{_safe_markdown_text(_sarif_level(before))}] "
                 f"{_safe_markdown_text(_sarif_semantic_message(before))} => "
                 f"[{_safe_markdown_text(_sarif_level(after))}] "
@@ -289,24 +295,50 @@ def _sarif_semantic_message(result):
     return re.sub(r" Derivations:.*$", "", _sarif_message(result))
 
 
-def _sarif_semantic_details(result, *, ignore_version):
-    """Detail key for change detection: (level, details).
+def _sarif_semantic_properties(result, *, ignore_version):
+    """The documented semantic properties of a result.
 
-    Compare the documented semantic properties only (severity, scanners,
-    fix data, patch evidence), not everything except an exclusion list: a
+    Only the allowlisted keys (severity, scanners, fix data, patch
+    evidence) take part, not everything except an exclusion list: a
     producer adding a property must not mark all persisted findings as
     changed against an older baseline. Carried findings also drop the
     version.
     """
-    cleaned = {
+    properties = {
         key: value
         for key, value in _sarif_properties(result).items()
         if key in _SEMANTIC_PROPERTY_KEYS
     }
     if ignore_version:
-        cleaned.pop("version", None)
-    details = json.dumps(cleaned, sort_keys=True, separators=(",", ":"), default=str)
+        properties.pop("version", None)
+    return properties
+
+
+def _sarif_semantic_details(result, *, ignore_version):
+    """Detail key for change detection: (level, details)."""
+    details = json.dumps(
+        _sarif_semantic_properties(result, ignore_version=ignore_version),
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
     return _sarif_level(result), details
+
+
+def _changed_properties(before, after, *, ignore_version):
+    """Names of the semantic properties that differ between two results."""
+    before_properties = _sarif_semantic_properties(
+        before, ignore_version=ignore_version
+    )
+    after_properties = _sarif_semantic_properties(after, ignore_version=ignore_version)
+    changed = {
+        key
+        for key in before_properties.keys() | after_properties.keys()
+        if before_properties.get(key) != after_properties.get(key)
+    }
+    if _sarif_level(before) != _sarif_level(after):
+        changed.add("level")
+    return sorted(changed)
 
 
 def _version_sort_key(result):
