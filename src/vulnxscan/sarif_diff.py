@@ -224,6 +224,26 @@ def _sarif_group_fingerprint(result):
     return group if isinstance(group, str) and group else None
 
 
+def _sarif_properties(result):
+    """The producer properties object.
+
+    Every vulnxscan SARIF result carries properties, while GitHub's
+    code-scanning analyses API strips them from accepted analyses. A
+    document without them was therefore likely downloaded from GitHub and
+    cannot serve as a baseline: its version-independent group fingerprints
+    are stripped too, so diffing it would silently report carried findings
+    as resolved plus added. Fail loudly instead of emitting such a
+    plausible but incorrect diff.
+    """
+    properties = result.get("properties")
+    if not isinstance(properties, dict):
+        raise ValueError(
+            f"missing properties for {_sarif_rule_id(result)}: the diff "
+            "requires raw vulnxscan SARIF, not a GitHub analyses download"
+        )
+    return properties
+
+
 def _keyed_sarif_results(document):
     keyed = {}
     for result in _sarif_results(document):
@@ -234,6 +254,7 @@ def _keyed_sarif_results(document):
             )
         _sarif_message(result)
         _sarif_level(result)
+        _sarif_properties(result)
         keyed[fingerprint] = result
     return keyed
 
@@ -247,26 +268,18 @@ def _sarif_semantic_details(result, *, ignore_version):
 
     Producer properties carry severity, scanners, and fix data; Nix store
     paths and GitHub alert metadata are excluded, and carried findings also
-    drop the version. Without properties, fall back to the message text with
-    the derivation list stripped — or to the level alone when ignoring the
-    version, since the version cannot be removed from prose reliably.
+    drop the version.
     """
-    properties = result.get("properties")
-    if isinstance(properties, dict):
-        cleaned = {
-            key: value
-            for key, value in properties.items()
-            if not str(key).startswith("github/")
-        }
-        cleaned.pop("drvPaths", None)
-        cleaned.pop("storePaths", None)
-        if ignore_version:
-            cleaned.pop("version", None)
-        details = json.dumps(
-            cleaned, sort_keys=True, separators=(",", ":"), default=str
-        )
-    else:
-        details = "" if ignore_version else _sarif_semantic_message(result)
+    cleaned = {
+        key: value
+        for key, value in _sarif_properties(result).items()
+        if not str(key).startswith("github/")
+    }
+    cleaned.pop("drvPaths", None)
+    cleaned.pop("storePaths", None)
+    if ignore_version:
+        cleaned.pop("version", None)
+    details = json.dumps(cleaned, sort_keys=True, separators=(",", ":"), default=str)
     return _sarif_level(result), details
 
 

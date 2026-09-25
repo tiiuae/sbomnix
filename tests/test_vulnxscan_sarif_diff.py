@@ -148,6 +148,17 @@ def test_render_rejects_run_without_results_array():
         render_sarif_diff({"runs": [{}]})
 
 
+def test_render_rejects_results_without_properties():
+    # GitHub's analyses API strips producer properties from accepted
+    # analyses, so a GitHub-roundtripped document cannot serve as a
+    # baseline. Reject it instead of emitting a plausible incorrect diff.
+    stripped = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
+    stripped.pop("properties")
+
+    with pytest.raises(ValueError, match="GitHub analyses download"):
+        render_sarif_diff(_sarif_document(stripped), _sarif_document())
+
+
 def test_render_rejects_duplicate_fingerprints():
     document = _sarif_document(
         _sarif_result("CVE-1", "pkg", "1.0", "a" * 64),
