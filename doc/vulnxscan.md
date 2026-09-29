@@ -41,6 +41,10 @@ $ nix run .#vulnxscan -- --help
 ## Example Target
 In the below examples, we use `git` as an example target for `vulnxscan`, referred to by flakeref `github:NixOS/nixpkgs/nixos-unstable#git`.
 
+Pass `--impure` to forward that option to Nix when resolving a flake target that
+requires impure evaluation. The option has no effect when the target is an
+existing store path or when `--sbom` is used.
+
 ## End-to-End Data Flow
 
 `vulnxscan` combines three independent scanner paths rather than passing data

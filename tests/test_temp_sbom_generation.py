@@ -53,8 +53,9 @@ def test_vulnxscan_skip_osv_controls_api_scan(
 
 
 @pytest.mark.parametrize("require_cpe_dictionary", [False, True])
+@pytest.mark.parametrize("impure", [False, True])
 def test_vulnxscan_cleans_generated_tempfiles_on_failure(
-    tmp_path, monkeypatch, require_cpe_dictionary
+    tmp_path, monkeypatch, require_cpe_dictionary, impure
 ):
     sbom_cdx_path = tmp_path / "generated.cdx.json"
     sbom_csv_path = tmp_path / "generated.csv"
@@ -67,6 +68,7 @@ def test_vulnxscan_cleans_generated_tempfiles_on_failure(
         verbose=0,
         out="vulns.csv",
         buildtime=False,
+        impure=impure,
         require_cpe_dictionary=require_cpe_dictionary,
         sbom=False,
         whitelist=None,
@@ -92,13 +94,12 @@ def test_vulnxscan_cleans_generated_tempfiles_on_failure(
     monkeypatch.setattr(
         vulnxscan_cli, "exit_unless_command_exists", lambda _command: None
     )
-    monkeypatch.setattr(
-        vulnxscan_cli,
-        "resolve_nix_target",
-        lambda _target, buildtime=False: sbomnix_cli_utils.ResolvedNixTarget(
-            path="/nix/store/target"
-        ),
-    )
+
+    def fake_resolve_nix_target(_target, *, buildtime=False, impure=False):
+        assert impure is args.impure
+        return sbomnix_cli_utils.ResolvedNixTarget(path="/nix/store/target")
+
+    monkeypatch.setattr(vulnxscan_cli, "resolve_nix_target", fake_resolve_nix_target)
 
     def fake_generate_temp_sbom(_target_path, _buildtime, **kwargs):
         generated_kwargs.update(kwargs)
