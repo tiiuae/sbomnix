@@ -51,6 +51,8 @@ def getargs(args=None):
         "has no impact if the scan target is SBOM (ref: --sbom)."
     )
     parser.add_argument("--buildtime", help=helps, action="store_true")
+    helps = "Run Nix commands with --impure when resolving the target flake"
+    parser.add_argument("--impure", help=helps, action="store_true")
     helps = "Fail if the generated SBOM's CPE dictionary cannot be loaded"
     parser.add_argument(
         "--require-cpe-dictionary", help=helps, action="store_true", default=False
@@ -151,7 +153,11 @@ def _run(args):
         sbom_cdx_path = target_path
         sbom_csv_path = None
     else:
-        target = resolve_nix_target(args.TARGET, buildtime=args.buildtime)
+        target = resolve_nix_target(
+            args.TARGET,
+            buildtime=args.buildtime,
+            impure=args.impure,
+        )
         target_path = target.path
         sbom_artifact = generate_temp_sbom(
             target_path,

@@ -85,6 +85,11 @@ def test_require_cpe_dictionary_is_opt_in(getargs, target):
     assert getargs(["--require-cpe-dictionary", target]).require_cpe_dictionary is True
 
 
+def test_vulnxscan_impure_flag_is_opt_in():
+    assert vulnxscan_cli.getargs([".#pkg"]).impure is False
+    assert vulnxscan_cli.getargs(["--impure", ".#pkg"]).impure is True
+
+
 def test_sbomnix_cpe_matching_options_are_mutually_exclusive():
     with pytest.raises(SystemExit) as excinfo:
         sbomnix_main.getargs(
