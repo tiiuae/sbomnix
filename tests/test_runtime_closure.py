@@ -5,6 +5,7 @@
 
 """Focused tests for structured runtime closure parsing."""
 
+import json
 import subprocess
 
 import pytest
@@ -126,3 +127,43 @@ def test_load_runtime_closure_wraps_nix_command_failures(monkeypatch):
         sbomnix_runtime.load_runtime_closure(
             "/nix/store/11111111111111111111111111111111-target-1.0"
         )
+
+
+def test_runtime_closure_from_path_info_prefers_target_derivers():
+    output = "/nix/store/11111111111111111111111111111111-target-1.0"
+    recorded = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-target-1.0.drv"
+    evaluated = "/nix/store/cccccccccccccccccccccccccccccccc-target-1.0.drv"
+    other = "/nix/store/22222222222222222222222222222222-dep-1.0"
+    other_drv = "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dep-1.0.drv"
+
+    closure = runtime_closure_from_path_info(
+        {
+            output: {"deriver": recorded, "references": [other]},
+            other: {"deriver": other_drv, "references": []},
+        },
+        {output: evaluated},
+    )
+
+    assert closure.output_paths_by_drv == {
+        evaluated: {output},
+        other_drv: {other},
+    }
+
+
+def test_target_output_derivers_maps_outputs_to_the_lowest_derivation(monkeypatch):
+    shared = "/nix/store/11111111111111111111111111111111-source"
+    low = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-source.drv"
+    high = "/nix/store/cccccccccccccccccccccccccccccccc-source.drv"
+    stdout = json.dumps(
+        {
+            high: {"outputs": {"out": {"path": shared}}, "env": {}},
+            low: {"outputs": {"out": {"path": shared}}, "env": {}},
+        }
+    )
+    monkeypatch.setattr(
+        sbomnix_runtime,
+        "exec_cmd",
+        lambda _cmd: subprocess.CompletedProcess([], 0, stdout=stdout, stderr=""),
+    )
+
+    assert sbomnix_runtime.target_output_derivers(high) == {shared: low}

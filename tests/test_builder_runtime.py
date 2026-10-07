@@ -32,9 +32,16 @@ def _builder_double():
     builder.include_meta = True
     builder.require_cpe_dictionary = False
     builder.depth = None
+    builder.flakeref = None
+    builder.impure = False
     builder.df_deps = None
     builder._runtime_output_paths_by_load_path = None
     return builder
+
+
+@pytest.fixture(autouse=True)
+def _no_target_derivation_closure(monkeypatch):
+    monkeypatch.setattr(sbomnix_builder, "target_output_derivers", lambda _drv: {})
 
 
 def _runtime_closure(output_paths_by_drv, rows=None):
@@ -49,7 +56,7 @@ def test_runtime_path_info_dependencies_accepts_existing_derivers(monkeypatch):
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -130,7 +137,7 @@ def test_runtime_path_info_dependencies_groups_outputs_for_unloadable_derivers(
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -166,7 +173,7 @@ def test_runtime_path_info_dependencies_accepts_graph_only_references(monkeypatc
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -195,7 +202,7 @@ def test_runtime_path_info_dependencies_supports_targets_without_derivers(
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
 
     builder = _builder_double()
@@ -365,3 +372,44 @@ def test_join_meta_cpe_resolution_prefers_exact_nixpkgs_value(monkeypatch):
     assert builder.df_sbomdb[cols.CPE].iloc[0] == (
         "cpe:2.3:a:nixpkgs:target:1.0:*:*:*:*:*:*:*"
     )
+
+
+def test_runtime_path_info_dependencies_use_target_derivation_closure(monkeypatch):
+    seen = {}
+
+    def load(_path, derivers=None):
+        seen["derivers"] = derivers
+        return _runtime_closure({TARGET_DERIVER: {TARGET_PATH}})
+
+    monkeypatch.setattr(sbomnix_builder, "load_runtime_closure", load)
+    monkeypatch.setattr(
+        sbomnix_builder,
+        "target_output_derivers",
+        lambda drv: {TARGET_PATH: drv},
+    )
+    monkeypatch.setattr(
+        sbomnix_builder,
+        "is_loadable_deriver_path",
+        lambda path: path == TARGET_DERIVER,
+    )
+
+    _builder_double()._load_runtime_path_info_closure(TARGET_PATH)
+
+    assert seen["derivers"] == {TARGET_PATH: TARGET_DERIVER}
+
+
+def test_runtime_target_deriver_comes_from_flakeref_evaluation(monkeypatch):
+    def fail_find_deriver(_path):
+        raise AssertionError("the store's recorded deriver must not be used")
+
+    monkeypatch.setattr(sbomnix_builder, "find_deriver", fail_find_deriver)
+    monkeypatch.setattr(
+        sbomnix_builder,
+        "try_resolve_flakeref",
+        lambda ref, impure, derivation: TARGET_DERIVER if derivation else None,
+    )
+    builder = _builder_double()
+    builder.flakeref = ".#target"
+    builder.impure = False
+
+    assert builder._resolve_target_deriver(TARGET_PATH) == TARGET_DERIVER

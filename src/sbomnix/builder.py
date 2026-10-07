@@ -23,6 +23,7 @@ from common.errors import (
     MissingNixDeriverError,
     SbomnixError,
 )
+from common.flakeref import try_resolve_flakeref
 from common.log import LOG, is_debug_enabled
 from common.nix_utils import RE_NIX_STORE_PATH
 from sbomnix.closure import (
@@ -42,6 +43,7 @@ from sbomnix.exporters import build_cdx_document, build_spdx_document, write_jso
 from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.runtime import (
     load_runtime_closure,
+    target_output_derivers,
 )
 from sbomnix.vuln_enrichment import enrich_cdx_with_vulnerabilities
 
@@ -123,6 +125,8 @@ class SbomBuilder:
         self.nix_path = nix_path
         self.buildtime = buildtime
         self.include_meta = include_meta
+        self.flakeref = flakeref
+        self.impure = impure
         self.target_deriver = self._resolve_target_deriver(nix_path)
         self.target_component_ref = None
         self._recursive_buildtime_derivations = None
@@ -134,9 +138,7 @@ class SbomBuilder:
         self.df_sbomdb = None
         self.df_sbomdb_outputs_exploded = None
         self.dependency_index = None
-        self.flakeref = flakeref
         self.original_ref = original_ref
-        self.impure = impure
         self.meta = None
         # "disabled" records explicit opt-out; "none" means auto-selection
         # found no source.
@@ -176,6 +178,17 @@ class SbomBuilder:
                 drv_path,
             )
             return drv_path
+        if self.flakeref:
+            drv_path = try_resolve_flakeref(
+                self.flakeref, impure=self.impure, derivation=True
+            )
+            if drv_path:
+                LOG.verbose(
+                    "Resolved runtime target deriver from flakeref in %.3fs: %s",
+                    time.perf_counter() - started,
+                    drv_path,
+                )
+                return drv_path
         try:
             drv_path = find_deriver(nix_path)
             LOG.verbose(
@@ -249,7 +262,12 @@ class SbomBuilder:
         """Load runtime dependencies from structured path-info JSON."""
         started = time.perf_counter()
         LOG.verbose("Loading runtime closure for '%s'", nix_path)
-        runtime_closure = load_runtime_closure(nix_path)
+        derivers = (
+            target_output_derivers(self.target_deriver)
+            if is_loadable_deriver_path(self.target_deriver)
+            else None
+        )
+        runtime_closure = load_runtime_closure(nix_path, derivers)
         LOG.verbose(
             "Loaded raw runtime closure with %d dependency edge(s) and %d deriver(s) in %.3fs",
             len(runtime_closure.df_deps),

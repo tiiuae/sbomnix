@@ -91,10 +91,11 @@ def test_metadata_policy_reaches_both_exporters(
     monkeypatch.setattr(builder_module, "require_deriver", lambda _path: DRV_PATH)
     monkeypatch.setattr(builder_module, "find_deriver", lambda _path: DRV_PATH)
     monkeypatch.setattr(builder_module, "is_loadable_deriver_path", lambda _path: True)
+    monkeypatch.setattr(builder_module, "target_output_derivers", lambda _drv: {})
     monkeypatch.setattr(
         builder_module,
         "load_runtime_closure",
-        lambda _path: RuntimeClosure(
+        lambda _path, _derivers=None: RuntimeClosure(
             df_deps=dependency_rows_to_dataframe([]),
             output_paths_by_drv={DRV_PATH: {OUT_PATH}},
         ),

@@ -143,7 +143,7 @@ def _load_derivation_infos(paths, store_path_hint=None, ignore_missing=False):
 def _query_paths_to_derivations(query_paths, drv_infos):
     output_to_drv_path = {}
     for drv_path, drv_info in drv_infos.items():
-        for output_path in _derivation_output_paths(drv_info):
+        for output_path in derivation_output_paths(drv_info):
             output_to_drv_path.setdefault(output_path, drv_path)
 
     query_to_drv_path = {}
@@ -157,7 +157,8 @@ def _query_paths_to_derivations(query_paths, drv_infos):
     return query_to_drv_path
 
 
-def _derivation_output_paths(drv_info):
+def derivation_output_paths(drv_info):
+    """Return the output paths a derivation JSON record declares."""
     outputs = drv_info.get("outputs", {})
     env_vars = drv_info.get("env", {})
     if not isinstance(outputs, dict):
