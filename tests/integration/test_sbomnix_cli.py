@@ -5,6 +5,10 @@
 
 """CLI integration tests for sbomnix."""
 
+import json
+import shutil
+import subprocess
+
 import pandas as pd
 import pytest
 
@@ -41,6 +45,55 @@ def test_sbomnix_type_runtime(_run_python_script, test_nix_result, test_work_dir
     spdx_schema_path = RESOURCES_DIR / "spdx_bom-2.3.schema.json"
     assert spdx_schema_path.exists()
     validate_json(out_path_spdx.as_posix(), spdx_schema_path)
+
+
+def _nix(*args):
+    cmd = ["nix", "--extra-experimental-features", "nix-command flakes", *args]
+    return subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True)
+
+
+def _shared_output_flake(work_dir):
+    """Write a flake exposing the two variants of test-shared-output.nix."""
+    system = _nix("eval", "--impure", "--raw", "--expr", "builtins.currentSystem")
+    flake_dir = work_dir / "shared-output-flake"
+    flake_dir.mkdir()
+    shutil.copy(RESOURCES_DIR / "test-shared-output.nix", flake_dir)
+    (flake_dir / "flake.nix").write_text(
+        "{ outputs = { self }: { packages."
+        f'"{system.stdout}"'
+        ' = import ./test-shared-output.nix { system = "'
+        f"{system.stdout}"
+        '"; }; }; }\n',
+        encoding="utf-8",
+    )
+    return flake_dir.as_posix()
+
+
+def _drv_closure(drv_path):
+    requisites = _nix("path-info", "--recursive", drv_path).stdout.split()
+    return {path for path in requisites if path.endswith(".drv")}
+
+
+def test_sbomnix_runtime_derivations_follow_the_flakeref(
+    _run_python_script, test_work_dir
+):
+    """Test runtime SBOMs name the target's own derivations.
+
+    Both variants share one output path, so the store records only one of
+    them as its deriver. Each SBOM must still name its own derivations,
+    regardless of which variant was realised first.
+    """
+    flake = _shared_output_flake(test_work_dir)
+    _nix("build", "--no-link", f"{flake}#a", f"{flake}#b")
+    for name in ("a", "b"):
+        drv_path = _nix("eval", "--raw", f"{flake}#{name}.drvPath").stdout
+        out_path_cdx = test_work_dir / f"sbom_{name}_cdx.json"
+        _run_python_script([SBOMNIX, f"{flake}#{name}", "--cdx", out_path_cdx])
+
+        sbom = json.loads(out_path_cdx.read_text(encoding="utf-8"))
+        assert sbom["metadata"]["component"]["bom-ref"] == drv_path
+        bom_refs = {component["bom-ref"] for component in sbom["components"]}
+        assert bom_refs == _drv_closure(drv_path) - {drv_path}
 
 
 @pytest.mark.slow
