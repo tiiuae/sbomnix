@@ -92,6 +92,7 @@ def test_sbomnix_main_enriches_cdx_explicitly_when_include_vulns_is_set(
             "init",
             {
                 "nix_path": "/nix/store/target",
+                "target_deriver": None,
                 "buildtime": False,
                 "depth": None,
                 "flakeref": ".#target",
@@ -157,6 +158,7 @@ def test_sbomnix_main_logs_generation_before_initializing_builder(monkeypatch):
             "init",
             {
                 "nix_path": "/nix/store/target",
+                "target_deriver": None,
                 "buildtime": False,
                 "depth": None,
                 "flakeref": ".#target",

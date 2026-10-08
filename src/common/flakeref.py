@@ -8,16 +8,22 @@ import logging
 import pathlib
 import re
 import time
+from dataclasses import dataclass
 
 from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
 from common.log import LOG, LOG_VERBOSE
-from common.nix_utils import parse_nix_derivation_show
+from common.nix_utils import (
+    NIX_BUILD_JSON,
+    load_nix_json,
+    parse_nix_derivation_show,
+)
 from common.proc import ExecCmdFn, exec_cmd, nix_cmd
 
 NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX = ".config.system.build.toplevel"
 _NIXOS_CONFIGURATION_PREFIX_RE = re.compile(
     r"^(?P<flake>.+)#nixosConfigurations\.(?P<rest>.+)$"
 )
+
 _UNQUOTED_ATTR_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_'-]+$")
 _NIX_STRING_ESCAPES = {
     '"': '"',
@@ -28,9 +34,16 @@ _NIX_STRING_ESCAPES = {
 }
 
 
-def try_resolve_flakeref(  # noqa: PLR0913
+@dataclass(frozen=True)
+class RealisedFlakeRef:
+    """A force-realised runtime flakeref target."""
+
+    path: str
+    drv_path: str | None = None
+
+
+def try_resolve_flakeref(
     flakeref: str,
-    force_realise: bool = False,
     impure: bool = False,
     derivation: bool = False,
     *,
@@ -38,29 +51,75 @@ def try_resolve_flakeref(  # noqa: PLR0913
     log: logging.Logger | None = None,
 ) -> str | None:
     """
-    Resolve flakeref to out-path, force-realising the output if
-    ``force_realise`` is True.
+    Resolve flakeref to out-path, or to its derivation path if ``derivation``
+    is True, without realising it.
     """
     exec_cmd_fn = exec_cmd if exec_cmd_fn is None else exec_cmd_fn
     log = LOG if log is None else log
 
     looks_like_flakeref = _looks_like_flakeref(flakeref)
-    if derivation and not force_realise and looks_like_flakeref:
+    if derivation and looks_like_flakeref:
         return _resolve_flakeref_derivation(
             flakeref,
             impure=impure,
             exec_cmd_fn=exec_cmd_fn,
             log=log,
         )
+    return _eval_flakeref_path(
+        flakeref,
+        looks_like_flakeref=looks_like_flakeref,
+        impure=impure,
+        exec_cmd_fn=exec_cmd_fn,
+        log=log,
+    )
 
-    if force_realise and looks_like_flakeref:
-        return _force_realise_flakeref(
+
+def try_realise_flakeref(
+    flakeref: str,
+    impure: bool = False,
+    *,
+    exec_cmd_fn: ExecCmdFn | None = None,
+    log: logging.Logger | None = None,
+) -> RealisedFlakeRef | None:
+    """
+    Resolve and force-realise flakeref, returning its out-path and, when
+    it has one, the derivation it was built from.
+    """
+    exec_cmd_fn = exec_cmd if exec_cmd_fn is None else exec_cmd_fn
+    log = LOG if log is None else log
+
+    if _looks_like_flakeref(flakeref):
+        log.info("Evaluating flakeref '%s'", flakeref)
+        return _build_flakeref(
             flakeref,
             impure=impure,
             exec_cmd_fn=exec_cmd_fn,
             log=log,
         )
 
+    nixpath = _eval_flakeref_path(
+        flakeref,
+        looks_like_flakeref=False,
+        impure=impure,
+        exec_cmd_fn=exec_cmd_fn,
+        log=log,
+    )
+    if nixpath is None:
+        return None
+    log.info("Realising flakeref '%s'", flakeref)
+    cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
+    started = time.perf_counter()
+    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
+    elapsed = time.perf_counter() - started
+    if ret is None or ret.returncode != 0:
+        log.debug("nix build failed for '%s' after %.3fs", flakeref, elapsed)
+        raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
+    log.log(LOG_VERBOSE, "Realised flakeref '%s' in %.3fs", flakeref, elapsed)
+    return RealisedFlakeRef(nixpath)
+
+
+def _eval_flakeref_path(flakeref, *, looks_like_flakeref, impure, exec_cmd_fn, log):
+    """Return the out-path ``nix eval`` resolves flakeref to."""
     if looks_like_flakeref:
         log.info("Evaluating flakeref '%s'", flakeref)
     else:
@@ -78,23 +137,33 @@ def try_resolve_flakeref(  # noqa: PLR0913
     nixpath = ret.stdout.strip()
     log.log(LOG_VERBOSE, "Evaluated '%s' in %.3fs", flakeref, elapsed)
     log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
-    if not force_realise:
-        return nixpath
-    log.info("Realising flakeref '%s'", flakeref)
-    cmd = nix_cmd("build", "--no-link", flakeref, impure=impure)
-    started = time.perf_counter()
-    ret = exec_cmd_fn(cmd, raise_on_error=False, return_error=True, log_error=False)
-    elapsed = time.perf_counter() - started
-    if ret is None or ret.returncode != 0:
-        log.debug("nix build failed for '%s' after %.3fs", flakeref, elapsed)
-        raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
-    log.log(LOG_VERBOSE, "Realised flakeref '%s' in %.3fs", flakeref, elapsed)
     return nixpath
 
 
-def _first_output_path(stdout: str) -> str:
-    """Return the first output path printed by ``nix build --print-out-paths``."""
-    return next((line.strip() for line in stdout.splitlines() if line.strip()), "")
+def _first_built_target(stdout: str) -> RealisedFlakeRef | None:
+    """Return the first target from ``nix build --json``."""
+    built = load_nix_json(stdout, NIX_BUILD_JSON)
+    if not isinstance(built, list) or not built:
+        return None
+    return _built_target(built[0])
+
+
+def _built_target(entry) -> RealisedFlakeRef | None:
+    """Return one ``nix build --json`` entry as a realised target.
+
+    A derivation is ``{"drvPath": ..., "outputs": {name: path}}``.
+    A plain store path is a bare string.
+    """
+    if isinstance(entry, str):
+        return RealisedFlakeRef(entry) if entry else None
+    if not isinstance(entry, dict):
+        return None
+    outputs = entry.get("outputs")
+    drv_path = entry.get("drvPath")
+    if not isinstance(outputs, dict) or not isinstance(drv_path, str):
+        return None
+    paths = [path for _name, path in sorted(outputs.items()) if isinstance(path, str)]
+    return RealisedFlakeRef(paths[0], drv_path) if paths else None
 
 
 def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
@@ -128,24 +197,13 @@ def _resolve_flakeref_derivation(flakeref, *, impure, exec_cmd_fn, log):
     return drv_path
 
 
-def _force_realise_flakeref(flakeref, *, impure, exec_cmd_fn, log):
-    """Return the realized output path for a runtime flakeref target."""
-    log.info("Evaluating flakeref '%s'", flakeref)
-    return _build_flakeref_path(
-        flakeref,
-        impure=impure,
-        exec_cmd_fn=exec_cmd_fn,
-        log=log,
-    )
-
-
-def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
-    """Build a flakeref target and return the first printed output path."""
+def _build_flakeref(flakeref, *, impure, exec_cmd_fn, log):
+    """Build a flakeref target and return the first output and derivation."""
     log.info("Realising flakeref '%s'", flakeref)
     cmd = nix_cmd(
         "build",
         "--no-link",
-        "--print-out-paths",
+        "--json",
         flakeref,
         impure=impure,
     )
@@ -155,8 +213,8 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
     if ret is None or ret.returncode != 0:
         log.debug("nix build failed for flakeref '%s' after %.3fs", flakeref, elapsed)
         raise FlakeRefRealisationError(flakeref, ret.stderr if ret else "")
-    nixpath = _first_output_path(ret.stdout)
-    if not nixpath:
+    target = _first_built_target(ret.stdout)
+    if target is None:
         raise FlakeRefRealisationError(
             flakeref,
             "nix build returned no output path",
@@ -164,11 +222,16 @@ def _build_flakeref_path(flakeref, *, impure, exec_cmd_fn, log):
     log.log(
         LOG_VERBOSE,
         "Resolved flakeref to built path '%s' in %.3fs",
-        nixpath,
+        target.path,
         elapsed,
     )
-    log.debug("flakeref='%s' maps to path='%s'", flakeref, nixpath)
-    return nixpath
+    log.debug(
+        "flakeref='%s' maps to path='%s', derivation='%s'",
+        flakeref,
+        target.path,
+        target.drv_path,
+    )
+    return target
 
 
 def parse_nixos_configuration_ref(

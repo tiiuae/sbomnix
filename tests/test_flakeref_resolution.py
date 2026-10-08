@@ -12,10 +12,16 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from common.errors import FlakeRefRealisationError, FlakeRefResolutionError
+from common.errors import (
+    FlakeRefRealisationError,
+    FlakeRefResolutionError,
+    InvalidNixJsonError,
+)
 from common.flakeref import (
+    RealisedFlakeRef,
     parse_nixos_configuration_ref,
     quote_nix_attr_segment,
+    try_realise_flakeref,
     try_resolve_flakeref,
 )
 from common.log import LOG_VERBOSE
@@ -74,28 +80,33 @@ def test_nixos_configuration_parser_rejects_unescaped_interpolation():
     assert parse_nixos_configuration_ref('/flake#nixosConfigurations."${foo}"') is None
 
 
-def test_try_resolve_flakeref_uses_argv_lists():
+def test_try_realise_flakeref_uses_argv_lists():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
-        return SimpleNamespace(stdout="/nix/store/resolved\n", stderr="", returncode=0)
+        return SimpleNamespace(
+            stdout='[{"drvPath":"/nix/store/resolved.drv","outputs":{"out":"/nix/store/resolved"}}]',
+            stderr="",
+            returncode=0,
+        )
 
-    resolved = try_resolve_flakeref(
+    resolved = try_realise_flakeref(
         "/tmp/my flake#pkg",
-        force_realise=True,
         impure=True,
         exec_cmd_fn=fake_exec_cmd,
     )
 
-    assert resolved == "/nix/store/resolved"
+    assert resolved == RealisedFlakeRef(
+        "/nix/store/resolved", "/nix/store/resolved.drv"
+    )
     assert calls == [
         (
             [
                 "nix",
                 "build",
                 "--no-link",
-                "--print-out-paths",
+                "--json",
                 "/tmp/my flake#pkg",
                 "--extra-experimental-features",
                 "flakes",
@@ -108,32 +119,33 @@ def test_try_resolve_flakeref_uses_argv_lists():
     ]
 
 
-def test_try_resolve_flakeref_realises_with_build_print_out_paths():
+def test_try_realise_flakeref_builds_with_json():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
         calls.append((cmd, kwargs))
         assert cmd[1] == "build"
         return SimpleNamespace(
-            stdout="/nix/store/00000000000000000000000000000000-resolved\n",
+            stdout='["/nix/store/00000000000000000000000000000000-resolved"]',
             stderr="",
             returncode=0,
         )
 
-    resolved = try_resolve_flakeref(
+    resolved = try_realise_flakeref(
         ".#hello",
-        force_realise=True,
         exec_cmd_fn=fake_exec_cmd,
     )
 
-    assert resolved == "/nix/store/00000000000000000000000000000000-resolved"
+    assert resolved == RealisedFlakeRef(
+        "/nix/store/00000000000000000000000000000000-resolved"
+    )
     assert calls == [
         (
             [
                 "nix",
                 "build",
                 "--no-link",
-                "--print-out-paths",
+                "--json",
                 ".#hello",
                 "--extra-experimental-features",
                 "flakes",
@@ -145,7 +157,7 @@ def test_try_resolve_flakeref_realises_with_build_print_out_paths():
     ]
 
 
-def test_try_resolve_flakeref_rejects_invalid_explicit_output_selector():
+def test_try_realise_flakeref_rejects_invalid_explicit_output_selector():
     calls = []
 
     def fake_exec_cmd(cmd, **kwargs):
@@ -162,9 +174,8 @@ def test_try_resolve_flakeref_rejects_invalid_explicit_output_selector():
         FlakeRefRealisationError,
         match="derivation does not have output 'missing'",
     ):
-        try_resolve_flakeref(
+        try_realise_flakeref(
             "nixpkgs#package^missing",
-            force_realise=True,
             exec_cmd_fn=fake_exec_cmd,
         )
 
@@ -212,24 +223,23 @@ def test_try_resolve_flakeref_can_return_derivation_path():
     ]
 
 
-def test_try_resolve_flakeref_logs_flake_progress_at_info():
+def test_try_realise_flakeref_logs_flake_progress_at_info():
     logger = CapturingLogger()
 
     def fake_exec_cmd(_cmd, **_kwargs):
         return SimpleNamespace(
-            stdout="/nix/store/resolved\n",
+            stdout='["/nix/store/resolved"]',
             stderr="",
             returncode=0,
         )
 
-    resolved = try_resolve_flakeref(
+    resolved = try_realise_flakeref(
         ".#hello",
-        force_realise=True,
         exec_cmd_fn=fake_exec_cmd,
         log=logger,
     )
 
-    assert resolved == "/nix/store/resolved"
+    assert resolved == RealisedFlakeRef("/nix/store/resolved")
     assert (
         "info",
         "Evaluating flakeref '%s'",
@@ -259,28 +269,26 @@ def test_try_resolve_flakeref_keeps_plain_path_probe_verbose():
     assert not [record for record in logger.records if record[0] == "info"]
 
 
-def test_try_resolve_flakeref_raises_on_failed_force_realise():
+def test_try_realise_flakeref_raises_on_failed_build():
     def fake_exec_cmd(cmd, **_kwargs):
         assert cmd[1] == "build"
         return SimpleNamespace(stdout="", stderr="build failed", returncode=1)
 
     with pytest.raises(FlakeRefRealisationError, match="build failed"):
-        try_resolve_flakeref(
+        try_realise_flakeref(
             "/tmp/my flake#pkg",
-            force_realise=True,
             exec_cmd_fn=fake_exec_cmd,
         )
 
 
-def test_try_resolve_flakeref_raises_when_force_realise_prints_no_path():
+def test_try_realise_flakeref_raises_when_build_returns_no_path():
     def fake_exec_cmd(cmd, **_kwargs):
         assert cmd[1] == "build"
-        return SimpleNamespace(stdout="\n", stderr="", returncode=0)
+        return SimpleNamespace(stdout="[]", stderr="", returncode=0)
 
     with pytest.raises(FlakeRefRealisationError, match="returned no output path"):
-        try_resolve_flakeref(
+        try_realise_flakeref(
             "/tmp/my flake#pkg",
-            force_realise=True,
             exec_cmd_fn=fake_exec_cmd,
         )
 
@@ -394,3 +402,78 @@ def test_flake_ref_resolution_error_preserves_stderr_verbatim():
 
     assert error.stderr == "stderr details\n"
     assert str(error) == "Failed evaluating flakeref '.#pkg': stderr details"
+
+
+def _built(stdout):
+    def fake_exec_cmd(cmd, **_kwargs):
+        assert cmd[1:4] == ["build", "--no-link", "--json"]
+        return SimpleNamespace(stdout=stdout, stderr="", returncode=0)
+
+    return fake_exec_cmd
+
+
+def test_try_realise_flakeref_returns_the_built_derivation():
+    resolved = try_realise_flakeref(
+        ".#hello",
+        exec_cmd_fn=_built(
+            '[{"drvPath":"/nix/store/hello.drv","outputs":{"out":"/nix/store/hello"}}]'
+        ),
+    )
+
+    assert resolved == RealisedFlakeRef("/nix/store/hello", "/nix/store/hello.drv")
+
+
+def test_try_realise_flakeref_accepts_plain_store_paths_without_deriver():
+    # e.g. builtins.path: nix build --json prints a bare store path
+    resolved = try_realise_flakeref(
+        ".#plain", exec_cmd_fn=_built('["/nix/store/plain"]')
+    )
+
+    assert resolved == RealisedFlakeRef("/nix/store/plain", None)
+
+
+def test_try_realise_flakeref_takes_the_first_output_by_name():
+    # nix build --print-out-paths prints outputs in name order
+    resolved = try_realise_flakeref(
+        ".#multi",
+        exec_cmd_fn=_built(
+            '[{"drvPath":"/nix/store/multi.drv",'
+            '"outputs":{"out":"/nix/store/multi","bin":"/nix/store/multi-bin"}}]'
+        ),
+    )
+
+    assert resolved == RealisedFlakeRef("/nix/store/multi-bin", "/nix/store/multi.drv")
+
+
+def test_try_realise_flakeref_rejects_unparsable_build_output():
+    with pytest.raises(InvalidNixJsonError, match="nix build --json"):
+        try_realise_flakeref(".#hello", exec_cmd_fn=_built("not json"))
+
+
+def test_try_realise_flakeref_returns_none_for_non_flake_path():
+    calls = []
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        calls.append(cmd[1])
+        return SimpleNamespace(stdout="", stderr="dummy eval failure", returncode=1)
+
+    resolved = try_realise_flakeref(
+        "/nix/store/not-a-flake-output",
+        exec_cmd_fn=fake_exec_cmd,
+    )
+
+    assert resolved is None
+    assert calls == ["eval"]
+
+
+def test_try_realise_flakeref_builds_evaluated_non_flake_path_without_derivation():
+    calls = []
+
+    def fake_exec_cmd(cmd, **_kwargs):
+        calls.append(cmd[1])
+        return SimpleNamespace(stdout="/nix/store/resolved\n", stderr="", returncode=0)
+
+    resolved = try_realise_flakeref("expression", exec_cmd_fn=fake_exec_cmd)
+
+    assert resolved == RealisedFlakeRef("/nix/store/resolved", None)
+    assert calls == ["eval", "build"]

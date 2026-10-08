@@ -32,8 +32,6 @@ def _builder_double():
     builder.include_meta = True
     builder.require_cpe_dictionary = False
     builder.depth = None
-    builder.flakeref = None
-    builder.impure = False
     builder.df_deps = None
     builder._runtime_output_paths_by_load_path = None
     return builder
@@ -116,7 +114,7 @@ def test_runtime_deriver_lookup_preserves_typed_errors(monkeypatch):
     builder = _builder_double()
 
     with pytest.raises(SbomnixError, match="schema drift"):
-        builder._resolve_target_deriver(TARGET_PATH)
+        builder._resolve_target_deriver(TARGET_PATH, None)
 
 
 @pytest.mark.parametrize(
@@ -374,42 +372,13 @@ def test_join_meta_cpe_resolution_prefers_exact_nixpkgs_value(monkeypatch):
     )
 
 
-def test_runtime_path_info_dependencies_use_target_derivation_closure(monkeypatch):
-    seen = {}
-
-    def load(_path, derivers=None):
-        seen["derivers"] = derivers
-        return _runtime_closure({TARGET_DERIVER: {TARGET_PATH}})
-
-    monkeypatch.setattr(sbomnix_builder, "load_runtime_closure", load)
-    monkeypatch.setattr(
-        sbomnix_builder,
-        "target_output_derivers",
-        lambda drv: {TARGET_PATH: drv},
-    )
-    monkeypatch.setattr(
-        sbomnix_builder,
-        "is_loadable_deriver_path",
-        lambda path: path == TARGET_DERIVER,
-    )
-
-    _builder_double()._load_runtime_path_info_closure(TARGET_PATH)
-
-    assert seen["derivers"] == {TARGET_PATH: TARGET_DERIVER}
-
-
-def test_runtime_target_deriver_comes_from_flakeref_evaluation(monkeypatch):
+def test_runtime_target_deriver_comes_from_the_built_target(monkeypatch):
     def fail_find_deriver(_path):
         raise AssertionError("the store's recorded deriver must not be used")
 
     monkeypatch.setattr(sbomnix_builder, "find_deriver", fail_find_deriver)
-    monkeypatch.setattr(
-        sbomnix_builder,
-        "try_resolve_flakeref",
-        lambda ref, impure, derivation: TARGET_DERIVER if derivation else None,
-    )
-    builder = _builder_double()
-    builder.flakeref = ".#target"
-    builder.impure = False
 
-    assert builder._resolve_target_deriver(TARGET_PATH) == TARGET_DERIVER
+    assert (
+        _builder_double()._resolve_target_deriver(TARGET_PATH, TARGET_DERIVER)
+        == TARGET_DERIVER
+    )

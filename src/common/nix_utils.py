@@ -12,6 +12,7 @@ from common.errors import InvalidNixJsonError
 
 RE_NIX_STORE_PATH_BASENAME = re.compile(r"^[0-9a-z]{32}-.+")
 RE_NIX_STORE_PATH = re.compile(r"(?P<store_path>/(?:[^/\s:]+/)+[0-9a-z]{32}-[^/\s:]+)")
+NIX_BUILD_JSON = "nix build --json"
 NIX_DERIVATION_SHOW_JSON = "nix derivation show"
 NIX_PATH_INFO_JSON = "nix path-info --json --json-format 1"
 

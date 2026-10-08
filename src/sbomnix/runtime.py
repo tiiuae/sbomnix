@@ -19,14 +19,12 @@ from common.nix_utils import (
     nix_path_info_deriver,
     nix_path_info_references,
     normalize_nix_path_info,
-    parse_nix_derivation_show,
 )
 from common.proc import exec_cmd, nix_cmd
 from sbomnix.closure import (
     dependency_rows_to_dataframe,
     store_path_label,
 )
-from sbomnix.derivation import derivation_output_paths
 
 
 @dataclass(frozen=True)
@@ -58,29 +56,6 @@ def load_runtime_closure(path, derivers=None):
     return runtime_closure_from_path_info(
         load_nix_json(ret.stdout, NIX_PATH_INFO_JSON), derivers
     )
-
-
-def target_output_derivers(drv_path):
-    """Return {output path: derivation} for the build closure of ``drv_path``.
-
-    When several derivations in the closure produce the same output,
-    the lowest store path wins, so the choice is stable.
-    """
-    cmd = nix_cmd("derivation", "show", "--recursive", drv_path)
-    try:
-        ret = exec_cmd(cmd)
-    except subprocess.CalledProcessError as error:
-        raise NixCommandError(
-            cmd,
-            stderr=error.stderr,
-            stdout=error.stdout,
-        ) from None
-    derivers = {}
-    drv_infos = parse_nix_derivation_show(ret.stdout, store_path_hint=drv_path)
-    for drv, drv_info in sorted(drv_infos.items()):
-        for output_path in derivation_output_paths(drv_info):
-            derivers.setdefault(output_path, drv)
-    return derivers
 
 
 def runtime_closure_from_path_info(path_info, derivers=None):

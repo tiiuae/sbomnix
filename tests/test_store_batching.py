@@ -290,3 +290,22 @@ def test_load_recursive_rejects_empty_derivation_metadata(monkeypatch):
         sbomnix_derivation.load_recursive(
             "/nix/store/11111111111111111111111111111111-target-1.0.drv"
         )
+
+
+def test_target_output_derivers_maps_outputs_to_the_lowest_derivation(monkeypatch):
+    shared = "/nix/store/11111111111111111111111111111111-source"
+    low = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-source.drv"
+    high = "/nix/store/cccccccccccccccccccccccccccccccc-source.drv"
+    stdout = json.dumps(
+        {
+            high: {"outputs": {"out": {"path": shared}}, "env": {}},
+            low: {"outputs": {"out": {"path": shared}}, "env": {}},
+        }
+    )
+    monkeypatch.setattr(
+        sbomnix_derivation,
+        "exec_cmd",
+        lambda _cmd: SimpleNamespace(stdout=stdout),
+    )
+
+    assert sbomnix_derivation.target_output_derivers(high) == {shared: low}
