@@ -17,6 +17,7 @@ from common.flakeref import (
     NIXOS_CONFIGURATION_TOPLEVEL_SUFFIX,
     parse_nixos_configuration_ref,
     quote_nix_attr_segment,
+    try_realise_flakeref,
     try_resolve_flakeref,
 )
 from common.log import LOG
@@ -31,6 +32,7 @@ class ResolvedNixTarget:
     path: str
     flakeref: str | None = None
     original_ref: str | None = None
+    drv_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -51,18 +53,27 @@ def resolve_nix_target(nixref, buildtime=False, impure=False):
     """Resolve a CLI target to a nix path, preserving flakeref context."""
     runtime = not buildtime
     resolved_ref = _normalize_nixos_configuration_ref(nixref)
-    target_path = try_resolve_flakeref(
-        resolved_ref,
-        force_realise=runtime,
-        impure=impure,
-        derivation=buildtime,
-    )
-    if target_path:
-        return ResolvedNixTarget(
-            path=target_path,
-            flakeref=resolved_ref,
-            original_ref=nixref,
+    if runtime:
+        realised = try_realise_flakeref(resolved_ref, impure=impure)
+        if realised:
+            return ResolvedNixTarget(
+                path=realised.path,
+                flakeref=resolved_ref,
+                original_ref=nixref,
+                drv_path=realised.drv_path,
+            )
+    else:
+        target_path = try_resolve_flakeref(
+            resolved_ref,
+            impure=impure,
+            derivation=True,
         )
+        if target_path:
+            return ResolvedNixTarget(
+                path=target_path,
+                flakeref=resolved_ref,
+                original_ref=nixref,
+            )
 
     target_path = pathlib.Path(nixref).resolve().as_posix()
     if runtime and target_path.endswith(".drv"):

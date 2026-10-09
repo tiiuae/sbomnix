@@ -141,11 +141,7 @@ def _load_derivation_infos(paths, store_path_hint=None, ignore_missing=False):
 
 
 def _query_paths_to_derivations(query_paths, drv_infos):
-    output_to_drv_path = {}
-    for drv_path, drv_info in drv_infos.items():
-        for output_path in _derivation_output_paths(drv_info):
-            output_to_drv_path.setdefault(output_path, drv_path)
-
+    output_to_drv_path = output_derivations(drv_infos)
     query_to_drv_path = {}
     for query_path in query_paths:
         if query_path in drv_infos:
@@ -155,6 +151,19 @@ def _query_paths_to_derivations(query_paths, drv_infos):
         if drv_path:
             query_to_drv_path[query_path] = drv_path
     return query_to_drv_path
+
+
+def output_derivations(drv_infos):
+    """Return {output path: derivation} for parsed derivation JSON records.
+
+    When several derivations produce the same output, the lowest store
+    path wins, so the choice is stable.
+    """
+    output_to_drv_path = {}
+    for drv_path, drv_info in sorted(drv_infos.items()):
+        for output_path in _derivation_output_paths(drv_info):
+            output_to_drv_path.setdefault(output_path, drv_path)
+    return output_to_drv_path
 
 
 def _derivation_output_paths(drv_info):
@@ -181,6 +190,16 @@ def _derivation_output_paths(drv_info):
     for output_name in str(env_vars.get("outputs", "")).split():
         add_output_path(env_vars.get(output_name))
     return output_paths
+
+
+def target_output_derivers(drv_path):
+    """Return {output path: derivation} for the build closure of ``drv_path``."""
+    cmd = nix_cmd("derivation", "show", "--recursive", drv_path)
+    drv_infos = parse_nix_derivation_show(
+        _exec_required_nix_command(cmd).stdout,
+        store_path_hint=drv_path,
+    )
+    return output_derivations(drv_infos)
 
 
 def load_recursive(path, *, include_meta=True):

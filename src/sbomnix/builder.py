@@ -36,7 +36,7 @@ from sbomnix.components import (
     runtime_derivations_to_dataframe,
 )
 from sbomnix.dependency_index import build_dependency_index
-from sbomnix.derivation import load_recursive
+from sbomnix.derivation import load_recursive, target_output_derivers
 from sbomnix.derivers import find_deriver, is_loadable_deriver_path, require_deriver
 from sbomnix.exporters import build_cdx_document, build_spdx_document, write_json
 from sbomnix.meta import Meta, NixpkgsMetaSource
@@ -107,6 +107,7 @@ class SbomBuilder:
         include_vulns=False,
         include_cpe=True,
         require_cpe_dictionary=False,
+        target_deriver=None,
     ):
         # self.uid specifies the attribute that identifies SBOM components.
         # See the column names in
@@ -123,7 +124,7 @@ class SbomBuilder:
         self.nix_path = nix_path
         self.buildtime = buildtime
         self.include_meta = include_meta
-        self.target_deriver = self._resolve_target_deriver(nix_path)
+        self.target_deriver = self._resolve_target_deriver(nix_path, target_deriver)
         self.target_component_ref = None
         self._recursive_buildtime_derivations = None
         self._runtime_output_paths_by_load_path = None
@@ -165,7 +166,7 @@ class SbomBuilder:
             time.perf_counter() - started,
         )
 
-    def _resolve_target_deriver(self, nix_path):
+    def _resolve_target_deriver(self, nix_path, target_deriver):
         started = time.perf_counter()
         LOG.verbose("Resolving target deriver for '%s'", nix_path)
         if self.buildtime:
@@ -176,6 +177,9 @@ class SbomBuilder:
                 drv_path,
             )
             return drv_path
+        if target_deriver:
+            LOG.verbose("Using the target's derivation: %s", target_deriver)
+            return target_deriver
         try:
             drv_path = find_deriver(nix_path)
             LOG.verbose(
@@ -249,7 +253,15 @@ class SbomBuilder:
         """Load runtime dependencies from structured path-info JSON."""
         started = time.perf_counter()
         LOG.verbose("Loading runtime closure for '%s'", nix_path)
-        runtime_closure = load_runtime_closure(nix_path)
+        derivers = None
+        if is_loadable_deriver_path(self.target_deriver):
+            derivers = target_output_derivers(self.target_deriver)
+            LOG.verbose(
+                "Loaded %d target build output deriver(s) in %.3fs",
+                len(derivers),
+                time.perf_counter() - started,
+            )
+        runtime_closure = load_runtime_closure(nix_path, derivers)
         LOG.verbose(
             "Loaded raw runtime closure with %d dependency edge(s) and %d deriver(s) in %.3fs",
             len(runtime_closure.df_deps),

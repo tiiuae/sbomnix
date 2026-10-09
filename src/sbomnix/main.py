@@ -107,6 +107,7 @@ def _run(args):
     build_started = time.perf_counter()
     sbom = SbomBuilder(
         nix_path=target.path,
+        target_deriver=target.drv_path,
         buildtime=args.buildtime,
         depth=args.depth,
         flakeref=target.flakeref,

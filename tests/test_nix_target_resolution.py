@@ -16,14 +16,17 @@ from common.errors import (
     InvalidNixArtifactError,
     MissingNixOutPathError,
 )
+from common.flakeref import RealisedFlakeRef
 from sbomnix import cli_utils as sbomnix_cli_utils
 
 
 def test_resolve_nix_target_preserves_flakeref_on_success(monkeypatch):
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
-        lambda *_args, **_kwargs: "/nix/store/resolved",
+        "try_realise_flakeref",
+        lambda *_args, **_kwargs: RealisedFlakeRef(
+            "/nix/store/resolved", "/nix/store/resolved.drv"
+        ),
     )
 
     resolved = sbomnix_cli_utils.resolve_nix_target(".#hello", buildtime=False)
@@ -32,6 +35,7 @@ def test_resolve_nix_target_preserves_flakeref_on_success(monkeypatch):
         path="/nix/store/resolved",
         flakeref=".#hello",
         original_ref=".#hello",
+        drv_path="/nix/store/resolved.drv",
     )
 
 
@@ -55,7 +59,6 @@ def test_resolve_nix_target_requests_derivation_for_buildtime_flakeref(monkeypat
         (
             ".#hello",
             {
-                "force_realise": False,
                 "impure": False,
                 "derivation": True,
             },
@@ -68,11 +71,11 @@ def test_resolve_nix_target_normalizes_plain_nixos_configuration(monkeypatch):
 
     def fake_resolve(flakeref, **_kwargs):
         calls.append(flakeref)
-        return "/nix/store/resolved"
+        return RealisedFlakeRef("/nix/store/resolved")
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         fake_resolve,
     )
 
@@ -94,11 +97,11 @@ def test_resolve_nix_target_normalizes_quoted_nixos_configuration(monkeypatch):
 
     def fake_resolve(flakeref, **_kwargs):
         calls.append(flakeref)
-        return "/nix/store/resolved"
+        return RealisedFlakeRef("/nix/store/resolved")
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         fake_resolve,
     )
 
@@ -135,11 +138,11 @@ def test_resolve_nix_target_leaves_malformed_nixos_configuration_refs(
 
     def fake_resolve(flakeref, **_kwargs):
         calls.append(flakeref)
-        return "/nix/store/resolved"
+        return RealisedFlakeRef("/nix/store/resolved")
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         fake_resolve,
     )
 
@@ -163,7 +166,7 @@ def test_resolve_nix_target_propagates_flakeref_realisation_failure_without_path
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         raise_realisation_error,
     )
     monkeypatch.setattr(
@@ -191,7 +194,7 @@ def test_resolve_nix_target_propagates_flakeref_eval_failure_without_path_probe(
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         raise_resolution_error,
     )
     monkeypatch.setattr(
@@ -214,7 +217,7 @@ def test_resolve_nix_target_uses_plain_path_validation(monkeypatch):
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
@@ -238,7 +241,7 @@ def test_resolve_nix_target_realises_runtime_drv_target(monkeypatch):
 
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         lambda *_args, **_kwargs: None,
     )
 
@@ -279,7 +282,7 @@ def test_resolve_nix_target_realises_runtime_drv_target(monkeypatch):
 def test_resolve_nix_target_uses_first_runtime_drv_output(monkeypatch):
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
@@ -301,7 +304,7 @@ def test_resolve_nix_target_uses_first_runtime_drv_output(monkeypatch):
 def test_resolve_nix_target_rejects_empty_runtime_drv_output(monkeypatch):
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
@@ -320,7 +323,7 @@ def test_resolve_nix_target_rejects_empty_runtime_drv_output(monkeypatch):
 def test_resolve_nix_target_rejects_failed_runtime_drv_realisation(monkeypatch):
     monkeypatch.setattr(
         sbomnix_cli_utils,
-        "try_resolve_flakeref",
+        "try_realise_flakeref",
         lambda *_args, **_kwargs: None,
     )
 

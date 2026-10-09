@@ -126,3 +126,24 @@ def test_load_runtime_closure_wraps_nix_command_failures(monkeypatch):
         sbomnix_runtime.load_runtime_closure(
             "/nix/store/11111111111111111111111111111111-target-1.0"
         )
+
+
+def test_runtime_closure_from_path_info_prefers_target_derivers():
+    output = "/nix/store/11111111111111111111111111111111-target-1.0"
+    recorded = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-target-1.0.drv"
+    evaluated = "/nix/store/cccccccccccccccccccccccccccccccc-target-1.0.drv"
+    other = "/nix/store/22222222222222222222222222222222-dep-1.0"
+    other_drv = "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-dep-1.0.drv"
+
+    closure = runtime_closure_from_path_info(
+        {
+            output: {"deriver": recorded, "references": [other]},
+            other: {"deriver": other_drv, "references": []},
+        },
+        {output: evaluated},
+    )
+
+    assert closure.output_paths_by_drv == {
+        evaluated: {output},
+        other_drv: {other},
+    }

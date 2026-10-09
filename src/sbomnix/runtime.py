@@ -35,7 +35,7 @@ class RuntimeClosure:
     output_paths_by_drv: dict[str, set[str]]
 
 
-def load_runtime_closure(path):
+def load_runtime_closure(path, derivers=None):
     """Load runtime closure information using ``nix path-info`` JSON."""
     cmd = nix_cmd(
         "path-info",
@@ -53,17 +53,20 @@ def load_runtime_closure(path):
             stderr=error.stderr,
             stdout=error.stdout,
         ) from None
-    return runtime_closure_from_path_info(load_nix_json(ret.stdout, NIX_PATH_INFO_JSON))
+    return runtime_closure_from_path_info(
+        load_nix_json(ret.stdout, NIX_PATH_INFO_JSON), derivers
+    )
 
 
-def runtime_closure_from_path_info(path_info):
+def runtime_closure_from_path_info(path_info, derivers=None):
     """Return runtime closure data from parsed ``nix path-info`` JSON."""
+    derivers = {} if derivers is None else derivers
     rows = []
     output_paths_by_drv = {}
     for target_path, info in normalize_nix_path_info(path_info).items():
         if info is None:
             continue
-        deriver = nix_path_info_deriver(info, target_path)
+        deriver = derivers.get(target_path) or nix_path_info_deriver(info, target_path)
         if deriver:
             output_paths_by_drv.setdefault(deriver, set()).add(target_path)
         for src_path in nix_path_info_references(info, target_path):

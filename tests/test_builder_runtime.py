@@ -37,6 +37,11 @@ def _builder_double():
     return builder
 
 
+@pytest.fixture(autouse=True)
+def _no_target_derivation_closure(monkeypatch):
+    monkeypatch.setattr(sbomnix_builder, "target_output_derivers", lambda _drv: {})
+
+
 def _runtime_closure(output_paths_by_drv, rows=None):
     return RuntimeClosure(
         df_deps=dependency_rows_to_dataframe([] if rows is None else rows),
@@ -49,7 +54,7 @@ def test_runtime_path_info_dependencies_accepts_existing_derivers(monkeypatch):
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -109,7 +114,7 @@ def test_runtime_deriver_lookup_preserves_typed_errors(monkeypatch):
     builder = _builder_double()
 
     with pytest.raises(SbomnixError, match="schema drift"):
-        builder._resolve_target_deriver(TARGET_PATH)
+        builder._resolve_target_deriver(TARGET_PATH, None)
 
 
 @pytest.mark.parametrize(
@@ -130,7 +135,7 @@ def test_runtime_path_info_dependencies_groups_outputs_for_unloadable_derivers(
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -166,7 +171,7 @@ def test_runtime_path_info_dependencies_accepts_graph_only_references(monkeypatc
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
     monkeypatch.setattr(
         sbomnix_builder,
@@ -195,7 +200,7 @@ def test_runtime_path_info_dependencies_supports_targets_without_derivers(
     monkeypatch.setattr(
         sbomnix_builder,
         "load_runtime_closure",
-        lambda _path: closure,
+        lambda _path, _derivers=None: closure,
     )
 
     builder = _builder_double()
@@ -364,4 +369,16 @@ def test_join_meta_cpe_resolution_prefers_exact_nixpkgs_value(monkeypatch):
 
     assert builder.df_sbomdb[cols.CPE].iloc[0] == (
         "cpe:2.3:a:nixpkgs:target:1.0:*:*:*:*:*:*:*"
+    )
+
+
+def test_runtime_target_deriver_comes_from_the_built_target(monkeypatch):
+    def fail_find_deriver(_path):
+        raise AssertionError("the store's recorded deriver must not be used")
+
+    monkeypatch.setattr(sbomnix_builder, "find_deriver", fail_find_deriver)
+
+    assert (
+        _builder_double()._resolve_target_deriver(TARGET_PATH, TARGET_DERIVER)
+        == TARGET_DERIVER
     )
