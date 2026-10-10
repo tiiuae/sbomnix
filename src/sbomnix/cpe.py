@@ -55,6 +55,16 @@ _CPE_OVERRIDES = {
     "xwayland": ("a", "x.org", "xwayland"),
 }
 
+# Characters a CPE 2.3 formatted string may contain unquoted (NISTIR 7695,
+# section 6.2); every other character is quoted with a backslash.
+_CPE_UNQUOTED = frozenset(string.ascii_letters + string.digits + "._-")
+
+
+def _quote_cpe_value(value):
+    """Quote a component value for a CPE 2.3 formatted string."""
+    return "".join(c if c in _CPE_UNQUOTED else f"\\{c}" for c in value)
+
+
 ###############################################################################
 
 
@@ -179,12 +189,15 @@ class CPE:
             LOG.log(LOG_SPAM, "CPE generation disabled")
             return ""
         cpe_product = name.strip()
-        cpe_version = version.strip()
+        cpe_version = _quote_cpe_value(version.strip())
         override = _CPE_OVERRIDES.get(cpe_product)
         if override:
             cpe_part, cpe_vendor, cpe_product = override
         else:
             cpe_part = "a"
+            # The CPE dictionary stores quoted names (e.g. "gtk\+"), so look
+            # up the quoted product.
+            cpe_product = _quote_cpe_value(cpe_product)
             cpe_vendor = self._candidate_vendor(cpe_product)
         cpe_end = "*:*:*:*:*:*:*"
         ret = f"cpe:2.3:{cpe_part}:{cpe_vendor}:{cpe_product}:{cpe_version}:{cpe_end}"
