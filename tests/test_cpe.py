@@ -118,6 +118,30 @@ def test_cpe_ambiguous_product_falls_back_to_product_name(monkeypatch):
     assert generated == "cpe:2.3:a:openssl:openssl:3.0.0:*:*:*:*:*:*:*"
 
 
+def test_cpe_looks_up_quoted_product_in_dictionary(monkeypatch):
+    monkeypatch.setattr(
+        cpe,
+        "LockedDfCache",
+        lambda: FakeCache(pd.DataFrame({"product": ["gtk\\+"], "vendor": ["gtk"]})),
+    )
+
+    generated = cpe.CPE().generate("gtk+", "2.24.33")
+
+    assert generated == r"cpe:2.3:a:gtk:gtk\+:2.24.33:*:*:*:*:*:*:*"
+
+
+def test_cpe_quotes_special_characters_in_product_and_version(monkeypatch):
+    monkeypatch.setattr(
+        cpe,
+        "LockedDfCache",
+        lambda: FakeCache(pd.DataFrame({"product": ["openssl"], "vendor": ["x"]})),
+    )
+
+    generated = cpe.CPE().generate("libsigc++", "3.8.1+git")
+
+    assert generated == (r"cpe:2.3:a:libsigc\+\+:libsigc\+\+:3.8.1\+git:*:*:*:*:*:*:*")
+
+
 def test_cpe_disabled_returns_empty_string():
     generated = cpe.CPE(include_cpe=False).generate("openssl", "3.0.0")
 
