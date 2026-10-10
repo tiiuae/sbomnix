@@ -198,7 +198,8 @@ def build_spdx_document(sbomdb):
     spdx["name"] = ""
     spdx["documentNamespace"] = f"sbomnix://{sbomdb.uuid}"
     creation_info = {}
-    creation_info["created"] = datetime.now(timezone.utc).astimezone().isoformat()
+    # SPDX 2.3 requires UTC as YYYY-MM-DDThh:mm:ssZ (no offset, no fraction).
+    creation_info["created"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     creation_info["creators"] = []
     creation_info["creators"].append(f"Tool: sbomnix-{get_py_pkg_version()}")
     spdx["creationInfo"] = creation_info
