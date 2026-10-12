@@ -214,7 +214,18 @@ def build_spdx_document(sbomdb):
         package = _drv_to_spdx_package(drv, uid=sbomdb.uid)
         spdx["packages"].append(package)
         if drv.store_path == sbomdb.target_component_ref:
-            spdx["name"] = _str_to_spdxid(getattr(drv, sbomdb.uid))
+            target_spdxid = _str_to_spdxid(getattr(drv, sbomdb.uid))
+            spdx["name"] = target_spdxid
+            # SPDX 2.3 requires a DESCRIBES relationship from the document
+            # when it contains more than one package.
+            spdx["relationships"].insert(
+                0,
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": target_spdxid,
+                },
+            )
         deps = sbomdb.lookup_dependencies(drv, uid=sbomdb.uid)
         relationships = _drv_to_spdx_relationships(drv, deps, uid=sbomdb.uid)
         for relation in relationships:
