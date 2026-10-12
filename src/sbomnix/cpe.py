@@ -189,6 +189,11 @@ class CPE:
             LOG.log(LOG_SPAM, "CPE generation disabled")
             return ""
         cpe_product = name.strip()
+        if not version.strip():
+            # A "*" version would match every CVE for the product, and an
+            # empty one is not a valid CPE, so emit no CPE without a version.
+            LOG.log(LOG_SPAM, "no version for '%s', skipping CPE", cpe_product)
+            return ""
         cpe_version = _quote_cpe_value(version.strip())
         override = _CPE_OVERRIDES.get(cpe_product)
         if override:

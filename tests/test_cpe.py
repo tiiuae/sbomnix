@@ -142,6 +142,17 @@ def test_cpe_quotes_special_characters_in_product_and_version(monkeypatch):
     assert generated == (r"cpe:2.3:a:libsigc\+\+:libsigc\+\+:3.8.1\+git:*:*:*:*:*:*:*")
 
 
+@pytest.mark.parametrize("version", ["", "  "])
+def test_cpe_without_version_returns_empty_string(monkeypatch, version):
+    monkeypatch.setattr(
+        cpe,
+        "LockedDfCache",
+        lambda: FakeCache(pd.DataFrame({"product": ["openssl"], "vendor": ["x"]})),
+    )
+
+    assert cpe.CPE().generate("CVE-2024-6655.patch", version) == ""
+
+
 def test_cpe_disabled_returns_empty_string():
     generated = cpe.CPE(include_cpe=False).generate("openssl", "3.0.0")
 
