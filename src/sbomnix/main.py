@@ -14,6 +14,7 @@ from common.errors import SbomnixError
 from common.log import LOG, set_log_verbosity
 from sbomnix.builder import SbomBuilder
 from sbomnix.cli_utils import resolve_nix_target
+from sbomnix.explorify import explorify_cdx
 
 ###############################################################################
 
@@ -71,6 +72,17 @@ def getargs(args=None):
     group.add_argument("--cdx", nargs="?", help=helps, default="sbom.cdx.json")
     helps = "Path to spdx json output file (default: ./sbom.spdx.json)"
     group.add_argument("--spdx", nargs="?", help=helps, default="sbom.spdx.json")
+
+    expl_group = parser.add_argument_group("explorer arguments")
+    helps = "Export SBOM Explorer product JSON to DIR/data/"
+    expl_group.add_argument("--explorer-dir", type=str, help=helps)
+    helps = "Product ID for Explorer (required with --explorer-dir)"
+    expl_group.add_argument("--explorer-id", type=str, help=helps)
+    helps = "Product variant label for Explorer (default: nix)"
+    expl_group.add_argument("--explorer-variant", type=str, default="nix", help=helps)
+    helps = "Product display name for Explorer"
+    expl_group.add_argument("--explorer-name", type=str, help=helps)
+
     helps = "Run nix command with --impure"
     parser.add_argument("--impure", help=helps, action="store_true")
 
@@ -144,6 +156,21 @@ def _run(args):
         sbom.to_csv(args.csv)
         LOG.verbose(
             "Wrote CSV output in %.3fs",
+            time.perf_counter() - export_started,
+        )
+    if args.explorer_dir:
+        if not args.explorer_id:
+            raise SbomnixError("--explorer-id is required when using --explorer-dir")
+        export_started = time.perf_counter()
+        explorify_cdx(
+            args.cdx,
+            args.explorer_dir,
+            args.explorer_id,
+            variant=args.explorer_variant,
+            name=args.explorer_name,
+        )
+        LOG.verbose(
+            "Wrote Explorer data in %.3fs",
             time.perf_counter() - export_started,
         )
     LOG.verbose("Completed sbomnix run in %.3fs", time.perf_counter() - started)

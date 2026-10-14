@@ -37,6 +37,9 @@
 
           # nix run .#provenance
           provenance = mkApp "${sbomnix}/bin/provenance" "Generate SLSA provenance for a nix target";
+
+          # nix run .#explore
+          explore = mkApp "${sbomnix}/bin/sbomnix-explore" "Export sbomnix output to SBOM Explorer format";
         };
     };
 }

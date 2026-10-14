@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Andrzej Piotrowski
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Usage:
+#   sbomnix-explore <NIXREF> <PRODUCT_ID> [VARIANT] [NAME]
+#
+# Example:
+#   sbomnix-explore ./nixpkgs#hello hello-app runtime "Hello App"
+#   sbomnix-explore /nix/store/...-firefox firefox linux
+
+set -euo pipefail
+
+NIXREF="${1:-}"
+PRODUCT_ID="${2:-}"
+VARIANT="${3:-nix}"
+NAME="${4:-}"
+
+if [[ -z "$NIXREF" || -z "$PRODUCT_ID" ]]; then
+    echo "Usage: sbomnix-explore <NIXREF> <PRODUCT_ID> [VARIANT] [NAME]"
+    exit 1
+fi
+
+# Find Explorer root: look for docs/data/manifest.json or site/data/manifest.json
+EXPLORER_DIR=""
+for dir in ./docs ./site ../docs ../site "${EXPLORER_DIR:-}" "${PWD}"; do
+    if [[ -f "$dir/data/manifest.json" ]]; then
+        EXPLORER_DIR="$dir"
+        break
+    fi
+done
+
+if [[ -z "$EXPLORER_DIR" ]]; then
+    echo "Could not find SBOM Explorer (docs/ or site/) in current tree."
+    echo "Set EXPLORER_DIR or run from a directory containing the Explorer."
+    exit 1
+fi
+
+echo "Explorer directory: $EXPLORER_DIR"
+
+# Run sbomnix with Explorer export
+python3 -m sbomnix "$NIXREF" \
+    --cdx "sbom.cdx.json" \
+    --explorer-dir "$EXPLORER_DIR" \
+    --explorer-id "$PRODUCT_ID" \
+    --explorer-variant "$VARIANT" \
+    ${NAME:+ --explorer-name "$NAME"}
+
+echo "Done. Product '$PRODUCT_ID' added to Explorer at $EXPLORER_DIR"

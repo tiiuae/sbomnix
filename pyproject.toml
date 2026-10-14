@@ -42,6 +42,7 @@ Homepage = "https://github.com/tiiuae/sbomnix"
 
 [project.scripts]
 sbomnix = "sbomnix.main:main"
+sbomnix-explore = "sbomnix.explore_cli:main"
 nixgraph = "nixgraph.main:main"
 nix_outdated = "nixupdate.nix_outdated:main"
 vulnxscan = "vulnxscan.vulnxscan_cli:main"
