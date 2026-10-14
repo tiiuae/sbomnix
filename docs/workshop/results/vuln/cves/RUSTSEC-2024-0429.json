@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2024-0429",
+  "packages": [
+    {
+      "name": "glib",
+      "version": "0.18.5",
+      "purl": "pkg:cargo/glib@0.18.5",
+      "ref": "pkg:cargo/glib@0.18.5"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2024-0429",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0429"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "Unsoundness in `Iterator` and `DoubleEndedIterator` impls for `glib::VariantStrIter`",
+    "affects": [
+      {
+        "ref": "pkg:cargo/glib@0.18.5"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0429"
+      }
+    ],
+    "published": "2024-03-30T12:00:00Z",
+    "updated": "2025-10-28T06:29:26.473225Z"
+  }
+}

@@ -1,0 +1,309 @@
+{
+  "platform": "windows",
+  "x": "v0.1.8",
+  "y": "v0.1.36",
+  "nx": 1194,
+  "ny": 1196,
+  "added": 4,
+  "removed": 2,
+  "changed": 27,
+  "rows": [
+    {
+      "kind": "changed",
+      "name": "anyhow",
+      "eco": "cargo",
+      "vx": "1.0.102",
+      "vy": "1.0.103",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/anyhow@1.0.103"
+    },
+    {
+      "kind": "changed",
+      "name": "crossbeam-epoch",
+      "eco": "cargo",
+      "vx": "0.9.18",
+      "vy": "0.9.20",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/crossbeam-epoch@0.9.20"
+    },
+    {
+      "kind": "changed",
+      "name": "h2",
+      "eco": "cargo",
+      "vx": "0.4.13",
+      "vy": "0.4.18",
+      "lic": "MIT",
+      "purl": "pkg:cargo/h2@0.4.18"
+    },
+    {
+      "kind": "changed",
+      "name": "num-conv",
+      "eco": "cargo",
+      "vx": "0.1.0",
+      "vy": "0.2.2",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/num-conv@0.2.2"
+    },
+    {
+      "kind": "changed",
+      "name": "openssl",
+      "eco": "cargo",
+      "vx": "0.10.76",
+      "vy": "0.10.80",
+      "lic": "Apache-2.0",
+      "purl": "pkg:cargo/openssl@0.10.80"
+    },
+    {
+      "kind": "changed",
+      "name": "openssl-sys",
+      "eco": "cargo",
+      "vx": "0.9.112",
+      "vy": "0.9.117",
+      "lic": "MIT",
+      "purl": "pkg:cargo/openssl-sys@0.9.117"
+    },
+    {
+      "kind": "changed",
+      "name": "rustls-webpki",
+      "eco": "cargo",
+      "vx": "0.103.10",
+      "vy": "0.103.13",
+      "lic": "ISC",
+      "purl": "pkg:cargo/rustls-webpki@0.103.13"
+    },
+    {
+      "kind": "removed",
+      "name": "steamworks",
+      "eco": "cargo",
+      "vx": "0.12.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/steamworks@0.12.2"
+    },
+    {
+      "kind": "removed",
+      "name": "steamworks-sys",
+      "eco": "cargo",
+      "vx": "0.12.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/steamworks-sys@0.12.2"
+    },
+    {
+      "kind": "changed",
+      "name": "time",
+      "eco": "cargo",
+      "vx": "0.3.45",
+      "vy": "0.3.47",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time@0.3.47"
+    },
+    {
+      "kind": "changed",
+      "name": "time-core",
+      "eco": "cargo",
+      "vx": "0.1.7",
+      "vy": "0.1.8",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time-core@0.1.8"
+    },
+    {
+      "kind": "changed",
+      "name": "time-macros",
+      "eco": "cargo",
+      "vx": "0.2.25",
+      "vy": "0.2.27",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time-macros@0.2.27"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_rvc_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_rvc_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_safe_load_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_safe_load_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_torchaudio_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_torchaudio_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "_python_embeded_overrides_fairseq",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/_python_embeded_overrides_fairseq@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "_python_embeded_overrides_sitecustomize",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/_python_embeded_overrides_sitecustomize@4160277"
+    },
+    {
+      "kind": "added",
+      "name": "ACE-Step v1 3.5B",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "070d866eef53",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/ACE-Step%20v1%203.5B@070d866eef53"
+    },
+    {
+      "kind": "changed",
+      "name": "ComfyUI-ChordMidi",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/ComfyUI-ChordMidi@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "comfyui_memescreamer_memory_cleaner",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/comfyui_memescreamer_memory_cleaner@4160277"
+    },
+    {
+      "kind": "added",
+      "name": "faster-whisper large-v3",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "53ebf7a7118f",
+      "lic": "MIT",
+      "purl": "pkg:generic/faster-whisper%20large-v3@53ebf7a7118f"
+    },
+    {
+      "kind": "added",
+      "name": "llama.cpp (llama-server)",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "b10066",
+      "lic": "MIT",
+      "purl": "pkg:generic/llama.cpp%20%28llama-server%29@b10066"
+    },
+    {
+      "kind": "added",
+      "name": "Qwen2.5-1.5B-Instruct",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "91cad51170dc",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/Qwen2.5-1.5B-Instruct@91cad51170dc"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_aimdo_reset",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_aimdo_reset@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_nodes",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/rAIdio_nodes@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_watermark",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_watermark@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_whisper_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_whisper_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_xl_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_xl_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_bool_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_bool_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_infer_audio_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_infer_audio_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_loadaudio_alias",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_loadaudio_alias@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_train_dir_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_train_dir_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_train_quote_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_train_quote_fix@4160277"
+    }
+  ]
+}

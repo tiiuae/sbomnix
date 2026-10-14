@@ -1,0 +1,103 @@
+Trivy SBOM scan — C:\andrzej-piotrowski-pl\sbom\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json
+Wygenerowano: 2026-09-18T20:01:36Z
+Znalezisk: 96  unique: 94
+Severity: critical=1, high=36, low=18, medium=41
+
+ID                           SEV        CVSS   PAKIET                       ZAINSTALOWANA → POPRAWKA
+--------------------------------------------------------------------------------------------------------------
+CVE-2025-31477               critical   9.8    @tauri-apps/plugin-shell     2.0.0 → 2.2.1
+CVE-2026-5241                high       9.6    transformers                 4.57.3 → 5.5.0
+CVE-2026-54058               high       9.1    pillow                       12.1.0 → 12.3.0
+CVE-2025-47273               high       8.8    setuptools                   70.2.0 → 78.1.1
+CVE-2026-44513               high       8.8    diffusers                    0.37.0 → 0.38.0
+CVE-2026-59197               high       8.2    pillow                       12.1.0 → 12.3.0
+CVE-2026-42311               high       7.8    pillow                       12.1.0 → 12.2.0
+CVE-2026-4372                high       7.8    transformers                 4.57.3 → 5.3.0
+CVE-2026-49853               high       7.7    tornado                      6.5.5 → 6.5.6
+CVE-2026-0994                high       7.5    protobuf                     3.19.6 → 6.33.5, 5.29.6
+CVE-2026-25990               high       7.5    pillow                       12.1.0 → 12.1.1
+CVE-2026-30922               high       7.5    pyasn1                       0.6.2 → 0.6.3
+CVE-2026-40192               high       7.5    pillow                       12.1.0 → 12.2.0
+CVE-2026-41205               high       7.5    Mako                         1.3.10 → 1.3.11
+CVE-2026-44432               high       7.5    urllib3                      2.6.3 → 2.7.0
+CVE-2026-45804               high       7.5    diffusers                    0.37.0 → 0.38.0
+CVE-2026-48818               high       7.5    starlette                    0.52.1 → 1.1.0
+CVE-2026-49855               high       7.5    tornado                      6.5.5 → 6.5.6
+CVE-2026-54059               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-54060               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-54283               high       7.5    starlette                    0.52.1 → 1.3.1
+CVE-2026-55379               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-55380               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59199               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59200               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59204               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59205               high       7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59884               high       7.5    pyasn1                       0.6.2 → 0.6.4
+CVE-2026-59885               high       7.5    pyasn1                       0.6.2 → 0.6.4
+CVE-2026-59886               high       7.5    pyasn1                       0.6.2 → 0.6.4
+CVE-2026-69244               high       7.5    aiohttp                      3.13.3 → 3.14.3
+CVE-2026-82397               high       7.5    tornado                      6.5.5 → 6.5.8
+GHSA-6v7p-g79w-8964          high       7.5    msgpack                      1.1.2 → 1.2.1
+CVE-2026-9856                high       7.1    transformers                 4.57.3 → 5.10.0
+CVE-2026-44307               high       5.9    Mako                         1.3.10 → 1.3.12
+CVE-2026-44431               high       5.9    urllib3                      2.6.3 → 2.7.0
+CVE-2025-4565                high       5.3    protobuf                     3.19.6 → 4.25.8, 5.29.5, 6.31.1
+CVE-2026-42184               medium     8.8    tauri                        2.10.3 → 2.11.1
+CVE-2026-8643                medium     8.0    pip                          26.0.1 → 26.1.2
+CVE-2026-1839                medium     7.8    transformers                 4.57.3 → 5.0.0rc3
+CVE-2026-34515               medium     7.5    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-34516               medium     7.5    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-47265               medium     7.5    aiohttp                      3.13.3 → 3.14.0
+CVE-2026-54273               medium     7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-54274               medium     7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-54277               medium     7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-54278               medium     7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-59198               medium     7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-59203               medium     7.5    pillow                       12.1.0 → 12.3.0
+CVE-2026-34993               medium     7.3    aiohttp                      3.13.3 → 3.14.0
+CVE-2026-28684               medium     7.1    python-dotenv                1.2.1 → 1.2.2
+CVE-2026-69112               medium     7.1    accelerate                   1.13.0 → —
+CVE-2026-69243               medium     7.0    aiohttp                      3.13.3 → 3.14.2
+CVE-2025-68146               medium     6.5    filelock                     3.20.0 → 3.20.1
+CVE-2026-13346               medium     6.5    pip                          26.0.1 → 26.2.0
+CVE-2026-48710               medium     6.5    starlette                    0.52.1 → 1.0.1
+CVE-2026-42308               medium     6.2    pillow                       12.1.0 → 12.2.0
+CVE-2026-54276               medium     6.1    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-55093               medium     6.1    tract-nnef                   0.21.10 → 0.23.1, 0.22.2, 0.21.16
+CVE-2026-55832               medium     6.1    tract-onnx                   0.21.10 → 0.21.17, 0.22.3, 0.23.2
+CVE-2026-59890               medium     6.1    setuptools                   70.2.0 → 83.0.0
+GHSA-pw6j-qg29-8w7f          medium     5.9    tornado                      6.5.5 → 6.5.7
+CVE-2026-6357                medium     5.8    pip                          26.0.1 → 26.1
+CVE-2026-25645               medium     5.5    requests                     2.32.5 → 2.33.0
+CVE-2026-42309               medium     5.5    pillow                       12.1.0 → 12.2.0
+CVE-2026-42310               medium     5.5    pillow                       12.1.0 → 12.2.0
+CVE-2026-34525               medium     5.4    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-22701               medium     5.3    filelock                     3.20.0 → 3.20.3
+CVE-2026-22815               medium     5.3    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-45409               medium     5.3    idna                         3.11 → 3.15
+CVE-2026-48817               medium     5.3    starlette                    0.52.1 → 1.1.0
+CVE-2026-59881               medium     5.3    aiohttp                      3.13.3 → 3.14.2
+GHSA-4xgf-cpjx-pc3j          medium     5.3    pydantic-settings            2.12.0 → 2.14.2
+CVE-2026-3219                medium     5.0    pip                          26.0.1 → 26.1
+CVE-2026-55798               medium     4.5    pillow                       12.1.0 → 12.3.0
+GHSA-7gcf-g7xr-8hxj          medium     —      serde_with                   3.17.0 → 3.21.0
+GHSA-8423-8fgw-73vq          medium     —      tornado                      6.5.5 → 6.5.8
+GHSA-wrw7-89jp-8q8g          medium     —      glib                         0.18.5 → 0.20.0
+CVE-2026-34520               low        9.1    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-34513               low        7.5    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-50269               low        7.5    aiohttp                      3.13.3 → 3.14.0
+CVE-2026-54275               low        7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-54279               low        7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2026-54280               low        7.5    aiohttp                      3.13.3 → 3.14.1
+CVE-2025-3000                low        5.3    torch                        2.10.0 → 2.13.0
+CVE-2025-3000                low        5.3    torch                        2.10.0+cu128 → 2.13.0
+CVE-2026-34514               low        5.3    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-34517               low        5.3    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-34518               low        5.3    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-34519               low        5.3    aiohttp                      3.13.3 → 3.13.4
+CVE-2026-49854               low        5.3    tornado                      6.5.5 → 6.5.6
+CVE-2026-54282               low        5.3    starlette                    0.52.1 → 1.3.0
+CVE-2026-4539                low        3.3    Pygments                     2.19.2 → 2.20.0
+GHSA-cq8v-f236-94qc          low        —      rand                         0.8.5 → 0.9.3, 0.10.1, 0.8.6
+GHSA-cq8v-f236-94qc          low        —      rand                         0.9.2 → 0.9.3, 0.10.1, 0.8.6
+GHSA-wwv5-g3v4-889x          low        —      tornado                      6.5.5 → 6.5.8

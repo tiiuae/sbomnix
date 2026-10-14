@@ -1,0 +1,20 @@
+{
+  "id": "GHSA-7gcf-g7xr-8hxj",
+  "scanner": "trivy",
+  "severity": "medium",
+  "cvss": null,
+  "packages": [
+    "serde_with"
+  ],
+  "findings": [
+    {
+      "package": "serde_with",
+      "installed": "3.17.0",
+      "fixed": "3.21.0",
+      "severity": "medium",
+      "cvss": null,
+      "target": "cargo",
+      "title": "serde_with: KeyValueMap serialization panics on empty sequence or map entries"
+    }
+  ]
+}

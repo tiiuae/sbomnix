@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2025-0100",
+  "packages": [
+    {
+      "name": "unic-ucd-ident",
+      "version": "0.9.0",
+      "purl": "pkg:cargo/unic-ucd-ident@0.9.0",
+      "ref": "pkg:cargo/unic-ucd-ident@0.9.0"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2025-0100",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2025-0100"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "`unic-ucd-ident` is unmaintained",
+    "affects": [
+      {
+        "ref": "pkg:cargo/unic-ucd-ident@0.9.0"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2025-0100"
+      }
+    ],
+    "published": "2025-10-18T12:00:00Z",
+    "updated": "2025-10-21T11:12:59Z"
+  }
+}

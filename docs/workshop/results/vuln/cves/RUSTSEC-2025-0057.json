@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2025-0057",
+  "packages": [
+    {
+      "name": "fxhash",
+      "version": "0.2.1",
+      "purl": "pkg:cargo/fxhash@0.2.1",
+      "ref": "pkg:cargo/fxhash@0.2.1"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2025-0057",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2025-0057"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "fxhash - no longer maintained",
+    "affects": [
+      {
+        "ref": "pkg:cargo/fxhash@0.2.1"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2025-0057"
+      }
+    ],
+    "published": "2025-09-05T12:00:00Z",
+    "updated": "2025-09-05T19:09:01Z"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "GHSA-wwv5-g3v4-889x",
+  "scanner": "trivy",
+  "severity": "low",
+  "cvss": null,
+  "packages": [
+    "tornado"
+  ],
+  "findings": [
+    {
+      "package": "tornado",
+      "installed": "6.5.5",
+      "fixed": "6.5.8",
+      "severity": "low",
+      "cvss": null,
+      "target": "Python",
+      "title": "Tornado: Incomplete fix for CVE-2026-35536: cookie attribute injection re-opened via the legacy case-insensitive `**kwargs` path in `set_cookie`"
+    }
+  ]
+}

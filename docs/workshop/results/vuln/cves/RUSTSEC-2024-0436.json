@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2024-0436",
+  "packages": [
+    {
+      "name": "paste",
+      "version": "1.0.15",
+      "purl": "pkg:cargo/paste@1.0.15",
+      "ref": "pkg:cargo/paste@1.0.15"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2024-0436",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0436"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "paste - no longer maintained",
+    "affects": [
+      {
+        "ref": "pkg:cargo/paste@1.0.15"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0436"
+      }
+    ],
+    "published": "2024-10-07T12:00:00Z",
+    "updated": "2026-01-27T22:03:15.694766Z"
+  }
+}

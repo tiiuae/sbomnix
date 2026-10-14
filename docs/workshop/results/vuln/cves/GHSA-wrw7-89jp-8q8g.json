@@ -1,0 +1,42 @@
+{
+  "id": "GHSA-wrw7-89jp-8q8g",
+  "packages": [
+    {
+      "name": "glib",
+      "version": "0.18.5",
+      "purl": "pkg:cargo/glib@0.18.5",
+      "ref": "pkg:cargo/glib@0.18.5"
+    }
+  ],
+  "vulnerability": {
+    "id": "GHSA-wrw7-89jp-8q8g",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/GHSA-wrw7-89jp-8q8g"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV",
+          "url": "https://osv.dev/vulnerability/GHSA-wrw7-89jp-8q8g"
+        },
+        "severity": "medium",
+        "method": "CVSSv4",
+        "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N"
+      }
+    ],
+    "description": "Unsoundness in `Iterator` and `DoubleEndedIterator` impls for `glib::VariantStrIter`",
+    "affects": [
+      {
+        "ref": "pkg:cargo/glib@0.18.5"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/GHSA-wrw7-89jp-8q8g"
+      }
+    ],
+    "published": "2024-12-23T20:19:24Z",
+    "updated": "2025-10-28T06:29:26.473225Z"
+  }
+}

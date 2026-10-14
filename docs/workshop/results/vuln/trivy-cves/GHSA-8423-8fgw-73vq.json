@@ -1,0 +1,20 @@
+{
+  "id": "GHSA-8423-8fgw-73vq",
+  "scanner": "trivy",
+  "severity": "medium",
+  "cvss": null,
+  "packages": [
+    "tornado"
+  ],
+  "findings": [
+    {
+      "package": "tornado",
+      "installed": "6.5.5",
+      "fixed": "6.5.8",
+      "severity": "medium",
+      "cvss": null,
+      "target": "Python",
+      "title": "tornado: multipart split() creates huge temp list before max_parts check -> memory amplification DoS (httputil.py:34)"
+    }
+  ]
+}

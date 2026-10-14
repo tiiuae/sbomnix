@@ -1,0 +1,319 @@
+{
+  "x": "windows-v0.1.36-osv",
+  "y": "linux-v0.1.36-osv",
+  "nx": 117,
+  "ny": 83,
+  "added": 0,
+  "removed": 34,
+  "changed": 0,
+  "rows": [
+    {
+      "kind": "removed",
+      "name": "CVE-2025-68146",
+      "eco": "osv",
+      "vx": "medium/6.3",
+      "vy": "—",
+      "lic": "filelock",
+      "purl": "pkg:vuln/CVE-2025-68146"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-22701",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "filelock",
+      "purl": "pkg:vuln/CVE-2026-22701"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-22815",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-22815"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-25645",
+      "eco": "osv",
+      "vx": "medium/4.4",
+      "vy": "—",
+      "lic": "requests",
+      "purl": "pkg:vuln/CVE-2026-25645"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-28684",
+      "eco": "osv",
+      "vx": "medium/6.6",
+      "vy": "—",
+      "lic": "python-dotenv",
+      "purl": "pkg:vuln/CVE-2026-28684"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34513",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34513"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34514",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34514"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34515",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34515"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34516",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34516"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34517",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34517"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34518",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34518"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34519",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34519"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34520",
+      "eco": "osv",
+      "vx": "critical/9.1",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34520"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34525",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34525"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-34993",
+      "eco": "osv",
+      "vx": "medium/6.4",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34993"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-41205",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "—",
+      "lic": "Mako",
+      "purl": "pkg:vuln/CVE-2026-41205"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-44307",
+      "eco": "osv",
+      "vx": "high",
+      "vy": "—",
+      "lic": "Mako",
+      "purl": "pkg:vuln/CVE-2026-44307"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-44431",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "urllib3",
+      "purl": "pkg:vuln/CVE-2026-44431"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-44432",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "—",
+      "lic": "urllib3",
+      "purl": "pkg:vuln/CVE-2026-44432"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-4539",
+      "eco": "osv",
+      "vx": "low/3.3",
+      "vy": "—",
+      "lic": "Pygments",
+      "purl": "pkg:vuln/CVE-2026-4539"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-45409",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "idna",
+      "purl": "pkg:vuln/CVE-2026-45409"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-47265",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-47265"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-50269",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-50269"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54273",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54273"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54274",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54274"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54275",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54275"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54276",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54276"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54277",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54277"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54278",
+      "eco": "osv",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54278"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54279",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54279"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-54280",
+      "eco": "osv",
+      "vx": "low",
+      "vy": "—",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54280"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-57585",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "—",
+      "lic": "msgpack",
+      "purl": "pkg:vuln/CVE-2026-57585"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-58203",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "pydantic-settings",
+      "purl": "pkg:vuln/CVE-2026-58203"
+    },
+    {
+      "kind": "removed",
+      "name": "CVE-2026-7246",
+      "eco": "osv",
+      "vx": "high/7.2",
+      "vy": "—",
+      "lic": "click",
+      "purl": "pkg:vuln/CVE-2026-7246"
+    }
+  ],
+  "labelX": "windows-v0.1.36-osv",
+  "labelY": "linux-v0.1.36-osv"
+}

@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "message": "snyk auth required",
+  "detail": "Snyk CLI nie jest zainstalowane na tej maszynie."
+}

@@ -1,0 +1,21 @@
+{
+  "platform": "windows",
+  "x": "v0.1.21",
+  "y": "v0.1.22",
+  "nx": 1192,
+  "ny": 1193,
+  "added": 1,
+  "removed": 0,
+  "changed": 0,
+  "rows": [
+    {
+      "kind": "added",
+      "name": "faster-whisper large-v3",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "53ebf7a7118f",
+      "lic": "MIT",
+      "purl": "pkg:generic/faster-whisper%20large-v3@53ebf7a7118f"
+    }
+  ]
+}

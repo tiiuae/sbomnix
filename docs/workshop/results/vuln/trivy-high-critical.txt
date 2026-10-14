@@ -1,0 +1,174 @@
+
+Report Summary
+
+┌─────────┬────────────┬─────────────────┐
+│ Target  │    Type    │ Vulnerabilities │
+├─────────┼────────────┼─────────────────┤
+│         │   cargo    │        0        │
+├─────────┼────────────┼─────────────────┤
+│ Node.js │  node-pkg  │        1        │
+├─────────┼────────────┼─────────────────┤
+│ Python  │ python-pkg │       36        │
+└─────────┴────────────┴─────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+
+Node.js (node-pkg)
+==================
+Total: 1 (HIGH: 0, CRITICAL: 1)
+
+┌──────────────────────────┬────────────────┬──────────┬────────┬───────────────────┬───────────────┬─────────────────────────────────────────────────────┐
+│         Library          │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version │                        Title                        │
+├──────────────────────────┼────────────────┼──────────┼────────┼───────────────────┼───────────────┼─────────────────────────────────────────────────────┤
+│ @tauri-apps/plugin-shell │ CVE-2025-31477 │ CRITICAL │ fixed  │ 2.0.0             │ 2.2.1         │ Improper Scope Validation in the `open` Endpoint of │
+│                          │                │          │        │                   │               │ `tauri-plugin-shell`                                │
+│                          │                │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2025-31477          │
+└──────────────────────────┴────────────────┴──────────┴────────┴───────────────────┴───────────────┴─────────────────────────────────────────────────────┘
+
+Python (python-pkg)
+===================
+Total: 36 (HIGH: 36, CRITICAL: 0)
+
+┌──────────────┬─────────────────────┬──────────┬────────┬───────────────────┬────────────────────────┬──────────────────────────────────────────────────────────────┐
+│   Library    │    Vulnerability    │ Severity │ Status │ Installed Version │     Fixed Version      │                            Title                             │
+├──────────────┼─────────────────────┼──────────┼────────┼───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ Mako         │ CVE-2026-41205      │ HIGH     │ fixed  │ 1.3.10            │ 1.3.11                 │ mako: Mako: Information disclosure via path traversal        │
+│              │                     │          │        │                   │                        │ vulnerability                                                │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-41205                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-44307      │          │        │                   │ 1.3.12                 │ mako: Mako: Information disclosure via directory traversal   │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-44307                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ aiohttp      │ CVE-2026-69244      │          │        │ 3.13.3            │ 3.14.3                 │ aiohttp: AIOHTTP: Denial of Service via malformed HTTP       │
+│              │                     │          │        │                   │                        │ responses                                                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-69244                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ diffusers    │ CVE-2026-44513      │          │        │ 0.37.0            │ 0.38.0                 │ Diffusers: Diffusers: Arbitrary remote code execution via    │
+│              │                     │          │        │                   │                        │ `trust_remote_code` bypass                                   │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-44513                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-45804      │          │        │                   │                        │ diffusers: Diffusers: Arbitrary code execution due to        │
+│              │                     │          │        │                   │                        │ trust_remote_code guard bypass                               │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-45804                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ msgpack      │ GHSA-6v7p-g79w-8964 │          │        │ 1.1.2             │ 1.2.1                  │ MessagePack for Python: Out-of-bounds read / crash on        │
+│              │                     │          │        │                   │                        │ Unpacker reuse after a...                                    │
+│              │                     │          │        │                   │                        │ https://github.com/advisories/GHSA-6v7p-g79w-8964            │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ pillow       │ CVE-2026-25990      │          │        │ 12.1.0            │ 12.1.1                 │ pillow: Pillow: Out-of-bounds Write via Specially Crafted    │
+│              │                     │          │        │                   │                        │ PSD Image                                                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-25990                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-40192      │          │        │                   │ 12.2.0                 │ Pillow: Pillow: Denial of Service via decompression bomb in  │
+│              │                     │          │        │                   │                        │ FITS image processing...                                     │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-40192                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-42311      │          │        │                   │                        │ Pillow: python-pillow: Pillow: Arbitrary code execution via  │
+│              │                     │          │        │                   │                        │ malicious PSD file processing                                │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-42311                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-54058      │          │        │                   │ 12.3.0                 │ Pillow: Pillow: Memory disclosure or denial of service via   │
+│              │                     │          │        │                   │                        │ crafted McIdas AREA...                                       │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-54058                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-54059      │          │        │                   │                        │ python-pillow: Pillow: Denial of Service via crafted PCF     │
+│              │                     │          │        │                   │                        │ font data                                                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-54059                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-54060      │          │        │                   │                        │ python-pillow: Pillow: Denial of Service via excessive       │
+│              │                     │          │        │                   │                        │ memory allocation when processing font...                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-54060                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-55379      │          │        │                   │                        │ python-pillow: Pillow: Denial of Service via crafted BDF     │
+│              │                     │          │        │                   │                        │ font file                                                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-55379                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-55380      │          │        │                   │                        │ python-pillow: Pillow: Denial of Service via crafted GD 2.x  │
+│              │                     │          │        │                   │                        │ image file                                                   │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-55380                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59197      │          │        │                   │                        │ Pillow: Pillow: Native heap out-of-bounds write              │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59197                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59199      │          │        │                   │                        │ Pillow: Pillow: Denial of Service via out-of-bounds write in │
+│              │                     │          │        │                   │                        │ image processing                                             │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59199                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59200      │          │        │                   │                        │ Pillow: Pillow: Denial of service via crafted PDF stream     │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59200                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59204      │          │        │                   │                        │ Pillow: Pillow: Denial of Service via crafted JPEG2000 image │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59204                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59205      │          │        │                   │                        │ Pillow: Pillow: Controlled native heap corruption in         │
+│              │                     │          │        │                   │                        │ ImageCms.ImageCmsTransform.apply API                         │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59205                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ protobuf     │ CVE-2025-4565       │          │        │ 3.19.6            │ 4.25.8, 5.29.5, 6.31.1 │ python-protobuf: Unbounded recursion in Python Protobuf      │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2025-4565                    │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-0994       │          │        │                   │ 6.33.5, 5.29.6         │ python: protobuf: Protobuf: Denial of Service due to         │
+│              │                     │          │        │                   │                        │ recursion depth bypass                                       │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-0994                    │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ pyasn1       │ CVE-2026-30922      │          │        │ 0.6.2             │ 0.6.3                  │ pyasn1: pyasn1 Vulnerable to Denial of Service via Unbounded │
+│              │                     │          │        │                   │                        │ Recursion                                                    │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-30922                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59884      │          │        │                   │ 0.6.4                  │ python-pyasn1: pyasn1: Denial of Service via crafted BER     │
+│              │                     │          │        │                   │                        │ input                                                        │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59884                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59885      │          │        │                   │                        │ pyasn1: python-pyasn1: pyasn1: Denial of Service via crafted │
+│              │                     │          │        │                   │                        │ ASN.1 OBJECT IDENTIFIER                                      │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59885                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-59886      │          │        │                   │                        │ pyasn1: pyasn1: Denial of Service via crafted ASN.1 REAL     │
+│              │                     │          │        │                   │                        │ values                                                       │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-59886                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ setuptools   │ CVE-2025-47273      │          │        │ 70.2.0            │ 78.1.1                 │ setuptools: Path Traversal Vulnerability in setuptools       │
+│              │                     │          │        │                   │                        │ PackageIndex                                                 │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2025-47273                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ starlette    │ CVE-2026-48818      │          │        │ 0.52.1            │ 1.1.0                  │ starlette: Starlette: SSRF and NTLM credential theft via UNC │
+│              │                     │          │        │                   │                        │ paths in StaticFiles...                                      │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-48818                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-54283      │          │        │                   │ 1.3.1                  │ starlette: Starlette: request.form() limits silently ignored │
+│              │                     │          │        │                   │                        │ for application/x-www-form-urlencoded enable DoS             │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-54283                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ tornado      │ CVE-2026-49853      │          │        │ 6.5.5             │ 6.5.6                  │ tornado: Tornado: Information disclosure via improper        │
+│              │                     │          │        │                   │                        │ handling of credentials during HTTP redirects...             │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-49853                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-49855      │          │        │                   │                        │ tornado: Tornado: Denial of Service via uncontrolled gzip    │
+│              │                     │          │        │                   │                        │ decompression memory consumption                             │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-49855                   │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-82397      │          │        │                   │ 6.5.8                  │ Tornado is a Python web framework and asynchronous           │
+│              │                     │          │        │                   │                        │ networking library. ...                                      │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-82397                   │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ transformers │ CVE-2026-4372       │          │        │ 4.57.3            │ 5.3.0                  │ HuggingFace transformers vulnerable to remote code execution │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-4372                    │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-5241       │          │        │                   │ 5.5.0                  │ python-transformers: python-transformers: Arbitrary code     │
+│              │                     │          │        │                   │                        │ execution due to overridden trust_remote_code setting        │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-5241                    │
+│              ├─────────────────────┤          │        │                   ├────────────────────────┼──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-9856       │          │        │                   │ 5.10.0                 │ Transformers save_pretrained path traversal allows arbitrary │
+│              │                     │          │        │                   │                        │ file writes through chat template names...                   │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-9856                    │
+├──────────────┼─────────────────────┤          │        ├───────────────────┼────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ urllib3      │ CVE-2026-44431      │          │        │ 2.6.3             │ 2.7.0                  │ urllib3: urllib3: Information disclosure via cross-origin    │
+│              │                     │          │        │                   │                        │ redirects forwarding sensitive headers                       │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-44431                   │
+│              ├─────────────────────┤          │        │                   │                        ├──────────────────────────────────────────────────────────────┤
+│              │ CVE-2026-44432      │          │        │                   │                        │ urllib3: urllib3: Denial of Service due to excessive HTTP    │
+│              │                     │          │        │                   │                        │ response decompression                                       │
+│              │                     │          │        │                   │                        │ https://avd.aquasec.com/nvd/cve-2026-44432                   │
+└──────────────┴─────────────────────┴──────────┴────────┴───────────────────┴────────────────────────┴──────────────────────────────────────────────────────────────┘

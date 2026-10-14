@@ -1,0 +1,52 @@
+{
+  "id": "RUSTSEC-2026-0194",
+  "packages": [
+    {
+      "name": "quick-xml",
+      "version": "0.38.4",
+      "purl": "pkg:cargo/quick-xml@0.38.4",
+      "ref": "pkg:cargo/quick-xml@0.38.4"
+    },
+    {
+      "name": "quick-xml",
+      "version": "0.39.2",
+      "purl": "pkg:cargo/quick-xml@0.39.2",
+      "ref": "pkg:cargo/quick-xml@0.39.2"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2026-0194",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0194"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV",
+          "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0194"
+        },
+        "score": 7.5,
+        "severity": "high",
+        "method": "CVSSv31",
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      }
+    ],
+    "description": "Quadratic run time when checking a start tag for duplicate attribute names",
+    "affects": [
+      {
+        "ref": "pkg:cargo/quick-xml@0.38.4"
+      },
+      {
+        "ref": "pkg:cargo/quick-xml@0.39.2"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0194"
+      }
+    ],
+    "published": "2026-06-29T12:00:00Z",
+    "updated": "2026-07-02T08:00:03.849273679Z"
+  }
+}

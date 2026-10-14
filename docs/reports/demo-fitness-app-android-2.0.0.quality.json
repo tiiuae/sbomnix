@@ -1,0 +1,695 @@
+{
+ "engine": "sbomquality/1",
+ "format": "CycloneDX",
+ "spec": "1.5",
+ "score": 7.94,
+ "grade": "C",
+ "components": 10,
+ "cats": {
+  "identification": {
+   "score": 10.0,
+   "features": [
+    "comp_with_name",
+    "comp_with_version",
+    "comp_with_uniq_ids"
+   ],
+   "weight": 1.0
+  },
+  "provenance": {
+   "score": 6.0,
+   "features": [
+    "sbom_creation_timestamp",
+    "sbom_authors",
+    "sbom_with_creator_and_version",
+    "comp_with_supplier",
+    "comp_with_source_code_uri"
+   ],
+   "weight": 1.0
+  },
+  "integrity": {
+   "score": 10.0,
+   "features": [
+    "comp_with_checksums",
+    "comp_with_checksums_sha256"
+   ],
+   "weight": 1.0
+  },
+  "completeness": {
+   "score": 7.5,
+   "features": [
+    "sbom_dependencies",
+    "sbom_with_primary_component",
+    "comp_with_primary_purpose",
+    "comp_with_executable_uri"
+   ],
+   "weight": 1.0
+  },
+  "licensing": {
+   "score": 10.0,
+   "features": [
+    "comp_with_licenses",
+    "comp_valid_licenses",
+    "comp_spdx_listed_license",
+    "comp_no_deprecated_licenses",
+    "comp_no_restrictive_licenses"
+   ],
+   "weight": 1.0
+  },
+  "vulnerability": {
+   "score": 5.0,
+   "features": [
+    "comp_with_purls",
+    "comp_with_cpes",
+    "comp_with_any_vuln_lookup_id",
+    "comp_with_multi_vuln_lookup_id"
+   ],
+   "weight": 1.0
+  },
+  "structural": {
+   "score": 10.0,
+   "features": [
+    "spec_compliant",
+    "spec_parsable",
+    "spec_file_format",
+    "sbom_required_fields",
+    "sbom_spec_version"
+   ],
+   "weight": 1.0
+  },
+  "sharing": {
+   "score": 5.0,
+   "features": [
+    "sbom_sharable",
+    "sbom_with_uri"
+   ],
+   "weight": 1.0
+  }
+ },
+ "features": [
+  {
+   "id": "comp_with_name",
+   "cat": "identification",
+   "level": "comp",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_version",
+   "cat": "identification",
+   "level": "comp",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_uniq_ids",
+   "cat": "identification",
+   "level": "comp",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_creation_timestamp",
+   "cat": "provenance",
+   "level": "sbom",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_authors",
+   "cat": "provenance",
+   "level": "sbom",
+   "impact": "required",
+   "score": 0.0,
+   "pass": 0,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_with_creator_and_version",
+   "cat": "provenance",
+   "level": "sbom",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_supplier",
+   "cat": "provenance",
+   "level": "comp",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_source_code_uri",
+   "cat": "provenance",
+   "level": "comp",
+   "impact": "medium",
+   "score": 0.0,
+   "pass": 0,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_checksums",
+   "cat": "integrity",
+   "level": "comp",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_checksums_sha256",
+   "cat": "integrity",
+   "level": "comp",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_dependencies",
+   "cat": "completeness",
+   "level": "comp",
+   "impact": "required",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_with_primary_component",
+   "cat": "completeness",
+   "level": "sbom",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_primary_purpose",
+   "cat": "completeness",
+   "level": "comp",
+   "impact": "low",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_executable_uri",
+   "cat": "completeness",
+   "level": "comp",
+   "impact": "low",
+   "score": 0.0,
+   "pass": 0,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_licenses",
+   "cat": "licensing",
+   "level": "comp",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_valid_licenses",
+   "cat": "licensing",
+   "level": "comp",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_spdx_listed_license",
+   "cat": "licensing",
+   "level": "comp",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_no_deprecated_licenses",
+   "cat": "licensing",
+   "level": "comp",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_no_restrictive_licenses",
+   "cat": "licensing",
+   "level": "comp",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_purls",
+   "cat": "vulnerability",
+   "level": "comp",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_cpes",
+   "cat": "vulnerability",
+   "level": "comp",
+   "impact": "high",
+   "score": 0.0,
+   "pass": 0,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_any_vuln_lookup_id",
+   "cat": "vulnerability",
+   "level": "comp",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 10,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "comp_with_multi_vuln_lookup_id",
+   "cat": "vulnerability",
+   "level": "comp",
+   "impact": "medium",
+   "score": 0.0,
+   "pass": 0,
+   "total": 10,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "spec_compliant",
+   "cat": "structural",
+   "level": "sbom",
+   "impact": "critical",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "spec_parsable",
+   "cat": "structural",
+   "level": "sbom",
+   "impact": "critical",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "spec_file_format",
+   "cat": "structural",
+   "level": "sbom",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_required_fields",
+   "cat": "structural",
+   "level": "sbom",
+   "impact": "high",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_spec_version",
+   "cat": "structural",
+   "level": "sbom",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_sharable",
+   "cat": "sharing",
+   "level": "sbom",
+   "impact": "high",
+   "score": 0.0,
+   "pass": 0,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  },
+  {
+   "id": "sbom_with_uri",
+   "cat": "sharing",
+   "level": "sbom",
+   "impact": "medium",
+   "score": 10.0,
+   "pass": 1,
+   "total": 1,
+   "weight": 1.0,
+   "na": false
+  }
+ ],
+ "profiles": {
+  "ntia": {
+   "status": "partial",
+   "reqs": [
+    {
+     "id": "ntia_supplier",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "ntia_name",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "ntia_version",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "ntia_uniq_id",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "ntia_dependencies",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "ntia_author",
+     "level": "sbom",
+     "ok": false,
+     "pct": 0,
+     "note": ""
+    },
+    {
+     "id": "ntia_timestamp",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    }
+   ],
+   "name": "NTIA Minimum Elements"
+  },
+  "bsi": {
+   "status": "partial",
+   "reqs": [
+    {
+     "id": "bsi_creator",
+     "level": "sbom",
+     "ok": false,
+     "pct": 0,
+     "note": "creator with an e-mail address"
+    },
+    {
+     "id": "bsi_timestamp",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_sbom_uri",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_dependencies",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_format",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": "CycloneDX \u2265 1.4 or SPDX \u2265 2.3"
+    },
+    {
+     "id": "bsi_comp_creator",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_name",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_version",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_filename",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": "filename of the component"
+    },
+    {
+     "id": "bsi_comp_hash",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_license",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_executable",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": "executable property"
+    },
+    {
+     "id": "bsi_comp_archive",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": "archive property"
+    },
+    {
+     "id": "bsi_comp_structured",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": "structured property"
+    },
+    {
+     "id": "bsi_comp_uniq_id",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "bsi_comp_source",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": ""
+    }
+   ],
+   "name": "BSI TR-03183-2 (approximate)",
+   "approximate": true
+  },
+  "fsct": {
+   "status": "partial",
+   "reqs": [
+    {
+     "id": "fsct_author",
+     "level": "sbom",
+     "ok": false,
+     "pct": 0,
+     "note": ""
+    },
+    {
+     "id": "fsct_timestamp",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_producer",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_name",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_version",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_identifiers",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_hash",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_license",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_dependencies",
+     "level": "comp",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    },
+    {
+     "id": "fsct_copyright",
+     "level": "comp",
+     "ok": false,
+     "pct": 0,
+     "note": "copyright holder"
+    },
+    {
+     "id": "fsct_generation_context",
+     "level": "sbom",
+     "ok": false,
+     "pct": 0,
+     "note": "lifecycle / generation context"
+    },
+    {
+     "id": "fsct_tool",
+     "level": "sbom",
+     "ok": true,
+     "pct": 100,
+     "note": ""
+    }
+   ],
+   "name": "FSCT v3 (approximate)",
+   "approximate": true
+  }
+ },
+ "structural": {
+  "problems": [],
+  "missing_fields": []
+ },
+ "licence_source": "SPDX list 3.29.0",
+ "product": "demo-fitness-app",
+ "variant": "android",
+ "version": "2.0.0"
+}

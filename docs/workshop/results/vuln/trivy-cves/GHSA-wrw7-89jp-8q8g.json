@@ -1,0 +1,20 @@
+{
+  "id": "GHSA-wrw7-89jp-8q8g",
+  "scanner": "trivy",
+  "severity": "medium",
+  "cvss": null,
+  "packages": [
+    "glib"
+  ],
+  "findings": [
+    {
+      "package": "glib",
+      "installed": "0.18.5",
+      "fixed": "0.20.0",
+      "severity": "medium",
+      "cvss": null,
+      "target": "cargo",
+      "title": "Unsoundness in `Iterator` and `DoubleEndedIterator` impls for `glib::VariantStrIter`"
+    }
+  ]
+}

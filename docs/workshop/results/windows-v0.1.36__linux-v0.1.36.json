@@ -1,0 +1,2362 @@
+{
+  "x": "windows-v0.1.36",
+  "y": "linux-v0.1.36",
+  "nx": 1196,
+  "ny": 1044,
+  "added": 41,
+  "removed": 134,
+  "changed": 86,
+  "rows": [
+    {
+      "kind": "removed",
+      "name": "android_system_properties",
+      "eco": "cargo",
+      "vx": "0.1.5",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/android_system_properties@0.1.5"
+    },
+    {
+      "kind": "removed",
+      "name": "anstyle-wincon",
+      "eco": "cargo",
+      "vx": "3.0.11",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/anstyle-wincon@3.0.11"
+    },
+    {
+      "kind": "removed",
+      "name": "arbitrary",
+      "eco": "cargo",
+      "vx": "1.4.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/arbitrary@1.4.2"
+    },
+    {
+      "kind": "removed",
+      "name": "async-channel",
+      "eco": "cargo",
+      "vx": "2.5.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-channel@2.5.0"
+    },
+    {
+      "kind": "removed",
+      "name": "async-io",
+      "eco": "cargo",
+      "vx": "2.6.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-io@2.6.0"
+    },
+    {
+      "kind": "removed",
+      "name": "async-lock",
+      "eco": "cargo",
+      "vx": "3.4.2",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-lock@3.4.2"
+    },
+    {
+      "kind": "removed",
+      "name": "async-process",
+      "eco": "cargo",
+      "vx": "2.5.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-process@2.5.0"
+    },
+    {
+      "kind": "removed",
+      "name": "async-recursion",
+      "eco": "cargo",
+      "vx": "1.1.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/async-recursion@1.1.1"
+    },
+    {
+      "kind": "removed",
+      "name": "async-signal",
+      "eco": "cargo",
+      "vx": "0.2.14",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-signal@0.2.14"
+    },
+    {
+      "kind": "removed",
+      "name": "async-task",
+      "eco": "cargo",
+      "vx": "4.7.1",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/async-task@4.7.1"
+    },
+    {
+      "kind": "changed",
+      "name": "bit-set",
+      "eco": "cargo",
+      "vx": "0.8.0",
+      "vy": "0.5.3",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/bit-set@0.5.3"
+    },
+    {
+      "kind": "changed",
+      "name": "bit-vec",
+      "eco": "cargo",
+      "vx": "0.8.0",
+      "vy": "0.6.3",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/bit-vec@0.6.3"
+    },
+    {
+      "kind": "removed",
+      "name": "block2",
+      "eco": "cargo",
+      "vx": "0.6.2",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/block2@0.6.2"
+    },
+    {
+      "kind": "removed",
+      "name": "blocking",
+      "eco": "cargo",
+      "vx": "1.6.2",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/blocking@1.6.2"
+    },
+    {
+      "kind": "removed",
+      "name": "cesu8",
+      "eco": "cargo",
+      "vx": "1.1.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/cesu8@1.1.0"
+    },
+    {
+      "kind": "removed",
+      "name": "combine",
+      "eco": "cargo",
+      "vx": "4.6.7",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/combine@4.6.7"
+    },
+    {
+      "kind": "removed",
+      "name": "console_log",
+      "eco": "cargo",
+      "vx": "1.0.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/console_log@1.0.0"
+    },
+    {
+      "kind": "removed",
+      "name": "core-foundation",
+      "eco": "cargo",
+      "vx": "0.9.4",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/core-foundation@0.9.4"
+    },
+    {
+      "kind": "removed",
+      "name": "core-foundation-sys",
+      "eco": "cargo",
+      "vx": "0.8.7",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/core-foundation-sys@0.8.7"
+    },
+    {
+      "kind": "removed",
+      "name": "core-graphics",
+      "eco": "cargo",
+      "vx": "0.25.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/core-graphics@0.25.0"
+    },
+    {
+      "kind": "removed",
+      "name": "core-graphics-types",
+      "eco": "cargo",
+      "vx": "0.2.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/core-graphics-types@0.2.0"
+    },
+    {
+      "kind": "removed",
+      "name": "coreaudio-rs",
+      "eco": "cargo",
+      "vx": "0.14.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/coreaudio-rs@0.14.0"
+    },
+    {
+      "kind": "removed",
+      "name": "crunchy",
+      "eco": "cargo",
+      "vx": "0.2.4",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/crunchy@0.2.4"
+    },
+    {
+      "kind": "changed",
+      "name": "cssparser",
+      "eco": "cargo",
+      "vx": "0.36.0",
+      "vy": "0.29.6",
+      "lic": "MPL-2.0",
+      "purl": "pkg:cargo/cssparser@0.29.6"
+    },
+    {
+      "kind": "removed",
+      "name": "derive_arbitrary",
+      "eco": "cargo",
+      "vx": "1.4.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/derive_arbitrary@1.4.2"
+    },
+    {
+      "kind": "changed",
+      "name": "derive_more",
+      "eco": "cargo",
+      "vx": "2.1.1",
+      "vy": "0.99.20",
+      "lic": "MIT",
+      "purl": "pkg:cargo/derive_more@0.99.20"
+    },
+    {
+      "kind": "removed",
+      "name": "derive_more-impl",
+      "eco": "cargo",
+      "vx": "2.1.1",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/derive_more-impl@2.1.1"
+    },
+    {
+      "kind": "removed",
+      "name": "dispatch2",
+      "eco": "cargo",
+      "vx": "0.3.1",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/dispatch2@0.3.1"
+    },
+    {
+      "kind": "removed",
+      "name": "dom_query",
+      "eco": "cargo",
+      "vx": "0.27.0",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/dom_query@0.27.0"
+    },
+    {
+      "kind": "removed",
+      "name": "embed_plist",
+      "eco": "cargo",
+      "vx": "1.2.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/embed_plist@1.2.2"
+    },
+    {
+      "kind": "removed",
+      "name": "fiat-crypto",
+      "eco": "cargo",
+      "vx": "0.2.9",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0 OR BSD-1-Clause",
+      "purl": "pkg:cargo/fiat-crypto@0.2.9"
+    },
+    {
+      "kind": "changed",
+      "name": "foreign-types",
+      "eco": "cargo",
+      "vx": "0.5.0",
+      "vy": "0.3.2",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/foreign-types@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "foreign-types-macros",
+      "eco": "cargo",
+      "vx": "0.2.3",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/foreign-types-macros@0.2.3"
+    },
+    {
+      "kind": "changed",
+      "name": "foreign-types-shared",
+      "eco": "cargo",
+      "vx": "0.3.1",
+      "vy": "0.1.1",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/foreign-types-shared@0.1.1"
+    },
+    {
+      "kind": "removed",
+      "name": "futures-lite",
+      "eco": "cargo",
+      "vx": "2.6.1",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/futures-lite@2.6.1"
+    },
+    {
+      "kind": "removed",
+      "name": "hermit-abi",
+      "eco": "cargo",
+      "vx": "0.5.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/hermit-abi@0.5.2"
+    },
+    {
+      "kind": "changed",
+      "name": "html5ever",
+      "eco": "cargo",
+      "vx": "0.38.0",
+      "vy": "0.29.1",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/html5ever@0.29.1"
+    },
+    {
+      "kind": "removed",
+      "name": "iana-time-zone-haiku",
+      "eco": "cargo",
+      "vx": "0.1.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/iana-time-zone-haiku@0.1.2"
+    },
+    {
+      "kind": "removed",
+      "name": "id-arena",
+      "eco": "cargo",
+      "vx": "2.3.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/id-arena@2.3.0"
+    },
+    {
+      "kind": "removed",
+      "name": "jiff-static",
+      "eco": "cargo",
+      "vx": "0.2.23",
+      "vy": "—",
+      "lic": "Unlicense OR MIT",
+      "purl": "pkg:cargo/jiff-static@0.2.23"
+    },
+    {
+      "kind": "removed",
+      "name": "jni",
+      "eco": "cargo",
+      "vx": "0.21.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/jni@0.21.1"
+    },
+    {
+      "kind": "removed",
+      "name": "jni-sys",
+      "eco": "cargo",
+      "vx": "0.4.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/jni-sys@0.4.1"
+    },
+    {
+      "kind": "removed",
+      "name": "jni-sys-macros",
+      "eco": "cargo",
+      "vx": "0.4.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/jni-sys-macros@0.4.1"
+    },
+    {
+      "kind": "removed",
+      "name": "js-sys",
+      "eco": "cargo",
+      "vx": "0.3.91",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/js-sys@0.3.91"
+    },
+    {
+      "kind": "removed",
+      "name": "leb128fmt",
+      "eco": "cargo",
+      "vx": "0.1.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/leb128fmt@0.1.0"
+    },
+    {
+      "kind": "removed",
+      "name": "libredox",
+      "eco": "cargo",
+      "vx": "0.1.14",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/libredox@0.1.14"
+    },
+    {
+      "kind": "removed",
+      "name": "mach2",
+      "eco": "cargo",
+      "vx": "0.5.0",
+      "vy": "—",
+      "lic": "BSD-2-Clause OR MIT OR Apache-2.0",
+      "purl": "pkg:cargo/mach2@0.5.0"
+    },
+    {
+      "kind": "changed",
+      "name": "markup5ever",
+      "eco": "cargo",
+      "vx": "0.38.0",
+      "vy": "0.14.1",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/markup5ever@0.14.1"
+    },
+    {
+      "kind": "added",
+      "name": "minisign-verify",
+      "eco": "cargo",
+      "vx": "—",
+      "vy": "0.2.5",
+      "lic": "MIT",
+      "purl": "pkg:cargo/minisign-verify@0.2.5"
+    },
+    {
+      "kind": "removed",
+      "name": "ndk",
+      "eco": "cargo",
+      "vx": "0.9.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/ndk@0.9.0"
+    },
+    {
+      "kind": "removed",
+      "name": "ndk-context",
+      "eco": "cargo",
+      "vx": "0.1.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/ndk-context@0.1.1"
+    },
+    {
+      "kind": "removed",
+      "name": "ndk-sys",
+      "eco": "cargo",
+      "vx": "0.6.0+11769913",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/ndk-sys@0.6.0+11769913"
+    },
+    {
+      "kind": "removed",
+      "name": "ntapi",
+      "eco": "cargo",
+      "vx": "0.4.3",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/ntapi@0.4.3"
+    },
+    {
+      "kind": "removed",
+      "name": "num-derive",
+      "eco": "cargo",
+      "vx": "0.4.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/num-derive@0.4.2"
+    },
+    {
+      "kind": "removed",
+      "name": "num_enum",
+      "eco": "cargo",
+      "vx": "0.7.6",
+      "vy": "—",
+      "lic": "BSD-3-Clause OR MIT OR Apache-2.0",
+      "purl": "pkg:cargo/num_enum@0.7.6"
+    },
+    {
+      "kind": "removed",
+      "name": "num_enum_derive",
+      "eco": "cargo",
+      "vx": "0.7.6",
+      "vy": "—",
+      "lic": "BSD-3-Clause OR MIT OR Apache-2.0",
+      "purl": "pkg:cargo/num_enum_derive@0.7.6"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2",
+      "eco": "cargo",
+      "vx": "0.6.4",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/objc2@0.6.4"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-app-kit",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-app-kit@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-audio-toolbox",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-audio-toolbox@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-avf-audio",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-avf-audio@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-core-audio",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-core-audio@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-core-audio-types",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-core-audio-types@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-core-foundation",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-core-foundation@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-core-graphics",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-core-graphics@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-encode",
+      "eco": "cargo",
+      "vx": "4.1.0",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/objc2-encode@4.1.0"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-exception-helper",
+      "eco": "cargo",
+      "vx": "0.1.1",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-exception-helper@0.1.1"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-foundation",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/objc2-foundation@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-io-surface",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-io-surface@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-quartz-core",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-quartz-core@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-ui-kit",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-ui-kit@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "objc2-web-kit",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "Zlib OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/objc2-web-kit@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "once_cell_polyfill",
+      "eco": "cargo",
+      "vx": "1.70.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/once_cell_polyfill@1.70.2"
+    },
+    {
+      "kind": "changed",
+      "name": "phf_generator",
+      "eco": "cargo",
+      "vx": "0.13.1",
+      "vy": "0.11.3",
+      "lic": "MIT",
+      "purl": "pkg:cargo/phf_generator@0.11.3"
+    },
+    {
+      "kind": "changed",
+      "name": "phf_macros",
+      "eco": "cargo",
+      "vx": "0.13.1",
+      "vy": "0.11.3",
+      "lic": "MIT",
+      "purl": "pkg:cargo/phf_macros@0.11.3"
+    },
+    {
+      "kind": "removed",
+      "name": "piper",
+      "eco": "cargo",
+      "vx": "0.2.5",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/piper@0.2.5"
+    },
+    {
+      "kind": "removed",
+      "name": "plist",
+      "eco": "cargo",
+      "vx": "1.8.0",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/plist@1.8.0"
+    },
+    {
+      "kind": "removed",
+      "name": "polling",
+      "eco": "cargo",
+      "vx": "3.11.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/polling@3.11.0"
+    },
+    {
+      "kind": "removed",
+      "name": "portable-atomic-util",
+      "eco": "cargo",
+      "vx": "0.2.6",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/portable-atomic-util@0.2.6"
+    },
+    {
+      "kind": "removed",
+      "name": "prettyplease",
+      "eco": "cargo",
+      "vx": "0.2.37",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/prettyplease@0.2.37"
+    },
+    {
+      "kind": "removed",
+      "name": "r-efi",
+      "eco": "cargo",
+      "vx": "6.0.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0 OR LGPL-2.1-or-later",
+      "purl": "pkg:cargo/r-efi@6.0.0"
+    },
+    {
+      "kind": "removed",
+      "name": "redox_syscall",
+      "eco": "cargo",
+      "vx": "0.5.18",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/redox_syscall@0.5.18"
+    },
+    {
+      "kind": "removed",
+      "name": "redox_users",
+      "eco": "cargo",
+      "vx": "0.5.2",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/redox_users@0.5.2"
+    },
+    {
+      "kind": "changed",
+      "name": "reqwest",
+      "eco": "cargo",
+      "vx": "0.13.2",
+      "vy": "0.12.28",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/reqwest@0.12.28"
+    },
+    {
+      "kind": "removed",
+      "name": "schannel",
+      "eco": "cargo",
+      "vx": "0.1.29",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/schannel@0.1.29"
+    },
+    {
+      "kind": "removed",
+      "name": "security-framework",
+      "eco": "cargo",
+      "vx": "3.7.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/security-framework@3.7.0"
+    },
+    {
+      "kind": "removed",
+      "name": "security-framework-sys",
+      "eco": "cargo",
+      "vx": "2.17.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/security-framework-sys@2.17.0"
+    },
+    {
+      "kind": "changed",
+      "name": "selectors",
+      "eco": "cargo",
+      "vx": "0.36.1",
+      "vy": "0.24.0",
+      "lic": "MPL-2.0",
+      "purl": "pkg:cargo/selectors@0.24.0"
+    },
+    {
+      "kind": "removed",
+      "name": "serde-wasm-bindgen",
+      "eco": "cargo",
+      "vx": "0.6.5",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/serde-wasm-bindgen@0.6.5"
+    },
+    {
+      "kind": "changed",
+      "name": "servo_arc",
+      "eco": "cargo",
+      "vx": "0.4.3",
+      "vy": "0.2.0",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/servo_arc@0.2.0"
+    },
+    {
+      "kind": "removed",
+      "name": "softbuffer",
+      "eco": "cargo",
+      "vx": "0.4.8",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/softbuffer@0.4.8"
+    },
+    {
+      "kind": "changed",
+      "name": "string_cache",
+      "eco": "cargo",
+      "vx": "0.9.0",
+      "vy": "0.8.9",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/string_cache@0.8.9"
+    },
+    {
+      "kind": "removed",
+      "name": "swift-rs",
+      "eco": "cargo",
+      "vx": "1.0.7",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/swift-rs@1.0.7"
+    },
+    {
+      "kind": "removed",
+      "name": "system-configuration",
+      "eco": "cargo",
+      "vx": "0.7.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/system-configuration@0.7.0"
+    },
+    {
+      "kind": "removed",
+      "name": "system-configuration-sys",
+      "eco": "cargo",
+      "vx": "0.6.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/system-configuration-sys@0.6.0"
+    },
+    {
+      "kind": "removed",
+      "name": "tao-macros",
+      "eco": "cargo",
+      "vx": "0.1.3",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/tao-macros@0.1.3"
+    },
+    {
+      "kind": "changed",
+      "name": "tendril",
+      "eco": "cargo",
+      "vx": "0.5.0",
+      "vy": "0.4.3",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/tendril@0.4.3"
+    },
+    {
+      "kind": "removed",
+      "name": "uds_windows",
+      "eco": "cargo",
+      "vx": "1.2.1",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/uds_windows@1.2.1"
+    },
+    {
+      "kind": "removed",
+      "name": "unicode-xid",
+      "eco": "cargo",
+      "vx": "0.2.6",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/unicode-xid@0.2.6"
+    },
+    {
+      "kind": "removed",
+      "name": "wasi",
+      "eco": "cargo",
+      "vx": "0.11.1+wasi-snapshot-preview1",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1"
+    },
+    {
+      "kind": "removed",
+      "name": "wasip2",
+      "eco": "cargo",
+      "vx": "1.0.1+wasi-0.2.4",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasip2@1.0.1+wasi-0.2.4"
+    },
+    {
+      "kind": "removed",
+      "name": "wasip3",
+      "eco": "cargo",
+      "vx": "0.4.0+wasi-0.3.0-rc-2026-01-06",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasip3@0.4.0+wasi-0.3.0-rc-2026-01-06"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-bindgen",
+      "eco": "cargo",
+      "vx": "0.2.114",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-bindgen@0.2.114"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-bindgen-futures",
+      "eco": "cargo",
+      "vx": "0.4.64",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-bindgen-futures@0.4.64"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-bindgen-macro",
+      "eco": "cargo",
+      "vx": "0.2.114",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-bindgen-macro@0.2.114"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-bindgen-macro-support",
+      "eco": "cargo",
+      "vx": "0.2.114",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-bindgen-macro-support@0.2.114"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-bindgen-shared",
+      "eco": "cargo",
+      "vx": "0.2.114",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-bindgen-shared@0.2.114"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-encoder",
+      "eco": "cargo",
+      "vx": "0.244.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasm-encoder@0.244.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-metadata",
+      "eco": "cargo",
+      "vx": "0.244.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasm-metadata@0.244.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wasm-streams",
+      "eco": "cargo",
+      "vx": "0.5.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/wasm-streams@0.5.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wasmparser",
+      "eco": "cargo",
+      "vx": "0.244.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wasmparser@0.244.0"
+    },
+    {
+      "kind": "removed",
+      "name": "web-sys",
+      "eco": "cargo",
+      "vx": "0.3.91",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/web-sys@0.3.91"
+    },
+    {
+      "kind": "removed",
+      "name": "web_atoms",
+      "eco": "cargo",
+      "vx": "0.2.3",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/web_atoms@0.2.3"
+    },
+    {
+      "kind": "removed",
+      "name": "webview2-com",
+      "eco": "cargo",
+      "vx": "0.38.2",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/webview2-com@0.38.2"
+    },
+    {
+      "kind": "removed",
+      "name": "webview2-com-macros",
+      "eco": "cargo",
+      "vx": "0.8.1",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/webview2-com-macros@0.8.1"
+    },
+    {
+      "kind": "removed",
+      "name": "webview2-com-sys",
+      "eco": "cargo",
+      "vx": "0.38.2",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:cargo/webview2-com-sys@0.38.2"
+    },
+    {
+      "kind": "removed",
+      "name": "winapi",
+      "eco": "cargo",
+      "vx": "0.3.9",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/winapi@0.3.9"
+    },
+    {
+      "kind": "removed",
+      "name": "winapi-i686-pc-windows-gnu",
+      "eco": "cargo",
+      "vx": "0.4.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/winapi-i686-pc-windows-gnu@0.4.0"
+    },
+    {
+      "kind": "removed",
+      "name": "winapi-util",
+      "eco": "cargo",
+      "vx": "0.1.11",
+      "vy": "—",
+      "lic": "Unlicense OR MIT",
+      "purl": "pkg:cargo/winapi-util@0.1.11"
+    },
+    {
+      "kind": "removed",
+      "name": "winapi-x86_64-pc-windows-gnu",
+      "eco": "cargo",
+      "vx": "0.4.0",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/winapi-x86_64-pc-windows-gnu@0.4.0"
+    },
+    {
+      "kind": "removed",
+      "name": "window-vibrancy",
+      "eco": "cargo",
+      "vx": "0.6.0",
+      "vy": "—",
+      "lic": "Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/window-vibrancy@0.6.0"
+    },
+    {
+      "kind": "removed",
+      "name": "windows",
+      "eco": "cargo",
+      "vx": "0.62.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows@0.62.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-collections",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-collections@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-core",
+      "eco": "cargo",
+      "vx": "0.62.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-core@0.62.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-future",
+      "eco": "cargo",
+      "vx": "0.3.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-future@0.3.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-implement",
+      "eco": "cargo",
+      "vx": "0.60.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-implement@0.60.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-interface",
+      "eco": "cargo",
+      "vx": "0.59.3",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-interface@0.59.3"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-link",
+      "eco": "cargo",
+      "vx": "0.2.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-link@0.2.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-numerics",
+      "eco": "cargo",
+      "vx": "0.3.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-numerics@0.3.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-registry",
+      "eco": "cargo",
+      "vx": "0.6.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-registry@0.6.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-result",
+      "eco": "cargo",
+      "vx": "0.4.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-result@0.4.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-strings",
+      "eco": "cargo",
+      "vx": "0.5.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-strings@0.5.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-sys",
+      "eco": "cargo",
+      "vx": "0.61.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-sys@0.61.2"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-targets",
+      "eco": "cargo",
+      "vx": "0.53.5",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-targets@0.53.5"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-threading",
+      "eco": "cargo",
+      "vx": "0.2.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-threading@0.2.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows-version",
+      "eco": "cargo",
+      "vx": "0.1.7",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows-version@0.1.7"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_aarch64_gnullvm",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_aarch64_gnullvm@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_aarch64_msvc",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_aarch64_msvc@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_i686_gnu",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_i686_gnu@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_i686_gnullvm",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_i686_gnullvm@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_i686_msvc",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_i686_msvc@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_x86_64_gnu",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_x86_64_gnu@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_x86_64_gnullvm",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_x86_64_gnullvm@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "windows_x86_64_msvc",
+      "eco": "cargo",
+      "vx": "0.53.1",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/windows_x86_64_msvc@0.53.1"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-bindgen",
+      "eco": "cargo",
+      "vx": "0.51.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-bindgen@0.51.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-bindgen-core",
+      "eco": "cargo",
+      "vx": "0.51.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-bindgen-core@0.51.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-bindgen-rust",
+      "eco": "cargo",
+      "vx": "0.51.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-bindgen-rust@0.51.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-bindgen-rust-macro",
+      "eco": "cargo",
+      "vx": "0.51.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-bindgen-rust-macro@0.51.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-component",
+      "eco": "cargo",
+      "vx": "0.244.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-component@0.244.0"
+    },
+    {
+      "kind": "removed",
+      "name": "wit-parser",
+      "eco": "cargo",
+      "vx": "0.244.0",
+      "vy": "—",
+      "lic": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "purl": "pkg:cargo/wit-parser@0.244.0"
+    },
+    {
+      "kind": "changed",
+      "name": "accelerate",
+      "eco": "pypi",
+      "vx": "1.13.0",
+      "vy": "1.14.0",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/accelerate@1.14.0"
+    },
+    {
+      "kind": "changed",
+      "name": "aiohappyeyeballs",
+      "eco": "pypi",
+      "vx": "2.6.1",
+      "vy": "2.7.1",
+      "lic": "PSF-2.0",
+      "purl": "pkg:pypi/aiohappyeyeballs@2.7.1"
+    },
+    {
+      "kind": "changed",
+      "name": "aiohttp",
+      "eco": "pypi",
+      "vx": "3.13.3",
+      "vy": "3.14.1",
+      "lic": "Apache-2.0 AND MIT",
+      "purl": "pkg:pypi/aiohttp@3.14.1"
+    },
+    {
+      "kind": "changed",
+      "name": "alembic",
+      "eco": "pypi",
+      "vx": "1.18.1",
+      "vy": "1.18.5",
+      "lic": "MIT",
+      "purl": "pkg:pypi/alembic@1.18.5"
+    },
+    {
+      "kind": "changed",
+      "name": "anyio",
+      "eco": "pypi",
+      "vx": "4.12.1",
+      "vy": "4.11.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/anyio@4.11.0"
+    },
+    {
+      "kind": "changed",
+      "name": "attrs",
+      "eco": "pypi",
+      "vx": "25.4.0",
+      "vy": "26.1.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/attrs@26.1.0"
+    },
+    {
+      "kind": "changed",
+      "name": "av",
+      "eco": "pypi",
+      "vx": "16.1.0",
+      "vy": "16.0.1",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/av@16.0.1"
+    },
+    {
+      "kind": "changed",
+      "name": "certifi",
+      "eco": "pypi",
+      "vx": "2026.2.25",
+      "vy": "2026.6.17",
+      "lic": "MPL-2.0",
+      "purl": "pkg:pypi/certifi@2026.6.17"
+    },
+    {
+      "kind": "changed",
+      "name": "charset-normalizer",
+      "eco": "pypi",
+      "vx": "3.4.6",
+      "vy": "3.4.7",
+      "lic": "MIT",
+      "purl": "pkg:pypi/charset-normalizer@3.4.7"
+    },
+    {
+      "kind": "changed",
+      "name": "click",
+      "eco": "pypi",
+      "vx": "8.3.1",
+      "vy": "8.4.2",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/click@8.4.2"
+    },
+    {
+      "kind": "changed",
+      "name": "cloudpathlib",
+      "eco": "pypi",
+      "vx": "0.23.0",
+      "vy": "0.24.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/cloudpathlib@0.24.0"
+    },
+    {
+      "kind": "changed",
+      "name": "comfy-aimdo",
+      "eco": "pypi",
+      "vx": "0.1.8",
+      "vy": "0.4.10",
+      "lic": "GPL-3.0",
+      "purl": "pkg:pypi/comfy-aimdo@0.4.10"
+    },
+    {
+      "kind": "changed",
+      "name": "ctranslate2",
+      "eco": "pypi",
+      "vx": "4.7.1",
+      "vy": "4.6.1",
+      "lic": "MIT",
+      "purl": "pkg:pypi/ctranslate2@4.6.1"
+    },
+    {
+      "kind": "added",
+      "name": "cuda-bindings",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.9.4",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/cuda-bindings@12.9.4"
+    },
+    {
+      "kind": "added",
+      "name": "cuda-pathfinder",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.5.6",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/cuda-pathfinder@1.5.6"
+    },
+    {
+      "kind": "added",
+      "name": "cuda-toolkit",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.2",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/cuda-toolkit@13.0.2"
+    },
+    {
+      "kind": "changed",
+      "name": "decorator",
+      "eco": "pypi",
+      "vx": "5.2.1",
+      "vy": "5.3.1",
+      "lic": "BSD-2-Clause",
+      "purl": "pkg:pypi/decorator@5.3.1"
+    },
+    {
+      "kind": "changed",
+      "name": "filelock",
+      "eco": "pypi",
+      "vx": "3.20.0",
+      "vy": "3.29.5",
+      "lic": "MIT",
+      "purl": "pkg:pypi/filelock@3.29.5"
+    },
+    {
+      "kind": "changed",
+      "name": "flatbuffers",
+      "eco": "pypi",
+      "vx": "25.12.19",
+      "vy": "25.9.23",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/flatbuffers@25.9.23"
+    },
+    {
+      "kind": "changed",
+      "name": "fonttools",
+      "eco": "pypi",
+      "vx": "4.62.1",
+      "vy": "4.63.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/fonttools@4.63.0"
+    },
+    {
+      "kind": "changed",
+      "name": "fsspec",
+      "eco": "pypi",
+      "vx": "2025.12.0",
+      "vy": "2026.6.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/fsspec@2026.6.0"
+    },
+    {
+      "kind": "changed",
+      "name": "greenlet",
+      "eco": "pypi",
+      "vx": "3.3.1",
+      "vy": "3.5.3",
+      "lic": "MIT AND PSF-2.0",
+      "purl": "pkg:pypi/greenlet@3.5.3"
+    },
+    {
+      "kind": "changed",
+      "name": "hf-xet",
+      "eco": "pypi",
+      "vx": "1.2.0",
+      "vy": "1.5.1",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/hf-xet@1.5.1"
+    },
+    {
+      "kind": "changed",
+      "name": "idna",
+      "eco": "pypi",
+      "vx": "3.11",
+      "vy": "3.18",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/idna@3.18"
+    },
+    {
+      "kind": "changed",
+      "name": "importlib_metadata",
+      "eco": "pypi",
+      "vx": "8.7.1",
+      "vy": "9.0.0",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/importlib_metadata@9.0.0"
+    },
+    {
+      "kind": "changed",
+      "name": "julius",
+      "eco": "pypi",
+      "vx": "0.2.7",
+      "vy": "0.2.8",
+      "lic": "MIT",
+      "purl": "pkg:pypi/julius@0.2.8"
+    },
+    {
+      "kind": "changed",
+      "name": "kornia",
+      "eco": "pypi",
+      "vx": "0.8.2",
+      "vy": "0.8.3",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/kornia@0.8.3"
+    },
+    {
+      "kind": "changed",
+      "name": "kornia_rs",
+      "eco": "pypi",
+      "vx": "0.1.10",
+      "vy": "0.1.14",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/kornia_rs@0.1.14"
+    },
+    {
+      "kind": "changed",
+      "name": "lameenc",
+      "eco": "pypi",
+      "vx": "1.8.2",
+      "vy": "1.8.4",
+      "lic": "LGPL-3.0-or-later",
+      "purl": "pkg:pypi/lameenc@1.8.4"
+    },
+    {
+      "kind": "changed",
+      "name": "llvmlite",
+      "eco": "pypi",
+      "vx": "0.46.0",
+      "vy": "0.45.1",
+      "lic": "BSD-2-Clause",
+      "purl": "pkg:pypi/llvmlite@0.45.1"
+    },
+    {
+      "kind": "changed",
+      "name": "Mako",
+      "eco": "pypi",
+      "vx": "1.3.10",
+      "vy": "1.3.12",
+      "lic": "MIT",
+      "purl": "pkg:pypi/Mako@1.3.12"
+    },
+    {
+      "kind": "changed",
+      "name": "markdown-it-py",
+      "eco": "pypi",
+      "vx": "4.0.0",
+      "vy": "4.2.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/markdown-it-py@4.2.0"
+    },
+    {
+      "kind": "changed",
+      "name": "MarkupSafe",
+      "eco": "pypi",
+      "vx": "3.0.2",
+      "vy": "3.0.3",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/MarkupSafe@3.0.3"
+    },
+    {
+      "kind": "changed",
+      "name": "msgpack",
+      "eco": "pypi",
+      "vx": "1.1.2",
+      "vy": "1.2.1",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/msgpack@1.2.1"
+    },
+    {
+      "kind": "added",
+      "name": "narwhals",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "2.23.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/narwhals@2.23.0"
+    },
+    {
+      "kind": "changed",
+      "name": "numba",
+      "eco": "pypi",
+      "vx": "0.64.0",
+      "vy": "0.62.1",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/numba@0.62.1"
+    },
+    {
+      "kind": "changed",
+      "name": "numpy",
+      "eco": "pypi",
+      "vx": "2.2.6",
+      "vy": "2.3.4",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/numpy@2.3.4"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cublas",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.1.1.3",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cublas@13.1.1.3"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cublas-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.4.1",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cublas-cu12@12.8.4.1"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-cupti",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.85",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-cupti@13.0.85"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-cupti-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.90",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-cupti-cu12@12.8.90"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-nvrtc",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.88",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-nvrtc@13.0.88"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-nvrtc-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.93",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-nvrtc-cu12@12.8.93"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-runtime",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.96",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-runtime@13.0.96"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cuda-runtime-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.90",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cuda-runtime-cu12@12.8.90"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cudnn-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "9.10.2.21",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cudnn-cu12@9.10.2.21"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cudnn-cu13",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "9.20.0.48",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cudnn-cu13@9.20.0.48"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cufft",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.0.0.61",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cufft@12.0.0.61"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cufft-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "11.3.3.83",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cufft-cu12@11.3.3.83"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cufile",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.15.1.6",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cufile@1.15.1.6"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cufile-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.13.1.3",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cufile-cu12@1.13.1.3"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-curand",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "10.4.0.35",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-curand@10.4.0.35"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-curand-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "10.3.9.90",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-curand-cu12@10.3.9.90"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusolver",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.0.4.66",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusolver@12.0.4.66"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusolver-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "11.7.3.90",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusolver-cu12@11.7.3.90"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusparse",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.6.3.3",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusparse@12.6.3.3"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusparse-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.5.8.93",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusparse-cu12@12.5.8.93"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusparselt-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "0.7.1",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusparselt-cu12@0.7.1"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-cusparselt-cu13",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "0.8.1",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-cusparselt-cu13@0.8.1"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nccl-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "2.27.5",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/nvidia-nccl-cu12@2.27.5"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nccl-cu13",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "2.29.7",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-nccl-cu13@2.29.7"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvjitlink",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.88",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-nvjitlink@13.0.88"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvjitlink-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.93",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-nvjitlink-cu12@12.8.93"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvshmem-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "3.4.5",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-nvshmem-cu12@3.4.5"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvshmem-cu13",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "3.4.5",
+      "lic": "LicenseRef-NVIDIA-Proprietary",
+      "purl": "pkg:pypi/nvidia-nvshmem-cu13@3.4.5"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvtx",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "13.0.85",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/nvidia-nvtx@13.0.85"
+    },
+    {
+      "kind": "added",
+      "name": "nvidia-nvtx-cu12",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "12.8.90",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/nvidia-nvtx-cu12@12.8.90"
+    },
+    {
+      "kind": "changed",
+      "name": "omegaconf",
+      "eco": "pypi",
+      "vx": "2.3.0",
+      "vy": "2.3.1",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/omegaconf@2.3.1"
+    },
+    {
+      "kind": "changed",
+      "name": "onnxruntime",
+      "eco": "pypi",
+      "vx": "1.24.3",
+      "vy": "1.23.2",
+      "lic": "MIT",
+      "purl": "pkg:pypi/onnxruntime@1.23.2"
+    },
+    {
+      "kind": "changed",
+      "name": "packaging",
+      "eco": "pypi",
+      "vx": "26.0",
+      "vy": "25.0",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/packaging@25.0"
+    },
+    {
+      "kind": "added",
+      "name": "peft",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "0.19.1",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/peft@0.19.1"
+    },
+    {
+      "kind": "changed",
+      "name": "pillow",
+      "eco": "pypi",
+      "vx": "12.1.0",
+      "vy": "12.3.0",
+      "lic": "MIT-CMU",
+      "purl": "pkg:pypi/pillow@12.3.0"
+    },
+    {
+      "kind": "changed",
+      "name": "pip",
+      "eco": "pypi",
+      "vx": "26.0.1",
+      "vy": "26.1.2",
+      "lic": "MIT",
+      "purl": "pkg:pypi/pip@26.1.2"
+    },
+    {
+      "kind": "changed",
+      "name": "platformdirs",
+      "eco": "pypi",
+      "vx": "4.9.4",
+      "vy": "4.10.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/platformdirs@4.10.0"
+    },
+    {
+      "kind": "changed",
+      "name": "preshed",
+      "eco": "pypi",
+      "vx": "3.0.12",
+      "vy": "3.0.13",
+      "lic": "MIT",
+      "purl": "pkg:pypi/preshed@3.0.13"
+    },
+    {
+      "kind": "changed",
+      "name": "propcache",
+      "eco": "pypi",
+      "vx": "0.4.1",
+      "vy": "0.5.2",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/propcache@0.5.2"
+    },
+    {
+      "kind": "changed",
+      "name": "protobuf",
+      "eco": "pypi",
+      "vx": "3.19.6",
+      "vy": "6.33.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/protobuf@6.33.0"
+    },
+    {
+      "kind": "changed",
+      "name": "psutil",
+      "eco": "pypi",
+      "vx": "7.2.1",
+      "vy": "7.2.2",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/psutil@7.2.2"
+    },
+    {
+      "kind": "changed",
+      "name": "pydantic",
+      "eco": "pypi",
+      "vx": "2.12.5",
+      "vy": "2.13.4",
+      "lic": "MIT",
+      "purl": "pkg:pypi/pydantic@2.13.4"
+    },
+    {
+      "kind": "changed",
+      "name": "pydantic-settings",
+      "eco": "pypi",
+      "vx": "2.12.0",
+      "vy": "2.14.2",
+      "lic": "MIT",
+      "purl": "pkg:pypi/pydantic-settings@2.14.2"
+    },
+    {
+      "kind": "changed",
+      "name": "pydantic_core",
+      "eco": "pypi",
+      "vx": "2.41.5",
+      "vy": "2.46.4",
+      "lic": "MIT",
+      "purl": "pkg:pypi/pydantic_core@2.46.4"
+    },
+    {
+      "kind": "added",
+      "name": "pygit2",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.19.1",
+      "lic": "GPL-2.0-only WITH linking-exception",
+      "purl": "pkg:pypi/pygit2@1.19.1"
+    },
+    {
+      "kind": "changed",
+      "name": "Pygments",
+      "eco": "pypi",
+      "vx": "2.19.2",
+      "vy": "2.20.0",
+      "lic": "BSD-2-Clause",
+      "purl": "pkg:pypi/Pygments@2.20.0"
+    },
+    {
+      "kind": "changed",
+      "name": "python-dotenv",
+      "eco": "pypi",
+      "vx": "1.2.1",
+      "vy": "1.2.2",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/python-dotenv@1.2.2"
+    },
+    {
+      "kind": "changed",
+      "name": "regex",
+      "eco": "pypi",
+      "vx": "2026.2.28",
+      "vy": "2025.11.3",
+      "lic": "Apache-2.0 AND CNRI-Python",
+      "purl": "pkg:pypi/regex@2025.11.3"
+    },
+    {
+      "kind": "changed",
+      "name": "requests",
+      "eco": "pypi",
+      "vx": "2.32.5",
+      "vy": "2.34.2",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/requests@2.34.2"
+    },
+    {
+      "kind": "changed",
+      "name": "rich",
+      "eco": "pypi",
+      "vx": "14.3.3",
+      "vy": "15.0.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/rich@15.0.0"
+    },
+    {
+      "kind": "changed",
+      "name": "safetensors",
+      "eco": "pypi",
+      "vx": "0.7.0",
+      "vy": "0.8.0",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/safetensors@0.8.0"
+    },
+    {
+      "kind": "changed",
+      "name": "scikit-learn",
+      "eco": "pypi",
+      "vx": "1.8.0",
+      "vy": "1.9.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/scikit-learn@1.9.0"
+    },
+    {
+      "kind": "changed",
+      "name": "scipy",
+      "eco": "pypi",
+      "vx": "1.17.1",
+      "vy": "1.18.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/scipy@1.18.0"
+    },
+    {
+      "kind": "changed",
+      "name": "setuptools",
+      "eco": "pypi",
+      "vx": "70.2.0",
+      "vy": "80.10.2",
+      "lic": "MIT",
+      "purl": "pkg:pypi/setuptools@80.10.2"
+    },
+    {
+      "kind": "changed",
+      "name": "smart_open",
+      "eco": "pypi",
+      "vx": "7.5.1",
+      "vy": "7.7.1",
+      "lic": "MIT",
+      "purl": "pkg:pypi/smart_open@7.7.1"
+    },
+    {
+      "kind": "added",
+      "name": "sniffio",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.3.1",
+      "lic": "MIT",
+      "purl": "pkg:pypi/sniffio@1.3.1"
+    },
+    {
+      "kind": "changed",
+      "name": "soundfile",
+      "eco": "pypi",
+      "vx": "0.13.1",
+      "vy": "0.14.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/soundfile@0.14.0"
+    },
+    {
+      "kind": "added",
+      "name": "sox",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "1.5.0",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/sox@1.5.0"
+    },
+    {
+      "kind": "changed",
+      "name": "soxr",
+      "eco": "pypi",
+      "vx": "1.0.0",
+      "vy": "1.1.0",
+      "lic": "LGPL-2.1-or-later",
+      "purl": "pkg:pypi/soxr@1.1.0"
+    },
+    {
+      "kind": "changed",
+      "name": "spandrel",
+      "eco": "pypi",
+      "vx": "0.4.1",
+      "vy": "0.4.2",
+      "lic": "MIT",
+      "purl": "pkg:pypi/spandrel@0.4.2"
+    },
+    {
+      "kind": "changed",
+      "name": "SQLAlchemy",
+      "eco": "pypi",
+      "vx": "2.0.46",
+      "vy": "2.0.51",
+      "lic": "MIT",
+      "purl": "pkg:pypi/SQLAlchemy@2.0.51"
+    },
+    {
+      "kind": "changed",
+      "name": "srsly",
+      "eco": "pypi",
+      "vx": "2.5.2",
+      "vy": "2.5.3",
+      "lic": "MIT",
+      "purl": "pkg:pypi/srsly@2.5.3"
+    },
+    {
+      "kind": "changed",
+      "name": "thinc",
+      "eco": "pypi",
+      "vx": "8.3.10",
+      "vy": "8.3.11",
+      "lic": "MIT",
+      "purl": "pkg:pypi/thinc@8.3.11"
+    },
+    {
+      "kind": "changed",
+      "name": "tokenizers",
+      "eco": "pypi",
+      "vx": "0.22.2",
+      "vy": "0.22.1",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/tokenizers@0.22.1"
+    },
+    {
+      "kind": "changed",
+      "name": "torchcodec",
+      "eco": "pypi",
+      "vx": "0.11.0",
+      "vy": "0.11.0+cu128",
+      "lic": "BSD-3-Clause",
+      "purl": "pkg:pypi/torchcodec@0.11.0+cu128"
+    },
+    {
+      "kind": "changed",
+      "name": "tqdm",
+      "eco": "pypi",
+      "vx": "4.67.3",
+      "vy": "4.67.1",
+      "lic": "MIT",
+      "purl": "pkg:pypi/tqdm@4.67.1"
+    },
+    {
+      "kind": "added",
+      "name": "triton",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "3.6.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/triton@3.6.0"
+    },
+    {
+      "kind": "removed",
+      "name": "triton-windows",
+      "eco": "pypi",
+      "vx": "3.6.0.post26",
+      "vy": "—",
+      "lic": "MIT",
+      "purl": "pkg:pypi/triton-windows@3.6.0.post26"
+    },
+    {
+      "kind": "added",
+      "name": "typer",
+      "eco": "pypi",
+      "vx": "—",
+      "vy": "0.26.8",
+      "lic": "MIT",
+      "purl": "pkg:pypi/typer@0.26.8"
+    },
+    {
+      "kind": "changed",
+      "name": "typer-slim",
+      "eco": "pypi",
+      "vx": "0.21.1",
+      "vy": "0.20.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/typer-slim@0.20.0"
+    },
+    {
+      "kind": "changed",
+      "name": "typing_extensions",
+      "eco": "pypi",
+      "vx": "4.15.0",
+      "vy": "4.16.0",
+      "lic": "PSF-2.0",
+      "purl": "pkg:pypi/typing_extensions@4.16.0"
+    },
+    {
+      "kind": "changed",
+      "name": "urllib3",
+      "eco": "pypi",
+      "vx": "2.6.3",
+      "vy": "2.7.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/urllib3@2.7.0"
+    },
+    {
+      "kind": "changed",
+      "name": "wrapt",
+      "eco": "pypi",
+      "vx": "2.1.2",
+      "vy": "2.2.2",
+      "lic": "BSD-2-Clause",
+      "purl": "pkg:pypi/wrapt@2.2.2"
+    },
+    {
+      "kind": "changed",
+      "name": "yarl",
+      "eco": "pypi",
+      "vx": "1.22.0",
+      "vy": "1.24.2",
+      "lic": "Apache-2.0",
+      "purl": "pkg:pypi/yarl@1.24.2"
+    },
+    {
+      "kind": "changed",
+      "name": "zipp",
+      "eco": "pypi",
+      "vx": "3.23.0",
+      "vy": "4.1.0",
+      "lic": "MIT",
+      "purl": "pkg:pypi/zipp@4.1.0"
+    }
+  ],
+  "labelX": "windows-v0.1.36",
+  "labelY": "linux-v0.1.36"
+}

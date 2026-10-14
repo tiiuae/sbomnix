@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>SBOM Explorer</title>
+<meta name="description" content="Software Bill of Materials per product (desktop, mobile, web, embedded): release history, CVE comparison, maturity and recommended actions. PL / EN.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%233b5bdb%27/%3E%3Cpath d=%27M3 4h10M3 8h10M3 12h6%27 stroke=%27white%27 stroke-width=%271.6%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">SBOM Explorer</a>
+  <h1 id="crumb"></h1>
+  <span id="lang" class="seg" role="group"><button data-l="pl" aria-pressed="false">PL</button><button data-l="en" aria-pressed="false">EN</button></span>
+  <a href="workshop/warsztat-cra-sbom.html" id="wsBtn" class="btn" hidden>Workshop</a>
+  <a href="#/upload" id="upBtn" class="btn">Upload</a>
+  <a href="#/about" id="howBtn" class="btn">How it works</a>
+  <button id="tourBtn" aria-label="Tour" title="Tour">?</button>
+  <button id="theme" aria-label="Toggle theme" title="Toggle theme">◐</button>
+</header>
+<main id="app"><p class="muted">Loading…</p></main>
+<script src="i18n.js"></script>
+<button id="fbBtn" class="fab" type="button">💬 Feedback</button>
+<script src="app.js"></script>
+<script src="extras.js"></script>
+<script src="quality.js"></script>
+</body>
+</html>

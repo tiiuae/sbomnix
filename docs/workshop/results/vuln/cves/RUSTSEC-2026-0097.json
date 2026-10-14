@@ -1,0 +1,49 @@
+{
+  "id": "RUSTSEC-2026-0097",
+  "packages": [
+    {
+      "name": "rand",
+      "version": "0.8.5",
+      "purl": "pkg:cargo/rand@0.8.5",
+      "ref": "pkg:cargo/rand@0.8.5"
+    },
+    {
+      "name": "rand",
+      "version": "0.9.2",
+      "purl": "pkg:cargo/rand@0.9.2",
+      "ref": "pkg:cargo/rand@0.9.2"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2026-0097",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0097"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "Rand is unsound with a custom logger using `rand::rng()`",
+    "affects": [
+      {
+        "ref": "pkg:cargo/rand@0.8.5"
+      },
+      {
+        "ref": "pkg:cargo/rand@0.9.2"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0097"
+      }
+    ],
+    "published": "2026-04-09T12:00:00Z",
+    "updated": "2026-07-17T16:00:04.554426493Z"
+  }
+}

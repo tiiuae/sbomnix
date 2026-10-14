@@ -1,0 +1,42 @@
+{
+  "id": "GHSA-7gcf-g7xr-8hxj",
+  "packages": [
+    {
+      "name": "serde_with",
+      "version": "3.17.0",
+      "purl": "pkg:cargo/serde_with@3.17.0",
+      "ref": "pkg:cargo/serde_with@3.17.0"
+    }
+  ],
+  "vulnerability": {
+    "id": "GHSA-7gcf-g7xr-8hxj",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/GHSA-7gcf-g7xr-8hxj"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV",
+          "url": "https://osv.dev/vulnerability/GHSA-7gcf-g7xr-8hxj"
+        },
+        "severity": "medium",
+        "method": "CVSSv4",
+        "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N"
+      }
+    ],
+    "description": "serde_with: KeyValueMap serialization panics on empty sequence or map entries",
+    "affects": [
+      {
+        "ref": "pkg:cargo/serde_with@3.17.0"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/GHSA-7gcf-g7xr-8hxj"
+      }
+    ],
+    "published": "2026-07-15T22:41:01Z",
+    "updated": "2026-09-10T03:51:10.897685062Z"
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "platform": "linux",
+  "x": "v0.1.18",
+  "y": "v0.1.36",
+  "nx": 1040,
+  "ny": 1044,
+  "added": 4,
+  "removed": 0,
+  "changed": 18,
+  "rows": [
+    {
+      "kind": "changed",
+      "name": "h2",
+      "eco": "cargo",
+      "vx": "0.4.13",
+      "vy": "0.4.18",
+      "lic": "MIT",
+      "purl": "pkg:cargo/h2@0.4.18"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_rvc_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_rvc_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_safe_load_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_safe_load_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "00_rAIdio_torchaudio_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/00_rAIdio_torchaudio_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "_python_embeded_overrides_fairseq",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/_python_embeded_overrides_fairseq@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "_python_embeded_overrides_sitecustomize",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/_python_embeded_overrides_sitecustomize@4160277"
+    },
+    {
+      "kind": "added",
+      "name": "ACE-Step v1 3.5B",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "070d866eef53",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/ACE-Step%20v1%203.5B@070d866eef53"
+    },
+    {
+      "kind": "changed",
+      "name": "ComfyUI-ChordMidi",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/ComfyUI-ChordMidi@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "comfyui_memescreamer_memory_cleaner",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/comfyui_memescreamer_memory_cleaner@4160277"
+    },
+    {
+      "kind": "added",
+      "name": "faster-whisper large-v3",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "53ebf7a7118f",
+      "lic": "MIT",
+      "purl": "pkg:generic/faster-whisper%20large-v3@53ebf7a7118f"
+    },
+    {
+      "kind": "added",
+      "name": "llama.cpp (llama-server)",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "b10066",
+      "lic": "MIT",
+      "purl": "pkg:generic/llama.cpp%20%28llama-server%29@b10066"
+    },
+    {
+      "kind": "added",
+      "name": "Qwen2.5-1.5B-Instruct",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "91cad51170dc",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/Qwen2.5-1.5B-Instruct@91cad51170dc"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_aimdo_reset",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_aimdo_reset@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_nodes",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/rAIdio_nodes@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_watermark",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_watermark@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_whisper_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_whisper_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "rAIdio_xl_patch",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/rAIdio_xl_patch@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_bool_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_bool_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_infer_audio_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_infer_audio_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_loadaudio_alias",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_loadaudio_alias@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_train_dir_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_train_dir_fix@4160277"
+    },
+    {
+      "kind": "changed",
+      "name": "zz_rAIdio_rvc_train_quote_fix",
+      "eco": "generic",
+      "vx": "c700713",
+      "vy": "4160277",
+      "lic": "GPL-3.0",
+      "purl": "pkg:generic/zz_rAIdio_rvc_train_quote_fix@4160277"
+    }
+  ]
+}

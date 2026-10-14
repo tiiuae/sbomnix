@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2026-0173",
+  "packages": [
+    {
+      "name": "proc-macro-error2",
+      "version": "2.0.1",
+      "purl": "pkg:cargo/proc-macro-error2@2.0.1",
+      "ref": "pkg:cargo/proc-macro-error2@2.0.1"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2026-0173",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0173"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "proc-macro-error2 is unmaintained",
+    "affects": [
+      {
+        "ref": "pkg:cargo/proc-macro-error2@2.0.1"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0173"
+      }
+    ],
+    "published": "2026-06-07T12:00:00Z",
+    "updated": "2026-06-07T21:00:04.318567692Z"
+  }
+}

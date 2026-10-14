@@ -1,0 +1,6 @@
+snyk auth required
+
+Snyk CLI na tej maszynie nie jest gotowy do skanu bez logowania.
+Zainstaluj: npm install -g snyk
+Zaloguj:    snyk auth
+Potem kliknij Snyk jeszcze raz albo uruchom viewer\run-snyk.cmd

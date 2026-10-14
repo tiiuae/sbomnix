@@ -1,0 +1,359 @@
+{
+ "generated": "2026-10-14T16:08:08+00:00",
+ "products": [
+  {
+   "id": "raidio-bot",
+   "type": "desktop",
+   "icon": "🎚️",
+   "demo": false,
+   "name": "rAIdio.bot",
+   "tagline": {
+    "en": "AI music studio that runs entirely on the user's PC",
+    "pl": "Studio muzyczne AI działające w całości na komputerze użytkownika"
+   },
+   "variants": {
+    "windows": {
+     "label": "Windows",
+     "version": "v0.1.36",
+     "date": "2026-08-30",
+     "quality": {
+      "score": 6.12,
+      "grade": "D",
+      "cats": {
+       "identification": 10.0,
+       "provenance": 4.05,
+       "integrity": 0.0,
+       "completeness": 5.01,
+       "licensing": 9.92,
+       "vulnerability": 5.0,
+       "structural": 10.0,
+       "sharing": 5.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 1196,
+     "vulns": {
+      "critical": 2,
+      "high": 55,
+      "medium": 38,
+      "low": 6,
+      "unknown": 35
+     },
+     "cve_checked": 1139,
+     "dq": {
+      "osv": 1139,
+      "nvd": 0,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 57
+     },
+     "maturity": 67,
+     "level": 3,
+     "level_name": "Defined",
+     "releases": 29,
+     "gaps": 8
+    },
+    "linux": {
+     "label": "Linux",
+     "version": "v0.1.36",
+     "date": "2026-08-30",
+     "quality": {
+      "score": 6.11,
+      "grade": "D",
+      "cats": {
+       "identification": 10.0,
+       "provenance": 4.06,
+       "integrity": 0.0,
+       "completeness": 5.01,
+       "licensing": 9.84,
+       "vulnerability": 5.0,
+       "structural": 10.0,
+       "sharing": 5.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 1044,
+     "vulns": {
+      "critical": 2,
+      "high": 38,
+      "medium": 25,
+      "low": 5,
+      "unknown": 31
+     },
+     "cve_checked": 987,
+     "dq": {
+      "osv": 987,
+      "nvd": 0,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 57
+     },
+     "maturity": 67,
+     "level": 3,
+     "level_name": "Defined",
+     "releases": 17,
+     "gaps": 8
+    }
+   }
+  },
+  {
+   "id": "demo-fitness-app",
+   "type": "mobile",
+   "icon": "📱",
+   "demo": true,
+   "name": "Demo · Fitness App",
+   "tagline": {
+    "en": "DEMO — fictional mobile app (Android + iOS)",
+    "pl": "DEMO — fikcyjna aplikacja mobilna (Android + iOS)"
+   },
+   "variants": {
+    "android": {
+     "label": "Android",
+     "version": "2.0.0",
+     "date": "2026-09-15",
+     "quality": {
+      "score": 7.94,
+      "grade": "C",
+      "cats": {
+       "identification": 10.0,
+       "provenance": 6.0,
+       "integrity": 10.0,
+       "completeness": 7.5,
+       "licensing": 10.0,
+       "vulnerability": 5.0,
+       "structural": 10.0,
+       "sharing": 5.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 10,
+     "vulns": {
+      "critical": 0,
+      "high": 6,
+      "medium": 6,
+      "low": 0,
+      "unknown": 0
+     },
+     "cve_checked": 10,
+     "dq": {
+      "osv": 10,
+      "nvd": 0,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 0
+     },
+     "maturity": 71,
+     "level": 3,
+     "level_name": "Defined",
+     "releases": 3,
+     "gaps": 3
+    },
+    "ios": {
+     "label": "iOS",
+     "version": "2.0.0",
+     "date": "2026-09-15",
+     "quality": {
+      "score": 6.3,
+      "grade": "D",
+      "cats": {
+       "identification": 10.0,
+       "provenance": 5.43,
+       "integrity": 0.0,
+       "completeness": 5.0,
+       "licensing": 10.0,
+       "vulnerability": 5.0,
+       "structural": 10.0,
+       "sharing": 5.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 7,
+     "vulns": {
+      "critical": 0,
+      "high": 2,
+      "medium": 1,
+      "low": 0,
+      "unknown": 0
+     },
+     "cve_checked": 5,
+     "dq": {
+      "osv": 5,
+      "nvd": 0,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 2
+     },
+     "maturity": 67,
+     "level": 3,
+     "level_name": "Defined",
+     "releases": 3,
+     "gaps": 9
+    }
+   }
+  },
+  {
+   "id": "demo-thermostat",
+   "type": "embedded",
+   "icon": "🔌",
+   "demo": true,
+   "name": "Demo · Smart Thermostat",
+   "tagline": {
+    "en": "DEMO — fictional hardware device (gateway + sensor MCU)",
+    "pl": "DEMO — fikcyjne urządzenie (bramka + mikrokontroler czujnika)"
+   },
+   "variants": {
+    "gateway": {
+     "label": "Gateway (Linux)",
+     "version": "1.2.0",
+     "date": "2026-09-01",
+     "quality": {
+      "score": 7.41,
+      "grade": "C",
+      "cats": {
+       "identification": 9.7,
+       "provenance": 7.64,
+       "integrity": 0.0,
+       "completeness": 7.5,
+       "licensing": 9.45,
+       "vulnerability": 5.0,
+       "structural": 10.0,
+       "sharing": 10.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 11,
+     "vulns": {
+      "critical": 14,
+      "high": 64,
+      "medium": 48,
+      "low": 11,
+      "unknown": 0
+     },
+     "cve_checked": 10,
+     "dq": {
+      "osv": 0,
+      "nvd": 10,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 1
+     },
+     "maturity": 44,
+     "level": 2,
+     "level_name": "Managed",
+     "releases": 3,
+     "gaps": 6
+    },
+    "sensor-mcu": {
+     "label": "Sensor MCU (RTOS)",
+     "version": "1.2.0",
+     "date": "2026-09-01",
+     "quality": {
+      "score": 5.91,
+      "grade": "E",
+      "cats": {
+       "identification": 8.52,
+       "provenance": 5.56,
+       "integrity": 1.11,
+       "completeness": 5.0,
+       "licensing": 9.33,
+       "vulnerability": 2.78,
+       "structural": 10.0,
+       "sharing": 5.0
+      },
+      "profiles": {
+       "ntia": "partial",
+       "bsi": "partial",
+       "fsct": "partial"
+      }
+     },
+     "components": 9,
+     "vulns": {
+      "critical": 2,
+      "high": 9,
+      "medium": 7,
+      "low": 1,
+      "unknown": 0
+     },
+     "cve_checked": 5,
+     "dq": {
+      "osv": 0,
+      "nvd": 5,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 4
+     },
+     "maturity": 44,
+     "level": 2,
+     "level_name": "Managed",
+     "releases": 3,
+     "gaps": 7
+    }
+   }
+  }
+ ],
+ "settings": {
+  "feedback": {
+   "github": "rAIdio-bot/sbom",
+   "email": ""
+  },
+  "workshop": "workshop/warsztat-cra-sbom.html"
+ },
+ "method": {
+  "weights": {
+   "Inventory completeness": 1,
+   "NTIA minimum elements": 1.2,
+   "License compliance": 1,
+   "Vulnerability posture": 1.6,
+   "Integrity & provenance": 1.2,
+   "Transparency & process": 0.8,
+   "Freshness": 0.6
+  },
+  "levels": [
+   {
+    "level": 1,
+    "name": "Initial",
+    "below": 35
+   },
+   {
+    "level": 2,
+    "name": "Managed",
+    "below": 55
+   },
+   {
+    "level": 3,
+    "name": "Defined",
+    "below": 72
+   },
+   {
+    "level": 4,
+    "name": "Measured",
+    "below": 88
+   },
+   {
+    "level": 5,
+    "name": "Optimizing",
+    "below": 101
+   }
+  ]
+ }
+}

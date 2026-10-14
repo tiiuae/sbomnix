@@ -1,0 +1,2080 @@
+{
+  "generated": "2026-09-18T19:50:05Z",
+  "count": 117,
+  "by_severity": {
+    "critical": 3,
+    "high": 45,
+    "low": 13,
+    "medium": 43,
+    "unknown": 13
+  },
+  "items": [
+    {
+      "id": "CVE-2023-49092",
+      "severity": "medium",
+      "cvss": 5.9,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "rsa"
+      ],
+      "purls": [
+        "pkg:cargo/rsa@0.9.10"
+      ],
+      "aliases": [],
+      "published": "2023-11-22T12:00:00Z",
+      "description": "Marvin Attack: potential key recovery through timing sidechannels"
+    },
+    {
+      "id": "CVE-2025-14929",
+      "severity": "high",
+      "cvss": 7.8,
+      "vector": "CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv3",
+      "packages": [
+        "transformers"
+      ],
+      "purls": [
+        "pkg:pypi/transformers@4.57.3"
+      ],
+      "aliases": [],
+      "published": "2025-12-23T21:15:48.240Z",
+      "description": "Hugging Face Transformers X-CLIP Checkpoint Conversion Deserialization of Untrusted Data Remote Code Execution Vulnerability. This vulnerability allows remote attackers to execute arbitrary code on affected installations of Hugging Face Transformers. User interaction is required "
+    },
+    {
+      "id": "CVE-2025-3000",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "torch"
+      ],
+      "purls": [
+        "pkg:pypi/torch@2.10.0",
+        "pkg:pypi/torch@2.10.0+cu128"
+      ],
+      "aliases": [
+        "GHSA-rrmf-rvhw-rf47"
+      ],
+      "published": "2025-03-31T15:30:48Z",
+      "description": "PyTorch is vulnerable to memory corruption through its torch.jit.script function"
+    },
+    {
+      "id": "CVE-2025-31477",
+      "severity": "critical",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "@tauri-apps/plugin-shell"
+      ],
+      "purls": [
+        "pkg:npm/@tauri-apps/plugin-shell@2.0.0"
+      ],
+      "aliases": [
+        "GHSA-c9pr-q8gx-3mgp"
+      ],
+      "published": "2025-04-02T22:36:45Z",
+      "description": "Improper Scope Validation in the `open` Endpoint of `tauri-plugin-shell`"
+    },
+    {
+      "id": "CVE-2025-4565",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "protobuf"
+      ],
+      "purls": [
+        "pkg:pypi/protobuf@3.19.6"
+      ],
+      "aliases": [
+        "GHSA-8qvm-5x2c-j2w7"
+      ],
+      "published": "2025-06-16T16:02:58Z",
+      "description": "protobuf-python has a potential Denial of Service issue"
+    },
+    {
+      "id": "CVE-2025-47273",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N/E:P",
+      "method": "CVSSv4",
+      "packages": [
+        "setuptools"
+      ],
+      "purls": [
+        "pkg:pypi/setuptools@70.2.0"
+      ],
+      "aliases": [
+        "GHSA-5rjg-fvgr-3xxf"
+      ],
+      "published": "2025-05-19T16:52:43Z",
+      "description": "setuptools has a path traversal vulnerability in PackageIndex.download that leads to Arbitrary File Write"
+    },
+    {
+      "id": "CVE-2025-68146",
+      "severity": "medium",
+      "cvss": 6.3,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "filelock"
+      ],
+      "purls": [
+        "pkg:pypi/filelock@3.20.0"
+      ],
+      "aliases": [
+        "GHSA-w853-jp5j-5j7f"
+      ],
+      "published": "2025-12-16T20:52:55Z",
+      "description": "filelock has a TOCTOU race condition which allows symlink attacks during lock file creation"
+    },
+    {
+      "id": "CVE-2026-0994",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:L",
+      "method": "CVSSv4",
+      "packages": [
+        "protobuf"
+      ],
+      "purls": [
+        "pkg:pypi/protobuf@3.19.6"
+      ],
+      "aliases": [
+        "GHSA-7gcm-g887-7qv7"
+      ],
+      "published": "2026-01-23T15:31:35Z",
+      "description": "protobuf affected by a JSON recursion depth bypass"
+    },
+    {
+      "id": "CVE-2026-13346",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:H/UI:A/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pip"
+      ],
+      "purls": [
+        "pkg:pypi/pip@26.0.1"
+      ],
+      "aliases": [
+        "GHSA-qwm4-qh6w-59xr"
+      ],
+      "published": "2026-07-29T21:30:59Z",
+      "description": "pip would incorrectly handle doubly-encoded package URLs from indexes"
+    },
+    {
+      "id": "CVE-2026-1839",
+      "severity": "medium",
+      "cvss": 6.5,
+      "vector": "CVSS:3.0/AV:L/AC:H/PR:N/UI:R/S:U/C:H/I:L/A:H",
+      "method": "CVSSv3",
+      "packages": [
+        "transformers"
+      ],
+      "purls": [
+        "pkg:pypi/transformers@4.57.3"
+      ],
+      "aliases": [
+        "GHSA-69w3-r845-3855"
+      ],
+      "published": "2026-04-07T06:30:28Z",
+      "description": "HuggingFace Transformers allows for arbitrary code execution in the `Trainer` class"
+    },
+    {
+      "id": "CVE-2026-22701",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "filelock"
+      ],
+      "purls": [
+        "pkg:pypi/filelock@3.20.0"
+      ],
+      "aliases": [
+        "GHSA-qmgc-5h2g-mvrw"
+      ],
+      "published": "2026-01-13T18:44:55Z",
+      "description": "filelock Time-of-Check-Time-of-Use (TOCTOU) Symlink Vulnerability in SoftFileLock"
+    },
+    {
+      "id": "CVE-2026-22815",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-w2fm-2cpv-w7v5"
+      ],
+      "published": "2026-04-01T19:45:17Z",
+      "description": "aiohttp allows unlimited trailer headers, leading to possible uncapped memory usage"
+    },
+    {
+      "id": "CVE-2026-25645",
+      "severity": "medium",
+      "cvss": 4.4,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:N/I:H/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "requests"
+      ],
+      "purls": [
+        "pkg:pypi/requests@2.32.5"
+      ],
+      "aliases": [
+        "GHSA-gc5v-m9x4-r6x2"
+      ],
+      "published": "2026-03-25T16:56:28Z",
+      "description": "Requests has Insecure Temp File Reuse in its extract_zipped_paths() utility function"
+    },
+    {
+      "id": "CVE-2026-25990",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-cfh3-3jmp-rvhc"
+      ],
+      "published": "2026-02-11T14:22:50Z",
+      "description": "Pillow affected by out-of-bounds write when loading PSD images"
+    },
+    {
+      "id": "CVE-2026-28684",
+      "severity": "medium",
+      "cvss": 6.6,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "python-dotenv"
+      ],
+      "purls": [
+        "pkg:pypi/python-dotenv@1.2.1"
+      ],
+      "aliases": [
+        "GHSA-mf9w-mj56-hr94"
+      ],
+      "published": "2026-04-21T14:38:57Z",
+      "description": "python-dotenv: Symlink following in set_key allows arbitrary file overwrite via cross-device rename fallback"
+    },
+    {
+      "id": "CVE-2026-30922",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv3",
+      "packages": [
+        "pyasn1"
+      ],
+      "purls": [
+        "pkg:pypi/pyasn1@0.6.2"
+      ],
+      "aliases": [
+        "GHSA-jr27-m4p2-rc6r"
+      ],
+      "published": "2026-03-17T16:17:33Z",
+      "description": "Denial of Service in pyasn1 via Unbounded Recursion"
+    },
+    {
+      "id": "CVE-2026-3219",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pip"
+      ],
+      "purls": [
+        "pkg:pypi/pip@26.0.1"
+      ],
+      "aliases": [
+        "GHSA-58qw-9mgm-455v"
+      ],
+      "published": "2026-04-20T18:31:48Z",
+      "description": "pip has an interpretation conflict due to handling both concatenated tar and ZIP files as ZIP files"
+    },
+    {
+      "id": "CVE-2026-34513",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-hcc4-c3v8-rx92"
+      ],
+      "published": "2026-04-01T21:19:22Z",
+      "description": "AIOHTTP Affected by Denial of Service (DoS) via Unbounded DNS Cache in TCPConnector"
+    },
+    {
+      "id": "CVE-2026-34514",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-2vrm-gr82-f7m5"
+      ],
+      "published": "2026-04-01T21:20:06Z",
+      "description": "AIOHTTP has CRLF injection through multipart part content type header construction"
+    },
+    {
+      "id": "CVE-2026-34515",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-p998-jp59-783m"
+      ],
+      "published": "2026-04-01T21:26:36Z",
+      "description": "AIOHTTP affected by UNC SSRF/NTLMv2 Credential Theft/Local File Read in static resource handler on Windows"
+    },
+    {
+      "id": "CVE-2026-34516",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-m5qp-6w8w-w647"
+      ],
+      "published": "2026-04-01T21:43:07Z",
+      "description": "AIOHTTP has a Multipart Header Size Bypass"
+    },
+    {
+      "id": "CVE-2026-34517",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-3wq7-rqq7-wx6j"
+      ],
+      "published": "2026-04-01T21:47:07Z",
+      "description": "AIOHTTP has late size enforcement for non-file multipart fields causes memory DoS"
+    },
+    {
+      "id": "CVE-2026-34518",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-966j-vmvw-g2g9"
+      ],
+      "published": "2026-04-01T21:47:46Z",
+      "description": "AIOHTTP leaks Cookie and Proxy-Authorization headers on cross-origin redirect"
+    },
+    {
+      "id": "CVE-2026-34519",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-mwh4-6h8g-pg8w"
+      ],
+      "published": "2026-04-01T21:48:24Z",
+      "description": "AIOHTTP has HTTP response splitting via \\r in reason phrase"
+    },
+    {
+      "id": "CVE-2026-34520",
+      "severity": "critical",
+      "cvss": 9.1,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-63hf-3vf5-4wqf"
+      ],
+      "published": "2026-04-01T21:49:06Z",
+      "description": "AIOHTTP's C parser (llhttp) accepts null bytes and control characters in response header values - header injection/security bypass"
+    },
+    {
+      "id": "CVE-2026-34525",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-c427-h43c-vf67"
+      ],
+      "published": "2026-04-01T21:49:45Z",
+      "description": "AIOHTTP accepts duplicate Host headers"
+    },
+    {
+      "id": "CVE-2026-34993",
+      "severity": "medium",
+      "cvss": 6.4,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:C/C:L/I:H/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-jg22-mg44-37j8"
+      ],
+      "published": "2026-06-03T20:56:54Z",
+      "description": "AIOHTTP is Vulnerable to Deserialization of Untrusted Data"
+    },
+    {
+      "id": "CVE-2026-40192",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-whj4-6x5x-4v2j"
+      ],
+      "published": "2026-04-13T19:22:35Z",
+      "description": "FITS GZIP decompression bomb in Pillow"
+    },
+    {
+      "id": "CVE-2026-41205",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "Mako"
+      ],
+      "purls": [
+        "pkg:pypi/Mako@1.3.10"
+      ],
+      "aliases": [
+        "GHSA-v92g-xgxw-vvmm"
+      ],
+      "published": "2026-04-16T21:16:40Z",
+      "description": "Mako: Path traversal via double-slash URI prefix in TemplateLookup"
+    },
+    {
+      "id": "CVE-2026-42184",
+      "severity": "high",
+      "cvss": 8.8,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "tauri"
+      ],
+      "purls": [
+        "pkg:cargo/tauri@2.10.3"
+      ],
+      "aliases": [
+        "GHSA-7gmj-67g7-phm9"
+      ],
+      "published": "2026-05-06T16:58:35Z",
+      "description": "Tauri has an Origin Confusion Issue that Allows Remote Pages to Invoke Local-Only IPC Commands"
+    },
+    {
+      "id": "CVE-2026-42308",
+      "severity": "medium",
+      "cvss": 5.5,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-wjx4-4jcj-g98j"
+      ],
+      "published": "2026-05-04T20:18:45Z",
+      "description": "Pillow has an integer overflow when processing fonts"
+    },
+    {
+      "id": "CVE-2026-42309",
+      "severity": "medium",
+      "cvss": 5.5,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-5xmw-vc9v-4wf2"
+      ],
+      "published": "2026-05-04T20:18:27Z",
+      "description": "Pillow has a heap buffer overflow with nested list coordinates"
+    },
+    {
+      "id": "CVE-2026-42310",
+      "severity": "medium",
+      "cvss": 5.5,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-r73j-pqj5-w3x7"
+      ],
+      "published": "2026-05-04T20:19:30Z",
+      "description": "Pillow has a PDF Parsing Trailer Infinite Loop (DoS)"
+    },
+    {
+      "id": "CVE-2026-42311",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-pwv6-vv43-88gr"
+      ],
+      "published": "2026-05-04T20:20:31Z",
+      "description": "Pillow has an OOB Write with Invalid PSD Tile Extents (Integer Overflow)"
+    },
+    {
+      "id": "CVE-2026-4372",
+      "severity": "high",
+      "cvss": 7.8,
+      "vector": "CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv3",
+      "packages": [
+        "transformers"
+      ],
+      "purls": [
+        "pkg:pypi/transformers@4.57.3"
+      ],
+      "aliases": [
+        "GHSA-29pf-2h5f-8g72"
+      ],
+      "published": "2026-05-26T13:30:33Z",
+      "description": "HuggingFace transformers vulnerable to remote code execution"
+    },
+    {
+      "id": "CVE-2026-44307",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "Mako"
+      ],
+      "purls": [
+        "pkg:pypi/Mako@1.3.10"
+      ],
+      "aliases": [
+        "GHSA-2h4p-vjrc-8xpq"
+      ],
+      "published": "2026-05-06T21:45:16Z",
+      "description": "Mako vulnerable to path traversal via backslash URI on Windows in TemplateLookup"
+    },
+    {
+      "id": "CVE-2026-44431",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "urllib3"
+      ],
+      "purls": [
+        "pkg:pypi/urllib3@2.6.3"
+      ],
+      "aliases": [
+        "GHSA-qccp-gfcp-xxvc"
+      ],
+      "published": "2026-05-11T14:51:20Z",
+      "description": "urllib3: Sensitive headers forwarded across origins in proxied low-level redirects"
+    },
+    {
+      "id": "CVE-2026-44432",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "urllib3"
+      ],
+      "purls": [
+        "pkg:pypi/urllib3@2.6.3"
+      ],
+      "aliases": [
+        "GHSA-mf9v-mfxr-j63j"
+      ],
+      "published": "2026-05-11T14:51:45Z",
+      "description": "urllib3: Decompression-bomb safeguards bypassed in parts of the streaming API"
+    },
+    {
+      "id": "CVE-2026-44513",
+      "severity": "high",
+      "cvss": 8.8,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "diffusers"
+      ],
+      "purls": [
+        "pkg:pypi/diffusers@0.37.0"
+      ],
+      "aliases": [
+        "GHSA-98h9-4798-4q5v"
+      ],
+      "published": "2026-05-07T05:31:17Z",
+      "description": "Diffusers has a `trust_remote_code` bypass via `custom_pipeline` and local custom components"
+    },
+    {
+      "id": "CVE-2026-44827",
+      "severity": "high",
+      "cvss": 8.8,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "diffusers"
+      ],
+      "purls": [
+        "pkg:pypi/diffusers@0.37.0"
+      ],
+      "aliases": [],
+      "published": "2026-05-14T17:16:23.500Z",
+      "description": "Diffusers is the a library for  pretrained diffusion models. Prior to 0.38.0, diffusers 0.37.0 allows remote code execution without the trust_remote_code=True safeguard when loading pipelines from Hugging Face Hub repositories. The _resolve_custom_pipeline_and_cls function in pip"
+    },
+    {
+      "id": "CVE-2026-4538",
+      "severity": "high",
+      "cvss": 7.8,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "torch"
+      ],
+      "purls": [
+        "pkg:pypi/torch@2.10.0",
+        "pkg:pypi/torch@2.10.0+cu128"
+      ],
+      "aliases": [],
+      "published": "2026-03-22T05:16:20.273Z",
+      "description": "A vulnerability was identified in PyTorch 2.10.0. The affected element is an unknown function of the component pt2 Loading Handler. The manipulation leads to deserialization. The attack can only be performed from a local environment. The exploit is publicly available and might be"
+    },
+    {
+      "id": "CVE-2026-4539",
+      "severity": "low",
+      "cvss": 3.3,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "Pygments"
+      ],
+      "purls": [
+        "pkg:pypi/Pygments@2.19.2"
+      ],
+      "aliases": [
+        "GHSA-5239-wwwm-4pmq"
+      ],
+      "published": "2026-03-22T06:30:15Z",
+      "description": "Pygments has Regular Expression Denial of Service (ReDoS) due to Inefficient Regex for GUID Matching"
+    },
+    {
+      "id": "CVE-2026-45409",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "idna"
+      ],
+      "purls": [
+        "pkg:pypi/idna@3.11"
+      ],
+      "aliases": [
+        "GHSA-65pc-fj4g-8rjx"
+      ],
+      "published": "2026-05-19T14:34:32Z",
+      "description": "Internationalized Domain Names in Applications (IDNA): Specially crafted inputs to idna.encode() can bypass CVE-2024-3651 fix"
+    },
+    {
+      "id": "CVE-2026-45804",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "diffusers"
+      ],
+      "purls": [
+        "pkg:pypi/diffusers@0.37.0"
+      ],
+      "aliases": [
+        "GHSA-7wx4-6vff-v64p"
+      ],
+      "published": "2026-05-20T15:31:33Z",
+      "description": "Diffusers: TOCTOU Trust Remote Code Bypass"
+    },
+    {
+      "id": "CVE-2026-47265",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-hg6j-4rv6-33pg"
+      ],
+      "published": "2026-06-03T21:34:38Z",
+      "description": "AIOHTTP is vulnerable to cross-origin redirect with per-request cookies"
+    },
+    {
+      "id": "CVE-2026-48710",
+      "severity": "medium",
+      "cvss": 6.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "starlette"
+      ],
+      "purls": [
+        "pkg:pypi/starlette@0.52.1"
+      ],
+      "aliases": [
+        "GHSA-86qp-5c8j-p5mr"
+      ],
+      "published": "2026-06-04T13:15:17Z",
+      "description": "Starlette has missing Host header validation that poisons request.url.path, bypassing path-based security checks"
+    },
+    {
+      "id": "CVE-2026-48817",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "starlette"
+      ],
+      "purls": [
+        "pkg:pypi/starlette@0.52.1"
+      ],
+      "aliases": [
+        "GHSA-x746-7m8f-x49c"
+      ],
+      "published": "2026-06-15T20:16:05Z",
+      "description": "Starlette: Arbitrary HTTP method dispatched to `HTTPEndpoint` attributes via `getattr`"
+    },
+    {
+      "id": "CVE-2026-48818",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "starlette"
+      ],
+      "purls": [
+        "pkg:pypi/starlette@0.52.1"
+      ],
+      "aliases": [
+        "GHSA-wqp7-x3pw-xc5r"
+      ],
+      "published": "2026-06-15T20:16:30Z",
+      "description": "Starlette: SSRF and NTLM credential theft via UNC paths in StaticFiles on Windows"
+    },
+    {
+      "id": "CVE-2026-49853",
+      "severity": "high",
+      "cvss": 7.7,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-3x9g-8vmp-wqvf"
+      ],
+      "published": "2026-06-15T20:20:00Z",
+      "description": "Tornado: Authorization header forwarded across cross-origin redirects in SimpleAsyncHTTPClient"
+    },
+    {
+      "id": "CVE-2026-49854",
+      "severity": "low",
+      "cvss": 3.7,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-cx3h-4qpv-8hc9"
+      ],
+      "published": "2026-06-12T18:30:19Z",
+      "description": "Tornado has out-of-bounds memory access via C extension"
+    },
+    {
+      "id": "CVE-2026-49855",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-mgf9-4vpg-hj56"
+      ],
+      "published": "2026-06-15T20:19:28Z",
+      "description": "tornado AsyncHTTPClient accumulates decompressed chunks without size limit (gzip bomb)"
+    },
+    {
+      "id": "CVE-2026-50269",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-m6qw-4cw2-hm4m"
+      ],
+      "published": "2026-06-15T20:07:26Z",
+      "description": "aiohttp: CRLF injection in multipart headers"
+    },
+    {
+      "id": "CVE-2026-5241",
+      "severity": "high",
+      "cvss": 8.0,
+      "vector": "CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N",
+      "method": "CVSSv3",
+      "packages": [
+        "transformers"
+      ],
+      "purls": [
+        "pkg:pypi/transformers@4.57.3"
+      ],
+      "aliases": [
+        "GHSA-fgcw-684q-jj6r"
+      ],
+      "published": "2026-06-03T15:30:43Z",
+      "description": "huggingface/transformers: Arbitrary Code Execution During Model Initialization in the LightGlue Model Loading Path"
+    },
+    {
+      "id": "CVE-2026-54058",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-62p4-gmf7-7g93"
+      ],
+      "published": "2026-07-20T21:08:13Z",
+      "description": "Pillow: Out-of-bounds read via attacker-controlled row stride on Pillow's mmap path (McIdas AREA files)"
+    },
+    {
+      "id": "CVE-2026-54059",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-8v84-f9pq-wr9x"
+      ],
+      "published": "2026-07-20T21:08:27Z",
+      "description": "Pillow `PcfFontFile._load_bitmaps()`: `Image.frombytes()` called without `_decompression_bomb_check()` — bomb protection bypass via PCF font loading"
+    },
+    {
+      "id": "CVE-2026-54060",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-5x94-69rx-g8h2"
+      ],
+      "published": "2026-07-20T21:08:40Z",
+      "description": "Pillow: `FontFile.compile()`: `Image.new()` called without `_decompression_bomb_check()`"
+    },
+    {
+      "id": "CVE-2026-54273",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-4fvr-rgm6-gqmc"
+      ],
+      "published": "2026-06-15T20:10:32Z",
+      "description": "aiohttp: HTTP/1 Pipelined Requests Queue Without Limit"
+    },
+    {
+      "id": "CVE-2026-54274",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-xcgm-r5h9-7989"
+      ],
+      "published": "2026-06-15T20:11:22Z",
+      "description": "aiohttp: Incomplete websocket frame payloads bypass memory limits"
+    },
+    {
+      "id": "CVE-2026-54275",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-4m7w-qmgq-4wj5"
+      ],
+      "published": "2026-06-15T20:11:13Z",
+      "description": "aiohttp: TLS Server Hostname Override Is Ignored When Reusing HTTPS Connections"
+    },
+    {
+      "id": "CVE-2026-54276",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-hpj7-wq8m-9hgp"
+      ],
+      "published": "2026-06-15T20:09:06Z",
+      "description": "aiohttp: DigestAuthMiddleware Applies Credentials to Cross-Origin Redirect Challenges"
+    },
+    {
+      "id": "CVE-2026-54277",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-63hw-fmq6-xxg2"
+      ],
+      "published": "2026-06-15T20:09:16Z",
+      "description": "aiohttp: C HTTP Parser Bypasses max_line_size for Fragmented Lines"
+    },
+    {
+      "id": "CVE-2026-54278",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-g3cq-j2xw-wf74"
+      ],
+      "published": "2026-06-15T20:09:51Z",
+      "description": "aiohttp: Unread Compressed Request Bodies Bypass client_max_size During Cleanup"
+    },
+    {
+      "id": "CVE-2026-54279",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:N/VA:N/SC:L/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-2fqr-mr3j-6wp8"
+      ],
+      "published": "2026-06-15T20:08:51Z",
+      "description": "aiohttp: Host-Only Cookies Become Domain Cookies After CookieJar Persistence"
+    },
+    {
+      "id": "CVE-2026-54280",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:U",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-9x8q-7h8h-wcw9"
+      ],
+      "published": "2026-06-15T20:10:44Z",
+      "description": "aiohttp: Payload Response Resources Are Not Closed After Mid-Body Disconnect"
+    },
+    {
+      "id": "CVE-2026-54282",
+      "severity": "low",
+      "cvss": 3.7,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "starlette"
+      ],
+      "purls": [
+        "pkg:pypi/starlette@0.52.1"
+      ],
+      "aliases": [
+        "GHSA-jp82-jpqv-5vv3"
+      ],
+      "published": "2026-06-15T20:38:08Z",
+      "description": "Starlette: Unvalidated request path concatenated into authority poisons request.url.hostname"
+    },
+    {
+      "id": "CVE-2026-54283",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "starlette"
+      ],
+      "purls": [
+        "pkg:pypi/starlette@0.52.1"
+      ],
+      "aliases": [
+        "GHSA-82w8-qh3p-5jfq"
+      ],
+      "published": "2026-06-15T20:39:53Z",
+      "description": "Starlette: request.form() limits silently ignored for application/x-www-form-urlencoded enable DoS"
+    },
+    {
+      "id": "CVE-2026-55093",
+      "severity": "medium",
+      "cvss": 6.1,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "tract-nnef"
+      ],
+      "purls": [
+        "pkg:cargo/tract-nnef@0.21.10"
+      ],
+      "aliases": [
+        "GHSA-x5mv-8wgw-29hg"
+      ],
+      "published": "2026-06-18T15:05:23Z",
+      "description": "tract-nnef: integer overflow in NNEF `.dat` tensor parser yields an out-of-bounds read on model load"
+    },
+    {
+      "id": "CVE-2026-55379",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-45hq-cxwh-f6vc"
+      ],
+      "published": "2026-07-20T21:13:18Z",
+      "description": "Pillow `BdfFontFile`: `Image.new()` called without `_decompression_bomb_check()` — bomb protection bypass via font loading"
+    },
+    {
+      "id": "CVE-2026-55380",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-phj9-mv4w-65pm"
+      ],
+      "published": "2026-07-20T21:13:35Z",
+      "description": "Pillow `GdImageFile._open()`: image dimensions accepted without `_decompression_bomb_check()`"
+    },
+    {
+      "id": "CVE-2026-55798",
+      "severity": "medium",
+      "cvss": 4.5,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-4x4j-2g7c-83w6"
+      ],
+      "published": "2026-07-20T21:14:14Z",
+      "description": "Pillow: WindowsViewer.get_command() OS command injection via unescaped shell path"
+    },
+    {
+      "id": "CVE-2026-55832",
+      "severity": "medium",
+      "cvss": 6.1,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "tract-onnx"
+      ],
+      "purls": [
+        "pkg:cargo/tract-onnx@0.21.10"
+      ],
+      "aliases": [
+        "GHSA-h668-6x6g-f8r5"
+      ],
+      "published": "2026-06-19T14:45:43Z",
+      "description": "tract: Arbitrary file read via unsanitized ONNX external_data `location` (path traversal) on model load in tract-onnx"
+    },
+    {
+      "id": "CVE-2026-57585",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "msgpack"
+      ],
+      "purls": [
+        "pkg:pypi/msgpack@1.1.2"
+      ],
+      "aliases": [
+        "GHSA-6v7p-g79w-8964"
+      ],
+      "published": "2026-06-19T21:42:55Z",
+      "description": "MessagePack for Python: Out-of-bounds read / crash on Unpacker reuse after a caught error"
+    },
+    {
+      "id": "CVE-2026-58203",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "pydantic-settings"
+      ],
+      "purls": [
+        "pkg:pypi/pydantic-settings@2.12.0"
+      ],
+      "aliases": [
+        "GHSA-4xgf-cpjx-pc3j"
+      ],
+      "published": "2026-06-19T22:10:42Z",
+      "description": "pydantic-settings: NestedSecretsSettingsSource follows symlinks outside secrets_dir, enabling local file read and bypassing secrets_dir_max_size"
+    },
+    {
+      "id": "CVE-2026-58659",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+      "method": "CVSSv4",
+      "packages": [
+        "pytorch-lightning"
+      ],
+      "purls": [
+        "pkg:pypi/pytorch-lightning@2.6.1"
+      ],
+      "aliases": [],
+      "published": "2026-07-15T18:16:48.743Z",
+      "description": "PyTorch Lightning through 2.6.5, fixed in commit d710d68, contains a remote code execution vulnerability in the _load_state function that imports and executes attacker-controlled module names from checkpoint _instantiator hyperparameters. Attackers can craft malicious checkpoint "
+    },
+    {
+      "id": "CVE-2026-59197",
+      "severity": "high",
+      "cvss": 8.2,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-xj96-63gp-2gmr"
+      ],
+      "published": "2026-07-20T23:08:58Z",
+      "description": "Pillow: Heap out-of-bounds write in `ImageFilter.RankFilter` via integer overflow in `ImagingExpand`"
+    },
+    {
+      "id": "CVE-2026-59198",
+      "severity": "medium",
+      "cvss": 6.5,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-fj7v-r99m-22gq"
+      ],
+      "published": "2026-07-20T23:09:36Z",
+      "description": "Pillow TGA RLE encoder can serialize up to ~57 KB of adjacent heap data into generated images"
+    },
+    {
+      "id": "CVE-2026-59199",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-6r8x-57c9-28j4"
+      ],
+      "published": "2026-07-20T23:09:53Z",
+      "description": "Pillow: Heap out-of-bounds write `Image.paste()` / `Image.crop()` via signed coordinate overflow"
+    },
+    {
+      "id": "CVE-2026-59200",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-jjj6-mw9f-p565"
+      ],
+      "published": "2026-07-20T23:11:29Z",
+      "description": "Pillow: Decompression Bomb DoS via PdfParser.PdfStream.decode()"
+    },
+    {
+      "id": "CVE-2026-59203",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-pg7v-jwj7-p798"
+      ],
+      "published": "2026-07-20T23:11:51Z",
+      "description": "Pillow EpsImagePlugin negative %%BeginBinary byte count causes infinite loop denial of service"
+    },
+    {
+      "id": "CVE-2026-59204",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-vjc4-5qp5-m44j"
+      ],
+      "published": "2026-07-20T23:18:32Z",
+      "description": "Pillow JPEG2000 tiled decode retains a growing scratch buffer and can be used for denial of service"
+    },
+    {
+      "id": "CVE-2026-59205",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pillow"
+      ],
+      "purls": [
+        "pkg:pypi/pillow@12.1.0"
+      ],
+      "aliases": [
+        "GHSA-9hw9-ch79-4vh6"
+      ],
+      "published": "2026-07-20T23:19:00Z",
+      "description": "Pillow: Controlled heap out-of-bounds write in Pillow `ImageCmsTransform.apply()` via output mode mismatch"
+    },
+    {
+      "id": "CVE-2026-59881",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-mq44-7p77-q5h7"
+      ],
+      "published": "2026-08-03T20:40:55Z",
+      "description": "AIOHTTP: WebSocket client accepts compressed frames without negotiated permessage-deflate"
+    },
+    {
+      "id": "CVE-2026-59884",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pyasn1"
+      ],
+      "purls": [
+        "pkg:pypi/pyasn1@0.6.2"
+      ],
+      "aliases": [
+        "GHSA-m4p7-r5rc-7g4j"
+      ],
+      "published": "2026-07-21T19:10:11Z",
+      "description": "pyasn1 BER/CER/DER decoder denial of service via unbounded long-form tag IDs"
+    },
+    {
+      "id": "CVE-2026-59885",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pyasn1"
+      ],
+      "purls": [
+        "pkg:pypi/pyasn1@0.6.2"
+      ],
+      "aliases": [
+        "GHSA-8ppf-4f7h-5ppj"
+      ],
+      "published": "2026-07-21T19:11:03Z",
+      "description": "pyasn1: Quadratic complexity in OBJECT IDENTIFIER and RELATIVE-OID processing allows denial of service"
+    },
+    {
+      "id": "CVE-2026-59886",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pyasn1"
+      ],
+      "purls": [
+        "pkg:pypi/pyasn1@0.6.2"
+      ],
+      "aliases": [
+        "GHSA-hm4w-wwcw-mr6r"
+      ],
+      "published": "2026-07-21T19:11:20Z",
+      "description": "pyasn1: Uncontrolled resource consumption when converting decoded REAL values"
+    },
+    {
+      "id": "CVE-2026-59890",
+      "severity": "medium",
+      "cvss": 6.1,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "setuptools"
+      ],
+      "purls": [
+        "pkg:pypi/setuptools@70.2.0"
+      ],
+      "aliases": [
+        "GHSA-h35f-9h28-mq5c"
+      ],
+      "published": "2026-07-21T19:09:21Z",
+      "description": "setuptools: MANIFEST.in exclusion bypass in sdist via Unicode normalization collision (NFC/NFD) on macOS APFS/HFS+"
+    },
+    {
+      "id": "CVE-2026-63374",
+      "severity": "critical",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "anyio"
+      ],
+      "purls": [
+        "pkg:pypi/anyio@4.12.1"
+      ],
+      "aliases": [
+        "GHSA-82r6-8w77-94w6"
+      ],
+      "published": "2026-09-18T17:17:18Z",
+      "description": "AnyIO: TLSStream IDNA 2003 host name encoding enables potential TLS certificate spoofing"
+    },
+    {
+      "id": "CVE-2026-6357",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:P/PR:H/UI:A/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "pip"
+      ],
+      "purls": [
+        "pkg:pypi/pip@26.0.1"
+      ],
+      "aliases": [
+        "GHSA-jp4c-xjxw-mgf9"
+      ],
+      "published": "2026-04-27T15:30:52Z",
+      "description": "pip Vulnerable to Inclusion of Functionality from Untrusted Control Sphere"
+    },
+    {
+      "id": "CVE-2026-64847",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "anyio"
+      ],
+      "purls": [
+        "pkg:pypi/anyio@4.12.1"
+      ],
+      "aliases": [
+        "GHSA-5p39-cfhj-2xmp"
+      ],
+      "published": "2026-09-18T17:17:10Z",
+      "description": "AnyIO process-pool workers can block indefinitely on undrained stderr"
+    },
+    {
+      "id": "CVE-2026-69112",
+      "severity": "high",
+      "cvss": 7.1,
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "accelerate"
+      ],
+      "purls": [
+        "pkg:pypi/accelerate@1.13.0"
+      ],
+      "aliases": [
+        "GHSA-4j2p-28q2-5m79"
+      ],
+      "published": "2026-08-10T21:32:04Z",
+      "description": "Accelerate path traversal and denial of service via sharded checkpoint weight_map entries"
+    },
+    {
+      "id": "CVE-2026-69243",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-mfx4-hv73-q22v"
+      ],
+      "published": "2026-08-03T20:46:10Z",
+      "description": "AIOHTTP: HTTP request smuggling via WebSocket upgrade"
+    },
+    {
+      "id": "CVE-2026-69244",
+      "severity": "high",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "aiohttp"
+      ],
+      "purls": [
+        "pkg:pypi/aiohttp@3.13.3"
+      ],
+      "aliases": [
+        "GHSA-cq5v-8q36-5273"
+      ],
+      "published": "2026-08-03T20:51:13Z",
+      "description": "AIOHTTP: Out-of-bounds heap read in C HTTP response parser error path (malformed chunked response)"
+    },
+    {
+      "id": "CVE-2026-7246",
+      "severity": "high",
+      "cvss": 7.2,
+      "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:C/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "click"
+      ],
+      "purls": [
+        "pkg:pypi/click@8.3.1"
+      ],
+      "aliases": [],
+      "published": "2026-04-30T14:16:36.433Z",
+      "description": "Pallets Click, versions 8.3.2 and below, contain a command injection vulnerability in the click.edit() function, allowing attackers to pass arbitrary OS commands from an unprivileged account."
+    },
+    {
+      "id": "CVE-2026-82397",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-mpf4-983q-p7j4"
+      ],
+      "published": "2026-09-02T14:38:43Z",
+      "description": " Tornado: Urlencoded body parsing omits max_num_fields, so one request can stall the event loop"
+    },
+    {
+      "id": "CVE-2026-8643",
+      "severity": "high",
+      "cvss": 8.0,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "pip"
+      ],
+      "purls": [
+        "pkg:pypi/pip@26.0.1"
+      ],
+      "aliases": [
+        "GHSA-wf93-45jw-7689"
+      ],
+      "published": "2026-06-01T18:31:53Z",
+      "description": " pip: Path traversal in console_scripts/gui_scripts entry point names allows installing scripts outside of target directory"
+    },
+    {
+      "id": "CVE-2026-91990",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-8423-8fgw-73vq"
+      ],
+      "published": "2026-09-01T20:17:38Z",
+      "description": "tornado: multipart split() creates huge temp list before max_parts check -> memory amplification DoS (httputil.py:34)"
+    },
+    {
+      "id": "CVE-2026-91991",
+      "severity": "low",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:P/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-wwv5-g3v4-889x"
+      ],
+      "published": "2026-09-01T20:17:23Z",
+      "description": "Tornado: Incomplete fix for CVE-2026-35536: cookie attribute injection re-opened via the legacy case-insensitive `**kwargs` path in `set_cookie`"
+    },
+    {
+      "id": "CVE-2026-91992",
+      "severity": "medium",
+      "cvss": 5.9,
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "tornado"
+      ],
+      "purls": [
+        "pkg:pypi/tornado@6.5.5"
+      ],
+      "aliases": [
+        "GHSA-pw6j-qg29-8w7f"
+      ],
+      "published": "2026-06-15T20:37:24Z",
+      "description": "Tornado: CurlAsyncHTTPClient leaks per-request credentials on handle reuse"
+    },
+    {
+      "id": "CVE-2026-9856",
+      "severity": "high",
+      "cvss": 7.1,
+      "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:L",
+      "method": "CVSSv3",
+      "packages": [
+        "transformers"
+      ],
+      "purls": [
+        "pkg:pypi/transformers@4.57.3"
+      ],
+      "aliases": [
+        "GHSA-xrqw-3rrv-vx5w"
+      ],
+      "published": "2026-08-02T18:30:20Z",
+      "description": "Transformers save_pretrained path traversal allows arbitrary file writes through chat template names"
+    },
+    {
+      "id": "GHSA-7gcf-g7xr-8hxj",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "serde_with"
+      ],
+      "purls": [
+        "pkg:cargo/serde_with@3.17.0"
+      ],
+      "aliases": [],
+      "published": "2026-07-15T22:41:01Z",
+      "description": "serde_with: KeyValueMap serialization panics on empty sequence or map entries"
+    },
+    {
+      "id": "GHSA-cq8v-f236-94qc",
+      "severity": "low",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "rand"
+      ],
+      "purls": [
+        "pkg:cargo/rand@0.8.5",
+        "pkg:cargo/rand@0.9.2"
+      ],
+      "aliases": [],
+      "published": "2026-04-14T01:03:36Z",
+      "description": "Rand is unsound with a custom logger using rand::rng()"
+    },
+    {
+      "id": "GHSA-wrw7-89jp-8q8g",
+      "severity": "medium",
+      "cvss": null,
+      "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "method": "CVSSv4",
+      "packages": [
+        "glib"
+      ],
+      "purls": [
+        "pkg:cargo/glib@0.18.5"
+      ],
+      "aliases": [],
+      "published": "2024-12-23T20:19:24Z",
+      "description": "Unsoundness in `Iterator` and `DoubleEndedIterator` impls for `glib::VariantStrIter`"
+    },
+    {
+      "id": "RUSTSEC-2024-0370",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "proc-macro-error"
+      ],
+      "purls": [
+        "pkg:cargo/proc-macro-error@1.0.4"
+      ],
+      "aliases": [],
+      "published": "2024-09-01T12:00:00Z",
+      "description": "proc-macro-error is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2024-0429",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "glib"
+      ],
+      "purls": [
+        "pkg:cargo/glib@0.18.5"
+      ],
+      "aliases": [],
+      "published": "2024-03-30T12:00:00Z",
+      "description": "Unsoundness in `Iterator` and `DoubleEndedIterator` impls for `glib::VariantStrIter`"
+    },
+    {
+      "id": "RUSTSEC-2024-0436",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "paste"
+      ],
+      "purls": [
+        "pkg:cargo/paste@1.0.15"
+      ],
+      "aliases": [],
+      "published": "2024-10-07T12:00:00Z",
+      "description": "paste - no longer maintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0057",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "fxhash"
+      ],
+      "purls": [
+        "pkg:cargo/fxhash@0.2.1"
+      ],
+      "aliases": [],
+      "published": "2025-09-05T12:00:00Z",
+      "description": "fxhash - no longer maintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0075",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "unic-char-range"
+      ],
+      "purls": [
+        "pkg:cargo/unic-char-range@0.9.0"
+      ],
+      "aliases": [],
+      "published": "2025-10-18T12:00:00Z",
+      "description": "`unic-char-range` is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0080",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "unic-common"
+      ],
+      "purls": [
+        "pkg:cargo/unic-common@0.9.0"
+      ],
+      "aliases": [],
+      "published": "2025-10-18T12:00:00Z",
+      "description": "`unic-common` is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0081",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "unic-char-property"
+      ],
+      "purls": [
+        "pkg:cargo/unic-char-property@0.9.0"
+      ],
+      "aliases": [],
+      "published": "2025-10-18T12:00:00Z",
+      "description": "`unic-char-property` is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0098",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "unic-ucd-version"
+      ],
+      "purls": [
+        "pkg:cargo/unic-ucd-version@0.9.0"
+      ],
+      "aliases": [],
+      "published": "2025-10-18T12:00:00Z",
+      "description": "`unic-ucd-version` is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2025-0100",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "unic-ucd-ident"
+      ],
+      "purls": [
+        "pkg:cargo/unic-ucd-ident@0.9.0"
+      ],
+      "aliases": [],
+      "published": "2025-10-18T12:00:00Z",
+      "description": "`unic-ucd-ident` is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2026-0097",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "rand"
+      ],
+      "purls": [
+        "pkg:cargo/rand@0.8.5",
+        "pkg:cargo/rand@0.9.2"
+      ],
+      "aliases": [],
+      "published": "2026-04-09T12:00:00Z",
+      "description": "Rand is unsound with a custom logger using `rand::rng()`"
+    },
+    {
+      "id": "RUSTSEC-2026-0173",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "proc-macro-error2"
+      ],
+      "purls": [
+        "pkg:cargo/proc-macro-error2@2.0.1"
+      ],
+      "aliases": [],
+      "published": "2026-06-07T12:00:00Z",
+      "description": "proc-macro-error2 is unmaintained"
+    },
+    {
+      "id": "RUSTSEC-2026-0194",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "quick-xml"
+      ],
+      "purls": [
+        "pkg:cargo/quick-xml@0.38.4",
+        "pkg:cargo/quick-xml@0.39.2"
+      ],
+      "aliases": [],
+      "published": "2026-06-29T12:00:00Z",
+      "description": "Quadratic run time when checking a start tag for duplicate attribute names"
+    },
+    {
+      "id": "RUSTSEC-2026-0195",
+      "severity": "high",
+      "cvss": 7.5,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "method": "CVSSv31",
+      "packages": [
+        "quick-xml"
+      ],
+      "purls": [
+        "pkg:cargo/quick-xml@0.38.4",
+        "pkg:cargo/quick-xml@0.39.2"
+      ],
+      "aliases": [],
+      "published": "2026-06-29T12:00:00Z",
+      "description": "Unbounded namespace-declaration allocation in `NsReader` enables memory-exhaustion denial of service"
+    },
+    {
+      "id": "RUSTSEC-2026-0221",
+      "severity": "unknown",
+      "cvss": null,
+      "vector": null,
+      "method": "other",
+      "packages": [
+        "event-listener"
+      ],
+      "purls": [
+        "pkg:cargo/event-listener@5.4.1"
+      ],
+      "aliases": [],
+      "published": "2026-07-13T12:00:00Z",
+      "description": "`event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`"
+    },
+    {
+      "id": "RUSTSEC-2026-0285",
+      "severity": "medium",
+      "cvss": 5.3,
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "method": "CVSSv31",
+      "packages": [
+        "rustls"
+      ],
+      "purls": [
+        "pkg:cargo/rustls@0.23.37"
+      ],
+      "aliases": [],
+      "published": "2026-09-14T12:00:00Z",
+      "description": "TLS 1.3 handshake messages incorrectly accepted across encryption level boundaries"
+    }
+  ],
+  "source": "C:\\andrzej-piotrowski-pl\\sbom\\viewer\\rAIdio.bot-v0.1.36.osv.cdx.json",
+  "platform": "windows",
+  "version": "0.1.36"
+}

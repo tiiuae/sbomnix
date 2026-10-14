@@ -1,0 +1,40 @@
+{
+  "id": "RUSTSEC-2024-0370",
+  "packages": [
+    {
+      "name": "proc-macro-error",
+      "version": "1.0.4",
+      "purl": "pkg:cargo/proc-macro-error@1.0.4",
+      "ref": "pkg:cargo/proc-macro-error@1.0.4"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2024-0370",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0370"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "unknown",
+        "method": "other"
+      }
+    ],
+    "description": "proc-macro-error is unmaintained",
+    "affects": [
+      {
+        "ref": "pkg:cargo/proc-macro-error@1.0.4"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2024-0370"
+      }
+    ],
+    "published": "2024-09-01T12:00:00Z",
+    "updated": "2026-06-07T20:00:03.923932350Z"
+  }
+}

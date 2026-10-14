@@ -1,0 +1,769 @@
+{
+  "x": "v0.1.36-trivy",
+  "y": "v0.1.36-osv",
+  "nx": 94,
+  "ny": 117,
+  "added": 28,
+  "removed": 5,
+  "changed": 51,
+  "rows": [
+    {
+      "kind": "added",
+      "name": "CVE-2023-49092",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium/5.9",
+      "lic": "rsa",
+      "purl": "pkg:vuln/CVE-2023-49092"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2025-14929",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.8",
+      "lic": "transformers",
+      "purl": "pkg:vuln/CVE-2025-14929"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2025-3000",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "medium/5.3",
+      "lic": "torch",
+      "purl": "pkg:vuln/CVE-2025-3000"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2025-31477",
+      "eco": "osv",
+      "vx": "critical/9.8",
+      "vy": "critical",
+      "lic": "@tauri-apps/plugin-shell",
+      "purl": "pkg:vuln/CVE-2025-31477"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2025-4565",
+      "eco": "osv",
+      "vx": "high/5.3",
+      "vy": "high",
+      "lic": "protobuf",
+      "purl": "pkg:vuln/CVE-2025-4565"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2025-47273",
+      "eco": "osv",
+      "vx": "high/8.8",
+      "vy": "high",
+      "lic": "setuptools",
+      "purl": "pkg:vuln/CVE-2025-47273"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2025-68146",
+      "eco": "osv",
+      "vx": "medium/6.5",
+      "vy": "medium/6.3",
+      "lic": "filelock",
+      "purl": "pkg:vuln/CVE-2025-68146"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-0994",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "high",
+      "lic": "protobuf",
+      "purl": "pkg:vuln/CVE-2026-0994"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-13346",
+      "eco": "osv",
+      "vx": "medium/6.5",
+      "vy": "medium",
+      "lic": "pip",
+      "purl": "pkg:vuln/CVE-2026-13346"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-1839",
+      "eco": "osv",
+      "vx": "medium/7.8",
+      "vy": "medium/6.5",
+      "lic": "transformers",
+      "purl": "pkg:vuln/CVE-2026-1839"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-22815",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-22815"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-25645",
+      "eco": "osv",
+      "vx": "medium/5.5",
+      "vy": "medium/4.4",
+      "lic": "requests",
+      "purl": "pkg:vuln/CVE-2026-25645"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-25990",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "high",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-25990"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-28684",
+      "eco": "osv",
+      "vx": "medium/7.1",
+      "vy": "medium/6.6",
+      "lic": "python-dotenv",
+      "purl": "pkg:vuln/CVE-2026-28684"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-3219",
+      "eco": "osv",
+      "vx": "medium/5.0",
+      "vy": "medium",
+      "lic": "pip",
+      "purl": "pkg:vuln/CVE-2026-3219"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34513",
+      "eco": "osv",
+      "vx": "low/7.5",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34513"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34514",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34514"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34515",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34515"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34516",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "high/7.5",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34516"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34517",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34517"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34518",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "medium/5.3",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34518"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34519",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34519"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34520",
+      "eco": "osv",
+      "vx": "low/9.1",
+      "vy": "critical/9.1",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34520"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34525",
+      "eco": "osv",
+      "vx": "medium/5.4",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34525"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-34993",
+      "eco": "osv",
+      "vx": "medium/7.3",
+      "vy": "medium/6.4",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-34993"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-42184",
+      "eco": "osv",
+      "vx": "medium/8.8",
+      "vy": "high/8.8",
+      "lic": "tauri",
+      "purl": "pkg:vuln/CVE-2026-42184"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-42308",
+      "eco": "osv",
+      "vx": "medium/6.2",
+      "vy": "medium/5.5",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-42308"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-42311",
+      "eco": "osv",
+      "vx": "high/7.8",
+      "vy": "high",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-42311"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-44307",
+      "eco": "osv",
+      "vx": "high/5.9",
+      "vy": "high",
+      "lic": "Mako",
+      "purl": "pkg:vuln/CVE-2026-44307"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-44431",
+      "eco": "osv",
+      "vx": "high/5.9",
+      "vy": "medium/5.3",
+      "lic": "urllib3",
+      "purl": "pkg:vuln/CVE-2026-44431"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-44827",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/8.8",
+      "lic": "diffusers",
+      "purl": "pkg:vuln/CVE-2026-44827"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-4538",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.8",
+      "lic": "torch",
+      "purl": "pkg:vuln/CVE-2026-4538"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-47265",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-47265"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-49854",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "low/3.7",
+      "lic": "tornado",
+      "purl": "pkg:vuln/CVE-2026-49854"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-50269",
+      "eco": "osv",
+      "vx": "low/7.5",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-50269"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-5241",
+      "eco": "osv",
+      "vx": "high/9.6",
+      "vy": "high/8.0",
+      "lic": "transformers",
+      "purl": "pkg:vuln/CVE-2026-5241"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54058",
+      "eco": "osv",
+      "vx": "high/9.1",
+      "vy": "high",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-54058"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54273",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54273"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54274",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54274"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54275",
+      "eco": "osv",
+      "vx": "low/7.5",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54275"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54276",
+      "eco": "osv",
+      "vx": "medium/6.1",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54276"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54277",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54277"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54278",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54278"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54279",
+      "eco": "osv",
+      "vx": "low/7.5",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54279"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54280",
+      "eco": "osv",
+      "vx": "low/7.5",
+      "vy": "low",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-54280"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-54282",
+      "eco": "osv",
+      "vx": "low/5.3",
+      "vy": "low/3.7",
+      "lic": "starlette",
+      "purl": "pkg:vuln/CVE-2026-54282"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-57585",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.5",
+      "lic": "msgpack",
+      "purl": "pkg:vuln/CVE-2026-57585"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-58203",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium/5.3",
+      "lic": "pydantic-settings",
+      "purl": "pkg:vuln/CVE-2026-58203"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-58659",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "pytorch-lightning",
+      "purl": "pkg:vuln/CVE-2026-58659"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-59198",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium/6.5",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-59198"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-59203",
+      "eco": "osv",
+      "vx": "medium/7.5",
+      "vy": "medium/5.3",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-59203"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-59204",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "high",
+      "lic": "pillow",
+      "purl": "pkg:vuln/CVE-2026-59204"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-59881",
+      "eco": "osv",
+      "vx": "medium/5.3",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-59881"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-63374",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "critical",
+      "lic": "anyio",
+      "purl": "pkg:vuln/CVE-2026-63374"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-6357",
+      "eco": "osv",
+      "vx": "medium/5.8",
+      "vy": "medium",
+      "lic": "pip",
+      "purl": "pkg:vuln/CVE-2026-6357"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-64847",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium",
+      "lic": "anyio",
+      "purl": "pkg:vuln/CVE-2026-64847"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-69112",
+      "eco": "osv",
+      "vx": "medium/7.1",
+      "vy": "high/7.1",
+      "lic": "accelerate",
+      "purl": "pkg:vuln/CVE-2026-69112"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-69243",
+      "eco": "osv",
+      "vx": "medium/7.0",
+      "vy": "medium",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-69243"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-69244",
+      "eco": "osv",
+      "vx": "high/7.5",
+      "vy": "high",
+      "lic": "aiohttp",
+      "purl": "pkg:vuln/CVE-2026-69244"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-7246",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.2",
+      "lic": "click",
+      "purl": "pkg:vuln/CVE-2026-7246"
+    },
+    {
+      "kind": "changed",
+      "name": "CVE-2026-8643",
+      "eco": "osv",
+      "vx": "medium/8.0",
+      "vy": "high/8.0",
+      "lic": "pip",
+      "purl": "pkg:vuln/CVE-2026-8643"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-91990",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium",
+      "lic": "tornado",
+      "purl": "pkg:vuln/CVE-2026-91990"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-91991",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "low",
+      "lic": "tornado",
+      "purl": "pkg:vuln/CVE-2026-91991"
+    },
+    {
+      "kind": "added",
+      "name": "CVE-2026-91992",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium/5.9",
+      "lic": "tornado",
+      "purl": "pkg:vuln/CVE-2026-91992"
+    },
+    {
+      "kind": "removed",
+      "name": "GHSA-4xgf-cpjx-pc3j",
+      "eco": "trivy",
+      "vx": "medium/5.3",
+      "vy": "—",
+      "lic": "pydantic-settings",
+      "purl": "pkg:vuln/GHSA-4xgf-cpjx-pc3j"
+    },
+    {
+      "kind": "removed",
+      "name": "GHSA-6v7p-g79w-8964",
+      "eco": "trivy",
+      "vx": "high/7.5",
+      "vy": "—",
+      "lic": "msgpack",
+      "purl": "pkg:vuln/GHSA-6v7p-g79w-8964"
+    },
+    {
+      "kind": "removed",
+      "name": "GHSA-8423-8fgw-73vq",
+      "eco": "trivy",
+      "vx": "medium",
+      "vy": "—",
+      "lic": "tornado",
+      "purl": "pkg:vuln/GHSA-8423-8fgw-73vq"
+    },
+    {
+      "kind": "removed",
+      "name": "GHSA-pw6j-qg29-8w7f",
+      "eco": "trivy",
+      "vx": "medium/5.9",
+      "vy": "—",
+      "lic": "tornado",
+      "purl": "pkg:vuln/GHSA-pw6j-qg29-8w7f"
+    },
+    {
+      "kind": "removed",
+      "name": "GHSA-wwv5-g3v4-889x",
+      "eco": "trivy",
+      "vx": "low",
+      "vy": "—",
+      "lic": "tornado",
+      "purl": "pkg:vuln/GHSA-wwv5-g3v4-889x"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2024-0370",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "proc-macro-error",
+      "purl": "pkg:vuln/RUSTSEC-2024-0370"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2024-0429",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "glib",
+      "purl": "pkg:vuln/RUSTSEC-2024-0429"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2024-0436",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "paste",
+      "purl": "pkg:vuln/RUSTSEC-2024-0436"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0057",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "fxhash",
+      "purl": "pkg:vuln/RUSTSEC-2025-0057"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0075",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "unic-char-range",
+      "purl": "pkg:vuln/RUSTSEC-2025-0075"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0080",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "unic-common",
+      "purl": "pkg:vuln/RUSTSEC-2025-0080"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0081",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "unic-char-property",
+      "purl": "pkg:vuln/RUSTSEC-2025-0081"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0098",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "unic-ucd-version",
+      "purl": "pkg:vuln/RUSTSEC-2025-0098"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2025-0100",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "unic-ucd-ident",
+      "purl": "pkg:vuln/RUSTSEC-2025-0100"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0097",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "rand",
+      "purl": "pkg:vuln/RUSTSEC-2026-0097"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0173",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "proc-macro-error2",
+      "purl": "pkg:vuln/RUSTSEC-2026-0173"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0194",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.5",
+      "lic": "quick-xml",
+      "purl": "pkg:vuln/RUSTSEC-2026-0194"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0195",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "high/7.5",
+      "lic": "quick-xml",
+      "purl": "pkg:vuln/RUSTSEC-2026-0195"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0221",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "unknown",
+      "lic": "event-listener",
+      "purl": "pkg:vuln/RUSTSEC-2026-0221"
+    },
+    {
+      "kind": "added",
+      "name": "RUSTSEC-2026-0285",
+      "eco": "osv",
+      "vx": "—",
+      "vy": "medium/5.3",
+      "lic": "rustls",
+      "purl": "pkg:vuln/RUSTSEC-2026-0285"
+    }
+  ],
+  "labelX": "v0.1.36-trivy",
+  "labelY": "v0.1.36-osv"
+}

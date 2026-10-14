@@ -1,0 +1,20 @@
+{
+  "id": "GHSA-pw6j-qg29-8w7f",
+  "scanner": "trivy",
+  "severity": "medium",
+  "cvss": 5.9,
+  "packages": [
+    "tornado"
+  ],
+  "findings": [
+    {
+      "package": "tornado",
+      "installed": "6.5.5",
+      "fixed": "6.5.7",
+      "severity": "medium",
+      "cvss": 5.9,
+      "target": "Python",
+      "title": "Tornado: CurlAsyncHTTPClient leaks per-request credentials on handle reuse"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "platform": "windows",
+  "x": "v0.1.9",
+  "y": "v0.1.10",
+  "nx": 1194,
+  "ny": 1192,
+  "added": 0,
+  "removed": 2,
+  "changed": 0,
+  "rows": [
+    {
+      "kind": "removed",
+      "name": "steamworks",
+      "eco": "cargo",
+      "vx": "0.12.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/steamworks@0.12.2"
+    },
+    {
+      "kind": "removed",
+      "name": "steamworks-sys",
+      "eco": "cargo",
+      "vx": "0.12.2",
+      "vy": "—",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/steamworks-sys@0.12.2"
+    }
+  ]
+}

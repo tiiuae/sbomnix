@@ -1,0 +1,93 @@
+{
+  "platform": "windows",
+  "x": "v0.1.18",
+  "y": "v0.1.19",
+  "nx": 1192,
+  "ny": 1192,
+  "added": 0,
+  "removed": 0,
+  "changed": 9,
+  "rows": [
+    {
+      "kind": "changed",
+      "name": "anyhow",
+      "eco": "cargo",
+      "vx": "1.0.102",
+      "vy": "1.0.103",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/anyhow@1.0.103"
+    },
+    {
+      "kind": "changed",
+      "name": "crossbeam-epoch",
+      "eco": "cargo",
+      "vx": "0.9.18",
+      "vy": "0.9.20",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/crossbeam-epoch@0.9.20"
+    },
+    {
+      "kind": "changed",
+      "name": "num-conv",
+      "eco": "cargo",
+      "vx": "0.1.0",
+      "vy": "0.2.2",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/num-conv@0.2.2"
+    },
+    {
+      "kind": "changed",
+      "name": "openssl",
+      "eco": "cargo",
+      "vx": "0.10.76",
+      "vy": "0.10.80",
+      "lic": "Apache-2.0",
+      "purl": "pkg:cargo/openssl@0.10.80"
+    },
+    {
+      "kind": "changed",
+      "name": "openssl-sys",
+      "eco": "cargo",
+      "vx": "0.9.112",
+      "vy": "0.9.117",
+      "lic": "MIT",
+      "purl": "pkg:cargo/openssl-sys@0.9.117"
+    },
+    {
+      "kind": "changed",
+      "name": "rustls-webpki",
+      "eco": "cargo",
+      "vx": "0.103.10",
+      "vy": "0.103.13",
+      "lic": "ISC",
+      "purl": "pkg:cargo/rustls-webpki@0.103.13"
+    },
+    {
+      "kind": "changed",
+      "name": "time",
+      "eco": "cargo",
+      "vx": "0.3.45",
+      "vy": "0.3.47",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time@0.3.47"
+    },
+    {
+      "kind": "changed",
+      "name": "time-core",
+      "eco": "cargo",
+      "vx": "0.1.7",
+      "vy": "0.1.8",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time-core@0.1.8"
+    },
+    {
+      "kind": "changed",
+      "name": "time-macros",
+      "eco": "cargo",
+      "vx": "0.2.25",
+      "vy": "0.2.27",
+      "lic": "MIT OR Apache-2.0",
+      "purl": "pkg:cargo/time-macros@0.2.27"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "id": "RUSTSEC-2026-0285",
+  "packages": [
+    {
+      "name": "rustls",
+      "version": "0.23.37",
+      "purl": "pkg:cargo/rustls@0.23.37",
+      "ref": "pkg:cargo/rustls@0.23.37"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2026-0285",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0285"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV",
+          "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0285"
+        },
+        "score": 5.3,
+        "severity": "medium",
+        "method": "CVSSv31",
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+      }
+    ],
+    "description": "TLS 1.3 handshake messages incorrectly accepted across encryption level boundaries",
+    "affects": [
+      {
+        "ref": "pkg:cargo/rustls@0.23.37"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0285"
+      }
+    ],
+    "published": "2026-09-14T12:00:00Z",
+    "updated": "2026-09-14T16:15:03.240735517Z"
+  }
+}

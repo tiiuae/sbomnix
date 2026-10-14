@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SBOM — pokaz CRA</title>
+  <style>
+    :root {
+      --ink: #152033;
+      --muted: #4b5b73;
+      --line: #d7deea;
+      --paper: #f6f3ec;
+      --card: #fff;
+      --accent: #1f4e79;
+      --accent-2: #8a3b12;
+      --ok: #1f6b3a;
+      --warn: #8a5a00;
+      --code-bg: #122033;
+      --code-fg: #e8eef6;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 18px/1.55 "Segoe UI", "Calibri", system-ui, sans-serif;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 2.4rem 1.4rem 2rem;
+    }
+    header .wrap, main, footer .wrap { max-width: 1080px; margin: 0 auto; }
+    .kicker {
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      opacity: .85;
+      margin: 0 0 .5rem;
+    }
+    h1 { font-size: clamp(1.8rem, 3vw, 2.5rem); line-height: 1.15; margin: 0 0 .6rem; }
+    header p { margin: 0; max-width: 46rem; color: #e4edf6; }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem .85rem;
+      padding: 1rem 0 0;
+      font-size: .92rem;
+    }
+    nav a { color: #d7e6f5; }
+    main { padding: 1.6rem 1.4rem 4rem; }
+    h2 {
+      margin: 2.4rem 0 .8rem;
+      padding-top: .4rem;
+      border-top: 3px solid var(--accent);
+      font-size: 1.45rem;
+    }
+    h3 { margin: 1.6rem 0 .5rem; font-size: 1.12rem; color: var(--accent); }
+    p, li { color: var(--ink); }
+    .muted { color: var(--muted); }
+    .lead { font-size: 1.12rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: .8rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem 1.05rem;
+    }
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .6rem;
+      margin: 1.1rem 0 1.4rem;
+    }
+    .step {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: .85rem .9rem;
+      min-height: 8.2rem;
+    }
+    .step b { display: block; color: var(--accent); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .35rem; }
+    .arrow { display: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      font-size: .95rem;
+    }
+    th, td { border: 1px solid var(--line); padding: .55rem .7rem; text-align: left; vertical-align: top; }
+    th { background: #e8eef5; }
+    pre {
+      position: relative;
+      background: var(--code-bg);
+      color: var(--code-fg);
+      border-radius: 10px;
+      padding: 1rem 1rem 1rem;
+      overflow-x: auto;
+      font: 14px/1.45 Consolas, "Cascadia Code", monospace;
+    }
+    pre .lang {
+      position: absolute;
+      top: .35rem;
+      right: .55rem;
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #9bb0c7;
+    }
+    button.copy {
+      position: absolute;
+      top: 1.55rem;
+      right: .45rem;
+      background: #2a425c;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: .2rem .5rem;
+      cursor: pointer;
+      font-size: .75rem;
+    }
+    .note, .warn, .ok {
+      border-radius: 10px;
+      padding: .85rem 1rem;
+      margin: 1rem 0;
+      border: 1px solid;
+    }
+    .note { background: #eef3f9; border-color: #c5d4e6; }
+    .warn { background: #f8f0e3; border-color: #e2c48a; }
+    .ok { background: #e8f4ec; border-color: #b7d8c1; }
+    .tag {
+      display: inline-block;
+      background: #e8eef5;
+      color: var(--accent);
+      border-radius: 999px;
+      padding: .05rem .5rem;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+    .checklist label { display: block; margin: .25rem 0; }
+    .compare-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: .7rem;
+      align-items: end;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    .compare-bar.mods { grid-template-columns: 1fr 1fr 1fr auto; }
+    .scan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .8rem;
+      margin: 1rem 0;
+    }
+    button.scan-xl {
+      font: inherit;
+      font-size: 1.2rem;
+      font-weight: 700;
+      padding: 1.15rem 1.2rem;
+      width: 100%;
+      min-height: 4rem;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      cursor: pointer;
+    }
+    button.scan-trivy { background: var(--accent); }
+    button.scan-snyk { background: var(--accent-2); }
+    button.scan-xl:disabled { opacity: .55; cursor: wait; }
+    #scan-status { min-height: 1.6em; white-space: pre-wrap; }
+    .fallback-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 1rem; }
+    .field { display: flex; flex-direction: column; gap: .3rem; font-size: .88rem; color: var(--muted); }
+    .field select, .field input[type="text"], .field input[type="file"] {
+      font: inherit;
+      color: var(--ink);
+      padding: .45rem .55rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: .55rem 1.05rem;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+    }
+    button.primary:disabled { opacity: .55; cursor: wait; }
+    button.secondary {
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: .45rem .85rem;
+      cursor: pointer;
+      font: inherit;
+    }
+    .download-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0 1rem; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin: 1rem 0; }
+    [hidden] { display: none !important; }
+    .stats[hidden], #compare-filters[hidden], #compare-table-wrap[hidden], #compare-downloads[hidden],
+    #vuln-stats[hidden], #vuln-filters[hidden], #vuln-table-wrap[hidden], #vuln-downloads[hidden] { display: none !important; }
+    .sev { text-transform: uppercase; font-weight: 700; font-size: .78rem; }
+    .sev.critical { color: #9b1c1c; }
+    .sev.high { color: #9a3412; }
+    .sev.medium { color: #854d0e; }
+    .sev.low { color: #166534; }
+    .stat strong { display: block; font-size: 1.7rem; line-height: 1.1; }
+    .stat.add strong { color: var(--ok); }
+    .stat.del strong { color: #922b21; }
+    .stat.chg strong { color: var(--warn); }
+    tr.row-add { background: #e8f4ec; }
+    tr.row-del { background: #f8e8e6; }
+    tr.row-chg { background: #f8f0e3; }
+    .table-wrap { overflow-x: auto; margin: .8rem 0 1.2rem; }
+    .filters { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .6rem 0; }
+    .filters label { font-size: .92rem; color: var(--muted); }
+    #compare-status { min-height: 1.4em; }
+    @media (max-width: 800px) {
+      .compare-bar, .compare-bar.mods, .stats, .scan-grid { grid-template-columns: 1fr 1fr; }
+    }
+    footer {
+      background: var(--ink);
+      color: #d5deea;
+      padding: 1.4rem;
+      font-size: .92rem;
+    }
+    footer a { color: #cfe0f4; }
+    .howto { display: none !important; }
+    body.show-howto .howto { display: revert !important; }
+    nav a.howto-link { display: none; }
+    body.show-howto nav a.howto-link { display: inline; }
+    button.toggle-howto {
+      background: transparent;
+      color: #cfe0f4;
+      border: 1px solid #6a7d96;
+      border-radius: 8px;
+      padding: .35rem .7rem;
+      cursor: pointer;
+      font: inherit;
+      font-size: .85rem;
+    }
+    @media (max-width: 800px) {
+      .pipeline { grid-template-columns: 1fr 1fr; }
+    }
+    @media print {
+      header { background: #fff; color: #000; border-bottom: 3px solid #000; }
+      header p, nav a { color: #000; }
+      pre { white-space: pre-wrap; }
+      button.copy { display: none; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body><a href="../index.html" style="position:fixed;left:12px;bottom:12px;z-index:2147483000;background:#3b5bdb;color:#fff;padding:8px 14px;border-radius:999px;font:600 14px/1.2 system-ui,sans-serif;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.35)" title="SBOM Explorer">← SBOM Explorer</a>
+  <header>
+    <div class="wrap">
+      <p class="kicker">rAIdio.bot · CRA / SBOM</p>
+      <h1>Skład produktu, podatności i dryft między wydaniami</h1>
+      <p>Gotowy pokaz: inwentarz CycloneDX, tabela CVE (Trivy / Snyk / OSV) i porównanie wersji. Bez odpalania skanerów na sali — wyniki są już w tej stronie.</p>
+      <nav>
+        <a href="#po-co">Po co</a>
+        <a href="#pipeline">Pipeline</a>
+        <a href="#narzedzia">Narzędzia</a>
+        <a class="howto-link" href="#krok1">Instalacja</a>
+        <a class="howto-link" href="#krok2">SBOM ze źródła</a>
+        <a href="#krok3">CVE i CVSS</a>
+        <a class="howto-link" href="#skanuj">Trivy / Snyk</a>
+        <a href="#wyniki-cve">CVE</a>
+        <a class="howto-link" href="#krok4">Raport HTML</a>
+        <a href="#demo-publiczne">Źródła</a>
+        <a href="#porownanie">Porównaj</a>
+        <a href="#pytania">Punkty</a>
+        <a class="howto-link" href="#cwiczenie">Ćwiczenie</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section id="po-co">
+      <h2>Po co to robimy</h2>
+      <p class="lead">SBOM (Software Bill of Materials) to spis treści oprogramowania: każda biblioteka, jej wersja, licencja i identyfikator <code>purl</code>. Cyber Resilience Act (CRA) wymaga, żeby producent produktu z elementami cyfrowymi <strong>znał skład</strong> i umiał powiązać go ze znanymi podatnościami.</p>
+      <div class="grid">
+        <div class="card"><b>Inwentarz</b><br>Co weszło do binarki i backendu — Rust, Python, npm, modele, ffmpeg.</div>
+        <div class="card"><b>Podatności</b><br>CVE + ocena CVSS. Sam plik licencyjny <em>nie</em> zawiera CVE, dopóki go nie przeskanujesz.</div>
+        <div class="card"><b>Priorytet</b><br>CVSS mówi „jak ciężko”, EPSS i CISA KEV / EUVD mówią „czy ktoś to już wykorzystuje”.</div>
+      </div>
+      <p class="warn"><strong>Najczęstszy błąd na sali:</strong> otwieracie gotowy <code>*.cdx.json</code> w Sunshine i widzicie <em>0 vulnerabilities</em>. To nie znaczy, że produkt jest czysty. Znaczy, że ten SBOM jest <em>inwentarzem</em> (licencje, komponenty), a nie wynikiem skanera. CVE trzeba <em>dodać</em> drugim krokiem.</p>
+    </section>
+
+    <section id="pipeline">
+      <h2>Pipeline, który rysujesz na tablicy</h2>
+      <div class="pipeline">
+        <div class="step"><b>1. Źródło</b>Repozytorium: <code>Cargo.lock</code>, <code>package-lock.json</code>, <code>requirements.txt</code> / venv.</div>
+        <div class="step"><b>2. Generator</b>Trivy, Snyk albo Syft czyta lockfile’e i zapisuje CycloneDX JSON.</div>
+        <div class="step"><b>3. Skaner</b>Ten sam Trivy, Snyk albo Grype dopisuje CVE, wektor i score CVSS.</div>
+        <div class="step"><b>4. Widok</b>Sunshine (albo Snyk UI) robi HTML z tabelą i wykresem.</div>
+      </div>
+      <p class="muted">Format: <strong>CycloneDX 1.5 JSON</strong> (<code>*.cdx.json</code>). SPDX jest równoważny prawnie; tu zostajemy przy CycloneDX, bo tak wyglądają pliki rAIdio.bot.</p>
+    </section>
+
+    <section id="narzedzia">
+      <h2>Które narzędzie wybrać</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Narzędzie</th>
+            <th>Co robi</th>
+            <th>Na pokazie</th>
+            <th>Dostęp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Trivy</strong> (Aqua)</td>
+            <td>SBOM ze źródła <em>i</em> skan CVE w jednym CLI</td>
+            <td>Domyślny pokaz: darmowy, jedno polecenie</td>
+            <td><a href="https://trivy.dev/">trivy.dev</a> · Apache-2.0</td>
+          </tr>
+          <tr>
+            <td><strong>Snyk</strong></td>
+            <td>SBOM + test licencji i CVE, ładny UI, CVSS od CNA/NVD</td>
+            <td>Gdy chcesz pokazać komercyjny SCA i poprawki</td>
+            <td><a href="https://snyk.io/">snyk.io</a> · konto + <code>snyk auth</code></td>
+          </tr>
+          <tr>
+            <td><strong>Syft + Grype</strong> (Anchore)</td>
+            <td>Syft buduje SBOM, Grype skanuje SBOM</td>
+            <td>Wariant „dwa narzędzia, czysty podział ról”</td>
+            <td><a href="https://github.com/anchore/syft">syft</a> / <a href="https://github.com/anchore/grype">grype</a></td>
+          </tr>
+          <tr>
+            <td><strong>OSV-Scanner</strong> (Google)</td>
+            <td>Skanuje lockfile albo SBOM względem osv.dev</td>
+            <td>Publiczna baza, bez konta</td>
+            <td><a href="https://google.github.io/osv-scanner/">osv-scanner</a></td>
+          </tr>
+          <tr>
+            <td><strong>Sunshine</strong> (CycloneDX)</td>
+            <td>HTML z komponentami, CVE, CVSS; flaga <code>-e</code> dodaje EPSS i CISA KEV</td>
+            <td>To, co rzucasz na projektor</td>
+            <td><a href="https://cyclonedx.github.io/Sunshine/">cyclonedx.github.io/Sunshine</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="ok"><strong>Na projektor:</strong> Trivy ze źródła → CycloneDX z podatnościami → Sunshine. Snyk jako drugi slajd „tak wygląda to samo w narzędziu z kontem”.</p>
+    </section>
+
+    <section id="krok1" class="howto">
+      <h2>Krok 1 — instalacja (Windows)</h2>
+      <p>Potrzebny jest PowerShell i katalog z projektem. Wystarczy jedno z trzech.</p>
+      <h3>Trivy</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>winget install Aqua.Trivy
+trivy --version</code></pre>
+      <h3>Snyk (Node.js już zainstalowany)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>npm install -g snyk
+snyk auth
+snyk --version</code></pre>
+      <p class="note"><code>snyk auth</code> otwiera przeglądarkę. Bez logowania skan SBOM nie ruszy. Konto darmowe wystarcza na demo.</p>
+      <h3>Syft + Grype (opcjonalnie)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>winget install Anchore.Syft
+winget install Anchore.Grype
+syft version
+grype version</code></pre>
+    </section>
+
+    <section id="krok2" class="howto">
+      <h2>Krok 2 — SBOM bezpośrednio ze źródła</h2>
+      <p>Wejdź do katalogu aplikacji (tam, gdzie jest <code>Cargo.toml</code> / <code>package.json</code> / Python). Nie skanujemy tu repozytorium <code>sbom/</code> — to archiwum gotowych BOM-ów. Skanujemy <strong>kod produktu</strong>.</p>
+
+      <h3>Wariant A — Trivy (pokaz główny)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>cd C:\sciezka\do\zrodla-aplikacji
+
+# Tylko inwentarz (komponenty + licencje, bez CVE)
+trivy fs --format cyclonedx --output sbom.cdx.json .
+
+# Inwentarz + podatności w jednym pliku (to chcemy na projektorze)
+trivy fs --scanners vuln,license --format cyclonedx --output sbom-vuln.cdx.json .</code></pre>
+      <p>Trivy czyta lockfile’e. Sam <code>requirements.txt</code> bez zamrożonych wersji daje gorszy wynik — CRA lubi <em>pinned versions</em>.</p>
+
+      <h3>Wariant B — Snyk</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>cd C:\sciezka\do\zrodla-aplikacji
+snyk sbom --format=cyclonedx1.5+json -o sbom.snyk.cdx.json
+Get-Item sbom.snyk.cdx.json</code></pre>
+      <p>Snyk wykrywa ekosystem sam (npm, pip, Maven, NuGet, Cargo przez manifest). Dla monorepo wskaż plik:</p>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>snyk sbom --format=cyclonedx1.5+json --file=package.json -o frontend.cdx.json
+snyk sbom --format=cyclonedx1.5+json --file=src-tauri/Cargo.toml -o rust.cdx.json</code></pre>
+
+      <h3>Wariant C — Syft</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>syft dir:. -o cyclonedx-json=sbom.syft.cdx.json</code></pre>
+
+      <h3>Co sprawdzić w JSON-ie</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>python -c "import json; d=json.load(open('sbom-vuln.cdx.json',encoding='utf-8')); print('spec', d.get('specVersion')); print('components', len(d.get('components') or [])); print('vulnerabilities', len(d.get('vulnerabilities') or []))"</code></pre>
+      <ul>
+        <li><code>bomFormat</code> = <code>CycloneDX</code>, <code>specVersion</code> 1.4–1.6.</li>
+        <li>Każdy komponent: <code>name</code>, <code>version</code>, <code>purl</code> (np. <code>pkg:pypi/torch@2.10.0</code>).</li>
+        <li>Po skanie vuln: tablica <code>vulnerabilities[]</code> z <code>id</code> typu <code>CVE-…</code> i <code>ratings[].score</code>.</li>
+      </ul>
+    </section>
+
+    <section id="skanuj" class="howto">
+      <h2>Trivy i Snyk — kliknij, nie kopiuj</h2>
+      <p class="lead">Te przyciski <strong>uruchamiają skaner na tej maszynie</strong> (nie wklejają komendy). Strona <code>file://</code> sama nie startuje procesów — lokalny helper na <code>127.0.0.1</code> to robi. Na pendrive bez Pythona: dwuklik <code>run-trivy.cmd</code> / <code>run-snyk.cmd</code>.</p>
+      <div class="scan-grid">
+        <button class="scan-xl scan-trivy" id="btn-scan-trivy" type="button">Uruchom Trivy</button>
+        <button class="scan-xl scan-snyk" id="btn-scan-snyk" type="button">Uruchom Snyk</button>
+      </div>
+      <p id="scan-status" class="muted">Sprawdzam, czy lokalny runner nasłuchuje na 127.0.0.1…</p>
+      <div class="fallback-row">
+        <a class="secondary" href="run-trivy.cmd" download>Pobierz run-trivy.cmd</a>
+        <a class="secondary" href="run-trivy.ps1" download>Pobierz run-trivy.ps1</a>
+        <a class="secondary" href="run-snyk.cmd" download>Pobierz run-snyk.cmd</a>
+        <a class="secondary" href="run-snyk.ps1" download>Pobierz run-snyk.ps1</a>
+        <a class="secondary" href="start-scan-server.cmd" download>Pobierz start-scan-server.cmd</a>
+      </div>
+      <div class="note">
+        <p><strong>Gdy przycisk mówi, że runner śpi:</strong> w PowerShell, w katalogu repozytorium:</p>
+        <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>python tools\workshop_scan_server.py
+# potem odśwież tę stronę albo otwórz http://127.0.0.1:18767/warsztat-cra-sbom.html</code></pre>
+        <p>Snyk bez <code>snyk auth</code> <em>nie</em> skanuje — przycisk i skrypt zapiszą wtedy plik z komunikatem <code>snyk auth required</code>. Trivy nie wymaga konta.</p>
+      </div>
+    </section>
+
+    <section id="krok3">
+      <h2>CVE i „korekta” CVSS</h2>
+      <p class="howto">Jeśli jest już czysty SBOM (jak <code>releases/v0.1.36/rAIdio.bot-v0.1.36.cdx.json</code> — 1196 komponentów, 0 CVE), skanuje się <em>plik</em>, nie źródło drugi raz. Na sali: najpierw przyciski <a href="#skanuj">Trivy / Snyk</a>, poniżej te same komendy.</p>
+
+      <div class="howto">
+      <h3>Trivy czyta SBOM</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>trivy sbom --format cyclonedx --output sbom-vuln.cdx.json .\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json
+trivy sbom --severity HIGH,CRITICAL .\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json</code></pre>
+
+      <h3>Snyk czyta SBOM</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>snyk sbom test --file=.\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json</code></pre>
+
+      <h3>Grype czyta SBOM i z powrotem zapisuje CycloneDX</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>grype sbom:.\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json -o cyclonedx-json=sbom-vuln.cdx.json</code></pre>
+
+      <h3>OSV-Scanner (bez konta)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>osv-scanner scan --sbom=.\releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json --format=cyclonedx-1.5 --output=sbom-osv.cdx.json</code></pre>
+      <p class="ok howto"><strong>Projektor bez skanowania na sali:</strong> w katalogu <code>viewer/</code> leżą już wyniki skanu (gdy skrypt je zapisze) — tabela <a href="#wyniki-cve">CVE offline</a>, Sunshine <code>rAIdio.bot-v0.1.36-osv.html</code>, indeksy <code>results/vuln/osv-index.html</code> i <code>results/vuln/grype-index.html</code>.</p>
+      </div>
+
+      <div class="note">
+        <p><strong>Dlaczego liczby się nie zgadzają między narzędziami?</strong> To jest slajd „korekta CVSS”, nie błąd skanera.</p>
+        <ul>
+          <li><strong>NVD</strong> nadaje CVSS 3.1 / 4.0 z opóźnieniem; czasem score jest pusty.</li>
+          <li><strong>GitHub Advisory / Snyk / OSV</strong> często mają score wcześniej, czasem inny.</li>
+          <li><strong>CVSS</strong> = jak bardzo boli technicznie (0–10). Nie mówi, czy ktoś to exploitował.</li>
+          <li><strong>EPSS</strong> = prawdopodobieństwo wykorzystania w 30 dni.</li>
+          <li><strong>CISA KEV</strong> i <strong>ENISA EUVD / EU KEV</strong> = potwierdzone wykorzystanie. Na CRA to jest ważniejsze niż sam score 9.8.</li>
+        </ul>
+        <p>Sunshine z flagą <code>-e</code> dociąga EPSS i CISA KEV do identyfikatorów <code>CVE-…</code>. Publiczne bazy:</p>
+        <ul>
+          <li><a href="https://nvd.nist.gov/">nvd.nist.gov</a> — CVSS „oficjalny USA”</li>
+          <li><a href="https://www.cve.org/">cve.org</a> — rekord CVE</li>
+          <li><a href="https://osv.dev/">osv.dev</a> — baza Google, bez logowania</li>
+          <li><a href="https://euvd.enisa.europa.eu/">euvd.enisa.europa.eu</a> — baza UE, kontekst CRA</li>
+          <li><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog">CISA KEV</a></li>
+          <li><a href="https://www.first.org/epss/">first.org/epss</a> — prawdopodobieństwo exploita</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="wyniki-cve">
+      <h2>Wyniki CVE / CVSS</h2>
+      <p class="ok">Tabela offline: CVE, severity i CVSS z <code>data/vulns-windows-v0.1.36.js</code>. Porównanie wydań czyta <code>data/inventories.js</code>.</p>
+      <p class="muted" id="vuln-status">Szukam pliku z wynikami skanu…</p>
+      <ul id="vuln-local-links">
+        <li><a id="link-osv-html" href="rAIdio.bot-v0.1.36-osv.html">Sunshine: <code>rAIdio.bot-v0.1.36-osv.html</code></a></li>
+        <li><a id="link-osv-index" href="results/vuln/osv-index.html">Indeks OSV: <code>results/vuln/osv-index.html</code></a></li>
+        <li><a id="link-trivy-index" href="results/vuln/trivy-index.html">Indeks Trivy: <code>results/vuln/trivy-index.html</code></a></li>
+        <li><a id="link-snyk-index" href="results/vuln/snyk-index.html">Indeks Snyk: <code>results/vuln/snyk-index.html</code></a></li>
+        <li><a id="link-grype-index" href="results/vuln/grype-index.html">Indeks Grype: <code>results/vuln/grype-index.html</code></a></li>
+      </ul>
+      <p class="note howto">Jeśli kliknięcie kończy się 404, pliku jeszcze nie ma — <strong>wygeneruj skanem</strong> z kroku 3, albo poczekaj aż skrypt zapisze wyniki obok tej strony.</p>
+      <div class="stats" id="vuln-stats" hidden>
+        <div class="card stat"><span class="muted">CVE łącznie</span><strong id="vuln-count">0</strong></div>
+        <div class="card stat del"><span class="muted">Critical</span><strong id="vuln-crit">0</strong></div>
+        <div class="card stat chg"><span class="muted">High</span><strong id="vuln-high">0</strong></div>
+        <div class="card stat"><span class="muted">Medium / Low</span><strong id="vuln-rest">0</strong></div>
+      </div>
+      <div class="filters" id="vuln-filters" hidden>
+        <label>Źródło
+          <select id="vuln-src">
+            <option value="osv">OSV (paczka)</option>
+            <option value="trivy">Trivy</option>
+            <option value="snyk">Snyk</option>
+          </select>
+        </label>
+        <label>Szukaj
+          <input id="vuln-q" type="text" placeholder="CVE, pakiet, severity…">
+        </label>
+      </div>
+      <div class="table-wrap" id="vuln-table-wrap" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Severity</th>
+              <th>CVSS</th>
+              <th>Pakiety</th>
+            </tr>
+          </thead>
+          <tbody id="vuln-tbody"></tbody>
+        </table>
+      </div>
+      <div class="download-row" id="vuln-downloads" hidden>
+        <button class="secondary" id="vuln-dl-json" type="button">Zapisz JSON</button>
+        <button class="secondary" id="vuln-dl-csv" type="button">Zapisz CSV</button>
+        <button class="secondary" id="vuln-dl-html" type="button">Zapisz HTML</button>
+      </div>
+    </section>
+
+    <section id="krok4" class="howto">
+      <h2>Krok 4 — raport HTML na projektor</h2>
+      <h3>Najszybciej: Sunshine w przeglądarce (zero instalacji)</h3>
+      <ol>
+        <li>Otwórz <a href="https://cyclonedx.github.io/Sunshine/">cyclonedx.github.io/Sunshine</a>.</li>
+        <li>Zaznacz <em>Enrich data with EPSS and CISA KEV</em>.</li>
+        <li>Wgraj <code>sbom-vuln.cdx.json</code> (plik <em>ze</em> skanerem, nie surowy inwentarz).</li>
+        <li>Plik nie wychodzi z przeglądarki — nadaje się do sali.</li>
+      </ol>
+      <h3>Albo HTML na dysk (offline na konferencji)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code>git clone --depth 1 https://github.com/CycloneDX/Sunshine.git $env:TEMP\Sunshine
+pip install requests
+python $env:TEMP\Sunshine\sunshine.py -i sbom-vuln.cdx.json -o raport.html -e -nl
+start raport.html</code></pre>
+      <p>W raporcie widać: liczbę komponentów, liczbę CVE, kolumnę CVSS, kolumnę EPSS, czy coś wpadło do CISA KEV. Szukanie po nazwie pakietu działa (np. <code>torch</code>).</p>
+      <p class="muted">Gotowy inwentarz rAIdio.bot v0.1.36 bez CVE: <code>viewer/rAIdio.bot-v0.1.36.html</code>. Raport po skanie (gdy skrypt go zapisze): <code>viewer/rAIdio.bot-v0.1.36-osv.html</code> i tabela <a href="#wyniki-cve">CVE offline</a>. Żeby na Sunshine w chmurze pojawiły się czerwone wiersze, wgraj plik <em>ze</em> skanerem z kroku 3.</p>
+    </section>
+
+    <section id="demo-publiczne">
+      <h2>Źródła i widoki</h2>
+      <p>Sprawdzone 18 września 2026. Kolumna <span class="tag">Internet</span> wymaga sieci na sali. Kolumna <span class="tag">USB</span> działa z <code>file://</code> po skopiowaniu całego <code>viewer/</code>. Nie linkujemy laboratoriów ataków (DVWA i podobne).</p>
+
+      <h3>Widoki SBOM</h3>
+      <table>
+        <thead>
+          <tr><th>URL / plik</th><th>Po co</th><th>Dostęp</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://cyclonedx.github.io/Sunshine/">cyclonedx.github.io/Sunshine</a></td>
+            <td>Wgraj CycloneDX JSON; tabela komponentów, CVE i CVSS. Enrich EPSS/KEV zostawia plik w przeglądarce, ale dociąga bazy z sieci.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://cyclonedx.github.io/Sunshine/sample_enriched.html">Sunshine — przykładowy raport</a></td>
+            <td>Gotowa tabela CVE z EPSS i wpisem CISA KEV, gdy nie macie jeszcze własnego skanu.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.sbomviewer.com/">sbomviewer.com</a></td>
+            <td>Wgraj CycloneDX/SPDX; skan OSV.dev w przeglądarce (CVE + CVSS). Skan wymaga netu.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/hristiy4n/bom-view">github.com/hristiy4n/bom-view</a></td>
+            <td>Otwarty kod bom-view (OSV on-demand + CVE „wpieczone” w CycloneDX). Publiczny GitHub Pages nie żyje (404) — to repo, nie demo online.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="rAIdio.bot-v0.1.36.html"><code>viewer/rAIdio.bot-v0.1.36.html</code></a></td>
+            <td>Sunshine z inwentarza rAIdio.bot — 1196 komponentów, 0 CVE (to jest lekcja: inwentarz ≠ skan).</td>
+            <td><span class="tag">USB</span></td>
+          </tr>
+          <tr>
+            <td><a href="#wyniki-cve">ta strona, sekcja CVE offline</a></td>
+            <td>Tabela CVE/CVSS z <code>data/vulns-windows-v0.1.36.js</code> plus lokalne raporty OSV/Grype/Sunshine.</td>
+            <td><span class="tag">USB</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Bazy CVE, CVSS, exploitowalność</h3>
+      <table>
+        <thead>
+          <tr><th>URL</th><th>Po co</th><th>Dostęp</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://osv.dev/">osv.dev</a></td>
+            <td>Wpisz <code>pkg:pypi/torch@2.10.0</code> i pokaż publiczny rekord bez konta.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.cve.org/">cve.org</a></td>
+            <td>Kanoniczny rekord CVE (identyfikator, CNA, opis).</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://nvd.nist.gov/">nvd.nist.gov</a></td>
+            <td>CVSS „oficjalny USA”; porównanie score z EUVD i z narzędziem SCA.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://euvd.enisa.europa.eu/">euvd.enisa.europa.eu</a></td>
+            <td>Europejska baza podatności (EUVD): CVSS, EPSS, flagi CISA KEV i EU KEV. SPA bywa chwilowo niedostępna — wtedy wejdź z opisem ENISA poniżej.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.enisa.europa.eu/topics/vulnerability-services">ENISA — Vulnerability Services</a></td>
+            <td>Stabilna strona agencji: EUVD, katalog EU KEV i Single Reporting Platform (CRA art. 14).</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog">CISA KEV</a></td>
+            <td>Potwierdzone wykorzystanie w naturze — na CRA ważniejsze niż sam CVSS 9.8.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.first.org/epss/">first.org/epss</a></td>
+            <td>Prawdopodobieństwo exploita w 30 dni (0–1); Sunshine z <code>-e</code> dociąga te liczby.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>CRA i wytyczne SBOM</h3>
+      <table>
+        <thead>
+          <tr><th>URL</th><th>Po co</th><th>Dostęp</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act">Komisja — Cyber Resilience Act</a></td>
+            <td>Oficjalna strona aktu: obowiązki od 11.12.2027, zgłoszenia od 11.09.2026.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://digital-strategy.ec.europa.eu/pl/library/commission-publishes-new-guidance-support-timely-cyber-resilience-act-implementation">Wytyczne Komisji (PL)</a></td>
+            <td>Praktyczny przewodnik z lipca 2026 (zakres, FOSS, zgłoszenia). Angielski: <a href="https://digital-strategy.ec.europa.eu/en/library/commission-publishes-new-guidance-support-timely-cyber-resilience-act-implementation">ta sama publikacja EN</a>.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://eur-lex.europa.eu/legal-content/PL/TXT/?uri=CELEX:32024R2847">EUR-Lex 2024/2847 (PL)</a></td>
+            <td>Tekst rozporządzenia; SBOM w załączniku I cz. II pkt 1 (format maszynowy, co najmniej zależności najwyższego poziomu).</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.enisa.europa.eu/publications/sbom-adoption-state-of-play-2026">ENISA — SBOM Adoption 2026</a></td>
+            <td>Jak firmy w UE wdrażają SBOM pod CRA (format, aktualizacja, dokumentacja techniczna — nie obowiązek publikacji).</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://www.bsi.bund.de/EN/Themen/Unternehmen-und-Organisationen/Standards-und-Zertifizierung/Technische-Richtlinien/TR-nach-Thema-sortiert/tr03183/tr-03183.html">BSI TR-03183 cz. 2 (SBOM)</a></td>
+            <td>Techniczna wykładnia pól SBOM (CycloneDX/SPDX) pod CRA — konkret, którego rozporządzenie nie rozpisuje.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Projekty i gotowe SBOM-y</h3>
+      <table>
+        <thead>
+          <tr><th>URL</th><th>Po co</th><th>Dostęp</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://github.com/idlab-discover/sbom-workshop-short">idlab-discover/sbom-workshop-short</a></td>
+            <td>Mała aplikacja Go + scenariusz Syft → Grype → Sunshine. Lepszy pierwszy skan niż 1196 pakietów rAIdio.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/CycloneDX/bom-examples">CycloneDX/bom-examples</a></td>
+            <td>Publiczne pliki CycloneDX (m.in. Juice Shop jako <em>SBOM</em>, nie jako laboratorium ataków). Wgraj do Sunshine.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/CycloneDX/cyclonedx-node-npm">CycloneDX/cyclonedx-node-npm</a></td>
+            <td>SBOM z <code>package-lock.json</code> (<code>--package-lock-only</code>) — demo lockfile’a bez odpalania aplikacji.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+          <tr>
+            <td><a href="https://owasp.org/www-project-dependency-track/">OWASP Dependency-Track</a> · <a href="https://dependencytrack.org/">dependencytrack.org</a></td>
+            <td>Platforma SBOM+CVE na Dockerze (<code>localhost:8081</code>, admin/admin). Publiczne demo <code>demo.dependencytrack.org</code> nie żyje (HTTP 500) — nie obiecuj go na sali.</td>
+            <td><span class="tag">Internet</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="porownanie">
+      <h2>Porównaj wydania (i tryby)</h2>
+      <p class="ok">Porównanie <strong>wersji</strong> (np. v0.1.31 → v0.1.36) albo <strong>trybów</strong>: Windows vs Linux oraz źródło (inwentarz, Trivy, Snyk, OSV). Ta sama wersja po dwóch stronach jest OK, gdy różni się platforma albo skaner.</p>
+      <div class="compare-bar mods">
+        <label class="field">Wersja X
+          <select id="ver-x"></select>
+        </label>
+        <label class="field">Platforma X
+          <select id="plat-x">
+            <option value="windows">Windows</option>
+            <option value="linux">Linux</option>
+          </select>
+        </label>
+        <label class="field">Źródło X (tryb)
+          <select id="src-x">
+            <option value="inventory">Inwentarz</option>
+            <option value="trivy">Trivy</option>
+            <option value="snyk">Snyk</option>
+            <option value="osv">OSV</option>
+          </select>
+        </label>
+        <span></span>
+        <label class="field">Wersja Y
+          <select id="ver-y"></select>
+        </label>
+        <label class="field">Platforma Y
+          <select id="plat-y">
+            <option value="windows">Windows</option>
+            <option value="linux">Linux</option>
+          </select>
+        </label>
+        <label class="field">Źródło Y (tryb)
+          <select id="src-y">
+            <option value="inventory">Inwentarz</option>
+            <option value="trivy">Trivy</option>
+            <option value="snyk">Snyk</option>
+            <option value="osv">OSV</option>
+          </select>
+        </label>
+        <button class="primary" id="btn-compare" type="button">Porównaj</button>
+      </div>
+      <p class="muted">Albo wgraj dwa dowolne pliki <code>*.cdx.json</code> (gdy serwer nie widzi katalogu <code>releases/</code>):</p>
+      <div class="compare-bar">
+        <label class="field">Plik X
+          <input id="file-x" type="file" accept=".json,.cdx.json,application/json">
+        </label>
+        <label class="field">Plik Y
+          <input id="file-y" type="file" accept=".json,.cdx.json,application/json">
+        </label>
+        <span></span>
+        <button class="primary" id="btn-compare-files" type="button">Porównaj pliki</button>
+      </div>
+      <p id="compare-status" class="muted"></p>
+      <div class="stats" id="compare-stats" hidden>
+        <div class="card stat"><span class="muted">Komponentów X → Y</span><strong id="st-count">—</strong></div>
+        <div class="card stat add"><span class="muted">Dodane w Y</span><strong id="st-add">0</strong></div>
+        <div class="card stat del"><span class="muted">Usunięte z X</span><strong id="st-del">0</strong></div>
+        <div class="card stat chg"><span class="muted">Zmiana wersji</span><strong id="st-chg">0</strong></div>
+      </div>
+      <div class="filters" id="compare-filters" hidden>
+        <label>Pokaż
+          <select id="flt-kind">
+            <option value="all">wszystkie różnice</option>
+            <option value="added">tylko dodane</option>
+            <option value="removed">tylko usunięte</option>
+            <option value="changed">tylko zmiana wersji</option>
+          </select>
+        </label>
+        <label>Szukaj
+          <input id="flt-q" type="text" placeholder="nazwa, purl, licencja…">
+        </label>
+      </div>
+      <div class="table-wrap" id="compare-table-wrap" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th>Zmiana</th>
+              <th>Komponent</th>
+              <th>Ekosystem</th>
+              <th>Wersja X</th>
+              <th>Wersja Y</th>
+              <th>Licencja</th>
+            </tr>
+          </thead>
+          <tbody id="compare-tbody"></tbody>
+        </table>
+      </div>
+      <div class="download-row" id="compare-downloads" hidden>
+        <button class="secondary" id="dl-json" type="button">Zapisz JSON</button>
+        <button class="secondary" id="dl-csv" type="button">Zapisz CSV</button>
+        <button class="secondary" id="dl-html" type="button">Zapisz HTML</button>
+        <a class="secondary" href="results/index.html" style="text-decoration:none;display:inline-block">Otwarte wyniki na dysku</a>
+      </div>
+      <p class="note">Gotowe porównania: <strong>v0.1.31 → v0.1.36</strong> (Windows), ta sama <strong>v0.1.36</strong> Windows vs Linux, ta sama wersja Trivy vs OSV — <a href="results/windows-v0.1.31__v0.1.32.html">windows-v0.1.31__v0.1.32.html</a>, <a href="results/windows-v0.1.36__linux-v0.1.36.html">windows-v0.1.36__linux-v0.1.36.html</a>, <a href="results/v0.1.36-trivy__v0.1.36-osv.html">v0.1.36-trivy__v0.1.36-osv.html</a>.</p>
+      <div class="howto">
+      <h3>To samo z CLI (na slajdzie obok)</h3>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code># cyclonedx-cli
+cyclonedx diff releases\v0.1.31\rAIdio.bot-v0.1.31.cdx.json releases\v0.1.36\rAIdio.bot-v0.1.36.cdx.json
+
+# albo Grype / Trivy nie robią diffu SBOM — do tego służy ten widok albo:
+python -c "import json; x=json.load(open(r'releases/v0.1.31/rAIdio.bot-v0.1.31.cdx.json',encoding='utf-8')); y=json.load(open(r'releases/v0.1.36/rAIdio.bot-v0.1.36.cdx.json',encoding='utf-8')); sx={c['name'] for c in x['components']}; sy={c['name'] for c in y['components']}; print('added', sorted(sy-sx)[:20]); print('removed', sorted(sx-sy)[:20])"</code></pre>
+      <p class="note">Domyślny pokaz na sali: <strong>v0.1.31 → v0.1.36</strong> (ten sam Windows, inwentarz). Drugi slajd: ta sama <strong>v0.1.36</strong>, Windows vs Linux. Trzeci: ta sama wersja, Trivy vs OSV — <a href="results/windows-v0.1.36__linux-v0.1.36.html">windows-v0.1.36__linux-v0.1.36.html</a>, <a href="results/v0.1.36-trivy__v0.1.36-osv.html">v0.1.36-trivy__v0.1.36-osv.html</a>. Gotowiec wersji: <a href="results/windows-v0.1.31__v0.1.32.html">windows-v0.1.31__v0.1.32.html</a>. Przebudowa paczki: <code>python tools/build_offline_compare.py</code>; tryby: <code>python tools/workshop_scan_server.py --pack</code>.</p>
+      </div>
+    </section>
+
+    <section id="pytania">
+      <h2>Trzy punkty na koniec</h2>
+      <ol>
+        <li>Dlaczego SBOM licencyjny rAIdio.bot pokazuje 0 podatności, a Trivy na tym samym pliku już nie?</li>
+        <li>Co jest ważniejsze przy CRA: CVSS 9.8 bez exploita, czy CVSS 7.5 w CISA KEV / EUVD?</li>
+        <li>Czy <code>pkg:generic/ffmpeg@…</code> w ogóle wejdzie do Snyk/OSV? (Często nie — skaner żyje z <code>purl</code> ekosystemu: <code>pypi</code>, <code>cargo</code>, <code>npm</code>.)</li>
+      </ol>
+    </section>
+
+    <section id="cwiczenie" class="howto">
+      <h2>Ćwiczenie na sali (20 minut)</h2>
+      <p>Pracujcie w parach. Weźcie mały projekt (np. własne <code>package.json</code> albo publiczne demo), nie pełne 1196 pakietów rAIdio za pierwszym razem.</p>
+      <div class="card checklist">
+        <label><input type="checkbox"> Zainstalować Trivy <em>albo</em> zalogować Snyk.</label>
+        <label><input type="checkbox"> Wygenerować <code>sbom.cdx.json</code> ze źródła.</label>
+        <label><input type="checkbox"> Policzyć komponenty skryptem Python z kroku 2.</label>
+        <label><input type="checkbox"> Uruchomić skan CVE i zapisać <code>sbom-vuln.cdx.json</code> — albo otworzyć tabelę <a href="#wyniki-cve">CVE offline</a> z pendrive.</label>
+        <label><input type="checkbox"> Wgrać plik do Sunshine z enrichment EPSS/KEV.</label>
+        <label><input type="checkbox"> Wybrać jeden CVE, otworzyć go w NVD i w EUVD, porównać score.</label>
+        <label><input type="checkbox"> Napisać jednym zdaniem: czy to CVE w ogóle dotyczy waszego sposobu użycia (zalążek VEX: <code>affected</code> / <code>not_affected</code>).</label>
+        <label><input type="checkbox"> Porównać dwie wersje SBOM (X i Y) i wskazać jeden pakiet, który doszedł albo zmienił wersję.</label>
+      </div>
+      <h3>Pytania, które zadajesz na końcu</h3>
+      <ol>
+        <li>Dlaczego SBOM licencyjny rAIdio.bot pokazuje 0 podatności, a Trivy na tym samym pliku już nie?</li>
+        <li>Co jest ważniejsze przy CRA: CVSS 9.8 bez exploita, czy CVSS 7.5 w CISA KEV / EUVD?</li>
+        <li>Czy <code>pkg:generic/ffmpeg@…</code> w ogóle wejdzie do Snyk/OSV? (Często nie — skaner żyje z <code>purl</code> ekosystemu: <code>pypi</code>, <code>cargo</code>, <code>npm</code>.)</li>
+      </ol>
+    </section>
+
+    <section id="sciaga" class="howto">
+      <h2>Ściąga — trzy polecenia</h2>
+      <pre><span class="lang">PowerShell</span><button class="copy" type="button">Kopiuj</button><code># 1. BOM ze źródła + CVE (Trivy)
+trivy fs --scanners vuln,license --format cyclonedx --output sbom-vuln.cdx.json .
+
+# 2. Albo BOM ze źródła (Snyk) i osobny test
+snyk sbom --format=cyclonedx1.5+json -o sbom.cdx.json
+snyk sbom test --file=sbom.cdx.json
+
+# 3. HTML
+# wgraj sbom-vuln.cdx.json na https://cyclonedx.github.io/Sunshine/  (włącz Enrich EPSS/KEV)</code></pre>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      rAIdio.bot v0.1.36 · CycloneDX 1.5 · 1196 komponentów.
+      Narzędzia: Trivy, Snyk, Syft, Grype, OSV, Sunshine, ENISA EUVD.
+      <button type="button" class="toggle-howto" id="toggle-howto">Pokaż instrukcję odpalania</button>
+    </div>
+  </footer>
+  <script src="data/inventories.js"></script>
+  <script src="data/vulns-windows-v0.1.36.js"></script>
+  <script src="data/scanners.js"></script>
+  <script>
+    document.querySelectorAll("button.copy").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var pre = btn.parentElement;
+        var code = pre.querySelector("code");
+        navigator.clipboard.writeText(code.innerText).then(function () {
+          btn.textContent = "Skopiowano";
+          setTimeout(function () { btn.textContent = "Kopiuj"; }, 1600);
+        });
+      });
+    });
+
+    var howtoBtn = document.getElementById("toggle-howto");
+    if (howtoBtn) {
+      howtoBtn.addEventListener("click", function () {
+        document.body.classList.toggle("show-howto");
+        var on = document.body.classList.contains("show-howto");
+        howtoBtn.textContent = on ? "Schowaj instrukcję odpalania" : "Pokaż instrukcję odpalania";
+      });
+    }
+
+    var VERSIONS = (window.SBOM_PACK && window.SBOM_PACK.versions) || [
+      "v0.1.36","v0.1.35","v0.1.34","v0.1.33","v0.1.32","v0.1.31","v0.1.30",
+      "v0.1.29","v0.1.28","v0.1.27","v0.1.26","v0.1.25","v0.1.24","v0.1.23",
+      "v0.1.22","v0.1.21","v0.1.20","v0.1.19","v0.1.18","v0.1.17","v0.1.16",
+      "v0.1.15","v0.1.14","v0.1.13","v0.1.12","v0.1.11","v0.1.10","v0.1.9","v0.1.8"
+    ];
+    var compareRows = [];
+    var lastResult = null;
+
+    function packToSbom(ver, plat) {
+      var pack = window.SBOM_PACK && window.SBOM_PACK.packs && window.SBOM_PACK.packs[plat + ":" + ver];
+      if (!pack) return null;
+      return {
+        components: pack.components.map(function (c) {
+          return {
+            name: c.n,
+            version: c.v,
+            purl: c.p,
+            licenses: [{ license: { id: c.l } }],
+            type: c.e || "inventory"
+          };
+        })
+      };
+    }
+
+    function packToScanSbom(ver, plat, src) {
+      var scanners = window.SBOM_SCANNERS;
+      var pack = scanners && scanners.packs && scanners.packs[src + ":" + plat + ":" + ver];
+      if (!pack) return null;
+      return {
+        components: (pack.items || []).map(function (it) {
+          var sev = it.severity || "unknown";
+          var verLabel = it.cvss != null ? sev + "/" + it.cvss : sev;
+          var pkgs = Array.isArray(it.packages) ? it.packages.join(", ") : (it.package || "—");
+          return {
+            name: it.id,
+            version: verLabel,
+            purl: "pkg:vuln/" + it.id,
+            licenses: [{ license: { id: pkgs || "—" } }],
+            type: src
+          };
+        })
+      };
+    }
+
+    function sideTag(ver, plat, src) {
+      if (src === "inventory") return plat + "-" + ver;
+      return plat + "-" + ver + "-" + src;
+    }
+
+    function compareStem(vx, px, sx, vy, py, sy) {
+      if (sx === "inventory" && sy === "inventory") {
+        if (px === py) return px + "-" + vx + "__" + vy;
+        return px + "-" + vx + "__" + py + "-" + vy;
+      }
+      if (sx !== "inventory" && sy !== "inventory" && px === py && vx === vy) {
+        return vx + "-" + sx + "__" + vy + "-" + sy;
+      }
+      return sideTag(vx, px, sx) + "__" + sideTag(vy, py, sy);
+    }
+
+    function loadSide(ver, plat, src) {
+      if (src === "inventory") return packToSbom(ver, plat);
+      return packToScanSbom(ver, plat, src);
+    }
+
+    function fillSelects() {
+      var x = document.getElementById("ver-x");
+      var y = document.getElementById("ver-y");
+      VERSIONS.forEach(function (v) {
+        x.appendChild(new Option(v, v));
+        y.appendChild(new Option(v, v));
+      });
+      x.value = "v0.1.31";
+      y.value = "v0.1.36";
+    }
+
+    function sbomCandidates(ver, plat) {
+      var file = plat === "linux"
+        ? "rAIdio.bot-" + ver + "-linux.cdx.json"
+        : "rAIdio.bot-" + ver + ".cdx.json";
+      var rel = "releases/" + ver + "/" + file;
+      return ["/" + rel, "../" + rel, rel];
+    }
+
+    async function loadJson(url) {
+      var res = await fetch(url);
+      if (!res.ok) throw new Error(url + " → HTTP " + res.status);
+      return res.json();
+    }
+
+    async function loadSbom(ver, plat) {
+      var last = null;
+      var urls = sbomCandidates(ver, plat);
+      for (var i = 0; i < urls.length; i++) {
+        try {
+          var res = await fetch(urls[i]);
+          if (res.ok) return res.json();
+          last = new Error(urls[i] + " → HTTP " + res.status);
+        } catch (err) {
+          last = err;
+        }
+      }
+      throw last || new Error("brak SBOM");
+    }
+
+    function identity(comp) {
+      var purl = comp.purl || "";
+      if (purl) {
+        var noVer = purl.replace(/@[^@/?#]+(?=($|[?#]))/, "");
+        return noVer.toLowerCase();
+      }
+      return ((comp.group || "") + "/" + (comp.name || "")).toLowerCase();
+    }
+
+    function eco(comp) {
+      var purl = comp.purl || "";
+      var m = purl.match(/^pkg:([^/]+)\//);
+      return m ? m[1] : (comp.type || "—");
+    }
+
+    function licenseOf(comp) {
+      var ls = comp.licenses || [];
+      if (!ls.length) return "—";
+      var first = ls[0] || {};
+      var lic = first.license || {};
+      return lic.id || lic.name || first.expression || "—";
+    }
+
+    function indexComponents(sbom) {
+      var map = {};
+      (sbom.components || []).forEach(function (c) {
+        map[identity(c)] = c;
+      });
+      return map;
+    }
+
+    function diffSboms(a, b, labelX, labelY) {
+      var ix = indexComponents(a);
+      var iy = indexComponents(b);
+      var keys = {};
+      Object.keys(ix).concat(Object.keys(iy)).forEach(function (k) { keys[k] = true; });
+      var rows = [];
+      Object.keys(keys).sort().forEach(function (k) {
+        var cx = ix[k];
+        var cy = iy[k];
+        if (cx && !cy) {
+          rows.push({ kind: "removed", name: cx.name, eco: eco(cx), vx: cx.version || "—", vy: "—", lic: licenseOf(cx), purl: cx.purl || k });
+        } else if (!cx && cy) {
+          rows.push({ kind: "added", name: cy.name, eco: eco(cy), vx: "—", vy: cy.version || "—", lic: licenseOf(cy), purl: cy.purl || k });
+        } else if ((cx.version || "") !== (cy.version || "")) {
+          rows.push({ kind: "changed", name: cy.name, eco: eco(cy), vx: cx.version || "—", vy: cy.version || "—", lic: licenseOf(cy), purl: cy.purl || k });
+        }
+      });
+      return {
+        rows: rows,
+        nx: (a.components || []).length,
+        ny: (b.components || []).length,
+        labelX: labelX,
+        labelY: labelY
+      };
+    }
+
+    function kindLabel(k) {
+      if (k === "added") return "dodane";
+      if (k === "removed") return "usunięte";
+      return "wersja";
+    }
+
+    function renderDiff(result) {
+      lastResult = result;
+      compareRows = result.rows;
+      document.getElementById("compare-stats").hidden = false;
+      document.getElementById("compare-filters").hidden = false;
+      document.getElementById("compare-table-wrap").hidden = false;
+      document.getElementById("compare-downloads").hidden = false;
+      document.getElementById("st-count").textContent = result.nx + " → " + result.ny;
+      document.getElementById("st-add").textContent = result.rows.filter(function (r) { return r.kind === "added"; }).length;
+      document.getElementById("st-del").textContent = result.rows.filter(function (r) { return r.kind === "removed"; }).length;
+      document.getElementById("st-chg").textContent = result.rows.filter(function (r) { return r.kind === "changed"; }).length;
+      var offline = !!(window.SBOM_PACK && window.SBOM_PACK.offline);
+      document.getElementById("compare-status").textContent =
+        (offline ? "Offline. " : "") +
+        "Porównano " + result.labelX + " → " + result.labelY + ". Poniżej tylko różnice. Zapisz wynik przyciskami poniżej albo otwórz gotowiec w viewer/results/.";
+      drawTable();
+    }
+
+    function downloadBlob(filename, mime, text) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    }
+
+    function resultFilename(ext) {
+      var r = lastResult || { labelX: "x", labelY: "y", stem: "x__y" };
+      return (r.stem || (r.labelX + "__" + r.labelY)) + "." + ext;
+    }
+
+    function saveJson() {
+      if (!lastResult) return;
+      downloadBlob(resultFilename("json"), "application/json", JSON.stringify(lastResult, null, 2));
+    }
+
+    function saveCsv() {
+      if (!lastResult) return;
+      var lines = ["zmiana,komponent,ekosystem,wersja_x,wersja_y,licencja,purl"];
+      lastResult.rows.forEach(function (r) {
+        lines.push([r.kind, r.name, r.eco, r.vx, r.vy, r.lic, r.purl].map(function (c) {
+          return '"' + String(c).replace(/"/g, '""') + '"';
+        }).join(","));
+      });
+      downloadBlob(resultFilename("csv"), "text/csv", lines.join("\n"));
+    }
+
+    function saveHtml() {
+      if (!lastResult) return;
+      var rows = lastResult.rows.map(function (r) {
+        var cls = r.kind === "added" ? "add" : r.kind === "removed" ? "del" : "chg";
+        return "<tr class='" + cls + "'><td>" + kindLabel(r.kind) + "</td><td>" + escapeHtml(r.name) +
+          "</td><td>" + escapeHtml(r.eco) + "</td><td>" + escapeHtml(r.vx) +
+          "</td><td>" + escapeHtml(r.vy) + "</td><td>" + escapeHtml(r.lic) + "</td></tr>";
+      }).join("");
+      var html = "<!DOCTYPE html><html lang='pl'><head><meta charset='utf-8'><title>" +
+        escapeHtml(lastResult.labelX) + " → " + escapeHtml(lastResult.labelY) +
+        "</title><style>body{font:16px Segoe UI,sans-serif}table{border-collapse:collapse;width:100%}" +
+        "th,td{border:1px solid #ccc;padding:.4rem}tr.add{background:#e8f4ec}tr.del{background:#f8e8e6}" +
+        "tr.chg{background:#f8f0e3}</style></head><body><h1>" +
+        escapeHtml(lastResult.labelX) + " → " + escapeHtml(lastResult.labelY) +
+        "</h1><p>Komponentów " + lastResult.nx + " → " + lastResult.ny +
+        "</p><table><thead><tr><th>Zmiana</th><th>Komponent</th><th>Ekosystem</th><th>X</th><th>Y</th><th>Licencja</th></tr></thead><tbody>" +
+        rows + "</tbody></table></body></html>";
+      downloadBlob(resultFilename("html"), "text/html", html);
+    }
+
+    function drawTable() {
+      var kind = document.getElementById("flt-kind").value;
+      var q = (document.getElementById("flt-q").value || "").toLowerCase();
+      var tbody = document.getElementById("compare-tbody");
+      tbody.innerHTML = "";
+      var shown = compareRows.filter(function (r) {
+        if (kind !== "all" && r.kind !== kind) return false;
+        if (!q) return true;
+        return (r.name + " " + r.eco + " " + r.vx + " " + r.vy + " " + r.lic + " " + r.purl).toLowerCase().indexOf(q) >= 0;
+      });
+      shown.forEach(function (r) {
+        var tr = document.createElement("tr");
+        tr.className = r.kind === "added" ? "row-add" : r.kind === "removed" ? "row-del" : "row-chg";
+        tr.innerHTML = "<td>" + kindLabel(r.kind) + "</td><td>" + escapeHtml(r.name) +
+          "</td><td>" + escapeHtml(r.eco) + "</td><td>" + escapeHtml(r.vx) +
+          "</td><td>" + escapeHtml(r.vy) + "</td><td>" + escapeHtml(r.lic) + "</td>";
+        tbody.appendChild(tr);
+      });
+      if (!shown.length) {
+        var empty = document.createElement("tr");
+        empty.innerHTML = "<td colspan='6'>Brak wierszy dla tego filtra — skład X i Y jest identyczny albo filtr jest za wąski.</td>";
+        tbody.appendChild(empty);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"'`]/g, function (c) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;" })[c];
+      });
+    }
+
+    async function loadJson(url) {
+      var res = await fetch(url);
+      if (!res.ok) throw new Error(url + " → HTTP " + res.status);
+      return res.json();
+    }
+
+    async function compareVersions() {
+      var vx = document.getElementById("ver-x").value;
+      var vy = document.getElementById("ver-y").value;
+      var px = document.getElementById("plat-x").value;
+      var py = document.getElementById("plat-y").value;
+      var sx = document.getElementById("src-x").value;
+      var sy = document.getElementById("src-y").value;
+      var btn = document.getElementById("btn-compare");
+      var status = document.getElementById("compare-status");
+      if (vx === vy && px === py && sx === sy) {
+        status.textContent = "Wybierz różne wersje albo różne tryby (platforma / źródło skanera). Ta sama wersja jest OK przy Windows vs Linux albo Trivy vs OSV.";
+        return;
+      }
+      var labelX = sideTag(vx, px, sx);
+      var labelY = sideTag(vy, py, sy);
+      if (sx !== "inventory" && sy !== "inventory" && px === py && vx === vy) {
+        labelX = vx + "-" + sx;
+        labelY = vy + "-" + sy;
+      }
+      btn.disabled = true;
+      status.textContent = "Porównuję " + labelX + " i " + labelY + " (offline)…";
+      try {
+        var a = loadSide(vx, px, sx);
+        var b = loadSide(vy, py, sy);
+        if (sx === "inventory" && !a) a = await loadSbom(vx, px);
+        if (sy === "inventory" && !b) b = await loadSbom(vy, py);
+        if (!a || !b) {
+          throw new Error("brak danych " + labelX + " / " + labelY +
+            (sx !== "inventory" || sy !== "inventory"
+              ? " — skanera nie ma w data/scanners.js (uruchom Trivy/Snyk albo --pack)"
+              : " — Linux nie ma inwentarza dla każdego wydania"));
+        }
+        var result = diffSboms(a, b, labelX, labelY);
+        result.stem = compareStem(vx, px, sx, vy, py, sy);
+        result.mode = (sx === "inventory" && sy === "inventory") ? "inventory" : "scanner";
+        var ths = document.querySelectorAll("#compare-table-wrap thead th");
+        if (ths.length >= 6) {
+          if (result.mode === "scanner") {
+            ths[1].textContent = "CVE / ID";
+            ths[2].textContent = "Źródło";
+            ths[5].textContent = "Pakiety";
+          } else {
+            ths[1].textContent = "Komponent";
+            ths[2].textContent = "Ekosystem";
+            ths[5].textContent = "Licencja";
+          }
+        }
+        renderDiff(result);
+      } catch (err) {
+        status.textContent = "Brak danych dla tej pary (" + err.message +
+          "). Skopiuj cały katalog viewer/ (z data/ i results/).";
+      }
+      btn.disabled = false;
+    }
+
+    function readFile(input) {
+      return new Promise(function (resolve, reject) {
+        var f = input.files && input.files[0];
+        if (!f) return reject(new Error("brak pliku"));
+        var reader = new FileReader();
+        reader.onload = function () {
+          try { resolve({ name: f.name, data: JSON.parse(reader.result) }); }
+          catch (e) { reject(e); }
+        };
+        reader.onerror = reject;
+        reader.readAsText(f);
+      });
+    }
+
+    async function compareFiles() {
+      var status = document.getElementById("compare-status");
+      var btn = document.getElementById("btn-compare-files");
+      btn.disabled = true;
+      status.textContent = "Czytam wgrane pliki…";
+      try {
+        var a = await readFile(document.getElementById("file-x"));
+        var b = await readFile(document.getElementById("file-y"));
+        renderDiff(diffSboms(a.data, b.data, a.name, b.name));
+      } catch (err) {
+        status.textContent = "Wgraj dwa poprawne pliki CycloneDX JSON. " + err.message;
+      }
+      btn.disabled = false;
+    }
+
+    fillSelects();
+    document.getElementById("btn-compare").addEventListener("click", compareVersions);
+    document.getElementById("btn-compare-files").addEventListener("click", compareFiles);
+    document.getElementById("flt-kind").addEventListener("change", drawTable);
+    document.getElementById("flt-q").addEventListener("input", drawTable);
+    document.getElementById("dl-json").addEventListener("click", saveJson);
+    document.getElementById("dl-csv").addEventListener("click", saveCsv);
+    document.getElementById("dl-html").addEventListener("click", saveHtml);
+    if (location.hash === "#porownanie" || window.SBOM_PACK) compareVersions();
+
+    var SCAN_PORTS = [18767, 18766, 18765, 8766, 8767, 28765];
+    var scanBase = null;
+
+    function runnerDownNote() {
+      return "Lokalny runner nie odpowiada na 127.0.0.1.\n" +
+        "W katalogu repozytorium uruchom:\n" +
+        "  python tools\\workshop_scan_server.py\n" +
+        "albo dwuklik: viewer\\start-scan-server.cmd\n" +
+        "Potem otwórz http://127.0.0.1:18767/warsztat-cra-sbom.html (albo odśwież tę stronę).\n" +
+        "Bez Pythona: dwuklik viewer\\run-trivy.cmd / run-trivy.ps1 albo run-snyk.cmd / run-snyk.ps1.";
+    }
+
+    async function pingRunner() {
+      var origins = [];
+      if (location.protocol.indexOf("http") === 0 &&
+          (location.hostname === "127.0.0.1" || location.hostname === "localhost")) {
+        origins.push(location.origin);
+      }
+      SCAN_PORTS.forEach(function (p) { origins.push("http://127.0.0.1:" + p); });
+      var seen = {};
+      for (var i = 0; i < origins.length; i++) {
+        if (seen[origins[i]]) continue;
+        seen[origins[i]] = true;
+        try {
+          var ctrl = new AbortController();
+          var t = setTimeout(function () { ctrl.abort(); }, 5000);
+          var res = await fetch(origins[i] + "/health", { signal: ctrl.signal });
+          clearTimeout(t);
+          if (!res.ok) continue;
+          var data = await res.json();
+          if (data && data.ok) {
+            scanBase = origins[i];
+            return true;
+          }
+        } catch (e) { /* runner down on this port */ }
+      }
+      scanBase = null;
+      return false;
+    }
+
+    async function updateScanStatus() {
+      var el = document.getElementById("scan-status");
+      if (!el) return;
+      var up = await pingRunner();
+      if (up) {
+        el.className = "ok";
+        el.textContent = "Runner online: " + scanBase + " — kliknij Uruchom Trivy albo Uruchom Snyk.";
+      } else {
+        el.className = "warn";
+        el.textContent = runnerDownNote();
+      }
+    }
+
+    async function runScan(tool) {
+      var btnT = document.getElementById("btn-scan-trivy");
+      var btnS = document.getElementById("btn-scan-snyk");
+      var el = document.getElementById("scan-status");
+      btnT.disabled = true;
+      btnS.disabled = true;
+      el.className = "muted";
+      el.textContent = tool === "trivy"
+        ? "Uruchamiam Trivy na tej maszynie (pierwsza baza CVE może potrwać kilka minut)…"
+        : "Uruchamiam Snyk na tej maszynie…";
+      var up = await pingRunner();
+      if (!up) {
+        el.className = "warn";
+        el.textContent = runnerDownNote();
+        btnT.disabled = false;
+        btnS.disabled = false;
+        return;
+      }
+      try {
+        var res = await fetch(scanBase + "/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tool: tool, version: "v0.1.36", platform: "windows" })
+        });
+        var data = await res.json();
+        if (data.message === "snyk auth required" || (tool === "snyk" && !data.ok)) {
+          el.className = "warn";
+          el.textContent = "snyk auth required\n" + (data.detail || data.error || "") +
+            "\nZainstaluj: npm install -g snyk   potem: snyk auth\nTrivy działa bez konta — użyj Uruchom Trivy.";
+        } else if (!data.ok && data.error) {
+          el.className = "warn";
+          el.textContent = "Skan " + tool + " nie wyszedł: " + data.error;
+        } else {
+          el.className = "ok";
+          var files = (data.files || []).slice(0, 6).join("\n");
+          el.textContent = "Skan " + tool + " zapisany na tej maszynie. Znalezisk: " +
+            (data.count != null ? data.count : "—") + ".\n" + (files || "viewer/results/vuln/");
+          initVulnPanel();
+        }
+      } catch (err) {
+        el.className = "warn";
+        el.textContent = runnerDownNote() + "\n(" + err.message + ")";
+      }
+      btnT.disabled = false;
+      btnS.disabled = false;
+    }
+
+    document.getElementById("btn-scan-trivy").addEventListener("click", function () { runScan("trivy"); });
+    document.getElementById("btn-scan-snyk").addEventListener("click", function () { runScan("snyk"); });
+    updateScanStatus();
+
+    var vulnRows = [];
+    var lastVulnPack = null;
+
+    function packagesLabel(it) {
+      var p = it.packages || it.pkgs || [];
+      if (typeof p === "string") return p;
+      return p.map(function (x) {
+        if (typeof x === "string") return x;
+        return x.name || x.purl || x.ref || "";
+      }).filter(Boolean).join(", ");
+    }
+
+    function cdxVulnToRow(v) {
+      var ratings = v.ratings || [];
+      var r = ratings[0] || {};
+      for (var i = 0; i < ratings.length; i++) {
+        if (ratings[i].method === "CVSSv31" || ratings[i].method === "CVSSv3") {
+          r = ratings[i];
+          break;
+        }
+      }
+      var pkgs = (v.affects || []).map(function (a) {
+        return (a && a.ref) || "";
+      }).filter(Boolean);
+      return {
+        id: v.id || v.vulnerability_id || "—",
+        severity: (r.severity || v.severity || "unknown").toLowerCase(),
+        cvss: r.score != null ? r.score : (v.cvss != null ? v.cvss : null),
+        packages: pkgs,
+        aliases: v.aliases || []
+      };
+    }
+
+    function vulnSourceList(raw) {
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw.items)) return raw.items;
+      if (Array.isArray(raw.vulnerabilities)) return raw.vulnerabilities.map(cdxVulnToRow);
+      if (Array.isArray(raw.vulns)) return raw.vulns;
+      return [];
+    }
+
+    function normalizeVulnRow(it) {
+      var sev = String(it.severity || it.sev || "unknown").toLowerCase();
+      var cvss = it.cvss;
+      if (cvss == null) cvss = it.score;
+      return {
+        id: it.id || it.cve || "—",
+        severity: sev,
+        cvss: cvss,
+        packages: it.packages || it.pkgs || [],
+        aliases: it.aliases || []
+      };
+    }
+
+    function drawVulnTable() {
+      var q = (document.getElementById("vuln-q").value || "").toLowerCase();
+      var tbody = document.getElementById("vuln-tbody");
+      tbody.innerHTML = "";
+      var shown = vulnRows.filter(function (r) {
+        if (!q) return true;
+        return (r.id + " " + r.severity + " " + packagesLabel(r) + " " + (r.aliases || []).join(" ")).toLowerCase().indexOf(q) >= 0;
+      });
+      shown.forEach(function (r) {
+        var tr = document.createElement("tr");
+        var score = (typeof r.cvss === "number") ? r.cvss.toFixed(1) : (r.cvss == null || r.cvss === "" ? "—" : String(r.cvss));
+        tr.innerHTML = "<td><code>" + escapeHtml(r.id) + "</code></td><td class='sev " + escapeHtml(r.severity) + "'>" +
+          escapeHtml(r.severity) + "</td><td>" + escapeHtml(score) + "</td><td>" + escapeHtml(packagesLabel(r) || "—") + "</td>";
+        tbody.appendChild(tr);
+      });
+      if (!shown.length) {
+        var empty = document.createElement("tr");
+        empty.innerHTML = "<td colspan='4'>Brak wierszy dla tego filtra — albo skan jeszcze nie zapisał CVE.</td>";
+        tbody.appendChild(empty);
+      }
+    }
+
+    function vulnFilename(ext) {
+      var ver = (lastVulnPack && lastVulnPack.version) || "v0.1.36";
+      var plat = (lastVulnPack && lastVulnPack.platform) || "windows";
+      return "cve-" + plat + "-" + ver + "." + ext;
+    }
+
+    function saveVulnJson() {
+      if (!lastVulnPack) return;
+      downloadBlob(vulnFilename("json"), "application/json", JSON.stringify(lastVulnPack, null, 2));
+    }
+
+    function saveVulnCsv() {
+      if (!lastVulnPack) return;
+      var lines = ["id,severity,cvss,packages"];
+      vulnRows.forEach(function (r) {
+        lines.push([r.id, r.severity, r.cvss == null ? "" : r.cvss, packagesLabel(r)].map(function (c) {
+          return '"' + String(c).replace(/"/g, '""') + '"';
+        }).join(","));
+      });
+      downloadBlob(vulnFilename("csv"), "text/csv", lines.join("\n"));
+    }
+
+    function saveVulnHtml() {
+      if (!lastVulnPack) return;
+      var rows = vulnRows.map(function (r) {
+        var score = (typeof r.cvss === "number") ? r.cvss.toFixed(1) : (r.cvss == null ? "—" : String(r.cvss));
+        return "<tr><td>" + escapeHtml(r.id) + "</td><td>" + escapeHtml(r.severity) +
+          "</td><td>" + escapeHtml(score) + "</td><td>" + escapeHtml(packagesLabel(r) || "—") + "</td></tr>";
+      }).join("");
+      var html = "<!DOCTYPE html><html lang='pl'><head><meta charset='utf-8'><title>CVE " +
+        escapeHtml(vulnFilename("html")) + "</title><style>body{font:16px Segoe UI,sans-serif}table{border-collapse:collapse;width:100%}" +
+        "th,td{border:1px solid #ccc;padding:.4rem}</style></head><body><h1>CVE / CVSS</h1><p>" +
+        vulnRows.length + " podatności</p><table><thead><tr><th>ID</th><th>Severity</th><th>CVSS</th><th>Pakiety</th></tr></thead><tbody>" +
+        rows + "</tbody></table></body></html>";
+      downloadBlob(vulnFilename("html"), "text/html", html);
+    }
+
+    function markMissingLocal(anchor) {
+      if (!anchor) return;
+      var href = anchor.getAttribute("href");
+      fetch(href).then(function (res) {
+        if (res.status === 404) {
+          var note = document.createElement("span");
+          note.className = "muted";
+          note.textContent = " — brak pliku, wygeneruj skanem";
+          anchor.after(note);
+        }
+      }).catch(function () { /* file:// często blokuje fetch — zostawiamy link */ });
+    }
+
+    function scannerPack(src, plat, ver) {
+      var s = window.SBOM_SCANNERS;
+      return s && s.packs && s.packs[src + ":" + plat + ":" + ver];
+    }
+
+    async function loadVulnSource(src) {
+      if (src === "osv" && window.SBOM_VULNS) {
+        return { raw: window.SBOM_VULNS, label: "data/vulns-windows-v0.1.36.js" };
+      }
+      var pack = scannerPack(src, "windows", "v0.1.36");
+      if (pack) return { raw: pack, label: "data/scanners.js (" + src + ")" };
+      var urls = {
+        trivy: ["results/vuln/trivy-summary.json"],
+        osv: ["results/vuln/osv-summary.json"],
+        snyk: ["results/vuln/snyk-summary.json"]
+      };
+      var list = urls[src] || [];
+      for (var i = 0; i < list.length; i++) {
+        try {
+          var data = await loadJson(list[i]);
+          return { raw: data, label: list[i] };
+        } catch (e) { /* file:// albo brak pliku */ }
+      }
+      return null;
+    }
+
+    function showVulnRows(raw, label) {
+      var status = document.getElementById("vuln-status");
+      var list = vulnSourceList(raw).map(normalizeVulnRow);
+      vulnRows = list.sort(function (a, b) {
+        var rank = { critical: 4, high: 3, medium: 2, low: 1 };
+        return (rank[b.severity] || 0) - (rank[a.severity] || 0) || (b.cvss || 0) - (a.cvss || 0);
+      });
+      lastVulnPack = {
+        version: (raw && raw.version) || "v0.1.36",
+        platform: (raw && raw.platform) || "windows",
+        generated: (raw && raw.generated) || "",
+        count: vulnRows.length,
+        items: vulnRows
+      };
+      var crit = vulnRows.filter(function (r) { return r.severity === "critical"; }).length;
+      var high = vulnRows.filter(function (r) { return r.severity === "high"; }).length;
+      var rest = vulnRows.length - crit - high;
+      document.getElementById("vuln-count").textContent = String(vulnRows.length);
+      document.getElementById("vuln-crit").textContent = String(crit);
+      document.getElementById("vuln-high").textContent = String(high);
+      document.getElementById("vuln-rest").textContent = String(rest);
+      document.getElementById("vuln-stats").hidden = false;
+      document.getElementById("vuln-filters").hidden = false;
+      document.getElementById("vuln-table-wrap").hidden = false;
+      document.getElementById("vuln-downloads").hidden = false;
+      status.textContent = vulnRows.length
+        ? ("Offline. " + vulnRows.length + " podatności z " + label +
+          (raw && raw.generated ? " (" + raw.generated + ")" : "") + ".")
+        : ("Źródło " + label + " jest, ale lista CVE jest pusta — skaner jeszcze nic nie dopisał.");
+      drawVulnTable();
+    }
+
+    async function initVulnPanel() {
+      var status = document.getElementById("vuln-status");
+      markMissingLocal(document.getElementById("link-osv-html"));
+      markMissingLocal(document.getElementById("link-osv-index"));
+      markMissingLocal(document.getElementById("link-trivy-index"));
+      markMissingLocal(document.getElementById("link-snyk-index"));
+      markMissingLocal(document.getElementById("link-grype-index"));
+      var srcSel = document.getElementById("vuln-src");
+      var src = srcSel ? srcSel.value : "osv";
+      var loaded = await loadVulnSource(src);
+      if (!loaded) {
+        status.textContent = "Brak wyników dla źródła " + src +
+          " — kliknij Uruchom Trivy / Uruchom Snyk albo skopiuj cały katalog viewer/ (data/ + results/vuln/).";
+        return;
+      }
+      showVulnRows(loaded.raw, loaded.label);
+    }
+
+    document.getElementById("vuln-q").addEventListener("input", drawVulnTable);
+    var vulnSrc = document.getElementById("vuln-src");
+    if (vulnSrc) vulnSrc.addEventListener("change", initVulnPanel);
+    document.getElementById("vuln-dl-json").addEventListener("click", saveVulnJson);
+    document.getElementById("vuln-dl-csv").addEventListener("click", saveVulnCsv);
+    document.getElementById("vuln-dl-html").addEventListener("click", saveVulnHtml);
+    initVulnPanel();
+  </script>
+</body>
+</html>

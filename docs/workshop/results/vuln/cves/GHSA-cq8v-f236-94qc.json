@@ -1,0 +1,49 @@
+{
+  "id": "GHSA-cq8v-f236-94qc",
+  "packages": [
+    {
+      "name": "rand",
+      "version": "0.8.5",
+      "purl": "pkg:cargo/rand@0.8.5",
+      "ref": "pkg:cargo/rand@0.8.5"
+    },
+    {
+      "name": "rand",
+      "version": "0.9.2",
+      "purl": "pkg:cargo/rand@0.9.2",
+      "ref": "pkg:cargo/rand@0.9.2"
+    }
+  ],
+  "vulnerability": {
+    "id": "GHSA-cq8v-f236-94qc",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/GHSA-cq8v-f236-94qc"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV"
+        },
+        "severity": "low",
+        "method": "other"
+      }
+    ],
+    "description": "Rand is unsound with a custom logger using rand::rng()",
+    "affects": [
+      {
+        "ref": "pkg:cargo/rand@0.8.5"
+      },
+      {
+        "ref": "pkg:cargo/rand@0.9.2"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/GHSA-cq8v-f236-94qc"
+      }
+    ],
+    "published": "2026-04-14T01:03:36Z",
+    "updated": "2026-09-10T03:50:43.958966498Z"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "RUSTSEC-2026-0195",
+  "packages": [
+    {
+      "name": "quick-xml",
+      "version": "0.38.4",
+      "purl": "pkg:cargo/quick-xml@0.38.4",
+      "ref": "pkg:cargo/quick-xml@0.38.4"
+    },
+    {
+      "name": "quick-xml",
+      "version": "0.39.2",
+      "purl": "pkg:cargo/quick-xml@0.39.2",
+      "ref": "pkg:cargo/quick-xml@0.39.2"
+    }
+  ],
+  "vulnerability": {
+    "id": "RUSTSEC-2026-0195",
+    "source": {
+      "name": "OSV",
+      "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0195"
+    },
+    "ratings": [
+      {
+        "source": {
+          "name": "OSV",
+          "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0195"
+        },
+        "score": 7.5,
+        "severity": "high",
+        "method": "CVSSv31",
+        "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      }
+    ],
+    "description": "Unbounded namespace-declaration allocation in `NsReader` enables memory-exhaustion denial of service",
+    "affects": [
+      {
+        "ref": "pkg:cargo/quick-xml@0.38.4"
+      },
+      {
+        "ref": "pkg:cargo/quick-xml@0.39.2"
+      }
+    ],
+    "references": [
+      {
+        "url": "https://osv.dev/vulnerability/RUSTSEC-2026-0195"
+      }
+    ],
+    "published": "2026-06-29T12:00:00Z",
+    "updated": "2026-07-02T09:00:04.037478193Z"
+  }
+}

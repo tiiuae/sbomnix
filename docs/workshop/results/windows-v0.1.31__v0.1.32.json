@@ -1,0 +1,30 @@
+{
+  "platform": "windows",
+  "x": "v0.1.31",
+  "y": "v0.1.32",
+  "nx": 1194,
+  "ny": 1196,
+  "added": 2,
+  "removed": 0,
+  "changed": 0,
+  "rows": [
+    {
+      "kind": "added",
+      "name": "llama.cpp (llama-server)",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "b10066",
+      "lic": "MIT",
+      "purl": "pkg:generic/llama.cpp%20%28llama-server%29@b10066"
+    },
+    {
+      "kind": "added",
+      "name": "Qwen2.5-1.5B-Instruct",
+      "eco": "generic",
+      "vx": "—",
+      "vy": "91cad51170dc",
+      "lic": "Apache-2.0",
+      "purl": "pkg:generic/Qwen2.5-1.5B-Instruct@91cad51170dc"
+    }
+  ]
+}
