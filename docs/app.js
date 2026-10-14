@@ -139,7 +139,7 @@ function overviewTab(p, pid, vid, v) {
   <div class="grid" style="margin-top:14px">
    <div class="card"><h3>${esc(t("ov.chart"))}</h3>${lineChart(labels, [{name: t("ch.components"), color: "var(--brand)", vals: h.map(x => x.components)}], {yTitle: t("ch.components"), zero: false})}${chart2}</div>
    <div class="card"><h3>${esc(t("ov.eco"))}</h3>${ecos.map(([k, n]) => `<div class="row" style="justify-content:space-between"><span>${esc(k)}</span><b>${n}</b></div>`).join("")}<h3 style="margin-top:14px">${esc(t("ov.lic"))}</h3>${stackBar(last.licenses, licOrder, "lic")}<div class="small muted">${licOrder.map(k => `${esc(t("lic." + k))} ${last.licenses[k]}`).join(" · ")}</div></div>
-   ${pythonCard(v)}`}]}
+   ${pythonCard(v)}
   </div>
   <div class="card" style="margin-top:14px"><h3>${esc(t("ov.top_actions"))}</h3>${actionsFor(v).slice(0, 4).map(actHtml).join("")}<a href="${link(["p", pid, vid, "actions"])}">${esc(t("btn.all_actions"))}</a></div>`;
 }

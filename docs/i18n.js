@@ -578,7 +578,7 @@ const I18N = {
     "kpi.latest": "Ostatnie wydanie", "kpi.components": "Komponenty", "kpi.cves": "Znane CVE", "kpi.maturity": "Dojrzałość", "kpi.vs_prev": "{d} wobec poprzedniego",
     "ov.severity": "Waga podatności (ostatnie wydanie)", "ov.severity_note": "{sum} — unikalne zgłoszenia dla {n} komponentów, które dało się sprawdzić (OSV.dev / NVD); CVE ocenione w VEX jako zamknięte są pominięte.",
     "ov.chart": "Komponenty i CVE w kolejnych wydaniach", "ov.eco": "Ekosystemy", "ov.lic": "Klasy licencji", "ov.python": "Ekosystem Python", "ov.top_actions": "Najważniejsze rekomendacje",
-    "py.packages": "Pakiety PyPI", "py.vuln": "Z CVE", "py.unchecked": "Niesprawdzone", "py.note": "Linki do PyPI.org są klikalne w zakładce Komponenty."
+    "py.packages": "Pakiety PyPI", "py.vuln": "Z CVE", "py.unchecked": "Niesprawdzone", "py.note": "Linki do PyPI.org są klikalne w zakładce Komponenty.",
     "ch.components": "komponenty", "ch.cves": "CVE", "ch.crit_high": "krytyczne+wysokie", "ch.score": "wynik",
     "sev.critical": "krytyczny", "sev.high": "wysoki", "sev.medium": "średni", "sev.low": "niski", "sev.unknown": "nieznany", "sev.none": "brak",
     "lic.permissive": "permisywne", "lic.weak-copyleft": "słaby copyleft", "lic.strong-copyleft": "silny copyleft", "lic.other": "inne", "lic.proprietary": "własnościowe", "lic.unknown": "nieznane",
