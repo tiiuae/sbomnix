@@ -30,3 +30,5 @@ result
 .idea
 .direnv
 .pre-commit-config.yaml
+
+worker/.wrangler/

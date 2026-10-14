@@ -5,7 +5,7 @@
 /* ---------- collection server (optional) ---------- */
 let API = null;  // set when /api/health answers: {upload_needs_token, max_bytes, ...}
 const apiBase = () => (manifest?.settings?.api_base || "");
-const WORKER_URL = "";  // set to your Cloudflare Worker URL when deployed (e.g. "https://sbom-explorer-upload.worker.dev")
+const WORKER_URL = "https://sbom-explorer-upload.sbomcra.workers.dev";  // set to your Cloudflare Worker URL when deployed (e.g. "https://sbom-explorer-upload.worker.dev")
 const apiReady = (async () => {
   try {
     const r = await fetch(apiBase() + "api/health", {cache: "no-store"});
