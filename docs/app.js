@@ -6,7 +6,7 @@ const $crumb = document.getElementById("crumb");
 const SEV = ["critical", "high", "medium", "low", "unknown"];
 const SEV_COLOR = {critical: "var(--crit)", high: "var(--high)", medium: "var(--med)", low: "var(--low)", unknown: "var(--unk)"};
 const LIC_COLOR = {permissive: "var(--low)", "weak-copyleft": "var(--med)", "strong-copyleft": "var(--high)", other: "var(--brand)", proprietary: "var(--crit)", unknown: "var(--unk)"};
-const TYPE_ICON = {desktop: "🖥️", mobile: "📱", web: "🌐", embedded: "🔌", server: "🗄️", library: "📦", software: "💾", other: "🧩"};
+const TYPE_ICON = {desktop: "🖥️", mobile: "📱", web: "🌐", embedded: "🔌", server: "🗄️", library: "📦", software: "💾", python: "🐍", other: "🧩"};
 const cache = {};
 let manifest = null;
 let deck = null;
@@ -139,6 +139,7 @@ function overviewTab(p, pid, vid, v) {
   <div class="grid" style="margin-top:14px">
    <div class="card"><h3>${esc(t("ov.chart"))}</h3>${lineChart(labels, [{name: t("ch.components"), color: "var(--brand)", vals: h.map(x => x.components)}], {yTitle: t("ch.components"), zero: false})}${chart2}</div>
    <div class="card"><h3>${esc(t("ov.eco"))}</h3>${ecos.map(([k, n]) => `<div class="row" style="justify-content:space-between"><span>${esc(k)}</span><b>${n}</b></div>`).join("")}<h3 style="margin-top:14px">${esc(t("ov.lic"))}</h3>${stackBar(last.licenses, licOrder, "lic")}<div class="small muted">${licOrder.map(k => `${esc(t("lic." + k))} ${last.licenses[k]}`).join(" · ")}</div></div>
+   ${pythonCard(v)}`}]}
   </div>
   <div class="card" style="margin-top:14px"><h3>${esc(t("ov.top_actions"))}</h3>${actionsFor(v).slice(0, 4).map(actHtml).join("")}<a href="${link(["p", pid, vid, "actions"])}">${esc(t("btn.all_actions"))}</a></div>`;
 }
@@ -183,6 +184,18 @@ function wireCompare(pid, vid) {
   document.getElementById("cmpGo").onclick = () => { location.hash = link(["p", pid, vid, "compare"], {from: document.getElementById("cmpA").value, to: document.getElementById("cmpB").value}); };
 }
 
+function pythonCard(v) {
+  const comps = v.components || [];
+  const py = comps.filter(c => c[2] === "pypi");
+  if (!py.length) return "";
+  const vuln = py.filter(c => c[6] === "osv" || c[6] === "nvd").length;
+  const unchecked = py.filter(c => c[6] === "").length;
+  const lic = {};
+  py.forEach(c => { const k = c[5] || "unknown"; lic[k] = (lic[k] || 0) + 1; });
+  const licBar = stackBar(lic, ["permissive", "weak-copyleft", "strong-copyleft", "other", "proprietary", "unknown"].filter(k => lic[k]), "lic");
+  return `<div class="card" style="margin-top:14px"><h3>🐍 ${esc(t("ov.python"))}</h3><div class="kpis"><div class="kpi"><span class="muted small">${esc(t("py.packages"))}</span><b>${py.length}</b></div><div class="kpi"><span class="muted small">${esc(t("py.vuln"))}</span><b class="${vuln ? "no" : "ok"}">${vuln}</b></div><div class="kpi"><span class="muted small">${esc(t("py.unchecked"))}</span><b>${unchecked}</b></div></div>${licBar}<p class="small muted">${esc(t("py.note"))}</p></div>`;
+}
+
 /* ---------- actions / maturity / components ---------- */
 function actionsTab(v) {
   const up = v.upgrades;
@@ -208,7 +221,10 @@ function wireComponents(v) {
     const s = q.value.toLowerCase(), eco = e.value, sv = st.value;
     const rows = v.components.filter(x => (!eco || x[2] === eco) && (!sv || x[6] === sv) && (!s || x.join(" ").toLowerCase().includes(s)));
     c.textContent = t("comp.count", {n: rows.length, total: v.components.length}) + (rows.length > 300 ? t("comp.first") : "");
-    body.innerHTML = rows.slice(0, 300).map(x => `<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[4] || "—")}</td><td class="small ${x[6] === "osv" || x[6] === "nvd" ? "ok" : x[6] === "none" ? "muted" : "no"}">${esc(t("st." + x[6]))}</td></tr>`).join("");
+    body.innerHTML = rows.slice(0, 300).map(x => {
+      const name = x[2] === "pypi" ? `<a href="https://pypi.org/project/${encodeURIComponent(x[0])}/" target="_blank" rel="noopener">${esc(x[0])} ↗</a>` : esc(x[0]);
+      return `<tr><td>${name}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[4] || "—")}</td><td class="small ${x[6] === "osv" || x[6] === "nvd" ? "ok" : x[6] === "none" ? "muted" : "no"}">${esc(t("st." + x[6]))}</td></tr>`;
+    }).join("");
   };
   q.oninput = draw; e.onchange = draw; st.onchange = draw; draw();
 }
