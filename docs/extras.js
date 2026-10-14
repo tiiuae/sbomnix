@@ -5,6 +5,7 @@
 /* ---------- collection server (optional) ---------- */
 let API = null;  // set when /api/health answers: {upload_needs_token, max_bytes, ...}
 const apiBase = () => (manifest?.settings?.api_base || "");
+const WORKER_URL = "";  // set to your Cloudflare Worker URL when deployed (e.g. "https://sbom-explorer-upload.worker.dev")
 const apiReady = (async () => {
   try {
     const r = await fetch(apiBase() + "api/health", {cache: "no-store"});
@@ -220,7 +221,7 @@ async function uploadView() {
   if (API) { try { products = (await (await fetch(apiBase() + "api/products")).json()).products || products; } catch (_) {} }
   const types = ["desktop", "mobile", "web", "embedded", "server", "library", "other"];
   $app.innerHTML = `<h2 style="margin:6px 0 4px">${esc(t("up.title"))}</h2><p class="muted">${esc(t("up.lead"))}</p>
-  <div class="card ${API ? "" : "warn"}"><b>${esc(t(API ? "up.mode_api" : "up.mode_offline"))}</b></div>
+  <div class="card ${API ? "" : WORKER_URL ? "" : "warn"}"><b>${esc(t(API ? "up.mode_api" : WORKER_URL ? "up.mode_worker" : "up.mode_offline"))}</b></div>
   <div class="card" style="margin-top:14px"><form id="upForm" autocomplete="off">
    <label class="blk">${esc(t("up.product"))}<select id="upProd">${products.map(p => `<option value="${esc(p.id)}" ${p.uploadable ? "" : "disabled"}>${esc(p.name)}${p.uploadable ? "" : " 🔒"}</option>`).join("")}<option value="__new">${esc(t("up.new_product"))}</option></select></label>
    <div id="upNew" hidden class="grid">
@@ -238,7 +239,7 @@ async function uploadView() {
    <label class="blk">${esc(t("up.vexfile"))}<input id="upVex" type="file" accept=".json,application/json"></label>
    <label class="blk">${esc(t("up.contact"))}<input id="upContact" maxlength="200"></label>
    <label class="blk" id="upTokRow" ${API?.upload_needs_token ? "" : "hidden"}>${esc(t("up.token"))}<input id="upTok" type="password" autocomplete="off"></label>
-   <div id="upErr" class="no small"></div><div class="row"><button type="submit" class="primary" id="upGo">${esc(t(API ? "up.submit" : "up.download"))}</button></div>
+   <div id="upErr" class="no small"></div><div class="row"><button type="submit" class="primary" id="upGo">${esc(t(API ? "up.submit" : WORKER_URL ? "up.submit" : "up.download"))}</button></div>
   </form><div id="upJob" style="margin-top:12px"></div></div>
   <div class="card" style="margin-top:14px"><h3 style="margin-top:0">${esc(t("csv.title"))}</h3><p class="small muted">${esc(t("csv.lead"))}</p>
    <div class="row" style="margin-bottom:10px"><a class="btn" href="data/import-template.csv" download="sbom-explorer-products.csv">${esc(t("csv.template"))}</a></div>
@@ -286,7 +287,19 @@ async function uploadView() {
       product: isNew ? {id: pid, name: $("upName").value.trim(), type: $("upType").value, website: $("upWeb").value.trim(), tagline: {en: $("upTagEn").value.trim(), pl: $("upTagPl").value.trim()}} : {id: pid, name: known?.name || pid, type: "other"},
       variant: {id: vid, label: newVar ? ($("upVlabel").value.trim() || vid) : ""}, version: $("upVer").value.trim(), sbom: state.sbom,
       ...(state.vex ? {vex: state.vex} : {}), ...($("upContact").value.trim() ? {submitter: {contact: $("upContact").value.trim()}} : {})};
-    if (!API) { downloadBlob(`submission-${pid}-${vid}-${doc.version}.json`, JSON.stringify(doc)); $("upJob").innerHTML = `<p class="small muted">python tools/import_sbom.py --envelope submission-${esc(pid)}-${esc(vid)}-${esc(doc.version)}.json</p>`; return; }
+    if (!API) {
+      if (WORKER_URL) {
+        $("upGo").disabled = true; $("upJob").textContent = t("up.state.queued");
+        try {
+          const r = await fetch(WORKER_URL + "/api/upload", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(doc)});
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || r.status);
+          $("upJob").innerHTML = `<p class="ok small">${esc(t("up.worker_pr", {pr: j.pr_number}))}</p><p class="small muted"><a href="${esc(j.pr_url)}" target="_blank" rel="noopener">${esc(j.pr_url)} ↗</a></p>`;
+        } catch (e) { $("upErr").textContent = t("up.worker_error", {err: e.message}); $("upJob").textContent = ""; }
+        $("upGo").disabled = false; return;
+      }
+      downloadBlob(`submission-${pid}-${vid}-${doc.version}.json`, JSON.stringify(doc)); $("upJob").innerHTML = `<p class="small muted">python tools/import_sbom.py --envelope submission-${esc(pid)}-${esc(vid)}-${esc(doc.version)}.json</p>`; return;
+    }
     $("upGo").disabled = true; $("upJob").textContent = t("up.state.queued");
     try {
       const headers = {"Content-Type": "application/json", ...($("upTok").value ? {Authorization: "Bearer " + $("upTok").value} : {})};

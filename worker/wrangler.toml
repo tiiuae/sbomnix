@@ -1,0 +1,20 @@
+name = "sbom-explorer-upload"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[vars]
+ENVIRONMENT = "production"
+MAX_UPLOAD_SIZE = 5242880
+
+[site]
+bucket = "../docs"
+
+# GitHub token stored as a secret — never in this file.
+# Set via: wrangler secret put GITHUB_TOKEN
+
+# Rate limiting (Cloudflare built-in, dashboard config recommended)
+# In production, set up a rate limit rule in Cloudflare dashboard:
+#   Path: /api/upload
+#   Period: 60 seconds
+#   Threshold: 10 requests
+#   Action: block
