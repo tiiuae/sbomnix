@@ -21,6 +21,7 @@ result
 *.sarif
 /*.log
 /*.json
+!/.mcp.json
 !/pyrightconfig.json
 /*.png
 /*.jpg
