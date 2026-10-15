@@ -75,3 +75,40 @@ def test_rejects_unsafe_product_id(site, bad):
 def test_wrong_directory_gives_clear_error(tmp_path):
     with pytest.raises(FileNotFoundError, match="must point at the SBOM Explorer folder"):
         explorify_cdx(CDX, tmp_path, "p")
+
+
+LIC_CASES = json.loads((ROOT / "tests/resources/license_cases.json").read_text())
+LIC_TABLE = json.loads((ROOT / "docs/data/licenses.json").read_text())
+
+
+@pytest.mark.parametrize("case", LIC_CASES, ids=[str(c["expr"]) for c in LIC_CASES])
+def test_license_class(case):
+    from sbomnix.explorify import license_class
+    assert license_class(case["expr"], LIC_TABLE) == case["class"]
+
+
+def test_explorify_classifies_licenses_when_table_present(site, tmp_path):
+    shutil.copy(ROOT / "docs/data/licenses.json", site / "data/licenses.json")
+    cdx = {"bomFormat": "CycloneDX", "specVersion": "1.5", "components": [
+        {"type": "library", "name": "a", "version": "1", "purl": "pkg:pypi/a@1", "licenses": [{"license": {"id": "MIT"}}]},
+        {"type": "library", "name": "b", "version": "1", "purl": "pkg:pypi/b@1", "licenses": [{"license": {"id": "GPL-3.0-only"}}]},
+        {"type": "library", "name": "c", "version": "1", "purl": "pkg:pypi/c@1"}]}
+    f = tmp_path / "l.cdx.json"
+    f.write_text(json.dumps(cdx))
+    explorify_cdx(f, site, "lic")
+    var = json.loads((site / "data/lic.json").read_text())["variants"]["nix"]
+    assert [c[5] for c in var["components"]] == ["permissive", "strong-copyleft", "unknown"]
+    assert var["history"][0]["licenses"] == {"permissive": 1, "strong-copyleft": 1, "unknown": 1}
+
+
+def test_expression_licenses_are_read(site, tmp_path):
+    shutil.copy(ROOT / "docs/data/licenses.json", site / "data/licenses.json")
+    cdx = {"bomFormat": "CycloneDX", "specVersion": "1.5", "components": [
+        {"type": "library", "name": "e", "version": "1", "licenses": [{"expression": "MIT OR GPL-3.0-only"}]},
+        {"type": "library", "name": "n", "version": "1", "licenses": [{"license": {"name": "Custom thing"}}]}]}
+    f = tmp_path / "e.cdx.json"
+    f.write_text(json.dumps(cdx))
+    explorify_cdx(f, site, "expr")
+    comps = json.loads((site / "data/expr.json").read_text())["variants"]["nix"]["components"]
+    assert comps[0][4] == "MIT OR GPL-3.0-only" and comps[0][5] == "permissive"
+    assert comps[1][4] == "Custom thing" and comps[1][5] == "unknown"   # a licence name we cannot map is unknown, not clean

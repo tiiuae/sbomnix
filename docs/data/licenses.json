@@ -1,0 +1,185 @@
+{
+ "_note": "SPDX id -> licence class. Used by the Explorer (docs/compliance.js) and by sbomnix explorify. Classes are a triage aid, not legal advice.",
+ "rank": [
+  "permissive",
+  "weak-copyleft",
+  "strong-copyleft",
+  "other",
+  "proprietary"
+ ],
+ "classes": {
+  "MIT": "permissive",
+  "MIT-0": "permissive",
+  "Apache-2.0": "permissive",
+  "Apache-1.1": "permissive",
+  "BSD-1-Clause": "permissive",
+  "BSD-2-Clause": "permissive",
+  "BSD-3-Clause": "permissive",
+  "BSD-3-Clause-Clear": "permissive",
+  "BSD-4-Clause": "permissive",
+  "0BSD": "permissive",
+  "ISC": "permissive",
+  "Zlib": "permissive",
+  "Unlicense": "permissive",
+  "CC0-1.0": "permissive",
+  "BSL-1.0": "permissive",
+  "PostgreSQL": "permissive",
+  "X11": "permissive",
+  "Python-2.0": "permissive",
+  "PSF-2.0": "permissive",
+  "curl": "permissive",
+  "libpng-2.0": "permissive",
+  "Libpng": "permissive",
+  "OpenSSL": "permissive",
+  "NCSA": "permissive",
+  "WTFPL": "permissive",
+  "Beerware": "permissive",
+  "BlueOak-1.0.0": "permissive",
+  "CC-BY-3.0": "permissive",
+  "CC-BY-4.0": "permissive",
+  "Ruby": "permissive",
+  "HPND": "permissive",
+  "Artistic-2.0": "permissive",
+  "AFL-3.0": "permissive",
+  "UPL-1.0": "permissive",
+  "Vim": "permissive",
+  "FTL": "permissive",
+  "ICU": "permissive",
+  "MulanPSL-2.0": "permissive",
+  "Zlib-acknowledgement": "permissive",
+  "LGPL-2.0-only": "weak-copyleft",
+  "LGPL-2.0-or-later": "weak-copyleft",
+  "LGPL-2.1-only": "weak-copyleft",
+  "LGPL-2.1-or-later": "weak-copyleft",
+  "LGPL-3.0-only": "weak-copyleft",
+  "LGPL-3.0-or-later": "weak-copyleft",
+  "LGPL-2.0": "weak-copyleft",
+  "LGPL-2.1": "weak-copyleft",
+  "LGPL-3.0": "weak-copyleft",
+  "LGPL-2.1+": "weak-copyleft",
+  "LGPL-3.0+": "weak-copyleft",
+  "MPL-1.1": "weak-copyleft",
+  "MPL-2.0": "weak-copyleft",
+  "MPL-2.0-no-copyleft-exception": "weak-copyleft",
+  "EPL-1.0": "weak-copyleft",
+  "EPL-2.0": "weak-copyleft",
+  "CDDL-1.0": "weak-copyleft",
+  "CDDL-1.1": "weak-copyleft",
+  "CPL-1.0": "weak-copyleft",
+  "OFL-1.1": "weak-copyleft",
+  "MS-RL": "weak-copyleft",
+  "CC-BY-SA-3.0": "weak-copyleft",
+  "CC-BY-SA-4.0": "weak-copyleft",
+  "APSL-2.0": "weak-copyleft",
+  "Sleepycat": "weak-copyleft",
+  "GPL-1.0-only": "strong-copyleft",
+  "GPL-1.0-or-later": "strong-copyleft",
+  "GPL-2.0-only": "strong-copyleft",
+  "GPL-2.0-or-later": "strong-copyleft",
+  "GPL-3.0-only": "strong-copyleft",
+  "GPL-3.0-or-later": "strong-copyleft",
+  "GPL-2.0": "strong-copyleft",
+  "GPL-3.0": "strong-copyleft",
+  "GPL-2.0+": "strong-copyleft",
+  "GPL-3.0+": "strong-copyleft",
+  "AGPL-1.0-only": "strong-copyleft",
+  "AGPL-3.0-only": "strong-copyleft",
+  "AGPL-3.0-or-later": "strong-copyleft",
+  "AGPL-3.0": "strong-copyleft",
+  "EUPL-1.1": "strong-copyleft",
+  "EUPL-1.2": "strong-copyleft",
+  "OSL-3.0": "strong-copyleft",
+  "CECILL-2.1": "strong-copyleft",
+  "SSPL-1.0": "other",
+  "BUSL-1.1": "other",
+  "Elastic-2.0": "other",
+  "CC-BY-NC-4.0": "other",
+  "CC-BY-NC-SA-4.0": "other",
+  "CC-BY-ND-4.0": "other",
+  "Commons-Clause": "other",
+  "Proprietary": "proprietary",
+  "LicenseRef-proprietary": "proprietary",
+  "LicenseRef-Proprietary": "proprietary",
+  "Commercial": "proprietary",
+  "LicenseRef-commercial": "proprietary"
+ },
+ "obligations": {
+  "permissive": {
+   "en": "Keep the copyright notice and licence text with redistributions (attribution notice). No source-sharing duty.",
+   "pl": "Zachowaj informację o prawach autorskich i tekst licencji przy dystrybucji (nota atrybucji). Brak obowiązku udostępniania kodu."
+  },
+  "weak-copyleft": {
+   "en": "Share changes to the licensed library itself (file- or library-level copyleft); your own separate code can stay closed. Keep notices; for LGPL allow relinking or replacement.",
+   "pl": "Udostępnij zmiany samej licencjonowanej biblioteki (copyleft na poziomie pliku lub biblioteki); Twój osobny kod może pozostać zamknięty. Zachowaj noty; dla LGPL umożliw ponowne linkowanie lub wymianę."
+  },
+  "strong-copyleft": {
+   "en": "Derivative or combined works must be offered under the same licence with source (AGPL: also for network use). Legal review needed before shipping it inside a product.",
+   "pl": "Dzieła pochodne lub połączone muszą być udostępnione na tej samej licencji wraz z kodem (AGPL: także przy użyciu przez sieć). Przed wdrożeniem w produkcie potrzebna ocena prawna."
+  },
+  "other": {
+   "en": "Non-standard or restricted terms (source-available, non-commercial, no-derivatives). Read the licence; it may forbid your use.",
+   "pl": "Niestandardowe lub ograniczone warunki (kod dostępny, niekomercyjne, bez pochodnych). Przeczytaj licencję; może zabraniać Twojego użycia."
+  },
+  "proprietary": {
+   "en": "Commercial or closed licence: follow the contract; redistribution usually needs permission.",
+   "pl": "Licencja komercyjna lub zamknięta: stosuj się do umowy; redystrybucja zwykle wymaga zgody."
+  },
+  "unknown": {
+   "en": "No licence found. Without a licence you have no right to use or redistribute the component: find out, or replace it.",
+   "pl": "Nie znaleziono licencji. Bez licencji nie masz prawa używać ani redystrybuować komponentu: ustal ją lub wymień komponent."
+  }
+ },
+ "exceptions_soften": [
+  "Classpath-exception-2.0",
+  "GCC-exception-3.1",
+  "LLVM-exception",
+  "Linux-syscall-note",
+  "OpenSSL-exception",
+  "GPL-3.0-linking-exception"
+ ],
+ "no_attribution": [
+  "CC0-1.0",
+  "Unlicense",
+  "0BSD",
+  "WTFPL",
+  "MIT-0"
+ ],
+ "family_notes": {
+  "LGPL": {
+   "en": "Keep the LGPL notice, ship the licence text, and let users replace or relink the library (dynamic linking or object files). Changes to the library itself must be shared under the LGPL.",
+   "pl": "Zachowaj notę LGPL, dołącz tekst licencji i pozwól użytkownikom wymienić lub ponownie zlinkować bibliotekę (linkowanie dynamiczne lub pliki obiektowe). Zmiany samej biblioteki trzeba udostępnić na LGPL."
+  },
+  "GPL": {
+   "en": "Anything you combine with or derive from this code and distribute must also be offered under the GPL, with source. Check linking, patents and installation-information duties (GPL-3.0).",
+   "pl": "Wszystko, co łączysz z tym kodem lub z niego wyprowadzasz i dystrybuujesz, trzeba też udostępnić na GPL wraz z kodem. Sprawdź linkowanie, patenty i obowiązek informacji instalacyjnych (GPL-3.0)."
+  },
+  "AGPL": {
+   "en": "Like the GPL, and the source duty also applies when users only interact with it over a network. Usually not acceptable inside a hosted product without a legal decision.",
+   "pl": "Jak GPL, a obowiązek udostępnienia kodu dotyczy też użytkowników korzystających wyłącznie przez sieć. Zwykle nieakceptowalna w produkcie hostowanym bez decyzji prawnej."
+  },
+  "MPL": {
+   "en": "File-level copyleft: modified MPL files must stay under the MPL with source; your other files can stay closed. Keep the notices.",
+   "pl": "Copyleft na poziomie pliku: zmodyfikowane pliki MPL muszą pozostać na MPL wraz z kodem; Twoje pozostałe pliki mogą być zamknięte. Zachowaj noty."
+  },
+  "Apache": {
+   "en": "Keep the copyright and licence, include the NOTICE file if there is one, and mark files you changed. Includes a patent grant that ends if you sue over patents.",
+   "pl": "Zachowaj prawa autorskie i licencję, dołącz plik NOTICE jeśli istnieje i oznacz zmienione pliki. Zawiera licencję patentową, która wygasa, gdy pozwiesz o patenty."
+  },
+  "EPL": {
+   "en": "Weak copyleft: modified EPL code must stay under the EPL with source; separate modules can use other licences.",
+   "pl": "Słaby copyleft: zmodyfikowany kod EPL musi pozostać na EPL wraz z kodem; osobne moduły mogą mieć inne licencje."
+  },
+  "BSD": {
+   "en": "Keep the copyright notice, the conditions and the disclaimer in redistributions. BSD-3 and BSD-4 limit using the authors' names to promote your product.",
+   "pl": "Zachowaj notę o prawach autorskich, warunki i zastrzeżenie przy redystrybucji. BSD-3 i BSD-4 ograniczają używanie nazwisk autorów do promocji produktu."
+  },
+  "MIT": {
+   "en": "Keep the copyright notice and the licence text in all copies or substantial portions.",
+   "pl": "Zachowaj notę o prawach autorskich i tekst licencji we wszystkich kopiach lub istotnych fragmentach."
+  },
+  "ISC": {
+   "en": "Keep the copyright notice and the permission notice.",
+   "pl": "Zachowaj notę o prawach autorskich i notę o zezwoleniu."
+  }
+ }
+}

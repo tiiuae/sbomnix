@@ -26,10 +26,12 @@ def _extract_licenses(component):
     """Extract license names from a CycloneDX component."""
     licenses = []
     for lic in component.get("licenses", []):
+        if lic.get("expression"):  # CycloneDX allows {"expression": "MIT OR Apache-2.0"} instead of {"license": {...}}
+            licenses.append(lic["expression"])
+            continue
         lic_data = lic.get("license", {})
-        name = lic_data.get("name") or lic_data.get("id", "unknown")
-        if name:
-            licenses.append(name)
+        name = lic_data.get("id") or lic_data.get("name") or "unknown"
+        licenses.append(name)
     return licenses
 
 
@@ -52,18 +54,122 @@ def _purl_type(purl):
     return m.group(1) if m else "other"
 
 
-def component_rows(cdx):
+_LIC_TOKEN = re.compile(r"\(|\)|,|[^\s(),]+")
+
+
+def license_class(expr, table):
+    """Class of an SPDX licence expression: permissive, weak-copyleft, strong-copyleft, other, proprietary or unknown.
+
+    `table` is the Explorer's data/licenses.json. OR lets the licensee pick the least restrictive known option, AND (and
+    comma lists) take the strictest, "WITH <exception>" softens strong copyleft only for known linking exceptions. Any
+    unknown part of an AND makes the whole unknown, and a malformed expression is unknown: never reported as clean.
+    This mirrors licenseClass() in docs/compliance.js; tests/resources/license_cases.json checks both.
+    """
+    if not expr or str(expr).strip().upper() in ("NOASSERTION", "NONE"):
+        return "unknown"
+    classes = {k.lower(): v for k, v in table["classes"].items()}
+    soften = {x.lower() for x in table.get("exceptions_soften", [])}
+    rank = table["rank"]
+    toks = _LIC_TOKEN.findall(str(expr))
+    pos = 0
+
+    def peek():
+        return toks[pos] if pos < len(toks) else None
+
+    def take():
+        nonlocal pos
+        pos += 1
+        return toks[pos - 1]
+
+    def atom():
+        t = peek()
+        if t is None or t in (")", ",") or t.upper() in ("AND", "OR", "WITH"):
+            raise ValueError("expected licence")
+        take()
+        if t == "(":
+            v = or_expr()
+            if peek() != ")":
+                raise ValueError("missing )")
+            take()
+            return v
+        cls = classes.get(t.lower())
+        v = rank.index(cls) if cls in rank else None
+        if peek() is not None and peek().upper() == "WITH":
+            take()
+            exc = take() if peek() is not None else ""
+            if v is not None and rank[v] == "strong-copyleft" and exc.lower() in soften:
+                v = rank.index("weak-copyleft")
+        return v
+
+    def and_expr():
+        vals = [atom()]
+        while peek() is not None and (peek().upper() == "AND" or peek() == ","):
+            take()
+            vals.append(atom())
+        return None if any(v is None for v in vals) else max(vals)
+
+    def or_expr():
+        vals = [and_expr()]
+        while peek() is not None and peek().upper() == "OR":
+            take()
+            vals.append(and_expr())
+        known = [v for v in vals if v is not None]
+        return min(known) if known else None
+
+    try:
+        v = or_expr()
+        if pos != len(toks):
+            return "unknown"
+    except (ValueError, IndexError):
+        return "unknown"
+    return "unknown" if v is None else rank[v]
+
+
+def _supplier(component):
+    """Who supplies a component: CycloneDX supplier name, else publisher, else author ("" when the SBOM does not say)."""
+    sup = component.get("supplier")
+    name = sup.get("name") if isinstance(sup, dict) else None
+    return str(name or component.get("publisher") or component.get("author") or "").strip()
+
+
+def dependency_graph(cdx):
+    """Dependency edges between the components of component_rows(cdx), by row index (same order as cdx["components"]).
+
+    Returns {"root": name of the described product, "edges": [[from, to], ...]} where from == -1 is the product itself.
+    Components that no edge reaches stay in the node list; nested components and unknown refs are ignored.
+    """
+    comps = cdx.get("components", [])
+    root_meta = cdx.get("metadata", {}).get("component", {})
+    index = {c.get("bom-ref"): i for i, c in enumerate(comps) if c.get("bom-ref")}
+    if root_meta.get("bom-ref"):
+        index[root_meta["bom-ref"]] = -1
+    edges, seen = [], set()
+    for dep in cdx.get("dependencies", []):
+        src = index.get(dep.get("ref"))
+        if src is None:
+            continue
+        for ref in dep.get("dependsOn", []):
+            dst = index.get(ref)
+            if dst is not None and dst != src and (src, dst) not in seen:
+                seen.add((src, dst))
+                edges.append([src, dst])
+    return {"root": root_meta.get("name") or "", "edges": edges}
+
+
+def component_rows(cdx, license_table=None):
     """Explorer component rows [name, version, ecosystem, type, licence, licence class, CVE state, key] from a CycloneDX document.
 
     The CVE state is "pending" when the component has a purl or CPE that a scanner can look up, "none" otherwise.
-    Licence classes are not derived here: a licence is "other", no licence is "unknown".
+    The 9th element is the supplier ("" when unknown).
+    Licence classes come from license_table (data/licenses.json) when given; without it a licence is "other", no licence "unknown".
     """
     rows = []
     for c in cdx.get("components", []):
         lic = ", ".join(_extract_licenses(c))
         key = c.get("cpe") or c.get("purl") or ""
         rows.append([c.get("name", "?"), c.get("version", ""), _purl_type(c.get("purl")), "LIBRARY", lic,
-                     "other" if lic else "unknown", "pending" if key else "none", key])
+                     license_class(lic, license_table) if license_table else ("other" if lic else "unknown"),
+                     "pending" if key else "none", key, _supplier(c)])
     return rows
 
 
@@ -100,14 +206,15 @@ def sbom_block(cdx, fname):
 
 
 def assemble_product(cdx, product_id, variant, method, *, comps=None, defs=None, pairs=None, name=None, label=None, src_name="sbom.cdx.json",
-                     file_path=None, product_type="software", icon="📦", demo=False, tagline=None, description=None, data_sources=None, today=None):
+                     file_path=None, product_type="software", icon="📦", demo=False, tagline=None, description=None, data_sources=None, today=None,
+                     license_table=None):
     """Build the full Explorer product (one variant, one release) and its manifest summary.
 
     comps/defs/pairs come from a scanner (scripts/cve-check.py); without them every component stays "pending lookup" and
     the CVE views are empty, which the UI reports as missing data rather than as "no vulnerabilities".
     Returns (product, manifest_entry).
     """
-    comps = component_rows(cdx) if comps is None else comps
+    comps = component_rows(cdx, license_table) if comps is None else comps
     defs, pairs = defs or {}, pairs or []
     meta = cdx.get("metadata", {}).get("component", {})
     ver, today = meta.get("version") or "unknown", today or datetime.now(timezone.utc).date().isoformat()
@@ -120,12 +227,15 @@ def assemble_product(cdx, product_id, variant, method, *, comps=None, defs=None,
     for c in comps:
         eco[c[2]] = eco.get(c[2], 0) + 1
     mat = sbom_maturity(cdx, comps, method)
-    entry = {"version": ver, "date": today, "components": len(comps), "eco": eco, "licenses": {}, "vulns": counts, "vuln_total": len(defs),
+    lic = {}
+    for c in comps:
+        lic[c[5]] = lic.get(c[5], 0) + 1
+    entry = {"version": ver, "date": today, "components": len(comps), "eco": eco, "licenses": lic, "vulns": counts, "vuln_total": len(defs),
              "vulns_open": counts, "open_total": len(defs), "dq": dq, "cve_pairs": pairs,
              "diff": {"added": [], "removed": [], "changed": []}, "diff_counts": {"added": 0, "removed": 0, "changed": 0},
              "maturity": {"score": mat["score"], "level": mat["level"]}, "files": []}
     var = {"label": label or variant.capitalize(), "history": [entry], "vuln_defs": defs, "components": comps, "maturity": mat,
-           "sbom": sbom_block(cdx, src_name), "file_path": file_path or src_name, "upgrades": [], "process_actions": [], "data_gaps": [],
+           "sbom": sbom_block(cdx, src_name), "graph": dependency_graph(cdx), "file_path": file_path or src_name, "upgrades": [], "process_actions": [], "data_gaps": [],
            "data_sources": data_sources or {}}
     nix_meta = _nix_meta_from_cdx(cdx)
     if nix_meta:
@@ -156,6 +266,12 @@ def write_explorer_files(explorer_dir, product, brief):
     LOG.info("Wrote Explorer product %s and updated %s", data_dir / f"{product['id']}.json", manifest_path)
 
 
+def explorer_licenses(explorer_dir):
+    """data/licenses.json of the Explorer (licence classes), or None if absent."""
+    path = Path(explorer_dir) / "data" / "licenses.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
 def explorer_method(explorer_dir):
     """The maturity weights and levels the Explorer's manifest.json defines."""
     path = Path(explorer_dir) / "data" / "manifest.json"
@@ -183,6 +299,7 @@ def explorify_cdx(cdx_path, explorer_dir, product_id, variant="nix", name=None):
     cdx = json.loads(cdx_path.read_text(encoding="utf-8"))
     method = explorer_method(explorer_dir)
     product, brief = assemble_product(cdx, product_id, variant, method, name=name, src_name=cdx_path.name,
-                                      product_type="software", icon="❄️", tagline=None)
+                                      product_type="software", icon="❄️", tagline=None,
+                                      license_table=explorer_licenses(explorer_dir))
     write_explorer_files(explorer_dir, product, brief)
     LOG.info("Explorify complete: product=%s variant=%s", product_id, variant)

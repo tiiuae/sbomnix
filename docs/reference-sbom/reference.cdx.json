@@ -12,37 +12,132 @@
       "bom-ref": "cve-reference-app@1.0.0"
     },
     "properties": [
-      {"name": "purpose", "value": "Static reference SBOM with deliberately outdated components, used to test CVE/NVD/EUVD lookups. Do not ship."}
+      {
+        "name": "purpose",
+        "value": "Static reference SBOM with deliberately outdated components, used to test CVE/NVD/EUVD lookups. Do not ship."
+      }
     ]
   },
   "components": [
     {
-      "type": "library", "bom-ref": "log4j-core", "group": "org.apache.logging.log4j", "name": "log4j-core", "version": "2.14.1",
+      "type": "library",
+      "bom-ref": "log4j-core",
+      "group": "org.apache.logging.log4j",
+      "name": "log4j-core",
+      "version": "2.14.1",
       "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
       "cpe": "cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*",
-      "properties": [{"name": "expected-cve", "value": "CVE-2021-44228"}]
+      "properties": [
+        {
+          "name": "expected-cve",
+          "value": "CVE-2021-44228"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "supplier": {
+        "name": "The Apache Software Foundation"
+      }
     },
     {
-      "type": "library", "bom-ref": "requests", "name": "requests", "version": "2.19.0",
+      "type": "library",
+      "bom-ref": "requests",
+      "name": "requests",
+      "version": "2.19.0",
       "purl": "pkg:pypi/requests@2.19.0",
       "cpe": "cpe:2.3:a:python:requests:2.19.0:*:*:*:*:*:*:*",
-      "properties": [{"name": "expected-cve", "value": "CVE-2018-18074"}]
+      "properties": [
+        {
+          "name": "expected-cve",
+          "value": "CVE-2018-18074"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "supplier": {
+        "name": "Python Software Foundation"
+      }
     },
     {
-      "type": "library", "bom-ref": "lodash", "name": "lodash", "version": "4.17.15",
+      "type": "library",
+      "bom-ref": "lodash",
+      "name": "lodash",
+      "version": "4.17.15",
       "purl": "pkg:npm/lodash@4.17.15",
       "cpe": "cpe:2.3:a:lodash:lodash:4.17.15:*:*:*:*:node.js:*:*",
-      "properties": [{"name": "expected-cve", "value": "CVE-2020-8203"}]
+      "properties": [
+        {
+          "name": "expected-cve",
+          "value": "CVE-2020-8203"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "supplier": {
+        "name": "OpenJS Foundation"
+      }
     },
     {
-      "type": "library", "bom-ref": "openssl", "name": "openssl", "version": "1.1.1k",
+      "type": "library",
+      "bom-ref": "openssl",
+      "name": "openssl",
+      "version": "1.1.1k",
       "purl": "pkg:generic/openssl@1.1.1k",
       "cpe": "cpe:2.3:a:openssl:openssl:1.1.1k:*:*:*:*:*:*:*",
-      "properties": [{"name": "expected-cve", "value": "CVE-2021-3711"}]
+      "properties": [
+        {
+          "name": "expected-cve",
+          "value": "CVE-2021-3711"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "OpenSSL"
+          }
+        }
+      ],
+      "supplier": {
+        "name": "The OpenSSL Project"
+      }
     }
   ],
   "dependencies": [
-    {"ref": "cve-reference-app@1.0.0", "dependsOn": ["log4j-core", "requests", "lodash", "openssl"]},
-    {"ref": "log4j-core"}, {"ref": "requests"}, {"ref": "lodash"}, {"ref": "openssl"}
+    {
+      "ref": "cve-reference-app@1.0.0",
+      "dependsOn": [
+        "log4j-core",
+        "requests",
+        "lodash",
+        "openssl"
+      ]
+    },
+    {
+      "ref": "log4j-core"
+    },
+    {
+      "ref": "requests"
+    },
+    {
+      "ref": "lodash"
+    },
+    {
+      "ref": "openssl"
+    }
   ]
 }
