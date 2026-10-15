@@ -18,3 +18,5 @@ bucket = "../docs"
 #   Period: 60 seconds
 #   Threshold: 10 requests
 #   Action: block
+# /sbomRiskAverage fans out to NVD and is public: add a rate limit rule for it too (for example 5 per 60 s),
+# and set an NVD key to raise its component limit: wrangler secret put NVD_API_KEY

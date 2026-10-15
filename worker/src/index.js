@@ -11,6 +11,7 @@
  *   POST /api/upload       — accept a submission, file a PR
  *   POST /api/submissions  — alias of /api/upload (sbom-explorer-submission/1 envelope)
  *   GET  /api/health       — health check
+ *   POST /sbomRiskAverage  — multipart "file" = CycloneDX JSON; average CVSS base score of the CVEs NVD lists for the CPEs in it
  */
 
 const GITHUB_API = "https://api.github.com";
@@ -38,6 +39,95 @@ function corsHeaders(request) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400",
   };
+}
+
+// ---------------------------------------------------------------------------
+// POST /sbomRiskAverage — average CVSS base score of an SBOM, from NVD by CPE
+// ---------------------------------------------------------------------------
+const NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0";
+const CPE_RE = /^cpe:2\.3:[aho*-]:[^\s]{1,280}$/;
+const RISK_MAX_COMPONENTS_NO_KEY = 5; // NVD allows ~5 requests per 30 s without an API key
+const RISK_MAX_COMPONENTS_KEY = 25; // Workers also cap subrequests per invocation
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const json = (obj, status, request) =>
+  new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...corsHeaders(request) } });
+
+/** CPEs of every component, nested ones included; also how many components have none. */
+function collectCpes(components, acc = { cpes: new Set(), without: 0, total: 0 }) {
+  for (const c of Array.isArray(components) ? components : []) {
+    if (!c || typeof c !== "object") continue;
+    acc.total++;
+    if (typeof c.cpe === "string" && CPE_RE.test(c.cpe)) acc.cpes.add(c.cpe);
+    else acc.without++;
+    collectCpes(c.components, acc);
+  }
+  return acc;
+}
+
+/** Best CVSS base score NVD gives for a CVE (v3.1, v3.0, v4.0, then v2), or null. */
+function nvdBaseScore(cve) {
+  const m = (cve && cve.metrics) || {};
+  for (const k of ["cvssMetricV31", "cvssMetricV30", "cvssMetricV40", "cvssMetricV2"]) {
+    const score = m[k] && m[k][0] && m[k][0].cvssData && m[k][0].cvssData.baseScore;
+    if (typeof score === "number") return score;
+  }
+  return null;
+}
+
+async function sbomRiskAverage(request, env) {
+  const declared = parseInt(request.headers.get("Content-Length") || "0", 10);
+  if (declared > MAX_UPLOAD_SIZE) return json({ error: `file too large (max ${MAX_UPLOAD_SIZE} bytes)` }, 413, request);
+  let form;
+  try {
+    form = await request.formData();
+  } catch (_) {
+    return json({ error: "expected a multipart/form-data request with the SBOM in a field named 'file'" }, 400, request);
+  }
+  const file = form.get("file");
+  if (!file || typeof file !== "object" || typeof file.text !== "function") return json({ error: "missing file: send the SBOM in a multipart field named 'file'" }, 400, request);
+  if (file.size > MAX_UPLOAD_SIZE) return json({ error: `file too large (max ${MAX_UPLOAD_SIZE} bytes)` }, 413, request);
+  let bom;
+  try {
+    bom = JSON.parse(await file.text());
+  } catch (_) {
+    return json({ error: "the file is not valid JSON" }, 400, request);
+  }
+  if (!bom || bom.bomFormat !== "CycloneDX") return json({ error: "only CycloneDX JSON is supported" }, 400, request);
+
+  const found = collectCpes(bom.components);
+  const limit = env.NVD_API_KEY ? RISK_MAX_COMPONENTS_KEY : RISK_MAX_COMPONENTS_NO_KEY;
+  const all = [...found.cpes], cpes = all.slice(0, limit), gap = env.NVD_API_KEY ? 700 : 6500;
+  const scores = new Map(); // CVE id -> base score (null when NVD has none)
+  let failed = 0, rateLimited = false;
+  for (let i = 0; i < cpes.length; i++) {
+    if (i > 0) await sleep(gap);
+    let res;
+    try {
+      res = await fetch(`${NVD_API}?cpeName=${encodeURIComponent(cpes[i])}&isVulnerable&resultsPerPage=2000`, {
+        headers: { Accept: "application/json", ...(env.NVD_API_KEY ? { apiKey: env.NVD_API_KEY } : {}) },
+      });
+    } catch (_) { failed++; continue; }
+    if (res.status === 403 || res.status === 429) { rateLimited = true; failed += cpes.length - i; break; }
+    if (!res.ok) { failed++; continue; }
+    const data = await res.json().catch(() => null);
+    for (const v of (data && data.vulnerabilities) || []) if (v.cve && v.cve.id && !scores.has(v.cve.id)) scores.set(v.cve.id, nvdBaseScore(v.cve));
+  }
+  const scored = [...scores.values()].filter((x) => x !== null);
+  const average = scored.length ? Math.round((scored.reduce((a, b) => a + b, 0) / scored.length) * 100) / 100 : null;
+  return json({
+    average, // null when no scored CVE was found: that is "nothing found", not a score of 0
+    cves: scores.size,
+    scored_cves: scored.length,
+    components_total: found.total,
+    components_without_cpe: found.without,
+    components_checked: cpes.length - failed,
+    components_skipped: all.length - cpes.length,
+    partial: failed > 0 || all.length > cpes.length,
+    rate_limited: rateLimited,
+    source: "NVD",
+    note: "CPE-based only: components without a CPE are not checked. Without an NVD API key at most " + RISK_MAX_COMPONENTS_NO_KEY + " components are checked per request.",
+  }, 200, request);
 }
 
 // ---------------------------------------------------------------------------
@@ -205,6 +295,12 @@ export default {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders(request) },
       });
+    }
+
+    // Average CVSS score of an uploaded CycloneDX SBOM (public, no authentication)
+    if (url.pathname === "/sbomRiskAverage") {
+      if (request.method !== "POST") return json({ error: "use POST with a multipart 'file' field" }, 405, request);
+      return sbomRiskAverage(request, env);
     }
 
     // EUVD (ENISA) search proxy: the upstream sends no CORS headers, so browsers cannot call it directly.
