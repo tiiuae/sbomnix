@@ -158,16 +158,16 @@ def _run(args):
             "Wrote CSV output in %.3fs",
             time.perf_counter() - export_started,
         )
-    if args.explorer_dir:
-        if not args.explorer_id:
+    if getattr(args, "explorer_dir", None):
+        if not getattr(args, "explorer_id", None):
             raise SbomnixError("--explorer-id is required when using --explorer-dir")
         export_started = time.perf_counter()
         explorify_cdx(
             args.cdx,
             args.explorer_dir,
             args.explorer_id,
-            variant=args.explorer_variant,
-            name=args.explorer_name,
+            variant=getattr(args, "explorer_variant", "nix"),
+            name=getattr(args, "explorer_name", None),
         )
         LOG.verbose(
             "Wrote Explorer data in %.3fs",

@@ -55,7 +55,8 @@ function qualityTab(p, v) {
    <label class="blk">${esc(t("q.missing_pick"))}<select id="qMiss">${missKeys.map(k => `<option value="${k}">${esc(t("qf." + k))}</option>`).join("")}</select></label><div id="qMissOut" class="small" style="margin-top:8px"></div></div>
   <div class="card" style="margin-top:14px"><h3>${esc(t("q.structural"))}</h3>${struct}</div>${official}
   <div class="card" style="margin-top:14px"><h3>${esc(t("q.share"))}</h3><div class="row"><button id="qJson">${esc(t("q.export.json"))}</button><button id="qHtml">${esc(t("q.export.html"))}</button><button id="qCsv">${esc(t("q.export.csv"))}</button><button id="qLink">${esc(t("q.link"))}</button></div>
-   <div class="row" style="margin-top:10px"><img src="${esc(badge)}" alt="SBOM quality badge" height="20"><code class="small">![SBOM quality](${esc(badge)})</code></div><p class="small muted">${esc(t("q.badge_md"))}</p></div>`;
+   <div class="row" style="margin-top:10px"><img src="${esc(badge)}" alt="SBOM quality badge" height="20"><code class="small">![SBOM quality](${esc(badge)})</code></div><p class="small muted">${esc(t("q.badge_md"))}</p>
+   <p><a class="btn" href="${link(["report", p.id, Object.keys(p.variants).find(k => p.variants[k] === v)])}">${esc(t("q.report_open"))}</a></p></div>`;
 }
 function FEATURE_LEVEL(q, id) { const f = q.features.find(x => x.id === id); return f ? f.level : ""; }
 
@@ -84,7 +85,7 @@ function wireQuality(p, vid, v) {
     downloadBlob(`${base}.quality-findings.csv`, csv.join("\n"), "text/csv");
   };
   document.getElementById("qHtml").onclick = () => downloadBlob(`${base}.quality-report.html`, qualityReportHtml(p, v, vid), "text/html");
-  document.getElementById("qLink").onclick = async e => { try { await navigator.clipboard.writeText(location.href.split("#")[0] + link(["p", p.id, vid, "quality"])); e.target.textContent = t("q.copied"); } catch (_) { /* clipboard blocked */ } };
+  document.getElementById("qLink").onclick = async e => { try { await navigator.clipboard.writeText(location.href.split("#")[0] + link(["report", p.id, vid])); e.target.textContent = t("q.copied"); } catch (_) { /* clipboard blocked */ } };
 }
 
 /* ---------- standalone HTML report (no external assets; follows the current language) ---------- */
@@ -104,11 +105,25 @@ function qualityReportHtml(p, v, vid) {
 
 /* ---------- About: what this tool covers vs sbomqs / Interlynk ---------- */
 const CAPS = [["score", "sbomqs", "have"], ["cats", "sbomqs", "have"], ["missing", "sbomqs", "have"], ["ntia", "sbomqs", "have"], ["bsi", "sbomqs", "partial"], ["fsct", "sbomqs", "partial"],
-  ["oct", "sbomqs", "no"], ["json", "sbomqs", "have"], ["weights", "sbomqs", "have"], ["share", "sbomqs", "partial"], ["airgap", "sbomqs", "have"], ["dtrack", "sbomqs", "no"],
+  ["oct", "sbomqs", "no"], ["json", "sbomqs", "have"], ["weights", "sbomqs", "have"], ["share", "sbomqs", "have"], ["airgap", "sbomqs", "have"], ["dtrack", "sbomqs", "no"],
   ["ingest", "Interlynk", "partial"], ["doctor", "Interlynk", "no"], ["supplier", "Interlynk", "have"], ["qcsv", "Interlynk", "have"], ["vuln", "Interlynk", "have"],
   ["vex", "Interlynk", "partial"], ["policy", "Interlynk", "partial"], ["integrations", "Interlynk", "no"], ["portfolio", "Interlynk", "have"], ["compliance", "Interlynk", "partial"]];
 function capabilitiesCard() {
   const col = {have: "var(--good)", partial: "var(--med)", no: "var(--unk)"};
   return `<div class="card" style="margin-top:14px"><h3>${esc(t("cap.title"))}</h3><p class="small muted">${esc(t("cap.lead"))}</p><div class="tablewrap"><table><tbody>${CAPS.map(([id, src, st]) =>
     `<tr><td><span class="badge">${esc(src)}</span></td><td>${esc(t(`cap.${id}.t`))}<br><span class="small muted">${esc(t(`cap.${id}.n`))}</span></td><td><span class="pill" style="background:${col[st]}${st === "partial" ? ";color:#222" : ""}">${esc(t("cap.st." + st))}</span></td></tr>`).join("")}</tbody></table></div></div>`;
+}
+
+/* ---------- hosted report page: #/report/<product>/<variant> — shareable link, rendered from the site's own data ---------- */
+async function reportView(pid, vid) {
+  const p = await product(pid);
+  vid = vid && p.variants[vid] ? vid : Object.keys(p.variants)[0];
+  const v = p.variants[vid];
+  $crumb.textContent = t("q.report_open");
+  if (!v.quality) { $app.innerHTML = `<p class="muted">${esc(t("av.nodata"))}</p>`; return; }
+  $app.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:8px"><a href="${link(["p", pid, vid, "quality"])}">${esc(t("q.open"))}</a><span><button id="rPrint">${esc(t("q.print"))}</button> <button id="rCopy">${esc(t("q.link"))}</button></span></div>
+  <iframe id="rFrame" title="${esc(t("report.title"))}" style="width:100%;height:80vh;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe>`;
+  document.getElementById("rFrame").srcdoc = qualityReportHtml(p, v, vid);
+  document.getElementById("rPrint").onclick = () => document.getElementById("rFrame").contentWindow.print();
+  document.getElementById("rCopy").onclick = async e => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = t("q.copied"); } catch (_) { /* clipboard blocked */ } };
 }

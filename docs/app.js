@@ -454,6 +454,7 @@ async function route(langSwitch) {
     else if (parts[0] === "upload") await uploadView();
     else if (parts[0] === "admin") await adminView();
     else if (parts[0] === "present" && parts[1]) await presentView(parts[1], parts[2]);
+    else if (parts[0] === "report" && parts[1]) await reportView(parts[1], parts[2]);
     else { await home(q); currentTour = "home"; }
     if (parts[0] !== "present" && !langSwitch) window.scrollTo(0, 0);
     if (currentTour && !langSwitch && !seen(currentTour)) setTimeout(() => { if (!tourState && !seen(currentTour)) startTour(currentTour); }, 400);
