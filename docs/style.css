@@ -82,3 +82,30 @@ button.gapBtn{margin-top:6px;padding:4px 10px;font-size:.82rem}
 @media (max-width:640px){.fab{padding:9px 13px}}
 
 .grade{display:inline-block;min-width:2.1em;text-align:center;padding:2px 9px;border-radius:8px;color:#fff;font-weight:800;font-size:.95rem}
+
+/* settings: API status cards */
+.svc-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.svc{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--unk);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.svc[data-state=ok]{border-left-color:var(--good)}.svc[data-state=fail]{border-left-color:var(--crit)}.svc[data-state=chk]{border-left-color:var(--med)}
+.svc-h{display:flex;align-items:center;gap:8px}.svc-ic{font-size:1.4rem;line-height:1}
+.svc input{width:100%}
+.svc-state{font-size:.9rem;font-weight:600}.svc-state::before{content:"";display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:.5em;background:var(--unk)}
+.svc-state.ok{color:var(--good)}.svc-state.ok::before{background:var(--good)}
+.svc-state.fail{color:var(--crit)}.svc-state.fail::before{background:var(--crit)}
+.svc-state.chk{color:var(--muted)}.svc-state.chk::before{background:var(--med);animation:svcpulse 1s infinite}
+.svc-state.off{color:var(--muted)}
+.svc-sum{font-weight:700;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.svc-sum.ok{color:var(--good);border-color:var(--good)}.svc-sum.fail{color:var(--crit);border-color:var(--crit)}
+.savebar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;padding:12px 0;background:var(--bg);border-top:1px solid var(--line)}
+@keyframes svcpulse{50%{opacity:.3}}@media (prefers-reduced-motion:reduce){.svc-state.chk::before{animation:none}}
+.svc-state:empty::before{display:none}.svc[data-state=idle]{border-left-color:var(--line)}
+
+/* review: steward / flag / CISO / quick check */
+.flagbtn{padding:3px 9px;font-size:.82rem;white-space:nowrap;color:var(--muted)}
+.flagbtn.on{background:var(--high);border-color:var(--high);color:#fff;font-weight:600}
+button.stew{padding:2px 4px;text-align:left;text-decoration:none;white-space:nowrap}
+dialog.rev-dlg{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);padding:18px;width:min(420px,92vw)}
+dialog.rev-dlg::backdrop{background:rgba(0,0,0,.45)}dialog.rev-dlg input,dialog.rev-dlg select{width:100%}
+.drop{border:2px dashed var(--line);border-radius:var(--radius);padding:28px;text-align:center;color:var(--muted);cursor:pointer}
+.drop:hover,.drop:focus,.drop.over{border-color:var(--brand);color:var(--ink);background:var(--accent)}
+@media print{.noprint,.fab{display:none!important}.ciso .card.warn{border:1px solid #999;background:#fff}}

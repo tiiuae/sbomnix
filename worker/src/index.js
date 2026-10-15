@@ -207,6 +207,16 @@ export default {
       });
     }
 
+    // EUVD (ENISA) search proxy: the upstream sends no CORS headers, so browsers cannot call it directly.
+    if (url.pathname === "/api/euvd" && request.method === "GET") {
+      const text = (url.searchParams.get("text") || "").slice(0, 100);
+      if (!/^[\w .:-]{2,100}$/.test(text)) {
+        return new Response(JSON.stringify({ error: "bad text" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(request) } });
+      }
+      const upstream = await fetch("https://euvdservices.enisa.europa.eu/api/search?size=5&text=" + encodeURIComponent(text), { headers: { Accept: "application/json" } });
+      return new Response(upstream.body, { status: upstream.status, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...corsHeaders(request) } });
+    }
+
     // Upload endpoint (/api/submissions is an alias)
     if ((url.pathname === "/api/upload" || url.pathname === "/api/submissions") && request.method === "POST") {
       const cors = corsHeaders(request);

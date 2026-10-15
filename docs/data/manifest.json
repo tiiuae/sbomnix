@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-14T16:08:08+00:00",
+ "generated": "2026-10-15T17:24:59.293169+00:00",
  "products": [
   {
    "id": "raidio-bot",
@@ -307,6 +307,45 @@
      "level_name": "Managed",
      "releases": 3,
      "gaps": 7
+    }
+   }
+  },
+  {
+   "id": "cve-reference-app",
+   "type": "library",
+   "icon": "🧪",
+   "demo": true,
+   "name": "cve-reference-app",
+   "tagline": {
+    "en": "DEMO — static reference SBOM with known-vulnerable components, for OSV/NVD/EUVD testing",
+    "pl": "DEMO — statyczny wzorcowy SBOM ze znanymi podatnościami do testów OSV/NVD/EUVD"
+   },
+   "variants": {
+    "reference": {
+     "label": "Reference",
+     "version": "1.0.0",
+     "date": "2026-10-15",
+     "components": 4,
+     "vulns": {
+      "critical": 5,
+      "high": 24,
+      "medium": 31,
+      "low": 2,
+      "unknown": 0
+     },
+     "cve_checked": 4,
+     "dq": {
+      "osv": 0,
+      "nvd": 4,
+      "pending": 0,
+      "unmatched": 0,
+      "none": 0
+     },
+     "maturity": 42,
+     "level": 2,
+     "level_name": "Managed",
+     "releases": 1,
+     "gaps": 0
     }
    }
   }

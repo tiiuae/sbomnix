@@ -13,6 +13,7 @@ This repository is home to various command line tools and Python libraries that 
 - [`repology_cli`](./doc/repology_cli.md) and [`repology_cve`](./doc/repology_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
 - [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 - [`provenance`](./doc/provenance.md) is a command line tool to generate SLSA v1.0 compliant [provenance](https://slsa.dev/spec/v1.0/provenance) attestation files in json format for any nix flake or derivation.
+- [`SBOM Explorer`](#sbom-explorer) is a static web app (in [`docs/`](./docs/README.md)) that turns SBOMs into a browsable report: release history, CVE comparison, KEV/PoC incident triage, quality, and a review page for your CISO. It runs in the browser, with no server.
 
 To automate daily vulnerability scans for a Nix flake project using the tooling provided in this repository, see [flakevuln](https://github.com/tiiuae/flakevuln), available as a reusable GitHub Action and local CLI.
 
@@ -36,6 +37,11 @@ Table of Contents
    * [Generate SBOM Based on a Store Path or Result Symlink](#generate-sbom-based-on-a-store-path-or-result-symlink)
    * [Nixpkgs Metadata Source Selection](#nixpkgs-metadata-source-selection)
    * [Visualize Package Dependencies](#visualize-package-dependencies)
+* [SBOM Explorer](#sbom-explorer)
+   * [Run it locally](#run-it-locally)
+   * [Add an sbomnix SBOM to the Explorer](#add-an-sbomnix-sbom-to-the-explorer)
+   * [What the Explorer shows](#what-the-explorer-shows)
+   * [Limits](#limits)
 * [Contribute](#contribute)
 * [License](#license)
 * [Acknowledgements](#acknowledgements)
@@ -215,6 +221,42 @@ Which outputs the dependency graph as an image (with maxdepth 2):
 <img src="doc/img/wget_runtime.svg" width="900">
 
 For more examples on querying and visualizing the package dependencies, see: [nixgraph](./doc/nixgraph.md).
+
+## SBOM Explorer
+The SBOM Explorer in [`docs/`](./docs/README.md) is plain HTML and JavaScript with no build step and no third-party packages. It reads the JSON files in `docs/data/` and shows them in the browser (English and Polish, light and dark, usable on a phone). It can be hosted on any static host; this repository publishes it with GitHub Pages (`.github/workflows/pages.yml`).
+
+### Run it locally
+```bash
+python3 -m http.server -d docs 8000   # then open http://localhost:8000/
+```
+`docs/data/` ships with demo products, including `cve-reference-app`, a small SBOM with deliberately outdated components for testing CVE lookups.
+
+### Add an sbomnix SBOM to the Explorer
+`sbomnix` can write its result straight into the Explorer:
+```bash
+sbomnix . --explorer-dir docs --explorer-id my-product --explorer-name "My product"
+# optional: --explorer-variant runtime   (default: nix)
+```
+This adds `docs/data/my-product.json` and lists it in `docs/data/manifest.json`. It makes **no vulnerability lookups**: components that have a purl or CPE show as *pending lookup*, never as clean. To fill in CVE data, check the same CycloneDX file with the helper script, which queries OSV, NVD and the EU vulnerability database (EUVD, ENISA), plus CISA KEV, EPSS and public PoCs:
+```bash
+python3 scripts/cve-check.py sbom.cdx.json --explorer-product my-product --explorer-variant nix \
+    --explorer-name "My product" --explorer-real --euvd-max 100
+```
+Run it from a checkout of this repository; it needs only Python 3, no extra packages. NVD allows few requests without a key, so set `NVD_API_KEY` or add `--no-nvd` for large SBOMs. It writes nothing if a lookup fails, so incomplete data is never published as complete.
+
+### What the Explorer shows
+- **Product pages**: release history, CVE comparison between releases, components with licences, maturity score, the SBOM file itself.
+- **Incident triage** tab: sorts CVEs into *exploited (KEV)*, *public PoC but not KEV*, *likely (EPSS)* and *routine*. **KEV is not an incident**: it means attackers exploit the vulnerability somewhere, while an incident is evidence of compromise in your own environment. A small decision tree takes three answers (deployed? reachable? evidence?) and returns a verdict with a checklist, and a nine-section incident-response playbook can be downloaded as markdown.
+- **Data stewards and flags**: assign a steward to each package (packages nobody watches can quietly become obsolete) and flag packages as possibly defective. The **CISO review** page lists the flagged packages with their risk, and can be printed, exported to CSV or JSON, or shared as a link that carries the list inside the URL.
+- **Quick check** (`#/check`): drop any CycloneDX or SPDX file and see which packages have known advisories, without uploading the file; only package URLs go to OSV.
+- **Settings** (`#/settings`): status of the services the page talks to (upload worker, OSV, NVD, an EUVD proxy) with test buttons.
+
+Flags, stewards and settings are stored only in your browser. Details and options: [`docs/README.md`](./docs/README.md). The SBOMs of this repository itself, generated with Syft and scanned with Grype, are in [`sbom/`](./sbom/README.md).
+
+### Limits
+- The Explorer shows data, it does not know your network. Whether a component is deployed or reachable is your answer.
+- Public PoC data is a name match on GitHub repositories, not proof of a working exploit. Not being in KEV does not mean a CVE is not exploited.
+- Ecosystems that OSV does not cover (for example `generic` or Nix purls) are checked through NVD by CPE only; a package with neither is reported as not checked.
 
 ## Contribute
 Any pull requests, questions and error reports are welcome.

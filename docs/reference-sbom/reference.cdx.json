@@ -1,0 +1,48 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:5b0c6d1e-7a1c-4a52-9a77-0e5d2f4c9a01",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "cve-reference-app",
+      "version": "1.0.0",
+      "bom-ref": "cve-reference-app@1.0.0"
+    },
+    "properties": [
+      {"name": "purpose", "value": "Static reference SBOM with deliberately outdated components, used to test CVE/NVD/EUVD lookups. Do not ship."}
+    ]
+  },
+  "components": [
+    {
+      "type": "library", "bom-ref": "log4j-core", "group": "org.apache.logging.log4j", "name": "log4j-core", "version": "2.14.1",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+      "cpe": "cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*",
+      "properties": [{"name": "expected-cve", "value": "CVE-2021-44228"}]
+    },
+    {
+      "type": "library", "bom-ref": "requests", "name": "requests", "version": "2.19.0",
+      "purl": "pkg:pypi/requests@2.19.0",
+      "cpe": "cpe:2.3:a:python:requests:2.19.0:*:*:*:*:*:*:*",
+      "properties": [{"name": "expected-cve", "value": "CVE-2018-18074"}]
+    },
+    {
+      "type": "library", "bom-ref": "lodash", "name": "lodash", "version": "4.17.15",
+      "purl": "pkg:npm/lodash@4.17.15",
+      "cpe": "cpe:2.3:a:lodash:lodash:4.17.15:*:*:*:*:node.js:*:*",
+      "properties": [{"name": "expected-cve", "value": "CVE-2020-8203"}]
+    },
+    {
+      "type": "library", "bom-ref": "openssl", "name": "openssl", "version": "1.1.1k",
+      "purl": "pkg:generic/openssl@1.1.1k",
+      "cpe": "cpe:2.3:a:openssl:openssl:1.1.1k:*:*:*:*:*:*:*",
+      "properties": [{"name": "expected-cve", "value": "CVE-2021-3711"}]
+    }
+  ],
+  "dependencies": [
+    {"ref": "cve-reference-app@1.0.0", "dependsOn": ["log4j-core", "requests", "lodash", "openssl"]},
+    {"ref": "log4j-core"}, {"ref": "requests"}, {"ref": "lodash"}, {"ref": "openssl"}
+  ]
+}
