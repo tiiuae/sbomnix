@@ -30,10 +30,10 @@ process.stdout.write(JSON.stringify({dyn, en: have('en'), pl: have('pl')}));
 def test_all_ir_keys_translated():
     out = json.loads(subprocess.run(["node", "-e", JS, str(ROOT)], capture_output=True, text=True, check=True).stdout)
     # static keys only: a trailing "." is the prefix of a dynamically built key, checked via `dyn`
-    static = {k for f in ("ir.js", "compliance.js", "supplychain.js", "snippets.js") for k in re.findall(r'\bt\("((?:ir|tab|cmp2|pol|lic|sc|sn)\.[A-Za-z_.0-9]+)"', (ROOT / "docs" / f).read_text()) if not k.endswith(".")}
-    dynamic = {"lic." + c for c in ("permissive", "weak-copyleft", "strong-copyleft", "other", "proprietary", "unknown")} | {"pol.rule." + r for r in ("licenseClass", "licenseDenied", "licenseMissing", "kev", "severity", "checked", "steward")} | {"tab.compliance", "tab.supplychain"} | {"sc.state." + k for k in ("kev", "critical", "high", "medium", "low", "unknown", "clean", "unchecked")} | {"sn.status." + k for k in ("compliant", "review", "noncompliant", "unknown")} | {"sn.why." + k for k in ("compliant", "review", "noncompliant", "unknown")} | {"sn.conf." + k for k in ("high", "medium", "low")}
+    static = {k for f in ("ir.js", "compliance.js", "supplychain.js", "snippets.js", "library.js") for k in re.findall(r'\bt\("((?:ir|tab|cmp2|pol|lic|sc|sn|lib)\.[A-Za-z_.0-9]+)"', (ROOT / "docs" / f).read_text()) if not k.endswith(".")}
+    dynamic = {"lic." + c for c in ("permissive", "weak-copyleft", "strong-copyleft", "other", "proprietary", "unknown")} | {"pol.rule." + r for r in ("licenseClass", "licenseDenied", "licenseMissing", "kev", "severity", "checked", "steward")} | {"tab.compliance", "tab.supplychain", "nav.library"} | {"lib.step." + k for k in ("osv", "details", "kev", "epss", "poc")} | {"sc.state." + k for k in ("kev", "critical", "high", "medium", "low", "unknown", "clean", "unchecked")} | {"sn.status." + k for k in ("compliant", "review", "noncompliant", "unknown")} | {"sn.why." + k for k in ("compliant", "review", "noncompliant", "unknown")} | {"sn.conf." + k for k in ("high", "medium", "low")}
     needed = static | dynamic | set(out["dyn"]) | {"tab.ir"}
     missing_en = sorted(k for k in needed if k not in out["en"])
     missing_pl = sorted(k for k in needed if k not in out["pl"])
     assert not missing_en and not missing_pl, (missing_en, missing_pl)
-    assert len(needed) > 150  # the check really looked at the whole feature
+    assert len(needed) > 200  # the check really looked at the whole feature

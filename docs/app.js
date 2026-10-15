@@ -21,7 +21,15 @@ const typeIcon = p => p.icon || TYPE_ICON[p.type] || TYPE_ICON.other;
 const typeLabel = ty => (I18N.en["type." + ty] ? t("type." + ty) : ty);
 
 async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(url + " " + r.status); return r.json(); }
-async function product(id) { return cache[id] || (cache[id] = await getJSON(`data/${encodeURIComponent(id)}.json`)); }
+async function product(id) {
+  if (cache[id]) return cache[id];
+  if (id.startsWith("local-") && typeof libGetRecord === "function") {  // imported into the browser library
+    const rec = await libGetRecord(id).catch(() => null);
+    if (!rec) throw new Error(t("lib.gone"));
+    return (cache[id] = rec.product);
+  }
+  return (cache[id] = await getJSON(`data/${encodeURIComponent(id)}.json`));
+}
 
 function parseHash() {
   const [path, qs] = (location.hash.slice(1) || "/").split("?");
@@ -86,9 +94,9 @@ async function home(q) {
   const cur = q.get("type") || "";
   const list = manifest.products.filter(p => !cur || p.type === cur);
   const chips = types.length > 1 ? `<nav class="tabs" aria-label="type"><a class="${cur ? "" : "on"}" href="${link([])}">${esc(t("home.filter.all"))}</a>${types.map(ty => `<a class="${cur === ty ? "on" : ""}" href="${link([], {type: ty})}">${TYPE_ICON[ty] || ""} ${esc(typeLabel(ty))}</a>`).join("")}</nav>` : "";
-  $app.innerHTML = `<h2 style="margin:6px 0 4px">${esc(t("home.title"))}</h2><p class="muted">${esc(t("home.lead", {date: manifest.generated.slice(0, 10)}))}</p>${chips}
+  $app.innerHTML = `<h2 style="margin:6px 0 4px">${esc(t("home.title"))}</h2><p class="muted">${esc(t("home.lead", {date: manifest.generated.slice(0, 10)}))}</p><p class="small"><a href="#/library">📚 ${esc(t("lib.manage"))}</a></p>${chips}
   ${list.length ? `<div class="grid">${list.map((p, i) => `
-  <div class="card" ${i === 0 ? 'data-tour="card"' : ""}><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)}</h2><span class="badge">${esc(typeLabel(p.type))}${p.demo ? " · " + esc(t("demo.badge")) : ""}</span></div><p class="muted small">${esc(loc(p.tagline))}</p>
+  <div class="card" ${i === 0 ? 'data-tour="card"' : ""}><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)}</h2><span class="badge">${esc(typeLabel(p.type))}${p.demo ? " · " + esc(t("demo.badge")) : ""}${p.local ? " · " + esc(t(p.origin === "third-party" ? "lib.third_party" : "lib.imported")) : ""}</span></div><p class="muted small">${esc(loc(p.tagline))}</p>
   ${Object.entries(p.variants).map(([vid, v]) => `<a href="${link(["p", p.id, vid])}" style="text-decoration:none;color:inherit;display:block;border-top:1px solid var(--line);padding:10px 0">
     <div class="row" style="justify-content:space-between"><b>${esc(v.label)} ${esc(v.version)}</b><span class="row" style="gap:6px">${v.quality ? gradeChip(v.quality.grade) : ""}${lvl(v.level)}</span></div>
     <div class="small muted">${esc(t("home.components", {n: v.components}))} · ${esc(t("home.maturity", {n: v.maturity}))} (${esc(tn("lvl.", v.level_name))}) · ${esc(t("home.releases", {n: v.releases}))}</div>
@@ -110,7 +118,7 @@ async function productView(pid, vid, tab, q) {
   $crumb.textContent = `${p.name} · ${v.label} ${last.version}`;
   const variantSwitch = Object.entries(p.variants).map(([id, x]) => `<a class="btn ${id === vid ? "primary" : ""}" href="${link(["p", pid, id, tab])}">${esc(x.label)}</a>`).join(" ");
   const tabs = tabIds.map(id => `<a class="${tab === id ? "on" : ""}" href="${link(["p", pid, vid, id])}">${esc(t("tab." + id))}</a>`).join("");
-  const head = `<div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)} <span class="badge">${esc(typeLabel(p.type))}</span>${p.demo ? ` <span class="badge demo">${esc(t("demo.badge"))}</span>` : ""}</h2><span class="muted small">${esc(loc(p.description) || loc(p.tagline))}</span></div><div class="row"><span class="row" data-tour="variants">${variantSwitch}</span><a class="btn" data-tour="present" href="${link(["present", pid, vid])}">${esc(t("btn.present"))}</a></div></div><nav class="tabs" data-tour="tabs">${tabs}</nav>${p.demo ? `<div class="card warn small">${esc(t("demo.banner"))}</div>` : ""}`;
+  const head = `<div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)} <span class="badge">${esc(typeLabel(p.type))}</span>${p.demo ? ` <span class="badge demo">${esc(t("demo.badge"))}</span>` : ""}${p.local ? ` <span class="badge">${esc(t("lib.imported"))}${p.origin === "third-party" ? " · " + esc(t("lib.third_party")) : ""}</span>` : ""}</h2><span class="muted small">${esc(loc(p.description) || loc(p.tagline))}</span></div><div class="row"><span class="row" data-tour="variants">${variantSwitch}</span><a class="btn" data-tour="present" href="${link(["present", pid, vid])}">${esc(t("btn.present"))}</a></div></div><nav class="tabs" data-tour="tabs">${tabs}</nav>${p.demo ? `<div class="card warn small">${esc(t("demo.banner"))}</div>` : ""}${typeof libNote === "function" ? libNote(p, v) : ""}`;
   const body = {history: () => historyTab(v), compare: () => compareTab(p, pid, vid, q), actions: () => actionsTab(v), ir: () => irTab(p, v), compliance: () => complianceTab(), supplychain: () => supplyChainTab(), maturity: () => maturityTab(v), quality: () => qualityTab(p, v),
     components: () => componentsTab(v), scanners: () => scannersTab(p, v), evidence: () => evidenceTab(p, v), sbom: () => sbomTab(p, v), overview: () => overviewTab(p, pid, vid, v)}[tab]();
   CUR = {pid, vid, p, v};
@@ -302,6 +310,7 @@ function wireSbom(p, v) {
   const pre = document.getElementById("sampleJson"), show = k => { pre.textContent = JSON.stringify(v.sbom.samples[k], null, 2); };
   document.querySelectorAll("#sampleTabs a").forEach(a => a.onclick = ev => { ev.preventDefault(); document.querySelectorAll("#sampleTabs a").forEach(x => x.classList.remove("on")); a.classList.add("on"); show(a.dataset.k); });
   show(Object.keys(v.sbom.samples)[0]);
+  if (p.local && typeof libWireSbom === "function") libWireSbom(p);
 }
 
 /* ---------- How it works ---------- */
@@ -434,6 +443,7 @@ function applyStatic() {
   const wb = document.getElementById("wsBtn"); wb.textContent = t("nav.workshop");
   const wsPath = manifest?.settings?.workshop; if (wsPath) { wb.href = wsPath; wb.hidden = false; } else wb.hidden = true;
   document.getElementById("chkBtn").textContent = "⚡ " + t("nav.check"); if (typeof refreshCisoBtn === "function") refreshCisoBtn();  // ciso.js loads after the first applyStatic()
+  const lb = document.getElementById("libBtn"); lb.title = t("nav.library"); lb.setAttribute("aria-label", t("nav.library"));
   const sb = document.getElementById("setBtn"); sb.title = t("nav.settings"); sb.setAttribute("aria-label", t("nav.settings"));
   const tb = document.getElementById("tourBtn"); tb.title = t("nav.tour"); tb.setAttribute("aria-label", t("nav.tour"));
   document.getElementById("theme").title = t("nav.theme");
@@ -457,7 +467,12 @@ async function route(langSwitch) {
   const {parts, q} = parseHash();
   currentTour = null;
   try {
-    if (!manifest) { manifest = await getJSON("data/manifest.json"); applyStatic(); }
+    if (!manifest) {
+      manifest = await getJSON("data/manifest.json");
+      if (typeof libMergeManifest === "function") await libMergeManifest();
+      applyStatic();
+      if (typeof libAutoRefresh === "function") setTimeout(() => libAutoRefresh().catch(e => console.warn("auto-update:", e)), 1500);
+    }
     if (parts[0] === "p" && parts[1]) { await productView(parts[1], parts[2], parts[3], q); currentTour = "product"; }
     else if (parts[0] === "about") aboutView();
     else if (parts[0] === "upload") await uploadView();
@@ -465,6 +480,7 @@ async function route(langSwitch) {
     else if (parts[0] === "settings") settingsView(parts[1]);
     else if (parts[0] === "check") checkView();
     else if (parts[0] === "snippet") snippetView();
+    else if (parts[0] === "library") await libraryView();
     else if (parts[0] === "ciso") await cisoView(q);
     else if (parts[0] === "present" && parts[1]) await presentView(parts[1], parts[2]);
     else if (parts[0] === "report" && parts[1]) await reportView(parts[1], parts[2]);
