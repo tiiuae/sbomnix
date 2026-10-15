@@ -131,7 +131,9 @@ function wireTriage(v) {
     const r = rows.find(x => x.id === sel.value), res = irVerdict({tier: r ? r.tier : "routine", deployed: q("deployed").value, exposed: q("exposed").value, evidence: q("evidence").value});
     out.dataset.verdict = res.verdict;
     out.innerHTML = `<div class="row" style="gap:10px"><span class="pill ${res.verdict === "incident" || res.priority === "P1" ? "s-critical" : res.priority === "P2" ? "s-high" : res.priority === "P3" ? "s-medium" : "s-unknown"}">${res.priority}</span><b>${esc(t("ir.v." + res.verdict))}</b></div>
-      <p class="small" style="margin:6px 0">${esc(t("ir.v." + res.verdict + "_d"))}</p><ol class="small" style="margin:0;padding-left:1.2em">${res.steps.map(k => `<li>${esc(t("ir.step." + k))}</li>`).join("")}</ol>`;
+      <p class="small" style="margin:6px 0">${esc(t("ir.v." + res.verdict + "_d"))}</p><ol class="small" style="margin:0;padding-left:1.2em">${res.steps.map(k => `<li>${esc(t("ir.step." + k))}</li>`).join("")}</ol>
+      <div class="row" style="margin-top:8px"><button id="irRecord">${esc(t("ir.record"))}</button><span id="irRecorded" class="small ok"></span></div>`;
+    document.getElementById("irRecord").onclick = () => { recordDecision(CUR.pid, sel.value, {verdict: res.verdict, priority: res.priority, deployed: q("deployed").value, exposed: q("exposed").value, evidence: q("evidence").value}); document.getElementById("irRecorded").textContent = t("ir.recorded"); };
   };
   [sel, q("deployed"), q("exposed"), q("evidence")].forEach(e => e.onchange = run); run();
 }

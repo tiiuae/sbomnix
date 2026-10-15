@@ -43,3 +43,23 @@ Separates CVEs by how urgent they are, and says plainly that **KEV is not an inc
 - **Data**: `scripts/cve-check.py ... --explorer-product <id>` writes `kev`, `kev_info`, `epss` and `poc` per CVE (CISA KEV, FIRST EPSS, nomi-sec/PoC-in-GitHub). Products built before this have no PoC data; the tab says so. If KEV/EPSS/PoC cannot be fetched, the build fails instead of writing incomplete data.
 - **Limits**: a PoC match is a name match on public GitHub repositories, not proof of a working exploit. Not being in KEV does not mean a CVE is not exploited. The tab does not know your network: deployment and exposure are your answers.
 - Tests: `pytest tests/test_ir_triage.py tests/test_ir_i18n.py` (the second fails if any IR string lacks an English or Polish translation).
+
+### Compliance tab (licences, policy, export)
+- **Licences**: each component's SPDX expression is classed as permissive, weak copyleft, strong copyleft, other, proprietary or **unknown** (`docs/data/licenses.json`; OR = least restrictive option, AND = strictest, `WITH` known linking exceptions soften GPL). A missing or unrecognised licence is never counted as permissive. A short table says what each class obliges you to do. Classes are a triage aid, not legal advice.
+- **Policy**: rules for forbidden licence classes or ids, missing licences, KEV CVEs, a CVE severity limit, unchecked components (*unchecked is not clean*) and data stewards. Edit it on the tab (kept in the browser) or run the same rules in CI: `node scripts/sbom-policy.js docs/data/<id>.json [--policy policy.json]` exits 1 when a rule fails.
+- **Export**: CycloneDX 1.4 with a VEX analysis per CVE, CycloneDX components only, SPDX 2.3, and an attribution notice (`.txt`). The VEX states come only from decisions you record on the Incident triage tab (*not deployed* gives `not_affected`, *incident* or *trigger* gives `exploitable`); everything else stays `in_triage`.
+- Earlier versions of the software: `scripts/make-sbom.sh --ref <tag|branch|commit>` builds an SBOM of that version without touching your working tree.
+
+### Supply chain tab (`#/p/<product>/<variant>/supplychain`)
+A tiered dependency graph (tier 1 = direct dependencies, tier 2 = what those use, ...) coloured by each component's worst known risk, and a supplier map: who supplies how many components, their worst risk, and which other suppliers they depend on. Components with no supplier in the SBOM are called out. It needs dependency relationships in the SBOM (sbomnix writes them); without them everything is shown as one tier and the tab says so.
+
+### Code licence check (`#/snippet`)
+Drop source files or paste code. For each file it reports the declared licence (SPDX tag or a well-known licence header), its class, whether attribution is required, what the licence obliges you to do, and a status against your policy: *compliant*, *needs review*, *not compliant* or *unknown* (no notice found). It can generate an attribution notice. Detection reads the first 400 lines of a file and only knows what the file says about itself, so low-confidence matches are marked for review.
+
+### `POST /sbomRiskAverage` (Cloudflare Worker)
+Upload a CycloneDX JSON SBOM as a multipart field named `file`; the worker looks up each component's CPE in NVD and returns the average CVSS base score of the CVEs found.
+```bash
+curl -X POST -F "file=@sbom.cdx.json" https://<your-worker>/sbomRiskAverage
+# {"average":7.21,"cves":42,"scored_cves":42,"components_checked":4,"components_without_cpe":0,"partial":false,...}
+```
+Notes: the response is a JSON object (`average` is `null` when no scored CVE was found, which means *nothing found*, not a score of 0); only components with a CPE are checked; without an `NVD_API_KEY` secret at most 5 components are checked per request (NVD's public limit), with one at most 25, and `partial` says when components were skipped. The endpoint is public and needs no authentication, so add a Cloudflare rate-limit rule for it (see `worker/wrangler.toml`). Redeploy with `wrangler deploy`.

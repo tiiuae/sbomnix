@@ -109,3 +109,8 @@ dialog.rev-dlg::backdrop{background:rgba(0,0,0,.45)}dialog.rev-dlg input,dialog.
 .drop{border:2px dashed var(--line);border-radius:var(--radius);padding:28px;text-align:center;color:var(--muted);cursor:pointer}
 .drop:hover,.drop:focus,.drop.over{border-color:var(--brand);color:var(--ink);background:var(--accent)}
 @media print{.noprint,.fab{display:none!important}.ciso .card.warn{border:1px solid #999;background:#fff}}
+
+/* supply chain */
+.scchip{display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border:1px solid var(--line);border-left:5px solid var(--unk);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.82rem;cursor:pointer}
+.scchip:hover,.scchip:focus{background:var(--accent)}
+.scwrap{overflow:auto;max-height:70vh;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:2px}

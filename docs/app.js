@@ -98,7 +98,7 @@ async function home(q) {
 }
 
 /* ---------- product ---------- */
-const TABS = ["overview", "history", "compare", "actions", "ir", "maturity", "quality", "components", "scanners", "evidence", "sbom"];
+const TABS = ["overview", "history", "compare", "actions", "ir", "maturity", "quality", "compliance", "supplychain", "components", "scanners", "evidence", "sbom"];
 
 async function productView(pid, vid, tab, q) {
   const p = await product(pid);
@@ -111,12 +111,14 @@ async function productView(pid, vid, tab, q) {
   const variantSwitch = Object.entries(p.variants).map(([id, x]) => `<a class="btn ${id === vid ? "primary" : ""}" href="${link(["p", pid, id, tab])}">${esc(x.label)}</a>`).join(" ");
   const tabs = tabIds.map(id => `<a class="${tab === id ? "on" : ""}" href="${link(["p", pid, vid, id])}">${esc(t("tab." + id))}</a>`).join("");
   const head = `<div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)} <span class="badge">${esc(typeLabel(p.type))}</span>${p.demo ? ` <span class="badge demo">${esc(t("demo.badge"))}</span>` : ""}</h2><span class="muted small">${esc(loc(p.description) || loc(p.tagline))}</span></div><div class="row"><span class="row" data-tour="variants">${variantSwitch}</span><a class="btn" data-tour="present" href="${link(["present", pid, vid])}">${esc(t("btn.present"))}</a></div></div><nav class="tabs" data-tour="tabs">${tabs}</nav>${p.demo ? `<div class="card warn small">${esc(t("demo.banner"))}</div>` : ""}`;
-  const body = {history: () => historyTab(v), compare: () => compareTab(p, pid, vid, q), actions: () => actionsTab(v), ir: () => irTab(p, v), maturity: () => maturityTab(v), quality: () => qualityTab(p, v),
+  const body = {history: () => historyTab(v), compare: () => compareTab(p, pid, vid, q), actions: () => actionsTab(v), ir: () => irTab(p, v), compliance: () => complianceTab(), supplychain: () => supplyChainTab(), maturity: () => maturityTab(v), quality: () => qualityTab(p, v),
     components: () => componentsTab(v), scanners: () => scannersTab(p, v), evidence: () => evidenceTab(p, v), sbom: () => sbomTab(p, v), overview: () => overviewTab(p, pid, vid, v)}[tab]();
   CUR = {pid, vid, p, v};
   $app.innerHTML = head + body;
   if (tab === "components") wireComponents(v);
   if (tab === "ir") wireIr(v);
+  if (tab === "compliance") wireCompliance(v);
+  if (tab === "supplychain") wireSupplyChain(v);
   if (tab === "compare") wireCompare(pid, vid);
   if (tab === "sbom") wireSbom(p, v);
   wireExtras(p, vid, v, tab);
@@ -462,6 +464,7 @@ async function route(langSwitch) {
     else if (parts[0] === "admin") await adminView();
     else if (parts[0] === "settings") settingsView(parts[1]);
     else if (parts[0] === "check") checkView();
+    else if (parts[0] === "snippet") snippetView();
     else if (parts[0] === "ciso") await cisoView(q);
     else if (parts[0] === "present" && parts[1]) await presentView(parts[1], parts[2]);
     else if (parts[0] === "report" && parts[1]) await reportView(parts[1], parts[2]);

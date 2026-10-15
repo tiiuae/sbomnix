@@ -249,9 +249,17 @@ Run it from a checkout of this repository; it needs only Python 3, no extra pack
 - **Incident triage** tab: sorts CVEs into *exploited (KEV)*, *public PoC but not KEV*, *likely (EPSS)* and *routine*. **KEV is not an incident**: it means attackers exploit the vulnerability somewhere, while an incident is evidence of compromise in your own environment. A small decision tree takes three answers (deployed? reachable? evidence?) and returns a verdict with a checklist, and a nine-section incident-response playbook can be downloaded as markdown.
 - **Data stewards and flags**: assign a steward to each package (packages nobody watches can quietly become obsolete) and flag packages as possibly defective. The **CISO review** page lists the flagged packages with their risk, and can be printed, exported to CSV or JSON, or shared as a link that carries the list inside the URL.
 - **Quick check** (`#/check`): drop any CycloneDX or SPDX file and see which packages have known advisories, without uploading the file; only package URLs go to OSV.
+- **Compliance** tab: licence classes and obligations, a configurable policy (also runnable in CI with `node scripts/sbom-policy.js`), and export to CycloneDX (with VEX), SPDX and an attribution notice.
+- **Supply chain** tab: tiered dependency graph and supplier map. **Code licence check** (`#/snippet`): licences declared in source files, obligations, and an attribution notice.
 - **Settings** (`#/settings`): status of the services the page talks to (upload worker, OSV, NVD, an EUVD proxy) with test buttons.
 
 Flags, stewards and settings are stored only in your browser. Details and options: [`docs/README.md`](./docs/README.md). The SBOMs of this repository itself, generated with Syft and scanned with Grype, are in [`sbom/`](./sbom/README.md).
+
+### Risk-average API
+The Cloudflare Worker in [`worker/`](./worker/src/index.js) also offers `POST /sbomRiskAverage`: upload a CycloneDX JSON file and get the average CVSS base score of the CVEs NVD lists for its components' CPEs. Details and limits are in [`docs/README.md`](./docs/README.md).
+
+### Ask an AI about your SBOMs (MCP)
+[`mcp/`](./mcp/README.md) is a Model Context Protocol server (one Node file, no packages, read-only) that lets Claude or any MCP client query the Explorer: list products, vulnerabilities by incident tier, *is this an incident?* verdicts, licences, policy checks, supply chain, SBOM export, and the risk-average API. `.mcp.json` registers it for Claude Code in this repository (`claude mcp list`, then approve it).
 
 ### Limits
 - The Explorer shows data, it does not know your network. Whether a component is deployed or reachable is your answer.

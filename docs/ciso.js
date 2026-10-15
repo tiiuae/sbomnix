@@ -143,11 +143,14 @@ async function cisoView(q) {
 
 /* ---------- Quick check: drop an SBOM, nothing is uploaded; only package URLs go to OSV ---------- */
 // purl types OSV.dev has advisories for; anything else (generic, deb, rpm, ...) cannot be judged by it and must not show a green "0"
+const LIC_PILL = {permissive: "s-low", "weak-copyleft": "s-medium", "strong-copyleft": "s-high", other: "s-high", proprietary: "s-critical", unknown: "s-unknown"};
 const OSV_TYPES = new Set(["pypi", "npm", "maven", "golang", "cargo", "nuget", "gem", "composer", "hex", "pub", "cran", "swift"]);
 function sbomPackages(doc) {
   const out = [];
-  if (doc && doc.bomFormat === "CycloneDX") (function walk(cs) { (cs || []).forEach(c => { out.push({name: c.name || "?", version: c.version || "", purl: c.purl || ""}); walk(c.components); }); })(doc.components);
-  else if (doc && Array.isArray(doc.packages)) doc.packages.forEach(p => out.push({name: p.name || "?", version: p.versionInfo || "", purl: ((p.externalRefs || []).find(r => r.referenceType === "purl") || {}).referenceLocator || ""}));
+  const cdxLicense = c => (c.licenses || []).map(l => l.expression || (l.license && (l.license.id || l.license.name)) || "").filter(Boolean).join(" AND ");
+  const spdxLicense = p => [p.licenseDeclared, p.licenseConcluded].find(x => x && !["NOASSERTION", "NONE"].includes(x)) || "";
+  if (doc && doc.bomFormat === "CycloneDX") (function walk(cs) { (cs || []).forEach(c => { out.push({name: c.name || "?", version: c.version || "", purl: c.purl || "", license: cdxLicense(c)}); walk(c.components); }); })(doc.components);
+  else if (doc && Array.isArray(doc.packages)) doc.packages.forEach(p => out.push({name: p.name || "?", version: p.versionInfo || "", purl: ((p.externalRefs || []).find(r => r.referenceType === "purl") || {}).referenceLocator || "", license: spdxLicense(p)}));
   else return null;
   const seen = new Set(); return out.filter(p => { const k = p.purl || p.name + "@" + p.version; return seen.has(k) ? false : (seen.add(k), true); });
 }
@@ -166,7 +169,7 @@ function checkView() {
   $app.innerHTML = `<h2>⚡ ${esc(t("chk.title"))}</h2><p class="muted">${esc(t("chk.lead"))}</p>
     <div class="card"><div id="chkDrop" class="drop" tabindex="0" role="button" aria-label="${esc(t("chk.drop"))}">${esc(t("chk.drop"))}<input type="file" id="chkFile" accept=".json,application/json" hidden></div>
     <label class="blk" style="margin-top:10px">${esc(t("chk.paste"))}<textarea id="chkText" rows="4" spellcheck="false" style="width:100%;font-family:monospace"></textarea></label>
-    <div class="row"><button class="primary" id="chkGo">${esc(t("chk.go"))}</button><a href="#/ciso" class="btn">🛡 ${esc(t("nav.ciso"))}</a><span id="chkMsg" class="small"></span></div>
+    <div class="row"><button class="primary" id="chkGo">${esc(t("chk.go"))}</button><a href="#/ciso" class="btn">🛡 ${esc(t("nav.ciso"))}</a><a href="#/snippet" class="btn">🧩 ${esc(t("sn.title"))}</a><span id="chkMsg" class="small"></span></div>
     <p class="small muted">${esc(t("chk.privacy", {host}))}</p></div><div id="chkOut" style="margin-top:14px"></div>`;
   let fname = "pasted-sbom";
   const msg = (ok, x) => { const m = document.getElementById("chkMsg"); m.className = "small " + (ok ? "ok" : "no"); m.textContent = x; };
@@ -183,12 +186,16 @@ function checkView() {
     const pk = sbomPackages(doc); if (!pk) { msg(false, t("chk.badformat")); return; }
     const withPurl = pk.filter(p => OSV_TYPES.has((p.purl.match(/^pkg:([^/]+)\//) || [])[1])); msg(true, t("set.testing"));
     let res; try { res = await osvBatch(withPurl.map(p => p.purl), osv); } catch (e) { msg(false, `${t("set.fail")}: ${e.message}`); return; }
-    const rows = withPurl.map((p, i) => ({...p, ids: res[i]})).sort((a, b) => b.ids.length - a.ids.length), vuln = rows.filter(r => r.ids.length).length;
-    msg(true, t("chk.done", {n: pk.length, p: withPurl.length, v: vuln}));
-    document.getElementById("chkOut").innerHTML = `<div class="tablewrap"><table><thead><tr><th>${esc(t("comp.name"))}</th><th>${esc(t("comp.version"))}</th><th>OSV</th><th>${esc(t("rev.flag"))}</th></tr></thead><tbody>${rows.map((r, i) => {
+    if (typeof licensesReady !== "undefined") await licensesReady;
+    const lic = typeof LIC_TABLE !== "undefined" && LIC_TABLE ? LIC_TABLE : null;
+    const rows = withPurl.map((p, i) => ({...p, ids: res[i], cls: lic ? licenseClass(p.license, lic) : "unknown"})).sort((a, b) => b.ids.length - a.ids.length), vuln = rows.filter(r => r.ids.length).length;
+    const copyleft = rows.filter(r => r.cls === "strong-copyleft" || r.cls === "weak-copyleft").length, nolic = rows.filter(r => r.cls === "unknown").length;
+    msg(true, t("chk.done", {n: pk.length, p: withPurl.length, v: vuln}) + " · " + t("chk.lic", {c: copyleft, u: nolic}));
+    document.getElementById("chkOut").innerHTML = `<div class="tablewrap"><table><thead><tr><th>${esc(t("comp.name"))}</th><th>${esc(t("comp.version"))}</th><th>OSV</th><th>${esc(t("comp.licence"))}</th><th>${esc(t("rev.flag"))}</th></tr></thead><tbody>${rows.map((r, i) => {
       const key = `check|${fname}|${r.name}@${r.version}`, f = review.flags[key];
       return `<tr><td>${esc(r.name)}</td><td>${esc(r.version)}</td><td class="${r.ids.length ? "no" : "ok"}">${r.ids.length ? esc(t("ciso.osvn", {n: r.ids.length})) + ` · <a class="small" href="https://osv.dev/vulnerability/${encodeURIComponent(r.ids[0])}" target="_blank" rel="noopener">${esc(r.ids[0])}</a>` : "✓ 0"}</td>
-        <td><button class="flagbtn ${f ? "on" : ""}" data-i="${i}">⚑${f ? " " + esc(t("rev.reason." + f.reason)) : ""}</button></td></tr>`; }).join("")}${pk.length > withPurl.length ? `<tr><td colspan="4" class="small muted">${esc(t("chk.nopurl", {n: pk.length - withPurl.length}))}</td></tr>` : ""}</tbody></table></div>`;
+        <td class="small">${r.license ? `<code>${esc(r.license)}</code> ` : ""}<span class="pill ${LIC_PILL[r.cls] || "s-unknown"}">${esc(t("lic." + r.cls))}</span></td>
+        <td><button class="flagbtn ${f ? "on" : ""}" data-i="${i}">⚑${f ? " " + esc(t("rev.reason." + f.reason)) : ""}</button></td></tr>`; }).join("")}${pk.length > withPurl.length ? `<tr><td colspan="5" class="small muted">${esc(t("chk.nopurl", {n: pk.length - withPurl.length}))}</td></tr>` : ""}</tbody></table></div>`;
     document.getElementById("chkOut").onclick = async e => {
       const b = e.target.closest(".flagbtn"); if (!b) return; const r = rows[b.dataset.i], key = `check|${fname}|${r.name}@${r.version}`, cur = review.flags[key];
       const x = await askModal({title: `⚑ ${r.name} ${r.version}`, fields: [{id: "reason", label: t("rev.reason"), options: reasonOpts(), value: cur?.reason || "defective"}, {id: "note", label: t("rev.note"), value: cur?.note || "", max: 300}], removeLabel: cur ? t("rev.flag_remove") : ""});
