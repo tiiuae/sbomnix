@@ -98,7 +98,7 @@ async function home(q) {
 }
 
 /* ---------- product ---------- */
-const TABS = ["overview", "history", "compare", "actions", "maturity", "quality", "components", "scanners", "evidence", "sbom"];
+const TABS = ["overview", "history", "compare", "actions", "ir", "maturity", "quality", "components", "scanners", "evidence", "sbom"];
 
 async function productView(pid, vid, tab, q) {
   const p = await product(pid);
@@ -111,10 +111,12 @@ async function productView(pid, vid, tab, q) {
   const variantSwitch = Object.entries(p.variants).map(([id, x]) => `<a class="btn ${id === vid ? "primary" : ""}" href="${link(["p", pid, id, tab])}">${esc(x.label)}</a>`).join(" ");
   const tabs = tabIds.map(id => `<a class="${tab === id ? "on" : ""}" href="${link(["p", pid, vid, id])}">${esc(t("tab." + id))}</a>`).join("");
   const head = `<div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(typeIcon(p))} ${esc(p.name)} <span class="badge">${esc(typeLabel(p.type))}</span>${p.demo ? ` <span class="badge demo">${esc(t("demo.badge"))}</span>` : ""}</h2><span class="muted small">${esc(loc(p.description) || loc(p.tagline))}</span></div><div class="row"><span class="row" data-tour="variants">${variantSwitch}</span><a class="btn" data-tour="present" href="${link(["present", pid, vid])}">${esc(t("btn.present"))}</a></div></div><nav class="tabs" data-tour="tabs">${tabs}</nav>${p.demo ? `<div class="card warn small">${esc(t("demo.banner"))}</div>` : ""}`;
-  const body = {history: () => historyTab(v), compare: () => compareTab(p, pid, vid, q), actions: () => actionsTab(v), maturity: () => maturityTab(v), quality: () => qualityTab(p, v),
+  const body = {history: () => historyTab(v), compare: () => compareTab(p, pid, vid, q), actions: () => actionsTab(v), ir: () => irTab(p, v), maturity: () => maturityTab(v), quality: () => qualityTab(p, v),
     components: () => componentsTab(v), scanners: () => scannersTab(p, v), evidence: () => evidenceTab(p, v), sbom: () => sbomTab(p, v), overview: () => overviewTab(p, pid, vid, v)}[tab]();
+  CUR = {pid, vid, p, v};
   $app.innerHTML = head + body;
   if (tab === "components") wireComponents(v);
+  if (tab === "ir") wireIr(v);
   if (tab === "compare") wireCompare(pid, vid);
   if (tab === "sbom") wireSbom(p, v);
   wireExtras(p, vid, v, tab);
@@ -213,20 +215,23 @@ function maturityTab(v) {
   ${v.history.length > 1 ? `<div class="card" style="margin-top:14px"><h3>${esc(t("mat.over_time"))}</h3>${lineChart(v.history.map(h => h.version), [{name: t("ch.score"), color: "var(--brand)", vals: v.history.map(h => h.maturity.score)}], {yTitle: t("mat.over_time")})}</div>` : ""}`;
 }
 function componentsTab(v) {
-  return `<div class="row"><input type="search" id="cq" placeholder="${esc(t("comp.search"))}" style="flex:1;min-width:200px"><select id="ceco"><option value="">${esc(t("comp.all_eco"))}</option>${[...new Set(v.components.map(c => c[2]))].sort().map(e => `<option>${esc(e)}</option>`).join("")}</select><select id="cst"><option value="">${esc(t("st.all"))}</option>${DQ_ORDER.map(k => `<option value="${k}">${esc(t("st." + k))}</option>`).join("")}</select></div><p class="small muted" id="ccount"></p><div class="tablewrap"><table><thead><tr><th>${esc(t("comp.name"))}</th><th>${esc(t("comp.version"))}</th><th>${esc(t("comp.eco"))}</th><th>${esc(t("comp.licence"))}</th><th>${esc(t("comp.cve"))}</th></tr></thead><tbody id="cbody"></tbody></table></div>`;
+  return `${STEWARD_STATEMENT()}<div class="row"><input type="search" id="cq" placeholder="${esc(t("comp.search"))}" style="flex:1;min-width:200px"><select id="ceco"><option value="">${esc(t("comp.all_eco"))}</option>${[...new Set(v.components.map(c => c[2]))].sort().map(e => `<option>${esc(e)}</option>`).join("")}</select><select id="cst"><option value="">${esc(t("st.all"))}</option>${DQ_ORDER.map(k => `<option value="${k}">${esc(t("st." + k))}</option>`).join("")}</select>${reviewFilter()}<button id="cbulk" type="button">${esc(t("rev.bulk_btn"))}</button></div><p class="small muted" id="ccount"></p><div class="tablewrap"><table><thead><tr><th>${esc(t("comp.name"))}</th><th>${esc(t("comp.version"))}</th><th>${esc(t("comp.eco"))}</th><th>${esc(t("comp.licence"))}</th><th>${esc(t("comp.cve"))}</th>${reviewHeadCells()}</tr></thead><tbody id="cbody"></tbody></table></div>`;
 }
 function wireComponents(v) {
   const body = document.getElementById("cbody"), q = document.getElementById("cq"), e = document.getElementById("ceco"), c = document.getElementById("ccount"), st = document.getElementById("cst");
   const draw = () => {
     const s = q.value.toLowerCase(), eco = e.value, sv = st.value;
-    const rows = v.components.filter(x => (!eco || x[2] === eco) && (!sv || x[6] === sv) && (!s || x.join(" ").toLowerCase().includes(s)));
+    const rows = visible = v.components.filter(x => (!eco || x[2] === eco) && (!sv || x[6] === sv) && reviewMatches(document.getElementById("cfilter").value, x) && (!s || x.join(" ").toLowerCase().includes(s)));
     c.textContent = t("comp.count", {n: rows.length, total: v.components.length}) + (rows.length > 300 ? t("comp.first") : "");
     body.innerHTML = rows.slice(0, 300).map(x => {
       const name = x[2] === "pypi" ? `<a href="https://pypi.org/project/${encodeURIComponent(x[0])}/" target="_blank" rel="noopener">${esc(x[0])} ↗</a>` : esc(x[0]);
-      return `<tr><td>${name}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[4] || "—")}</td><td class="small ${x[6] === "osv" || x[6] === "nvd" ? "ok" : x[6] === "none" ? "muted" : "no"}">${esc(t("st." + x[6]))}</td></tr>`;
+      return `<tr><td>${name}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[4] || "—")}</td><td class="small ${x[6] === "osv" || x[6] === "nvd" ? "ok" : x[6] === "none" ? "muted" : "no"}">${esc(t("st." + x[6]))}</td>${reviewCells(x)}</tr>`;
     }).join("");
+    updateStewardKpi();
   };
-  q.oninput = draw; e.onchange = draw; st.onchange = draw; draw();
+  let visible = v.components;
+  wireReview(body, draw); document.getElementById("cbulk").onclick = bulkSteward(() => visible, draw);
+  q.oninput = draw; e.onchange = draw; st.onchange = draw; document.getElementById("cfilter").onchange = draw; draw();
 }
 
 /* ---------- scanners tab: Trivy / Snyk / OSV results from the workshop kit (viewer/) vs this explorer ---------- */
@@ -426,6 +431,7 @@ function applyStatic() {
   document.getElementById("upBtn").textContent = t("nav.upload"); document.getElementById("fbBtn").textContent = "💬 " + t("fb.button");
   const wb = document.getElementById("wsBtn"); wb.textContent = t("nav.workshop");
   const wsPath = manifest?.settings?.workshop; if (wsPath) { wb.href = wsPath; wb.hidden = false; } else wb.hidden = true;
+  document.getElementById("chkBtn").textContent = "⚡ " + t("nav.check"); if (typeof refreshCisoBtn === "function") refreshCisoBtn();  // ciso.js loads after the first applyStatic()
   const sb = document.getElementById("setBtn"); sb.title = t("nav.settings"); sb.setAttribute("aria-label", t("nav.settings"));
   const tb = document.getElementById("tourBtn"); tb.title = t("nav.tour"); tb.setAttribute("aria-label", t("nav.tour"));
   document.getElementById("theme").title = t("nav.theme");
@@ -455,6 +461,8 @@ async function route(langSwitch) {
     else if (parts[0] === "upload") await uploadView();
     else if (parts[0] === "admin") await adminView();
     else if (parts[0] === "settings") settingsView(parts[1]);
+    else if (parts[0] === "check") checkView();
+    else if (parts[0] === "ciso") await cisoView(q);
     else if (parts[0] === "present" && parts[1]) await presentView(parts[1], parts[2]);
     else if (parts[0] === "report" && parts[1]) await reportView(parts[1], parts[2]);
     else { await home(q); currentTour = "home"; }
