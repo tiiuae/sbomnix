@@ -36,3 +36,28 @@ def test_reference_sbom_against_live_databases(tmp_path, monkeypatch):
         mod.main()
     assert e.value.code == 0
     assert json.loads((tmp_path / "r.json").read_text())["self_test"] == "pass"
+
+
+def test_euvd_enrich_with_stub_lookup():
+    spec = importlib.util.spec_from_file_location("euvd_enrich", ROOT / "scripts/euvd-enrich.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    calls = []
+
+    def lookup(cve):
+        calls.append(cve)
+        if cve == "CVE-2000-0002":
+            return None
+        if cve == "CVE-2000-0003":
+            raise OSError("boom")
+        return {"id": "EUVD-X", "score": "9.8", "exploited": True}
+
+    product = {"variants": {"a": {"vuln_defs": {"CVE-2000-0001": {}, "CVE-2000-0002": {}, "CVE-2000-0003": {}, "GHSA-x": {}}},
+                            "b": {"vuln_defs": {"CVE-2000-0001": {}, "CVE-2000-0009": {"euvd": {"id": "old"}}}}}}
+    added, missing, failed = mod.enrich(product, lookup=lookup)
+    assert (added, missing, failed) == (2, 1, 1)
+    assert calls.count("CVE-2000-0001") == 1  # looked up once, reused across variants
+    assert "CVE-2000-0009" not in calls and "GHSA-x" not in calls
+    assert product["variants"]["b"]["vuln_defs"]["CVE-2000-0001"]["euvd"]["id"] == "EUVD-X"
+    assert product["variants"]["a"]["vuln_defs"]["CVE-2000-0002"]["euvd"] is None
+    assert "euvd" not in product["variants"]["a"]["vuln_defs"]["CVE-2000-0003"]

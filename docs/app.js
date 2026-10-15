@@ -168,7 +168,7 @@ function compareTab(p, pid, vid, q) {
   const ids = s => [...s.keys()];
   const added = ids(B).filter(i => !A.has(i)), fixed = ids(A).filter(i => !B.has(i)), kept = ids(B).filter(i => A.has(i));
   const rank = i => -(SEV.length - SEV.indexOf(defs[i]?.sev || "unknown"));
-  const rows = (list, tag) => list.sort((a, b) => rank(a) - rank(b)).map(i => { const d = defs[i] || {}; const pk = (B.get(i) || A.get(i) || [])[0]; return `<tr><td>${esc(tag)}</td><td><a href="https://osv.dev/vulnerability/${encodeURIComponent(d.osv || i)}" target="_blank" rel="noopener">${esc(i)}</a></td><td>${pill(d.sev || "unknown")} ${d.score ?? ""}</td><td><code>${esc((pk?.purl || "").replace(/^pkg:/, ""))}</code>${pk?.fix ? `<br><span class="small ok">${esc(t("cmp.fix_ge", {v: pk.fix}))}</span>` : ""}</td><td class="small">${esc(d.summary || "")}</td></tr>`; }).join("");
+  const rows = (list, tag) => list.sort((a, b) => rank(a) - rank(b)).map(i => { const d = defs[i] || {}; const pk = (B.get(i) || A.get(i) || [])[0]; return `<tr><td>${esc(tag)}</td><td><a href="https://osv.dev/vulnerability/${encodeURIComponent(d.osv || i)}" target="_blank" rel="noopener">${esc(i)}</a>${d.euvd ? `<br><a class="badge" style="white-space:nowrap" href="https://euvd.enisa.europa.eu/vulnerability/${encodeURIComponent(d.euvd.id)}" target="_blank" rel="noopener" title="${esc(t("euvd.title"))}">${esc(d.euvd.id)}</a>${d.euvd.exploited ? ` <span class="badge no" style="white-space:nowrap">${esc(t("euvd.exploited"))}</span>` : ""}` : ""}</td><td>${pill(d.sev || "unknown")} ${d.score ?? ""}</td><td><code>${esc((pk?.purl || "").replace(/^pkg:/, ""))}</code>${pk?.fix ? `<br><span class="small ok">${esc(t("cmp.fix_ge", {v: pk.fix}))}</span>` : ""}</td><td class="small">${esc(d.summary || "")}</td></tr>`; }).join("");
   let comp = "";
   if (fv === tv) {
     if (vcmp(fver, tver) < 0) { const d = foldDiff(p.variants[fv], fver, tver); comp = `<div class="card" style="margin-top:14px"><h3>${esc(t("cmp.changes", {a: fver, b: tver}))}</h3>${diffHtml({added: d.added.map(c => [c.n, c.to]), removed: d.removed.map(c => [c.n, c.from]), changed: d.changed.map(c => [c.n, c.from, c.to])})}</div>`; }
@@ -426,6 +426,7 @@ function applyStatic() {
   document.getElementById("upBtn").textContent = t("nav.upload"); document.getElementById("fbBtn").textContent = "💬 " + t("fb.button");
   const wb = document.getElementById("wsBtn"); wb.textContent = t("nav.workshop");
   const wsPath = manifest?.settings?.workshop; if (wsPath) { wb.href = wsPath; wb.hidden = false; } else wb.hidden = true;
+  const sb = document.getElementById("setBtn"); sb.title = t("nav.settings"); sb.setAttribute("aria-label", t("nav.settings"));
   const tb = document.getElementById("tourBtn"); tb.title = t("nav.tour"); tb.setAttribute("aria-label", t("nav.tour"));
   document.getElementById("theme").title = t("nav.theme");
   document.getElementById("lang").setAttribute("aria-label", t("nav.lang"));
@@ -453,6 +454,7 @@ async function route(langSwitch) {
     else if (parts[0] === "about") aboutView();
     else if (parts[0] === "upload") await uploadView();
     else if (parts[0] === "admin") await adminView();
+    else if (parts[0] === "settings") settingsView(parts[1]);
     else if (parts[0] === "present" && parts[1]) await presentView(parts[1], parts[2]);
     else if (parts[0] === "report" && parts[1]) await reportView(parts[1], parts[2]);
     else { await home(q); currentTour = "home"; }

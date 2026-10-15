@@ -4,8 +4,11 @@
 
 /* ---------- collection server (optional) ---------- */
 let API = null;  // set when /api/health answers: {upload_needs_token, max_bytes, ...}
-const apiBase = () => (manifest?.settings?.api_base || "");
-const WORKER_URL = "https://sbom-explorer-upload.sbomcra.workers.dev";  // set to your Cloudflare Worker URL when deployed (e.g. "https://sbom-explorer-upload.worker.dev")
+/* user settings (Settings page, #/settings) live in localStorage; they override the defaults below and apply after a reload */
+const userSetting = k => { try { return (JSON.parse(localStorage.getItem("sbom-settings") || "{}")[k] || "").trim(); } catch (_) { return ""; } };
+const apiBase = () => { const b = userSetting("apiBase") || manifest?.settings?.api_base || ""; return b && !b.endsWith("/") ? b + "/" : b; };
+const DEFAULT_WORKER_URL = "https://sbom-explorer-upload.sbomcra.workers.dev";  // set to your Cloudflare Worker URL when deployed (e.g. "https://sbom-explorer-upload.worker.dev")
+const WORKER_URL = (userSetting("workerUrl") || DEFAULT_WORKER_URL).replace(/\/+$/, "");
 const apiReady = (async () => {
   try {
     const r = await fetch(apiBase() + "api/health", {cache: "no-store"});
@@ -88,7 +91,8 @@ function wireEvidence(p, v) {
     (h.cve_pairs || []).forEach(([id, key]) => { if (!seen.has(id)) seen.set(id, []); seen.get(id).push(key); });
     const doc = {bomFormat: "CycloneDX", specVersion: "1.5", version: 1,
       metadata: {timestamp: new Date().toISOString(), component: {type: "application", name: p.name, version: h.version}},
-      vulnerabilities: [...seen].map(([id, refs]) => ({id, source: {name: v.vuln_defs[id]?.src === "nvd" ? "NVD" : "OSV"},
+      vulnerabilities: [...seen].map(([id, refs]) => ({id, source: {name: v.vuln_defs[id]?.src === "nvd" ? "NVD" : v.vuln_defs[id]?.src === "euvd" ? "EUVD" : "OSV"},
+        ...(v.vuln_defs[id]?.euvd ? {references: [{id: v.vuln_defs[id].euvd.id, source: {name: "EUVD", url: `https://euvd.enisa.europa.eu/vulnerability/${v.vuln_defs[id].euvd.id}`}}]} : {}),
         analysis: {state: v.vuln_defs[id]?.vex?.state || "in_triage"}, affects: refs.map(ref => ({ref})) }))};
     downloadBlob(`${p.id}-${h.version}.vex-template.cdx.json`, JSON.stringify(doc, null, 2));
   };
