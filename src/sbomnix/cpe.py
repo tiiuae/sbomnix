@@ -24,6 +24,10 @@ _CPE_CSV_CACHE_TTL = 60 * 60 * 24
 # Keep cups on its valid cups:cups fallback to avoid Apple's unrelated version
 # scale. util-linux has no unambiguous vendor identity to override.
 _CPE_OVERRIDES = {
+    # The nixpkgs `air` package is the Go live-reload tool (air-verse/air),
+    # not Adobe AIR. The CPE dictionary only knows the Adobe product, so
+    # override to the correct vendor instead of false-matching adobe:air.
+    "air": ("a", "air-verse", "air"),
     "brave": ("a", "brave", "browser"),
     "brave-browser": ("a", "brave", "browser"),
     "cairo": ("a", "cairographics", "cairo"),
