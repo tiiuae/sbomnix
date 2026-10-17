@@ -101,3 +101,11 @@ def test_nix_to_repology_pkg_name_handles_prefixes_and_special_cases():
     assert nix_to_repology_pkg_name("ruby-rake") == "ruby:rake"
     assert nix_to_repology_pkg_name("python3") == "python"
     assert nix_to_repology_pkg_name("libtiff") == "tiff"
+
+
+def test_nix_to_repology_pkg_name_handles_php_prefix():
+    # Nix derivation names for PHP packages are prefixed with ``php`` or
+    # ``php<major><minor>`` (e.g. ``php-composer``, ``php83-composer``).
+    # They must map to the ``php:`` repology namespace like other languages.
+    assert nix_to_repology_pkg_name("php-composer") == "php:composer"
+    assert nix_to_repology_pkg_name("php83-composer") == "php:composer"
