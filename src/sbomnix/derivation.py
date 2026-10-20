@@ -329,7 +329,9 @@ class Derive:
         self.cpe = ""
         self.purl = ""
         self._refresh_purl()
-        self.urls = envVars.get("urls", "")
+        self.urls = envVars.get("urls", "") or _coerce_derivation_urls(
+            structured_env.get("urls")
+        )
 
     @classmethod
     def from_nix_derivation_info(
@@ -370,6 +372,7 @@ class Derive:
             or _derivation_output_path(outputs, "out")
             or _coerce_derivation_string(structured_attrs.get("out"))
         )
+        drv.urls = drv.urls or _coerce_derivation_urls(structured_attrs.get("urls"))
         drv._refresh_purl()
         # Experimental Nix derivation-meta exposes nixpkgs identifiers here.
         # Keep the heuristic if metadata is disabled or has no usable PURL.
@@ -459,6 +462,11 @@ def _coerce_derivation_patch_paths(value):
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str) and item]
     return []
+
+
+def _coerce_derivation_urls(value):
+    # structuredAttrs keep urls as a list, env vars as a space-separated string
+    return " ".join(_coerce_derivation_patch_paths(value))
 
 
 def _set_derivation_output_paths(drv, outputs, env_vars):
