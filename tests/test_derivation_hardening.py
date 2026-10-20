@@ -9,6 +9,8 @@ import json
 from collections import namedtuple
 from types import SimpleNamespace
 
+import pytest
+
 from common import spdx as common_spdx
 from sbomnix import cdx as sbomnix_cdx
 from sbomnix import derivation as sbomnix_derivation
@@ -103,6 +105,37 @@ def test_from_nix_derivation_info_uses_structured_attrs_for_pname_and_version():
     assert drv.out == out_path
     assert drv.outputs == [out_path]
     assert drv.purl == "pkg:nix/audit@4.1.2"
+
+
+_FETCH_URLS = [
+    "mirror://gnu/hello/hello-2.12.3.tar.gz",
+    "https://example.test/hello-2.12.3.tar.gz",
+]
+
+
+@pytest.mark.parametrize(
+    "drv_attrs",
+    [
+        {"structuredAttrs": {"urls": _FETCH_URLS}},
+        {"env": {"__json": json.dumps({"urls": _FETCH_URLS})}},
+    ],
+    ids=["structured-attrs", "env-json"],
+)
+def test_from_nix_derivation_info_reads_structured_attrs_urls(drv_attrs):
+    # nixpkgs fetchurl sets __structuredAttrs, so its urls are not plain env vars
+    drv = sbomnix_derivation.Derive.from_nix_derivation_info(
+        "/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-hello-2.12.3.tar.gz.drv",
+        {
+            "name": "hello-2.12.3.tar.gz",
+            "outputs": {"out": {"hash": "sha256-AAAA", "method": "flat"}},
+            **drv_attrs,
+        },
+    )
+
+    assert drv.urls == (
+        "mirror://gnu/hello/hello-2.12.3.tar.gz "
+        "https://example.test/hello-2.12.3.tar.gz"
+    )
 
 
 def test_from_nix_derivation_info_preserves_structured_attrs_patch_lists_for_cdx():
