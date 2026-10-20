@@ -147,15 +147,21 @@ def _drv_to_spdx_extrefs(drv):
     return extrefs
 
 
+def _spdx_download_location(urls):
+    # SPDX takes a single URL, and nix mirror:// URLs are not valid there
+    for url in urls.split():
+        if url.startswith(("http://", "https://", "ftp://")):
+            return url
+    return "NOASSERTION"
+
+
 def _drv_to_spdx_package(drv, uid=cols.STORE_PATH):
     """Convert one entry from sbomdb (drv) to an SPDX package."""
     pkg = {}
     pkg["name"] = drv.pname
     pkg["SPDXID"] = _str_to_spdxid(getattr(drv, uid))
     pkg["versionInfo"] = drv.version
-    pkg["downloadLocation"] = "NOASSERTION"
-    if drv.urls:
-        pkg["downloadLocation"] = drv.urls
+    pkg["downloadLocation"] = _spdx_download_location(drv.urls)
     if "meta_homepage" in drv._asdict() and drv.meta_homepage:
         pkg["homepage"] = drv.meta_homepage
     if "meta_description" in drv._asdict() and drv.meta_description:
