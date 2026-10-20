@@ -26,6 +26,19 @@
                 dfdiskcache = pyprev.dfdiskcache.overridePythonAttrs (old: {
                   pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "pandas" ];
                 });
+                # Backport https://github.com/NixOS/nixpkgs/pull/573108
+                # until the nixpkgs input includes the fixes from staging.
+                sqliteschema = pyprev.sqliteschema.overridePythonAttrs (old: {
+                  pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "typepy" ];
+                });
+                simplesqlite = pyprev.simplesqlite.overridePythonAttrs (old: {
+                  pythonRelaxDeps = (old.pythonRelaxDeps or [ ]) ++ [ "typepy" ];
+                });
+                # Work around sphinxHook dropping array elements until the
+                # nixpkgs input includes https://github.com/NixOS/nixpkgs/pull/573479.
+                reuse = pyprev.reuse.overridePythonAttrs (_old: {
+                  sphinxBuilders = "html man";
+                });
               })
             ];
           })
