@@ -84,7 +84,10 @@
           dependencies = build_inputs;
           pythonImportsCheck = [ "sbomnix" ];
           makeWrapperArgs = [
-            "--prefix PATH : ${lib.makeBinPath prefix_path}"
+            "--prefix"
+            "PATH"
+            ":"
+            (lib.makeBinPath prefix_path)
           ];
         };
       };
