@@ -83,25 +83,52 @@ _HELLO_HTTPS = "https://ftpmirror.gnu.org/hello/hello-2.12.tar.gz"
 )
 def test_spdx_download_location_is_the_first_http_or_ftp_url(urls, download_location):
     # nixpkgs fetchurl often lists only mirror:// URLs, which SPDX does not accept
+    package = _spdx_package(urls=urls)
+
+    assert package["downloadLocation"] == download_location
+
+
+@pytest.mark.parametrize(
+    ("meta_homepage", "homepage"),
+    [
+        ("https://www.gnu.org/software/hello/", "https://www.gnu.org/software/hello/"),
+        (
+            "https://www.gnu.org/software/hello/;https://savannah.gnu.org/projects/hello",
+            "https://www.gnu.org/software/hello/",
+        ),
+        ("https://example.test/hello;v=2", "https://example.test/hello;v=2"),
+    ],
+    ids=["single", "list", "semicolon-in-url"],
+)
+def test_spdx_homepage_is_the_first_homepage_url(meta_homepage, homepage):
+    # A nixpkgs meta.homepage list is joined with ";", but SPDX takes one URL
+    package = _spdx_package(meta_homepage=meta_homepage)
+
+    assert package["homepage"] == homepage
+
+
+def test_spdx_package_without_homepage_has_no_homepage_field():
+    assert "homepage" not in _spdx_package(meta_homepage="")
+
+
+def _spdx_package(**columns):
     target = "/nix/store/1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-hello-2.12"
+    row = {
+        "store_path": target,
+        "pname": "hello",
+        "version": "2.12",
+        "urls": "",
+        "cpe": "",
+        "purl": "",
+        **columns,
+    }
     sbomdb = SimpleNamespace(
         uuid="00000000-0000-0000-0000-000000000000",
         sbom_type="runtime_only",
-        df_sbomdb=pd.DataFrame(
-            {
-                "store_path": [target],
-                "pname": ["hello"],
-                "version": ["2.12"],
-                "urls": [urls],
-                "cpe": [""],
-                "purl": [""],
-            }
-        ),
+        df_sbomdb=pd.DataFrame({key: [value] for key, value in row.items()}),
         uid="store_path",
         target_component_ref=target,
         lookup_dependencies=lambda drv, uid: [],
     )
-
     (package,) = build_spdx_document(sbomdb)["packages"]
-
-    assert package["downloadLocation"] == download_location
+    return package

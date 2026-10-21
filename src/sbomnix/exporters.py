@@ -14,7 +14,11 @@ from common import columns as cols
 from common.log import LOG
 from common.pkgmeta import get_py_pkg_version
 from common.spdx import canonicalize_spdx_license_id
-from sbomnix.cdx import _drv_to_cdx_component, _drv_to_cdx_dependency
+from sbomnix.cdx import (
+    _drv_to_cdx_component,
+    _drv_to_cdx_dependency,
+    _split_meta_homepage,
+)
 
 _NIXPKGS_META_SOURCE_FIELDS = (
     ("nixpkgs:metadata_source_method", "method"),
@@ -162,8 +166,11 @@ def _drv_to_spdx_package(drv, uid=cols.STORE_PATH):
     pkg["SPDXID"] = _str_to_spdxid(getattr(drv, uid))
     pkg["versionInfo"] = drv.version
     pkg["downloadLocation"] = _spdx_download_location(drv.urls)
-    if "meta_homepage" in drv._asdict() and drv.meta_homepage:
-        pkg["homepage"] = drv.meta_homepage
+    if "meta_homepage" in drv._asdict():
+        # SPDX takes a single URL, and a nixpkgs meta.homepage list is joined with ";"
+        homepages = _split_meta_homepage(drv.meta_homepage)
+        if homepages:
+            pkg["homepage"] = homepages[0]
     if "meta_description" in drv._asdict() and drv.meta_description:
         pkg["summary"] = drv.meta_description
     licenses = _drv_to_spdx_license_list(drv)
