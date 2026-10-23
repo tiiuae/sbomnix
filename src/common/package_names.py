@@ -18,7 +18,7 @@ def nix_to_repology_pkg_name(nix_pkg_name):
         r"^(?:"
         r"(python)|(perl)|(emacs)|(vim)plugin|(ocaml)|"
         r"(gnome)-shell-extension|(lisp)|(ruby)|(lua)|"
-        r"(php)[0-9]*Packages|(go)|(coq)|(rust)"
+        r"(php)|(go)|(coq)|(rust)"
         r")"
         r"[0-9.]*-(.+)"
     )
