@@ -67,6 +67,7 @@
         requests-ratelimiter
         tabulate
       ];
+      devPython = pkgs.python3.withPackages (_: check_inputs ++ build_system ++ build_inputs);
     in
     {
       packages = rec {
@@ -99,11 +100,10 @@
         packages = [
           pkgs.pyright # for running pyright manually in devshell
           pkgs.ruff # for running ruff manually in devshell
-        ]
-        ++ check_inputs
-        ++ build_system
-        ++ build_inputs
-        ++ [
+          # Expose Python tools without sourcing their package build hooks.
+          # In particular, Hypothesis's setup hook exports CI=1 for builds;
+          # the devshell must preserve the caller's CI setting instead.
+          devPython
           (mkDevEntry "sbomnix" "sbomnix.main")
           (mkDevEntry "nixgraph" "nixgraph.main")
           (mkDevEntry "nix_outdated" "nixupdate.nix_outdated")
@@ -113,16 +113,15 @@
           (mkDevEntry "repology_cve" "repology.repology_cve")
           (mkDevEntry "provenance" "provenance.main")
         ];
-        # Add the repo root to PYTHONPATH, so invoking entrypoints (and them being
-        # able to find the python packages in the repo) becomes possible.
-        # `pytest.ini` already sets this for invoking `pytest`
-        # (cascading down to the processes it spawns), but this is for the developer
-        # invoking entrypoints from inside the devshell.
+        # Add the repo's src directory to PYTHONPATH so devshell entrypoints
+        # and their subprocesses can import the local Python packages.
         shellHook = ''
           ${config.pre-commit.installationScript}
           echo 1>&2 "Welcome to the development shell!"
           export PATH=${lib.makeBinPath prefix_path}:$PATH
-          export PYTHONPATH="$PYTHONPATH:$(pwd)/src"
+          # pytest's wrapper prepends the bare Python interpreter to PATH;
+          # its subprocesses also need access to the devshell's dependencies.
+          export PYTHONPATH="''${PYTHONPATH:+$PYTHONPATH:}${devPython}/${pkgs.python3.sitePackages}:$(pwd)/src"
           # https://github.com/NixOS/nix/issues/1009:
           export TMPDIR="/tmp"
         '';
