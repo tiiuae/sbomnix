@@ -17,6 +17,13 @@ def test_repology_cli_help(_run_python_script):
 
 @pytest.mark.network
 @pytest.mark.slow
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "Repology blocks non-browser clients: "
+        "https://github.com/tiiuae/sbomnix/issues/350"
+    ),
+)
 def test_repology_cli_sbom(
     _run_python_script_retry_on_repology_network_error,
     test_cdx_sbom,
