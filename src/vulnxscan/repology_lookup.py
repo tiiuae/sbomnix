@@ -17,7 +17,6 @@ from common.package_names import nix_to_repology_pkg_name
 from common.versioning import version_distance
 from repology.adapter import RepologyAdapter, RepologyQuery
 from repology.exceptions import RepologyNoMatchingPackages
-from repology.repology_cve import query_cve
 from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
 
 
@@ -94,33 +93,11 @@ def _version_similarity(row):
 
 
 class RepologyVulnerabilityLookup:
-    """Cache and query Repology/CVE data used by triage."""
+    """Cache and query Repology version data used by triage."""
 
-    def __init__(self, adapter=None, cve_query=None):
+    def __init__(self, adapter=None):
         self.adapter = RepologyAdapter() if adapter is None else adapter
-        self.cve_query = query_cve if cve_query is None else cve_query
-        self._repology_cve_dfs = {}
         self._repology_dfs = {}
-
-    def is_vulnerable(self, repo_pkg_name, pkg_version, cve_id=None):
-        """
-        Return true if given pkg version is vulnerable. If ``cve_id`` is
-        specified, return true only if pkg is affected by the given cve id.
-        """
-        LOG.debug("Finding vulnerability status for %s:%s", repo_pkg_name, pkg_version)
-        key = f"{repo_pkg_name}:{pkg_version}"
-        if key in self._repology_cve_dfs:
-            LOG.log(LOG_SPAM, "Using cached repology_cve results")
-            df = self._repology_cve_dfs[key]
-        else:
-            df = self.cve_query(str(repo_pkg_name), str(pkg_version))
-            if df is None:
-                df = pd.DataFrame()
-            df_log(df, LOG_SPAM)
-            self._repology_cve_dfs[key] = df
-        if cve_id and not df.empty:
-            df = df[df["cve"] == cve_id]
-        return not df.empty
 
     def query_repology(self, pname, match_type="pkg_exact"):
         """Return cached Repology results for a package name."""

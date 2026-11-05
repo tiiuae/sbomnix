@@ -6,6 +6,7 @@
 """Unit tests for vulnxscan triage and lookup helpers."""
 
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pandas as pd
 import pytest
@@ -14,17 +15,12 @@ from requests import HTTPError
 from common import columns as cols
 from vulnxscan.github_prs import GitHubPrLookup, GitHubUnexpectedResponse
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
-from vulnxscan.triage import classify_vulnerability, triage_vulnerabilities
+from vulnxscan.triage import triage_vulnerabilities
 
 
 class FakeRepologyLookup:
     def __init__(self):
-        self.vulnerable_checks = []
         self.query_inputs = []
-
-    def is_vulnerable(self, package, version, vuln_id=None):
-        self.vulnerable_checks.append((package, str(version), vuln_id))
-        return str(version) == "1.0.0"
 
     def query_repology_versions(self, df_vuln_pkgs):
         self.query_inputs.append(df_vuln_pkgs.copy(deep=True))
@@ -46,11 +42,7 @@ class FakeRepologyLookup:
 
 
 class FakeGitHubLookup:
-    def __init__(self):
-        self.rows = []
-
     def find_nixpkgs_prs(self, row):
-        self.rows.append(row)
         return "https://github.com/NixOS/nixpkgs/pull/1"
 
 
@@ -112,25 +104,6 @@ class FakeAdapter:
         )
 
 
-def test_classify_vulnerability_marks_fixable_nixpkgs_update():
-    lookup = FakeRepologyLookup()
-    row = SimpleNamespace(
-        vuln_id="CVE-2024-1",
-        package_repology="openssl",
-        version_local="1.0.0",
-        version_nixpkgs="1.1.0",
-        version_upstream="1.2.0",
-    )
-
-    classification = classify_vulnerability(row, repology_lookup=lookup)
-
-    assert classification == "fix_update_to_version_nixpkgs"
-    assert lookup.vulnerable_checks == [
-        ("openssl", "1.0.0", "CVE-2024-1"),
-        ("openssl", "1.1.0", "CVE-2024-1"),
-    ]
-
-
 def test_triage_vulnerabilities_groups_rows_and_adds_nixpkgs_prs():
     repology_lookup = FakeRepologyLookup()
     github_lookup = FakeGitHubLookup()
@@ -163,8 +136,35 @@ def test_triage_vulnerabilities_groups_rows_and_adds_nixpkgs_prs():
     )
 
     assert repology_lookup.query_inputs[0]["count"].tolist() == [2]
-    assert triaged["classify"].tolist() == ["fix_update_to_version_nixpkgs"]
     assert triaged["nixpkgs_pr"].tolist() == ["https://github.com/NixOS/nixpkgs/pull/1"]
+
+
+def test_github_pr_lookup_queries_vuln_id_and_skips_whitelisted_rows():
+    lookup = GitHubPrLookup(session=SimpleNamespace())
+    pr_url = "https://github.com/NixOS/nixpkgs/pull"
+    lookup.query = Mock(
+        side_effect=[
+            {"items": [{"html_url": f"{pr_url}/{number}"} for number in numbers]}
+            for numbers in ((3, 2), (2, 1))
+        ]
+    )
+    row = SimpleNamespace(
+        vuln_id="CVE-2024-1",
+        package="openssl",
+        version_nixpkgs="1.1.0",
+        version_upstream="1.2.0",
+        classify="",
+        whitelist=False,
+    )
+
+    assert lookup.find_nixpkgs_prs(row) == f"{pr_url}/1 \n{pr_url}/2 \n{pr_url}/3"
+    assert [call.args[0] for call in lookup.query.call_args_list] == [
+        "repo:NixOS/nixpkgs is:pr is:unmerged is:open CVE-2024-1",
+        "repo:NixOS/nixpkgs is:pr is:merged CVE-2024-1",
+    ]
+    row.whitelist = True
+    assert lookup.find_nixpkgs_prs(row) == ""
+    assert lookup.query.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -178,7 +178,7 @@ def test_triage_vulnerabilities_groups_rows_and_adds_nixpkgs_prs():
 def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(
     fail_after, github_error, caplog
 ):
-    """Retain the completed repology triage when github enrichment fails."""
+    """Retain the Repology version hints when GitHub enrichment fails."""
     repology_lookup = TwoRowRepologyLookup()
     github_lookup = FailingGitHubLookup(github_error, fail_after=fail_after)
     df_report = pd.DataFrame(
@@ -201,8 +201,9 @@ def test_triage_vulnerabilities_keeps_repology_result_when_github_fails(
         github_lookup=github_lookup,
     )
 
-    assert triaged["classify"].tolist() == ["fix_update_to_version_nixpkgs"] * 2
+    assert triaged["classify"].tolist() == [""] * 2
     assert triaged["version_nixpkgs"].tolist() == ["1.1.0"] * 2
+    assert triaged["version_upstream"].tolist() == ["1.2.0"] * 2
     assert triaged[cols.NIXPKGS_PR].tolist() == ["", ""]
     assert github_lookup.calls == fail_after + 1
     assert str(github_error) in caplog.text
@@ -229,53 +230,9 @@ def test_github_pr_lookup_rejects_malformed_response(response_text):
         lookup.query("CVE-2024-1")
 
 
-def test_github_pr_lookup_queries_vuln_and_version_matches():
-    queries = []
-    lookup = GitHubPrLookup(
-        session=SimpleNamespace(get=None), sleeper=lambda _delay: None
-    )
-
-    def fake_query(query_str, delay=60):
-        queries.append((query_str, delay))
-        return {
-            "total_count": 1,
-            "items": [
-                {"html_url": f"https://github.com/NixOS/nixpkgs/pull/{len(queries)}"}
-            ],
-        }
-
-    lookup.query = fake_query
-    row = SimpleNamespace(
-        vuln_id="CVE-2024-1",
-        classify="fix_update_to_version_nixpkgs",
-        version_nixpkgs="1.2.3",
-        version_upstream="",
-        package="openssl",
-        whitelist=False,
-    )
-
-    prs = lookup.find_nixpkgs_prs(row)
-
-    assert queries == [
-        ("repo:NixOS/nixpkgs is:pr is:unmerged is:open CVE-2024-1", 60),
-        ("repo:NixOS/nixpkgs is:pr is:merged CVE-2024-1", 60),
-        (
-            "repo:NixOS/nixpkgs is:pr is:unmerged is:open openssl in:title 1.2.3 in:title",
-            60,
-        ),
-        ("repo:NixOS/nixpkgs is:pr is:merged openssl in:title 1.2.3 in:title", 60),
-    ]
-    assert prs == (
-        "https://github.com/NixOS/nixpkgs/pull/1 \n"
-        "https://github.com/NixOS/nixpkgs/pull/2 \n"
-        "https://github.com/NixOS/nixpkgs/pull/3 \n"
-        "https://github.com/NixOS/nixpkgs/pull/4"
-    )
-
-
 def test_query_repology_versions_prefers_exact_version_match():
     adapter = FakeAdapter()
-    lookup = RepologyVulnerabilityLookup(adapter=adapter, cve_query=lambda *_args: None)
+    lookup = RepologyVulnerabilityLookup(adapter=adapter)
     df_vuln_pkgs = pd.DataFrame(
         [
             {
@@ -313,10 +270,7 @@ def test_query_repology_versions_preserves_evidence_columns_without_match():
         def query(self, _repology_query):
             return None
 
-    lookup = RepologyVulnerabilityLookup(
-        adapter=EmptyAdapter(),
-        cve_query=lambda *_args: None,
-    )
+    lookup = RepologyVulnerabilityLookup(adapter=EmptyAdapter())
     df_vuln_pkgs = pd.DataFrame(
         [
             {
@@ -367,10 +321,7 @@ def test_query_repology_versions_repeats_evidence_on_every_candidate_row():
                 ]
             )
 
-    lookup = RepologyVulnerabilityLookup(
-        adapter=TwoCandidateAdapter(),
-        cve_query=lambda *_args: None,
-    )
+    lookup = RepologyVulnerabilityLookup(adapter=TwoCandidateAdapter())
     df_vuln_pkgs = pd.DataFrame(
         [
             {
@@ -403,10 +354,7 @@ def test_query_repology_versions_repeats_evidence_on_every_candidate_row():
 
 
 def test_query_repology_rejects_unknown_match_type():
-    lookup = RepologyVulnerabilityLookup(
-        adapter=FakeAdapter(),
-        cve_query=lambda *_args: None,
-    )
+    lookup = RepologyVulnerabilityLookup(adapter=FakeAdapter())
 
     with pytest.raises(ValueError, match="Unknown match_type: 'bad'"):
         lookup.query_repology("openssl", match_type="bad")

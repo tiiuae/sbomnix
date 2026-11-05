@@ -159,11 +159,15 @@ class VulnScan:
             self._apply_whitelist(args.whitelist)
         if args.triage:
             LOG.verbose("Running vulnerability triage")
+            self.evidence_document[TRIAGE_STATUS] = TRIAGE_STATUS_UNAVAILABLE
+            LOG.warning(
+                "Triage classification is disabled; the 'classify' column is "
+                "left empty. See https://github.com/tiiuae/sbomnix/issues/350"
+            )
             try:
                 self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
             except (RequestException, RepologyError) as error:
                 self.df_triaged = unavailable_triage_report(self.df_report, args.nixprs)
-                self.evidence_document[TRIAGE_STATUS] = TRIAGE_STATUS_UNAVAILABLE
                 LOG.warning(
                     "Failed running triage: fix availability not included: %s", error
                 )

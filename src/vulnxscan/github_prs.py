@@ -95,29 +95,14 @@ class GitHubPrLookup:
         return resp_json
 
     def find_nixpkgs_prs(self, row):
-        """Return likely nixpkgs PR URLs for a vulnerable package row."""
+        """Return nixpkgs PR URLs found by vulnerability ID."""
         if hasattr(row, "whitelist") and row.whitelist:
             LOG.log(LOG_SPAM, "Whitelisted, skipping PR query: %s", row)
             return ""
         nixpr = "repo:NixOS/nixpkgs is:pr"
         unmerged = "is:unmerged is:open"
         merged = "is:merged"
-        version = None
         result = set()
         append_search_results(self.query(f"{nixpr} {unmerged} {row.vuln_id}"), result)
         append_search_results(self.query(f"{nixpr} {merged} {row.vuln_id}"), result)
-        if row.classify == "fix_update_to_version_nixpkgs":
-            version = row.version_nixpkgs
-        elif row.classify == "fix_update_to_version_upstream":
-            version = row.version_upstream
-        if version:
-            pkg = row.package
-            append_search_results(
-                self.query(f"{nixpr} {unmerged} {pkg} in:title {version} in:title"),
-                result,
-            )
-            append_search_results(
-                self.query(f"{nixpr} {merged} {pkg} in:title {version} in:title"),
-                result,
-            )
         return " \n".join(sorted(result))
