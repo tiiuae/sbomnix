@@ -99,7 +99,7 @@ def test_vulnxscan_triage(_run_python_script, test_nix_result, test_work_dir):
         f"{_SYNTHETIC_CVE} not found in triage output"
     )
     evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
-    assert TRIAGE_STATUS not in evidence
+    assert evidence[TRIAGE_STATUS] == "unavailable"
 
 
 @pytest.mark.network

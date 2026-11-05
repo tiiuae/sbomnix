@@ -102,8 +102,8 @@ flowchart TB
     filtering -->|all findings plus annotations| csv["vulns.csv"]
     filtering -->|active findings only| sarif["vulns.sarif"]
 
-    repology["Repology API"] -. optional .-> triage["Version and fix triage"]
-    nixprs["GitHub Nixpkgs PR search"] -. optional .-> triage
+    repology["Repology version lookup"] -. optional .-> triage["Version hints<br/>classification disabled"]
+    nixprs["GitHub Nixpkgs PR search<br/>vulnerability ID only"] -. optional .-> triage
     filtering -.-> triage
     triage -.-> triagecsv["vulns.triage.csv"]
     triage -. enriches .-> sarif
@@ -336,18 +336,29 @@ The above example `manual_analysis.csv` includes two rules: one for `CVE-2022-08
 See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/main/.github/flakevuln/manual_analysis.csv) for a more complete example and usage of non-whitelisting rules to help manual analysis.
 
 ### Triage to Help Manual Analysis
-`vulnxscan` can be used to help manual analysis with `--triage` and `--nixprs` command line options.
 
-With command line option `--triage`, `vulnxscan` queries repology.org for nix-unstable and package upstream version information, as well as the CVE impacted versions. With the additional information from repology.org, `vulnxscan` classifies each vulnerability accordingly.
+`vulnxscan` can help manual analysis with the `--triage` and `--nixprs`
+command line options.
+
+With `--triage`, `vulnxscan` still queries repology.org for nix-unstable and
+package upstream version hints in `version_nixpkgs` and `version_upstream`.
+Classification is disabled because Repology CVE data cannot reliably establish
+whether a package is affected. No Repology CVE requests are made, and the
+`classify` column is retained but left empty for every row. Repology also
+blocks non-browser clients, so version lookups may fail. See
+[issue #350](https://github.com/tiiuae/sbomnix/issues/350).
+
+Whenever triage runs on findings, `--evidence-out` records
+`"triage_status": "unavailable"`, even if version lookups succeed. A scan with
+no findings returns before triage and does not include `triage_status`.
 
 If Repology cannot be reached, the scan still writes its main CSV or SARIF and
 a supplemental triage CSV. The fallback triage rows retain whitelist and
 component-evidence fields, while `package_repology`, `version_nixpkgs`,
-`version_upstream`, and `classify` are empty. When `--evidence-out` is used, its
-document also contains `"triage_status": "unavailable"` so automation can
-distinguish degraded enrichment from an empty or malformed triage report.
+`version_upstream`, and `classify` are empty.
 
-Consider the following example, using [ghaf](https://github.com/tiiuae/ghaf) as target:
+The abbreviated example below uses [ghaf](https://github.com/tiiuae/ghaf) as
+the target and illustrates successful version lookups with historical values.
 
 ```bash
 # Run vulnxscan:
@@ -369,21 +380,12 @@ INFO     CVE-2023-2617 for 'opencv' is patched with: ['/nix/store/vw29nr5nrfs10v
 
 Potential vulnerabilities impacting version_local:
 
-| vuln_id             | package    | severity | version_local | version_nixpkgs | version_upstream | classify                             |
-|---------------------+------------+----------+---------------+-----------------+------------------+--------------------------------------|
-| CVE-2023-40360      | qemu       | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            | fix_update_to_version_nixpkgs        |
-| CVE-2023-40359      | xterm      | 9.8      | 379           | 384             | 384              | fix_update_to_version_nixpkgs        |
-| CVE-2023-39742      | giflib     | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            | fix_not_available                    |
-| CVE-2023-39533      | go         | 7.5      | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs        |
-| CVE-2023-38858      | faad2      | 6.5      | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available                    |
-| CVE-2023-38857      | faad2      | 5.5      | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available                    |
-| CVE-2023-38633      | librsvg    | 5.5      | 2.55.1        | 2.56.3          | 2.56.3           | fix_update_to_version_nixpkgs        |
-| CVE-2023-37769      | pixman     | 6.5      | 0.42.2        | 0.42.2          | 0.42.2           | err_not_vulnerable_based_on_repology |
-| CVE-2023-31484      | perl       | 8.1      | 5.36.0-env    | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs        |
-| CVE-2023-31484      | perl       | 8.1      | 5.36.0        | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs        |
-| CVE-2023-30571      | libarchive | 5.3      | 3.6.2         | 3.6.2           | 3.7.1            | fix_update_to_version_upstream       |
-| CVE-2023-29409      | go         | 5.3      | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs        |
-| CVE-2023-29383      | shadow     | 3.3      | 4.13          | 4.13            | 4.14.0           | fix_update_to_version_upstream       |
+| vuln_id        | package | severity | version_local | version_nixpkgs | version_upstream | classify |
+|----------------+---------+----------+---------------+-----------------+------------------+----------|
+| CVE-2023-40360 | qemu    | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            |          |
+| CVE-2023-40359 | xterm   | 9.8      | 379           | 384             | 384              |          |
+| CVE-2023-39742 | giflib  | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            |          |
+| CVE-2023-37769 | pixman  | 6.5      | 0.42.2        | 0.42.2          | 0.42.2           |          |
 
 ... (output truncated) ...
 
@@ -391,19 +393,22 @@ INFO     Wrote: /home/hrosten/projects/sbomnix-fork/vulns.csv
 INFO     Wrote: /home/hrosten/projects/sbomnix-fork/vulns.triage.csv
 ```
 
-As an example, the output table states the following:
-- Package `qemu` 8.0.2, which is a dependency to ghaf, is potentially vulnerable to CVE-2023-40360.
-- Based on repology.org, `qemu` newest version in nix-unstable is 8.0.4. Also, based on repology.org, latest `qemu` version in the `qemu` upstream is 8.1.0.
-- Since both `qemu` 8.0.2 and 8.0.4 are vulnerable to CVE-2023-40360, but the upstream version 8.1.0 is not vulnerable, `vulnxscan` classifies the issue as `fix_update_to_version_upstream`.
-- Package `xterm` version 379 is potentially vulnerable to CVE-2023-40359. Latest version of `xterm` in nix-unstable is 384, which is not vulnerable to CVE-2023-40359. Therefore, `vulnxscan` classifies the issue as `fix_update_to_version_nixpkgs`.
-- Package `giflib` version 5.2.1 is potentially vulnerable to CVE-2023-39742. Since there's no known fixed version available in nix-unstable or the package upstream, `vulnxscan` classifies the issue as `fix_not_available`. Notice that the classification is based only on the version numbers. Indeed, it's still possible that there's an upstream patch available in an unreleased version of `giflib` that would fix the issue.
-- Package `pixman` version 0.42.2 is potentially vulnerable to CVE-2023-37769. However, based on repology.org, the vulnerability [does not impact](https://repology.org/project/pixman/cves?version=0.42.2) the given version of `pixman`. Therefore, `vulnxscan` classifies the issue as `err_not_vulnerable_based_on_repology`.
+For example, the table reports `qemu` 8.0.2 as potentially vulnerable to
+CVE-2023-40360 and shows 8.1.0 as the nix-unstable and upstream version hints.
+Those hints do not establish whether a newer version fixes the vulnerability.
+The same applies when no newer version is listed, as with `giflib` and
+`pixman`. Manual analysis is still required.
 
 ##### Nixpkgs PR Search
 
-With command line option `--nixprs`, `vulnxscan` queries github for nixpkgs PRs that might include more information concerning possible nixpkgs fixes for the found vulnerabilities. `--nixprs` adds URLs to (at most five) PRs that appear valid for each vulnerability based on heuristic. The PR search takes significant time due to github API rate limits, which is why it is not enabled by default.
+With `--triage --nixprs`, `vulnxscan` queries GitHub for nixpkgs PRs by
+vulnerability ID only. Each non-whitelisted row gets two searches, one for
+open unmerged PRs and one for merged PRs. The `nixpkgs_pr` column lists at most
+five matching PR URLs per row to help manual analysis. The PR search takes
+significant time due to GitHub API rate limits and is not enabled by default.
 
-Consider the following example, using the same Ghaf target as earlier:
+The following abbreviated example uses the same Ghaf target and historical
+version hints and PR links:
 
 ```bash
 # Run vulnscan with --triage and --nixprs
@@ -413,29 +418,15 @@ INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
 Potential vulnerabilities impacting version_local:
 
 
-| vuln_id        | package    | severity   | version_local | version_nixpkgs | version_upstream | classify                      | nixpkgs_pr                                    |
-|----------------+------------+------------+---------------+-----------------+------------------+-------------------------------+-----------------------------------------------|
-| CVE-2023-40360 | qemu       | 5.5        | 8.0.2         | 8.1.0           | 8.1.0            | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/251154  |
-| CVE-2023-40359 | xterm      | 9.8        | 379           | 384             | 384              | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/244141  |
-| CVE-2023-39742 | giflib     | 5.5        | 5.2.1         | 5.2.1           | 5.2.1            | fix_not_available             |                                               |
-| CVE-2023-39533 | go         | 7.5        | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/253738  |
-| CVE-2023-38858 | faad2      | 6.5        | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available             |                                               |
-| CVE-2023-38857 | faad2      | 5.5        | 2.10.1        | 2.10.1          | 2.10.1           | fix_not_available             |                                               |
-| CVE-2023-38633 | librsvg    | 5.5        | 2.55.1        | 2.56.3          | 2.56.3           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/246763  |
-|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/246860  |
-| CVE-2023-37769 | pixman     | 6.5        | 0.42.2        | 0.42.2          | 0.42.2           | err_not_vulnerable_based_on_re|                                               |
-| CVE-2023-31484 | perl       | 8.1        | 5.36.0-env    | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/241848  |
-|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/247547  |
-| CVE-2023-31484 | perl       | 8.1        | 5.36.0        | 5.38.0          | 5.38.0           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/241848  |
-|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/247547  |
-| CVE-2023-30571 | libarchive | 5.3        | 3.6.2         | 3.6.2           | 3.7.1            | fix_update_to_version_upstream|                                               |
-| CVE-2023-29409 | go         | 5.3        | 1.20.6        | 1.21.1          | 1.21.1           | fix_update_to_version_nixpkgs | https://github.com/NixOS/nixpkgs/pull/247034  |
-|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/253738  |
-| CVE-2023-29383 | shadow     | 3.3        | 4.13          | 4.13            | 4.14.0           | fix_update_to_version_upstream| https://github.com/NixOS/nixpkgs/pull/233924  |
-|                |            |            |               |                 |                  |                               | https://github.com/NixOS/nixpkgs/pull/254143  |
+| vuln_id        | package | severity | version_local | version_nixpkgs | version_upstream | classify | nixpkgs_pr                                   |
+|----------------+---------+----------+---------------+-----------------+------------------+----------+----------------------------------------------|
+| CVE-2023-40360 | qemu    | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            |          | https://github.com/NixOS/nixpkgs/pull/251154 |
+| CVE-2023-40359 | xterm   | 9.8      | 379           | 384             | 384              |          | https://github.com/NixOS/nixpkgs/pull/244141 |
+| CVE-2023-39742 | giflib  | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            |          |                                              |
 ```
 
-`vulnxscan` option `--nixprs` adds the column `nixpkgs_pr` to the output, to help manual analysis by listing PRs that appear relevant for the given issue.
+`--nixprs` has no effect without `--triage`. PR links are candidates for
+manual review and do not establish that a vulnerability is fixed.
 
 ### SARIF Output
 
@@ -513,7 +504,13 @@ steps:
 
 Replace `flake.nix` with a more precise repository-relative provenance file when available. If no truthful file exists, omit `--sarif-location`; the result remains valid generic SARIF, but GitHub Code Scanning will not display its location-free results. Upload and authentication remain the CI platform's responsibility; `vulnxscan` performs no GitHub API calls and requires no GitHub environment variables.
 
-When `--triage` is combined with SARIF, the main output is SARIF and the existing supplemental triage report remains CSV at `<stem>.triage.csv`. With `--nixprs`, matching Nixpkgs pull requests also appear as package-specific work-item links on each result and as labeled links in GitHub's rule-help panel.
+When `--triage` is combined with SARIF, the main output is SARIF and the
+supplemental triage report remains CSV at `<stem>.triage.csv`. Version hints
+remain available when lookups succeed, but `classify` is always empty. When
+triage runs, the evidence document records `"triage_status": "unavailable"`.
+With `--nixprs`, Nixpkgs pull requests found by vulnerability ID also appear
+as package-specific work-item links on each result and as labeled links in
+GitHub's rule-help panel.
 
 ### Component Patch Evidence
 
@@ -560,8 +557,11 @@ The document is written atomically and validated first, so a partial or internal
 }
 ```
 
-When requested triage enrichment is unavailable, the document additionally
-contains the optional top-level field `"triage_status": "unavailable"`.
+Whenever `--triage` runs on findings, the document additionally contains the
+top-level field `"triage_status": "unavailable"` because classification is
+disabled ([issue #350](https://github.com/tiiuae/sbomnix/issues/350)). This is
+set even when version lookups succeed. Scans with no findings return before
+triage and omit this field.
 
 - `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Optional `description`, `fix_state`, and `fix_versions` fields retain scanner metadata when available. Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
 - `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.

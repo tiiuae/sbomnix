@@ -11,7 +11,6 @@ from requests import RequestException
 from common import columns as cols
 from common.df import df_log
 from common.log import LOG, LOG_SPAM
-from common.versioning import parse_version
 from vulnxscan.evidence import EVIDENCE_REPORT_COLUMNS
 from vulnxscan.github_prs import GitHubPrLookup, GitHubUnexpectedResponse
 from vulnxscan.repology_lookup import RepologyVulnerabilityLookup
@@ -32,37 +31,6 @@ def _get_default_github_lookup():
     if _DEFAULT_GITHUB_PR_LOOKUP is None:
         _DEFAULT_GITHUB_PR_LOOKUP = GitHubPrLookup()
     return _DEFAULT_GITHUB_PR_LOOKUP
-
-
-def classify_vulnerability(row, repology_lookup=None):  # noqa: PLR0911
-    """Classify a vulnerable package row using Repology/CVE data."""
-    repology_lookup = (
-        _get_default_repology_lookup() if repology_lookup is None else repology_lookup
-    )
-    if not row.version_nixpkgs and not row.version_upstream:
-        return "err_missing_repology_version"
-    if row.version_local and not repology_lookup.is_vulnerable(
-        row.package_repology, row.version_local, row.vuln_id
-    ):
-        return "err_not_vulnerable_based_on_repology"
-    version_local = parse_version(row.version_local)
-    version_nixpkgs = parse_version(row.version_nixpkgs)
-    if not version_local or not version_nixpkgs:
-        return "err_invalid_version"
-    if row.version_nixpkgs and version_local < version_nixpkgs:
-        if not repology_lookup.is_vulnerable(
-            row.package_repology, row.version_nixpkgs, row.vuln_id
-        ):
-            return "fix_update_to_version_nixpkgs"
-    version_upstream = parse_version(row.version_upstream)
-    if not version_upstream:
-        return "err_invalid_version"
-    if row.version_upstream and version_local < version_upstream:
-        if not repology_lookup.is_vulnerable(
-            row.package_repology, version_upstream, row.vuln_id
-        ):
-            return "fix_update_to_version_upstream"
-    return "fix_not_available"
 
 
 def unavailable_triage_report(df_report, search_nix_prs):
@@ -103,7 +71,7 @@ def triage_vulnerabilities(
     repology_lookup=None,
     github_lookup=None,
 ):
-    """Enrich and classify a vulnerability report."""
+    """Enrich a vulnerability report with version hints and optional PRs."""
     repology_lookup = (
         _get_default_repology_lookup() if repology_lookup is None else repology_lookup
     )
@@ -134,10 +102,7 @@ def triage_vulnerabilities(
     df_vuln_pkgs = repology_lookup.query_repology_versions(df_vuln_pkgs)
     LOG.debug("Vulnerable pkgs with repology version info: %s", df_vuln_pkgs.shape[0])
     df_log(df_vuln_pkgs, LOG_SPAM)
-    df_vuln_pkgs[cols.CLASSIFY] = df_vuln_pkgs.apply(
-        lambda row: classify_vulnerability(row, repology_lookup=repology_lookup),
-        axis=1,
-    )
+    df_vuln_pkgs[cols.CLASSIFY] = ""
     if search_nix_prs:
         LOG.verbose("Querying nixpkgs github PRs")
         try:
@@ -146,8 +111,8 @@ def triage_vulnerabilities(
                 axis=1,
             )
         except (RequestException, GitHubUnexpectedResponse) as error:
-            # Repology classification is already complete; keep it. Emptied
-            # for every row, since a partial column reads as "no PRs found".
+            # Keep the Repology version hints. Empty PRs for every row,
+            # since a partial column reads as "no PRs found".
             df_vuln_pkgs[cols.NIXPKGS_PR] = ""
             LOG.warning(
                 "Failed querying nixpkgs github PRs: column left empty: %s", error

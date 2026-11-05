@@ -793,12 +793,13 @@ def test_json_transport_columns_round_trip_paths_with_whitespace(tmp_path):
     assert component["matching_patch_paths"] == [spaced_patch]
 
 
-def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path):
+@pytest.mark.parametrize("triage", [False, True])
+def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path, triage):
     """A clean scan still produces a valid, empty, requested evidence file."""
     out = tmp_path / "vulns.csv"
     evidence_out = tmp_path / "evidence.json"
     args = SimpleNamespace(
-        out=out, evidence_out=evidence_out, whitelist=None, triage=False
+        out=out, evidence_out=evidence_out, whitelist=None, triage=triage
     )
 
     VulnScan().report(args, sbom_csv=None)
@@ -807,6 +808,37 @@ def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path):
         empty_evidence_document()
     )
     assert not out.exists()
+
+
+def test_triage_version_success_writes_unavailable_evidence_status(
+    tmp_path, monkeypatch, caplog
+):
+    """Successful version lookups still leave classification unavailable."""
+    out = tmp_path / "vulns.csv"
+    evidence_out = tmp_path / "evidence.json"
+    args = SimpleNamespace(
+        out=out, evidence_out=evidence_out, whitelist=None, triage=True, nixprs=False
+    )
+    scanner = VulnScan()
+    scanner.df_grype = _scanner_df()
+
+    def query_versions(df_report):
+        return df_report.rename(columns={cols.VERSION: cols.VERSION_LOCAL})
+
+    monkeypatch.setattr(
+        "vulnxscan.triage._get_default_repology_lookup",
+        lambda: SimpleNamespace(query_repology_versions=query_versions),
+    )
+    monkeypatch.setattr("vulnxscan.triage._get_default_github_lookup", SimpleNamespace)
+
+    with caplog.at_level("WARNING"):
+        scanner.report(args, sbom_csv=None)
+
+    assert out.exists()
+    evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
+    assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
+    assert len(caplog.records) == 1
+    assert "https://github.com/tiiuae/sbomnix/issues/350" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -878,6 +910,7 @@ def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
             column: finding[column] for column in EVIDENCE_REPORT_COLUMNS
         }
     assert str(triage_error) in caplog.text
+    assert "Failed running triage" in caplog.text
 
 
 def test_component_evidence_malformed_patch_json_is_metadata_unavailable(tmp_path):
