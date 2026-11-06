@@ -105,3 +105,60 @@ def test_query_cve_rejects_malformed_html():
 )
 def test_is_affected_handles_open_ended_ranges(version, affected, expected):
     assert is_affected(version, affected) is expected
+
+
+@pytest.mark.parametrize(
+    ("version", "affected", "expected"),
+    [
+        ("0.9.8a", "(-∞, 0.9.8zh)", True),
+        ("0.9.8zh", "(-∞, 0.9.8zh)", False),
+        ("0.9.8z", "(-∞, 0.9.8zh)", True),
+        ("0.9.8", "(-∞, 0.9.8a]", True),
+        ("0.9.8b", "(-∞, 0.9.8a]", False),
+        ("1.0.1h", "[1.0.1, 1.0.1g]", False),
+        ("1.0.1", "(1.0.1, 1.0.1g]", False),
+        ("1.0.1c", "(1.0.1, 1.0.1g]", True),
+        ("1.0.1g", "1.0.1g", True),
+        ("1.0.1h", "1.0.1g", False),
+    ],
+)
+def test_is_affected_compares_letter_suffixes(version, affected, expected):
+    assert is_affected(version, affected) is expected
+
+
+@pytest.mark.parametrize(
+    ("version", "affected"),
+    [
+        ("3.0.0-rc1", "(-∞, 1.0.2)"),
+        ("3.0.0beta1", "(-∞, 1.0.2)"),
+        ("1.0.2", "(-∞, 3.0.0-alpha1]"),
+        ("2024-01-15", "(-∞, 1.0.2)"),
+        ("1.0.2", "[foo, bar)"),
+    ],
+)
+def test_is_affected_assumes_affected_when_not_comparable(version, affected):
+    assert is_affected(version, affected) is True
+
+
+def test_query_cve_keeps_letter_suffix_cves():
+    url = "https://repology.org/project/openssl/cves?version=0.9.8a"
+    html = """
+    <table>
+      <thead><tr><th>CVE ID</th><th>Affected version(s)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>CVE-2015-3195</td>
+          <td><span class="version version-outdated">(-∞, 0.9.8zh)</span></td>
+        </tr>
+        <tr>
+          <td>CVE-2016-2105</td>
+          <td><span class="version version-outdated">[1.0.1, 1.0.1t)</span></td>
+        </tr>
+      </tbody>
+    </table>
+    """
+    session = MappingSession({url: FakeResponse(html)})
+
+    df = query_cve("openssl", "0.9.8a", session=session)
+
+    assert list(df["cve"]) == ["CVE-2015-3195"]
