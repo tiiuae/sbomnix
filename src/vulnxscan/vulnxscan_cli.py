@@ -87,6 +87,8 @@ def getargs(args=None):
         "Add more information to vulnxscan output by querying "
         "repology.org for available package versions in nix-unstable and "
         "package upstream. This option is intended to help manual analysis. "
+        "Classification is disabled and the 'classify' column is left empty "
+        "(https://github.com/tiiuae/sbomnix/issues/350). "
         "Output is written to a separate OUT file with 'triage' infix, "
         "by default: 'vulns.triage.csv'."
     )
@@ -99,7 +101,7 @@ def getargs(args=None):
     triagegr = parser.add_argument_group("Other arguments")
     helps = (
         "Search nixpkgs github for PRs that might include more information "
-        "concerning possible nixpkgs fixes for the found vulnerabilities. "
+        "concerning possible nixpkgs fixes, searching by vulnerability ID only. "
         "This option adds URLs to (at most five) PRs that appear valid "
         "for each vulnerability based on heuristic. "
         "The PR search takes significant "
