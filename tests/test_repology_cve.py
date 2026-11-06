@@ -7,6 +7,7 @@
 
 import pytest
 
+from repology.cves import is_affected
 from repology.exceptions import RepologyUnexpectedResponse
 from repology.repology_cve import query_cve
 from repology.session import REPOLOGY_REQUEST_TIMEOUT
@@ -89,3 +90,18 @@ def test_query_cve_rejects_malformed_html():
         query_cve("openssl", "3.1.0", session=session)
 
     assert session.calls == [(url, REPOLOGY_REQUEST_TIMEOUT)]
+
+
+@pytest.mark.parametrize(
+    ("version", "affected", "expected"),
+    [
+        ("0.9.8a", "(-∞, 0.9.8g]", True),
+        ("0.9.8g", "(-∞, 0.9.8g]", True),
+        ("3.1.0", "(-∞, 0.9.8g]", False),
+        ("1.0.2", "(-∞, 1.0.2)", False),
+        ("2.0", "[1.0, +∞)", True),
+        ("0.5", "[1.0, +∞)", False),
+    ],
+)
+def test_is_affected_handles_open_ended_ranges(version, affected, expected):
+    assert is_affected(version, affected) is expected

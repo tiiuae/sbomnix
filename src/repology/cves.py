@@ -26,6 +26,12 @@ def _raise_unexpected_response(log, error=None) -> NoReturn:
     raise repology.exceptions.RepologyUnexpectedResponse(detail) from error
 
 
+def _is_unbounded(range_ver):
+    # Repology writes open-ended ranges with an infinity endpoint,
+    # e.g. "(-∞, 1.0.2)"
+    return range_ver.strip() in {"-∞", "+∞", "∞"}
+
+
 def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
     """
     Return True if version number is included in the repology affected version
@@ -49,23 +55,23 @@ def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
             log.fatal("Unexpected version group: %s", affected_ver_str)
             raise repology.exceptions.RepologyUnexpectedResponse
         beg_ind = impacted_group[0]
-        beg_ver_parsed = parse_version(impacted_group[1])
-        if not beg_ver_parsed:
-            return True
+        beg_affected = _is_unbounded(impacted_group[1])
+        if not beg_affected:
+            beg_ver_parsed = parse_version(impacted_group[1])
+            if not beg_ver_parsed:
+                return True
+            beg_affected = (version_local > beg_ver_parsed) or (
+                version_local == beg_ver_parsed and beg_ind == "["
+            )
         end_ind = impacted_group[3]
-        end_ver_parsed = parse_version(impacted_group[2])
-        if not end_ver_parsed:
-            return True
-        beg_affected = False
-        end_affected = False
-        if (version_local > beg_ver_parsed) or (
-            version_local == beg_ver_parsed and beg_ind == "["
-        ):
-            beg_affected = True
-        if (version_local < end_ver_parsed) or (
-            version_local == end_ver_parsed and end_ind == "]"
-        ):
-            end_affected = True
+        end_affected = _is_unbounded(impacted_group[2])
+        if not end_affected:
+            end_ver_parsed = parse_version(impacted_group[2])
+            if not end_ver_parsed:
+                return True
+            end_affected = (version_local < end_ver_parsed) or (
+                version_local == end_ver_parsed and end_ind == "]"
+            )
         if beg_affected and end_affected:
             return True
     ver_one = r"(?<= )(?<!\()(?P<version>\d[^ $)]+)(?= )"
