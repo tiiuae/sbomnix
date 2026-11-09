@@ -17,7 +17,8 @@ from sbomnix.dfcache import LockedDfCache
 
 ###############################################################################
 
-_CPE_CSV_URL = "https://github.com/tiiuae/cpedict/raw/main/data/cpes.csv"
+# Avoid the github.com redirect, which can fail independently of the file host.
+_CPE_CSV_URL = "https://raw.githubusercontent.com/tiiuae/cpedict/main/data/cpes.csv"
 # Update local cached version of _CPE_CSV_URL once a day or when local cache
 # is cleaned:
 _CPE_CSV_CACHE_TTL = 60 * 60 * 24
