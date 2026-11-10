@@ -8,6 +8,7 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pandas as pd
 import pytest
@@ -33,6 +34,7 @@ from vulnxscan.reporting import (
     write_reports,
 )
 from vulnxscan.vulnscan import VulnScan
+from vulnxscan.vulnxscan_cli import getargs
 
 
 def test_parse_vulnix_json_updates_cvss_cache():
@@ -813,28 +815,38 @@ def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path, triage):
 def test_triage_version_success_writes_unavailable_evidence_status(
     tmp_path, monkeypatch, caplog
 ):
-    """Successful version lookups still leave classification unavailable."""
+    """Successful version lookups leave classification unavailable and keep PRs."""
     out = tmp_path / "vulns.csv"
     evidence_out = tmp_path / "evidence.json"
     args = SimpleNamespace(
-        out=out, evidence_out=evidence_out, whitelist=None, triage=True, nixprs=False
+        out=out, evidence_out=evidence_out, whitelist=None, triage=True, nixprs=True
     )
     scanner = VulnScan()
     scanner.df_grype = _scanner_df()
+    pr_url = "https://github.com/NixOS/nixpkgs/pull/1"
 
     def query_versions(df_report):
-        return df_report.rename(columns={cols.VERSION: cols.VERSION_LOCAL})
+        # Repology can return several package matches for one finding.
+        return pd.concat([df_report] * 2).rename(
+            columns={cols.VERSION: cols.VERSION_LOCAL}
+        )
 
     monkeypatch.setattr(
         "vulnxscan.triage._get_default_repology_lookup",
         lambda: SimpleNamespace(query_repology_versions=query_versions),
     )
-    monkeypatch.setattr("vulnxscan.triage._get_default_github_lookup", SimpleNamespace)
+    monkeypatch.setattr(
+        "vulnxscan.vulnscan.GitHubPrLookup",
+        lambda: SimpleNamespace(find_nixpkgs_prs=lambda _row: (pr_url, "ok")),
+    )
 
     with caplog.at_level("WARNING"):
         scanner.report(args, sbom_csv=None)
 
     assert out.exists()
+    triaged = pd.read_csv(tmp_path / "vulns.triage.csv", keep_default_na=False)
+    assert triaged[cols.NIXPKGS_PR].tolist() == [pr_url] * 2
+    assert triaged[cols.NIXPKGS_PR_STATUS].tolist() == ["ok"] * 2
     evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
     assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
     assert len(caplog.records) == 1
@@ -875,11 +887,19 @@ def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
         [_scanner_df("CVE-2024-1"), _scanner_df("CVE-2024-2")], ignore_index=True
     )
 
-    def fail_triage(_df_report, search_nix_prs):
-        assert search_nix_prs is True
+    def fail_triage(_df_report):
         raise triage_error
 
     monkeypatch.setattr("vulnxscan.vulnscan.triage_vulnerabilities", fail_triage)
+    pr_url = "https://github.com/NixOS/nixpkgs/pull/2"
+    monkeypatch.setattr(
+        "vulnxscan.vulnscan.GitHubPrLookup",
+        lambda: SimpleNamespace(
+            find_nixpkgs_prs=lambda row: (
+                ("", "skipped") if row.whitelist else (pr_url, "ok")
+            )
+        ),
+    )
 
     with caplog.at_level("WARNING"):
         scanner.report(args, sbom_csv=None)
@@ -899,9 +919,19 @@ def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
         cols.VERSION_UPSTREAM,
         cols.PACKAGE_REPOLOGY,
         cols.CLASSIFY,
-        cols.NIXPKGS_PR,
     ):
         assert fallback[column].tolist() == ["", ""]
+    assert fallback[cols.NIXPKGS_PR].to_dict() == {
+        "CVE-2024-1": "",
+        "CVE-2024-2": pr_url,
+    }
+    assert fallback[cols.NIXPKGS_PR_STATUS].to_dict() == {
+        "CVE-2024-1": "skipped",
+        "CVE-2024-2": "ok",
+    }
+    result = sarif["runs"][0]["results"][0]
+    assert result["workItemUris"] == [pr_url]
+    assert result["properties"]["nixpkgsPrStatus"] == "ok"
     evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
     assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
     for finding in evidence["findings"]:
@@ -911,6 +941,61 @@ def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
         }
     assert str(triage_error) in caplog.text
     assert "Failed running triage" in caplog.text
+
+
+@pytest.mark.parametrize("nixprs", [False, True])
+def test_standalone_nixprs_in_csv_and_console(tmp_path, monkeypatch, caplog, nixprs):
+    out = tmp_path / "vulns.csv"
+    evidence_out = tmp_path / "evidence.json"
+    whitelist = tmp_path / "whitelist.csv"
+    pd.DataFrame([{cols.VULN_ID: "CVE-2024-1", cols.COMMENT: "accepted risk"}]).to_csv(
+        whitelist, index=False
+    )
+    args = getargs(
+        [
+            "unused",
+            "--out",
+            str(out),
+            "--evidence-out",
+            str(evidence_out),
+            "--whitelist",
+            str(whitelist),
+            *(["--nixprs"] if nixprs else []),
+        ]
+    )
+    pr_url = "https://github.com/NixOS/nixpkgs/pull/2"
+    lookup = SimpleNamespace(
+        find_nixpkgs_prs=lambda row: (
+            ("", "skipped") if row.whitelist else (pr_url, "unavailable")
+        )
+    )
+    factory = Mock(return_value=lookup)
+    monkeypatch.setattr("vulnxscan.vulnscan.GitHubPrLookup", factory)
+    scanner = VulnScan()
+    scanner.df_grype = pd.concat([_scanner_df(f"CVE-2024-{n}") for n in (1, 2)])
+
+    with caplog.at_level("INFO"):
+        scanner.report(args, sbom_csv=None)
+
+    report = pd.read_csv(out, keep_default_na=False).set_index(cols.VULN_ID)
+    assert len(report) == 2
+    assert TRIAGE_STATUS not in json.loads(evidence_out.read_text())
+    assert not (tmp_path / "vulns.triage.csv").exists()
+    if nixprs:
+        assert report[cols.NIXPKGS_PR_STATUS].to_dict() == {
+            "CVE-2024-1": "skipped",
+            "CVE-2024-2": "unavailable",
+        }
+        assert report[cols.NIXPKGS_PR].to_dict() == {
+            "CVE-2024-1": "",
+            "CVE-2024-2": pr_url,
+        }
+        assert cols.NIXPKGS_PR_STATUS in caplog.text
+    else:
+        factory.assert_not_called()
+        assert cols.NIXPKGS_PR not in report
+        assert cols.NIXPKGS_PR_STATUS not in report
+        assert cols.NIXPKGS_PR_STATUS not in caplog.text
 
 
 def test_component_evidence_malformed_patch_json_is_metadata_unavailable(tmp_path):

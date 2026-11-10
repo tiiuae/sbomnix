@@ -95,19 +95,18 @@ def getargs(args=None):
     parser.add_argument("--triage", help=helps, action="store_true")
     helps = (
         "Skip OSV API queries. This permits offline scans with locally "
-        "available scanner data unless --triage requests Repology lookups."
+        "available scanner data unless --triage or --nixprs requests lookups."
     )
     parser.add_argument("--skip-osv", help=helps, action="store_true")
     triagegr = parser.add_argument_group("Other arguments")
     helps = (
         "Search nixpkgs github for PRs that might include more information "
         "concerning possible nixpkgs fixes, searching by vulnerability ID only. "
-        "This option adds URLs to (at most five) PRs that appear valid "
-        "for each vulnerability based on heuristic. "
+        "This option adds URLs to at most five matching PRs per finding. "
         "The PR search takes significant "
         "time due to github API rate limits, which is why this feature is "
-        "not enabled by default. This option has no impact unless '--triage' "
-        "is also specified."
+        "not enabled by default. Adds nixpkgs_pr and nixpkgs_pr_status to "
+        "the ordinary report; does not require --triage or Repology."
     )
     triagegr.add_argument("--nixprs", help=helps, action="store_true")
     add_version_argument(parser)

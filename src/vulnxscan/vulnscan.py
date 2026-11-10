@@ -27,6 +27,7 @@ from vulnxscan.evidence import (
     empty_evidence_document,
     write_evidence_document,
 )
+from vulnxscan.github_prs import GitHubPrLookup
 from vulnxscan.triage import triage_vulnerabilities, unavailable_triage_report
 
 
@@ -165,11 +166,28 @@ class VulnScan:
                 "left empty. See https://github.com/tiiuae/sbomnix/issues/350"
             )
             try:
-                self.df_triaged = triage_vulnerabilities(self.df_report, args.nixprs)
+                self.df_triaged = triage_vulnerabilities(self.df_report)
             except (RequestException, RepologyError) as error:
-                self.df_triaged = unavailable_triage_report(self.df_report, args.nixprs)
+                self.df_triaged = unavailable_triage_report(self.df_report)
                 LOG.warning(
                     "Failed running triage: fix availability not included: %s", error
+                )
+        if getattr(args, "nixprs", False):
+            LOG.verbose("Querying nixpkgs github PRs")
+            lookup = GitHubPrLookup()
+            results = [
+                lookup.find_nixpkgs_prs(row) for row in self.df_report.itertuples()
+            ]
+            self.df_report[cols.NIXPKGS_PR] = [urls for urls, _ in results]
+            self.df_report[cols.NIXPKGS_PR_STATUS] = [status for _, status in results]
+            if self.df_triaged is not None:
+                self.df_triaged = self.df_triaged.merge(
+                    self.df_report[
+                        [cols.FINDING_ID, cols.NIXPKGS_PR, cols.NIXPKGS_PR_STATUS]
+                    ],
+                    on=cols.FINDING_ID,
+                    how="left",
+                    validate="many_to_one",
                 )
         # Rename 'version' to 'version_local'
         self.df_report.columns = [

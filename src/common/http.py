@@ -4,10 +4,10 @@
 
 """Shared HTTP session primitives."""
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from typing import Any
 
-from requests import Session
+from requests import Response, Session
 from requests.adapters import HTTPAdapter
 from requests_cache import CacheMixin
 from requests_ratelimiter import LimiterMixin
@@ -56,6 +56,7 @@ def create_cached_limited_session(  # noqa: PLR0913
     user_agent: str | None = None,
     allowed_methods: Collection[str] = frozenset(("GET", "HEAD")),
     cache_name: str | None = None,
+    filter_fn: Callable[[Response], bool] | None = None,
 ) -> Session:
     """Create a cached, rate-limited session with retry policy attached."""
     kwargs: dict[str, Any] = {}
@@ -68,6 +69,8 @@ def create_cached_limited_session(  # noqa: PLR0913
     if cache_name is None:
         cache_name = str(http_cache_name())
     kwargs["cache_name"] = cache_name
+    if filter_fn is not None:
+        kwargs["filter_fn"] = filter_fn
     session = CachedLimiterSession(**kwargs)
     mount_retries(session, allowed_methods=allowed_methods)
     if user_agent:
