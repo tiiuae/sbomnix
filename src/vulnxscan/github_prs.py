@@ -4,11 +4,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""GitHub PR search helpers for vulnerability triage."""
+"""GitHub PR search helpers for vulnerability findings."""
 
 import json
 import time
 import urllib.parse
+
+from requests import RequestException
 
 from common.http import create_cached_limited_session
 from common.log import LOG, LOG_SPAM
@@ -29,12 +31,24 @@ def _parse_search_response(text):
     except json.JSONDecodeError as error:
         raise GitHubUnexpectedResponse("malformed GitHub search response") from error
     items = response.get("items") if isinstance(response, dict) else None
-    if not isinstance(items, list) or any(
-        not isinstance(item, dict) or not isinstance(item.get("html_url"), str)
-        for item in items
+    if (
+        not isinstance(items, list)
+        or not isinstance(response.get("incomplete_results"), bool)
+        or any(
+            not isinstance(item, dict) or not isinstance(item.get("html_url"), str)
+            for item in items
+        )
     ):
         raise GitHubUnexpectedResponse("malformed GitHub search response")
     return response
+
+
+def _cache_complete_search_response(response):
+    """Keep incomplete or malformed search responses out of the HTTP cache."""
+    try:
+        return not _parse_search_response(response.text)["incomplete_results"]
+    except GitHubUnexpectedResponse:
+        return False
 
 
 def append_search_results(prs, result, max_results=5):
@@ -67,12 +81,15 @@ class GitHubPrLookup:
                 per_second=1,
                 expire_after=GITHUB_API_CACHE_SECONDS,
                 user_agent=GITHUB_API_USER_AGENT,
+                filter_fn=_cache_complete_search_response,
             )
             if session is None
             else session
         )
         self.sleeper = time.sleep if sleeper is None else sleeper
         self.request_timeout = request_timeout
+        self._results = {}
+        self._failed = False
 
     def query(self, query_str, delay=60):
         """Query the GitHub issues search API."""
@@ -83,8 +100,7 @@ class GitHubPrLookup:
         if not resp.ok and "rate limit exceeded" in resp.text:
             max_delay = 60
             if delay > max_delay:
-                LOG.warning("Rate limit exceeded requesting %s", query)
-                return {"items": []}
+                raise GitHubUnexpectedResponse("GitHub search rate limit exhausted")
             LOG.debug("Sleeping %s seconds before re-requesting", delay)
             self.sleeper(delay)
             LOG.debug("Re-requesting")
@@ -95,14 +111,36 @@ class GitHubPrLookup:
         return resp_json
 
     def find_nixpkgs_prs(self, row):
-        """Return nixpkgs PR URLs found by vulnerability ID."""
+        """Return PR URLs and lookup status for a finding's vulnerability ID."""
         if hasattr(row, "whitelist") and row.whitelist:
             LOG.log(LOG_SPAM, "Whitelisted, skipping PR query: %s", row)
-            return ""
+            return "", "skipped"
+        if row.vuln_id in self._results:
+            return self._results[row.vuln_id]
+        if self._failed:
+            return "", "unavailable"
         nixpr = "repo:NixOS/nixpkgs is:pr"
         unmerged = "is:unmerged is:open"
         merged = "is:merged"
         result = set()
-        append_search_results(self.query(f"{nixpr} {unmerged} {row.vuln_id}"), result)
-        append_search_results(self.query(f"{nixpr} {merged} {row.vuln_id}"), result)
-        return " \n".join(sorted(result))
+        status = "ok"
+        for state in (unmerged, merged):
+            query_str = f"{nixpr} {state} {row.vuln_id}"
+            try:
+                response = self.query(query_str)
+            except (RequestException, GitHubUnexpectedResponse) as error:
+                LOG.warning(
+                    "Failed querying nixpkgs PRs for %s, skipping remaining "
+                    "PR searches: %s",
+                    query_str,
+                    error,
+                )
+                self._failed = True
+                status = "unavailable"
+                break
+            append_search_results(response, result)
+            if response["incomplete_results"]:
+                LOG.warning("Incomplete nixpkgs PR search results: %s", query_str)
+                status = "unavailable"
+        self._results[row.vuln_id] = " \n".join(sorted(result)), status
+        return self._results[row.vuln_id]

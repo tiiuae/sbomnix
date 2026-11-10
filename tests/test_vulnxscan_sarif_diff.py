@@ -154,6 +154,7 @@ def test_render_ignores_github_properties_and_store_paths():
     previous_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
     previous_result["properties"]["github/alertNumber"] = 7
     previous_result["properties"]["drvPaths"] = ["/nix/store/other"]
+    previous_result["properties"]["nixpkgsPrStatus"] = "unavailable"
     current_result = _sarif_result("CVE-1", "pkg", "1.0", "a" * 64)
 
     report = render_sarif_diff(

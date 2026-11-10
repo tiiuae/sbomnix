@@ -111,7 +111,6 @@ def write_reports(  # noqa: PLR0913
         document = findings_to_sarif(
             active_findings,
             evidence_document=evidence_document,
-            triage_findings=df_triaged,
             location=sarif_location,
         )
         write_sarif(document, out_path)

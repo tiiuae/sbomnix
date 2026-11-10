@@ -30,7 +30,6 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0914, PLR0915
     findings,
     *,
     evidence_document=None,
-    triage_findings=None,
     tool_version=None,
     location=None,
 ):
@@ -48,7 +47,7 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0914, PLR0915
     observation_metadata, descriptions = _scanner_metadata(
         evidence_document.get("observations", [])
     )
-    nixpkgs_prs = _nixpkgs_prs_by_finding(triage_findings)
+    nixpkgs_prs = _nixpkgs_prs_by_finding(findings)
     evidence_findings = {
         item.get(cols.FINDING_ID): item
         for item in evidence_document.get("findings", [])
@@ -81,6 +80,9 @@ def findings_to_sarif(  # noqa: PLR0912, PLR0914, PLR0915
         properties: dict[str, object] = {"package": package, "version": version}
         if severity:
             properties["severity"] = severity
+        pr_status = _text(row.get(cols.NIXPKGS_PR_STATUS))
+        if pr_status:
+            properties["nixpkgsPrStatus"] = pr_status
         score = _numeric_severity(severity)
         if score is not None:
             properties["cvssScore"] = score
@@ -366,11 +368,11 @@ def _rule_links(rule_id, existing_url):
     return [("Vulnerability record", existing_url)] if existing_url else []
 
 
-def _nixpkgs_prs_by_finding(triage_findings):
-    if triage_findings is None or cols.NIXPKGS_PR not in triage_findings:
+def _nixpkgs_prs_by_finding(findings):
+    if cols.NIXPKGS_PR not in findings:
         return {}
     result = {}
-    for row in triage_findings.to_dict("records"):
+    for row in findings.to_dict("records"):
         urls = _text(row.get(cols.NIXPKGS_PR)).split()
         if not urls:
             continue

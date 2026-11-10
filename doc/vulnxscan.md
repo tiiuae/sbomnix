@@ -103,7 +103,10 @@ flowchart TB
     filtering -->|active findings only| sarif["vulns.sarif"]
 
     repology["Repology version lookup"] -. optional .-> triage["Version hints<br/>classification disabled"]
-    nixprs["GitHub Nixpkgs PR search<br/>vulnerability ID only"] -. optional .-> triage
+    filtering -. optional .-> nixprs["GitHub Nixpkgs PR search<br/>vulnerability ID only"]
+    nixprs -. enriches .-> csv
+    nixprs -. enriches .-> sarif
+    nixprs -. enriches .-> triagecsv
     filtering -.-> triage
     triage -.-> triagecsv["vulns.triage.csv"]
     triage -. enriches .-> sarif
@@ -124,7 +127,7 @@ and [Grype DB architecture](https://oss.anchore.com/docs/architecture/grype-db/)
 
 Pass `--skip-osv` to omit OSV API queries. This allows `vulnxscan` to run
 without network access when the Grype database and any Vulnix data are already
-available locally and `--triage` is not requesting Repology lookups. Reports
+available locally and neither `--triage` nor `--nixprs` is requesting lookups. Reports
 omit the `osv` scanner column when OSV was not run. For a fully air-gapped
 scan, pre-populate the other scanner data and disable Grype database updates
 with `GRYPE_DB_AUTO_UPDATE=false`.
@@ -337,8 +340,7 @@ See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/m
 
 ### Triage to Help Manual Analysis
 
-`vulnxscan` can help manual analysis with the `--triage` and `--nixprs`
-command line options.
+`vulnxscan` can help manual analysis with the `--triage` command line option.
 
 With `--triage`, `vulnxscan` still queries repology.org for nix-unstable and
 package upstream version hints in `version_nixpkgs` and `version_upstream`.
@@ -399,34 +401,36 @@ Those hints do not establish whether a newer version fixes the vulnerability.
 The same applies when no newer version is listed, as with `giflib` and
 `pixman`. Manual analysis is still required.
 
-##### Nixpkgs PR Search
+### Nixpkgs PR Search
 
-With `--triage --nixprs`, `vulnxscan` queries GitHub for nixpkgs PRs by
-vulnerability ID only. Each non-whitelisted row gets two searches, one for
-open unmerged PRs and one for merged PRs. The `nixpkgs_pr` column lists at most
-five matching PR URLs per row to help manual analysis. The PR search takes
-significant time due to GitHub API rate limits and is not enabled by default.
-
-The following abbreviated example uses the same Ghaf target and historical
-version hints and PR links:
+With `--nixprs`, `vulnxscan` searches GitHub for open/unmerged and merged
+nixpkgs PRs by vulnerability ID. It runs independently of `--triage` and
+Repology, skips whitelisted findings, and adds `nixpkgs_pr` and
+`nixpkgs_pr_status` to the ordinary CSV and console report. Without
+`--nixprs`, both columns are omitted. If `--triage` is also requested, its
+supplemental CSV carries the same links and statuses.
 
 ```bash
-# Run vulnscan with --triage and --nixprs
-$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage --nixprs
-INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
-...
-Potential vulnerabilities impacting version_local:
-
-
-| vuln_id        | package | severity | version_local | version_nixpkgs | version_upstream | classify | nixpkgs_pr                                   |
-|----------------+---------+----------+---------------+-----------------+------------------+----------+----------------------------------------------|
-| CVE-2023-40360 | qemu    | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            |          | https://github.com/NixOS/nixpkgs/pull/251154 |
-| CVE-2023-40359 | xterm   | 9.8      | 379           | 384             | 384              |          | https://github.com/NixOS/nixpkgs/pull/244141 |
-| CVE-2023-39742 | giflib  | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            |          |                                              |
+$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --nixprs
 ```
 
-`--nixprs` has no effect without `--triage`. PR links are candidates for
-manual review and do not establish that a vulnerability is fixed.
+`nixpkgs_pr` lists at most five matching URLs per finding. The status
+explains how to interpret those links:
+
+| `nixpkgs_pr_status` | Meaning |
+| --- | --- |
+| `ok` | Both searches completed with complete results. Empty means no matches, not proof that no relevant PR exists. |
+| `unavailable` | A search failed (including exhausted rate-limit retries) or returned incomplete results, or an earlier failure stopped searching. Any links already found are kept. Empty makes no claim. |
+| `skipped` | The finding was whitelisted and was not queried. |
+
+The first failed search warns once and stops PR searches for the rest of the
+scan, without discarding scanner findings or links already found. Incomplete
+results do not stop searching. Equivalent queries reuse the same outcome
+within a scan. Complete responses use the existing six-hour HTTP cache;
+incomplete responses are not persisted. Searches remain rate limited and can
+take significant time, so they are opt-in. PR links are suggestions for manual
+review and do not establish that a vulnerability is fixed. Component
+evidence JSON is unchanged by PR lookup.
 
 ### SARIF Output
 
@@ -502,15 +506,17 @@ steps:
     category: vulnxscan
 ```
 
-Replace `flake.nix` with a more precise repository-relative provenance file when available. If no truthful file exists, omit `--sarif-location`; the result remains valid generic SARIF, but GitHub Code Scanning will not display its location-free results. Upload and authentication remain the CI platform's responsibility; `vulnxscan` performs no GitHub API calls and requires no GitHub environment variables.
+Replace `flake.nix` with a more precise repository-relative provenance file when available. If no truthful file exists, omit `--sarif-location`; the result remains valid generic SARIF, but GitHub Code Scanning will not display its location-free results. Upload and authentication remain the CI platform's responsibility; SARIF export itself performs no GitHub API calls and requires no GitHub environment variables. Optional `--nixprs` searches call the GitHub API separately.
 
 When `--triage` is combined with SARIF, the main output is SARIF and the
 supplemental triage report remains CSV at `<stem>.triage.csv`. Version hints
 remain available when lookups succeed, but `classify` is always empty. When
 triage runs, the evidence document records `"triage_status": "unavailable"`.
+
 With `--nixprs`, Nixpkgs pull requests found by vulnerability ID also appear
 as package-specific work-item links on each result and as labeled links in
-GitHub's rule-help panel.
+GitHub's rule-help panel. Each result also records the lookup status in
+`properties.nixpkgsPrStatus`; `vulnxscan-diff` ignores this enrichment status.
 
 ### Component Patch Evidence
 

@@ -6,6 +6,7 @@
 """Focused tests for native vulnxscan SARIF output."""
 
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pandas as pd
@@ -231,27 +232,30 @@ def test_nixpkgs_prs_are_clickable_and_remain_package_specific():
         ],
         scanner_columns=("grype",),
     )
-    triage_findings = pd.DataFrame(
+    prs = pd.DataFrame(
         [
             {
                 cols.VULN_ID: "CVE-2026-12345",
                 cols.PACKAGE: "hello",
-                cols.VERSION_LOCAL: "1.0",
                 cols.NIXPKGS_PR: (
                     "https://github.com/NixOS/nixpkgs/pull/1 \n"
                     "https://github.com/NixOS/nixpkgs/pull/2"
                 ),
+                cols.NIXPKGS_PR_STATUS: "unavailable",
             },
             {
                 cols.VULN_ID: "CVE-2026-12345",
                 cols.PACKAGE: "world",
-                cols.VERSION_LOCAL: "1.0",
                 cols.NIXPKGS_PR: "https://github.com/NixOS/nixpkgs/pull/3",
+                cols.NIXPKGS_PR_STATUS: "ok",
             },
         ]
     )
 
-    document = _sarif(report, triage_findings=triage_findings)
+    report = replace(
+        report, report=report.report.merge(prs, on=[cols.VULN_ID, cols.PACKAGE])
+    )
+    document = _sarif(report)
     rule = document["runs"][0]["tool"]["driver"]["rules"][0]
     hello, world = document["runs"][0]["results"]
 
@@ -268,6 +272,8 @@ def test_nixpkgs_prs_are_clickable_and_remain_package_specific():
         "https://github.com/NixOS/nixpkgs/pull/2",
     ]
     assert world["workItemUris"] == ["https://github.com/NixOS/nixpkgs/pull/3"]
+    assert hello["properties"]["nixpkgsPrStatus"] == "unavailable"
+    assert world["properties"]["nixpkgsPrStatus"] == "ok"
 
 
 def test_grype_metadata_is_visible_in_github_supported_fields():
