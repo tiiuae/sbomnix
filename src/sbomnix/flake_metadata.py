@@ -4,12 +4,18 @@
 
 """Helpers for resolving nixpkgs metadata from flakerefs."""
 
+import base64
+import hashlib
 import json
+import os
 import pathlib
 import re
+from urllib.parse import urlencode
 
 from common.log import LOG, LOG_SPAM
 from common.proc import exec_cmd, nix_cmd
+
+NIX32_ALPHABET = "0123456789abcdfghijklmnpqrsvwxyz"
 
 
 def normalize_current_flake_shorthand(flakeref):
@@ -197,10 +203,46 @@ def get_nixpkgs_flakeref(meta_json, *, log=LOG):
     return None
 
 
+def _nix32_encode(data):
+    value = int.from_bytes(data, "little")
+    length = (len(data) * 8 - 1) // 5 + 1
+    return "".join(
+        NIX32_ALPHABET[(value >> (n * 5)) & 0x1F] for n in reversed(range(length))
+    )
+
+
+def _nar_hash_store_path(nar_hash):
+    algo, _, value = str(nar_hash or "").partition("-")
+    if algo != "sha256":
+        return None
+    try:
+        digest = base64.b64decode(value, validate=True)
+    except ValueError:
+        return None
+    # Store path Nix uses for a locked input source with this NAR hash.
+    fingerprint = f"source:sha256:{digest.hex()}:/nix/store:source"
+    full_hash = hashlib.sha256(fingerprint.encode()).digest()
+    compressed = bytearray(20)
+    for index, byte in enumerate(full_hash):
+        compressed[index % 20] ^= byte
+    return f"/nix/store/{_nix32_encode(compressed)}-source"
+
+
+def _get_nixpkgs_store_flakeref(meta_json, *, path_exists_fn):
+    # Nix doesn't honor `narHash` in git flakerefs, so the rebuilt locked ref
+    # can't reuse the source that is already in the store; point at it directly.
+    nar_hash = _get_flake_nixpkgs_val(meta_json, "narHash")
+    store_path = _nar_hash_store_path(nar_hash)
+    if not store_path or not path_exists_fn(store_path):
+        return None
+    return f"path:{store_path}?{urlencode({'narHash': nar_hash}, safe='/')}"
+
+
 def nixref_to_nixpkgs_path(
     flakeref,
     *,
     get_flake_metadata_fn=get_flake_metadata,
+    path_exists_fn=os.path.exists,
     log=LOG,
     log_spam=LOG_SPAM,
 ):
@@ -217,13 +259,22 @@ def nixref_to_nixpkgs_path(
     meta_json = get_flake_metadata_fn(flakeref)
     if not is_nixpkgs_metadata(meta_json):
         log.debug("non-nixpkgs flakeref: %s", flakeref)
-        nixpkgs_flakeref = get_nixpkgs_flakeref(meta_json, log=log)
-        if not nixpkgs_flakeref:
+        store_ref = _get_nixpkgs_store_flakeref(
+            meta_json, path_exists_fn=path_exists_fn
+        )
+        locked_ref = get_nixpkgs_flakeref(meta_json, log=log)
+        # The store path can vanish (e.g. GC) before Nix reads it, so fall
+        # back to the locked ref if reading the store path fails.
+        nixpkgs_flakerefs = [ref for ref in (store_ref, locked_ref) if ref]
+        if not nixpkgs_flakerefs:
             log.warning("Failed parsing locked nixpkgs: %s", flakeref)
             return None
-        log.log(log_spam, "using nixpkgs_flakeref: %s", nixpkgs_flakeref)
-        meta_json = get_flake_metadata_fn(nixpkgs_flakeref)
-        if not is_nixpkgs_metadata(meta_json):
+        for nixpkgs_flakeref in nixpkgs_flakerefs:
+            log.log(log_spam, "using nixpkgs_flakeref: %s", nixpkgs_flakeref)
+            meta_json = get_flake_metadata_fn(nixpkgs_flakeref)
+            if is_nixpkgs_metadata(meta_json):
+                break
+        else:
             log.warning("Failed reading nixpkgs metadata: %s", flakeref)
             return None
     return pathlib.Path(meta_json["path"]).absolute()

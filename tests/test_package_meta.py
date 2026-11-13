@@ -1206,3 +1206,68 @@ def test_get_nixpkgs_flakeref_keeps_shallow_git_lock():
     assert flake_metadata.get_nixpkgs_flakeref(meta_json) == (
         "git+https://github.com/NixOS/nixpkgs?ref=nixos-26.05&rev=abc123&shallow=1"
     )
+
+
+# From `nix-store --print-fixed-path --recursive sha256 <narHash> source`.
+LOCKED_NIXPKGS_STORE_PATH = "/nix/store/fjr02205wq70r3vghhfbfzv5g97nr4ya-source"
+LOCKED_NIXPKGS_STORE_REF = (
+    f"path:{LOCKED_NIXPKGS_STORE_PATH}"
+    "?narHash=sha256-Mh0PUaIv4nFY%2B8wAGonaEh8iBzwsmdNlwjVHmFg1Biw%3D"
+)
+LOCKED_NIXPKGS_GIT_REF = (
+    "git+https://github.com/NixOS/nixpkgs?ref=nixos-26.05&rev=abc123"
+)
+
+
+@pytest.mark.parametrize(
+    ("store_path_exists", "store_read_ok", "expected_refs"),
+    [
+        (True, True, [".", LOCKED_NIXPKGS_STORE_REF]),
+        (False, True, [".", LOCKED_NIXPKGS_GIT_REF]),
+        (True, False, [".", LOCKED_NIXPKGS_STORE_REF, LOCKED_NIXPKGS_GIT_REF]),
+    ],
+    ids=["store", "no-store", "store-read-fails"],
+)
+def test_nixref_to_nixpkgs_path_prefers_locked_nixpkgs_in_store(
+    store_path_exists, store_read_ok, expected_refs
+):
+    metadata_refs = []
+
+    def fake_get_flake_metadata(flakeref):
+        metadata_refs.append(flakeref)
+        if flakeref == LOCKED_NIXPKGS_STORE_REF and not store_read_ok:
+            return None
+        if flakeref != ".":
+            return {
+                "path": LOCKED_NIXPKGS_STORE_PATH,
+                "description": "A collection of packages for the Nix package manager",
+            }
+        return {
+            "path": "/nix/store/target-flake",
+            "locks": {
+                "root": "root",
+                "nodes": {
+                    "root": {"inputs": {"nixpkgs": "nixpkgs"}},
+                    "nixpkgs": {
+                        "locked": {
+                            "narHash": "sha256-Mh0PUaIv4nFY+8wAGonaEh8iBzwsmdNlwjVHmFg1Biw=",
+                            "ref": "nixos-26.05",
+                            "rev": "abc123",
+                            "type": "git",
+                            "url": "https://github.com/NixOS/nixpkgs",
+                        }
+                    },
+                },
+            },
+        }
+
+    nixpkgs_path = flake_metadata.nixref_to_nixpkgs_path(
+        ".#hello",
+        get_flake_metadata_fn=fake_get_flake_metadata,
+        path_exists_fn=lambda path: (
+            store_path_exists and path == LOCKED_NIXPKGS_STORE_PATH
+        ),
+    )
+
+    assert metadata_refs == expected_refs
+    assert nixpkgs_path.as_posix() == LOCKED_NIXPKGS_STORE_PATH
