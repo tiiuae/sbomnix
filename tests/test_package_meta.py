@@ -1181,3 +1181,28 @@ def test_nixref_to_nixpkgs_path_normalizes_current_flake_shorthand():
 
     assert metadata_refs == ["."]
     assert nixpkgs_path.as_posix() == "/nix/store/current-nixpkgs"
+
+
+def test_get_nixpkgs_flakeref_keeps_shallow_git_lock():
+    meta_json = {
+        "locks": {
+            "root": "root",
+            "nodes": {
+                "root": {"inputs": {"nixpkgs": "nixpkgs"}},
+                "nixpkgs": {
+                    "locked": {
+                        "narHash": "sha256-test",
+                        "ref": "nixos-26.05",
+                        "rev": "abc123",
+                        "shallow": True,
+                        "type": "git",
+                        "url": "https://github.com/NixOS/nixpkgs",
+                    }
+                },
+            },
+        }
+    }
+
+    assert flake_metadata.get_nixpkgs_flakeref(meta_json) == (
+        "git+https://github.com/NixOS/nixpkgs?ref=nixos-26.05&rev=abc123&shallow=1"
+    )
