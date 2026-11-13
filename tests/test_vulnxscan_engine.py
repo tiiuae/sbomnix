@@ -6,20 +6,16 @@
 """Focused tests for vulnxscan parser and reporting helpers."""
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pandas as pd
 import pytest
-from requests import RequestException
 
 from common import columns as cols
-from repology.exceptions import RepologyUnexpectedResponse
 from sbomnix.builder import SbomBuilder
 from tests.testpaths import VULNXSCAN_EVIDENCE_V1
 from vulnxscan.evidence import (
-    EVIDENCE_REPORT_COLUMNS,
     TRIAGE_STATUS,
     TRIAGE_STATUS_UNAVAILABLE,
     build_evidence_report,
@@ -31,7 +27,6 @@ from vulnxscan.evidence import (
 from vulnxscan.parsers import parse_grype_json, parse_vulnix_json
 from vulnxscan.reporting import (
     render_console_report,
-    write_reports,
 )
 from vulnxscan.vulnscan import VulnScan
 from vulnxscan.vulnxscan_cli import getargs
@@ -481,6 +476,16 @@ def test_evidence_validation_accepts_the_documented_shape():
     validate_evidence_document(_valid_document())
 
 
+def test_evidence_validation_still_accepts_legacy_triage_status():
+    document = _valid_document()
+    document[TRIAGE_STATUS] = TRIAGE_STATUS_UNAVAILABLE
+    validate_evidence_document(document)
+
+    document[TRIAGE_STATUS] = "ok"
+    with pytest.raises(AssertionError, match="Invalid triage_status"):
+        validate_evidence_document(document)
+
+
 def test_evidence_validation_rejects_duplicate_observation_ids():
     document = _valid_document()
     document["observations"][1]["observation_id"] = "observation:0"
@@ -795,14 +800,11 @@ def test_json_transport_columns_round_trip_paths_with_whitespace(tmp_path):
     assert component["matching_patch_paths"] == [spaced_patch]
 
 
-@pytest.mark.parametrize("triage", [False, True])
-def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path, triage):
+def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path):
     """A clean scan still produces a valid, empty, requested evidence file."""
     out = tmp_path / "vulns.csv"
     evidence_out = tmp_path / "evidence.json"
-    args = SimpleNamespace(
-        out=out, evidence_out=evidence_out, whitelist=None, triage=triage
-    )
+    args = SimpleNamespace(out=out, evidence_out=evidence_out, whitelist=None)
 
     VulnScan().report(args, sbom_csv=None)
 
@@ -810,137 +812,6 @@ def test_zero_finding_scan_writes_an_empty_evidence_document(tmp_path, triage):
         empty_evidence_document()
     )
     assert not out.exists()
-
-
-def test_triage_version_success_writes_unavailable_evidence_status(
-    tmp_path, monkeypatch, caplog
-):
-    """Successful version lookups leave classification unavailable and keep PRs."""
-    out = tmp_path / "vulns.csv"
-    evidence_out = tmp_path / "evidence.json"
-    args = SimpleNamespace(
-        out=out, evidence_out=evidence_out, whitelist=None, triage=True, nixprs=True
-    )
-    scanner = VulnScan()
-    scanner.df_grype = _scanner_df()
-    pr_url = "https://github.com/NixOS/nixpkgs/pull/1"
-
-    def query_versions(df_report):
-        # Repology can return several package matches for one finding.
-        return pd.concat([df_report] * 2).rename(
-            columns={cols.VERSION: cols.VERSION_LOCAL}
-        )
-
-    monkeypatch.setattr(
-        "vulnxscan.triage._get_default_repology_lookup",
-        lambda: SimpleNamespace(query_repology_versions=query_versions),
-    )
-    monkeypatch.setattr(
-        "vulnxscan.vulnscan.GitHubPrLookup",
-        lambda: SimpleNamespace(find_nixpkgs_prs=lambda _row: (pr_url, "ok")),
-    )
-
-    with caplog.at_level("WARNING"):
-        scanner.report(args, sbom_csv=None)
-
-    assert out.exists()
-    triaged = pd.read_csv(tmp_path / "vulns.triage.csv", keep_default_na=False)
-    assert triaged[cols.NIXPKGS_PR].tolist() == [pr_url] * 2
-    assert triaged[cols.NIXPKGS_PR_STATUS].tolist() == ["ok"] * 2
-    evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
-    assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
-    assert len(caplog.records) == 1
-    assert "https://github.com/tiiuae/sbomnix/issues/350" in caplog.text
-
-
-@pytest.mark.parametrize(
-    "triage_error",
-    [
-        RequestException("repology connection refused"),
-        RepologyUnexpectedResponse("repology maintenance response"),
-    ],
-    ids=["request-error", "unexpected-response"],
-)
-def test_unavailable_triage_keeps_sarif_whitelist_rows_and_evidence_status(
-    tmp_path, monkeypatch, caplog, triage_error
-):
-    """A Repology failure degrades enrichment without discarding scan results."""
-    out = tmp_path / "vulns.sarif"
-    evidence_out = tmp_path / "evidence.json"
-    whitelist = tmp_path / "whitelist.csv"
-    pd.DataFrame([{cols.VULN_ID: "CVE-2024-1", cols.COMMENT: "accepted risk"}]).to_csv(
-        whitelist, index=False
-    )
-    args = SimpleNamespace(
-        out=out,
-        format="sarif",
-        sarif_location=None,
-        evidence_out=evidence_out,
-        whitelist=whitelist,
-        triage=True,
-        nixprs=True,
-    )
-    triage_out = tmp_path / "vulns.triage.csv"
-    triage_out.write_text("stale\n", encoding="utf-8")
-    scanner = VulnScan()
-    scanner.df_grype = pd.concat(
-        [_scanner_df("CVE-2024-1"), _scanner_df("CVE-2024-2")], ignore_index=True
-    )
-
-    def fail_triage(_df_report):
-        raise triage_error
-
-    monkeypatch.setattr("vulnxscan.vulnscan.triage_vulnerabilities", fail_triage)
-    pr_url = "https://github.com/NixOS/nixpkgs/pull/2"
-    monkeypatch.setattr(
-        "vulnxscan.vulnscan.GitHubPrLookup",
-        lambda: SimpleNamespace(
-            find_nixpkgs_prs=lambda row: (
-                ("", "skipped") if row.whitelist else (pr_url, "ok")
-            )
-        ),
-    )
-
-    with caplog.at_level("WARNING"):
-        scanner.report(args, sbom_csv=None)
-
-    sarif = json.loads(out.read_text(encoding="utf-8"))
-    assert [result["ruleId"] for result in sarif["runs"][0]["results"]] == [
-        "CVE-2024-2"
-    ]
-    fallback = pd.read_csv(triage_out, keep_default_na=False)
-    fallback.set_index(cols.VULN_ID, inplace=True)
-    assert set(fallback.index) == {"CVE-2024-1", "CVE-2024-2"}
-    assert bool(fallback.loc["CVE-2024-1", cols.WHITELIST]) is True
-    assert fallback.loc["CVE-2024-1", cols.WHITELIST_COMMENT] == "accepted risk"
-    assert fallback.loc["CVE-2024-1", cols.FINDING_ID]
-    for column in (
-        cols.VERSION_NIXPKGS,
-        cols.VERSION_UPSTREAM,
-        cols.PACKAGE_REPOLOGY,
-        cols.CLASSIFY,
-    ):
-        assert fallback[column].tolist() == ["", ""]
-    assert fallback[cols.NIXPKGS_PR].to_dict() == {
-        "CVE-2024-1": "",
-        "CVE-2024-2": pr_url,
-    }
-    assert fallback[cols.NIXPKGS_PR_STATUS].to_dict() == {
-        "CVE-2024-1": "skipped",
-        "CVE-2024-2": "ok",
-    }
-    result = sarif["runs"][0]["results"][0]
-    assert result["workItemUris"] == [pr_url]
-    assert result["properties"]["nixpkgsPrStatus"] == "ok"
-    evidence = json.loads(evidence_out.read_text(encoding="utf-8"))
-    assert evidence[TRIAGE_STATUS] == TRIAGE_STATUS_UNAVAILABLE
-    for finding in evidence["findings"]:
-        actual = fallback.loc[finding[cols.VULN_ID], list(EVIDENCE_REPORT_COLUMNS)]
-        assert actual.to_dict() == {
-            column: finding[column] for column in EVIDENCE_REPORT_COLUMNS
-        }
-    assert str(triage_error) in caplog.text
-    assert "Failed running triage" in caplog.text
 
 
 @pytest.mark.parametrize("nixprs", [False, True])
@@ -1152,35 +1023,6 @@ def test_console_report_hides_csv_only_evidence_columns(caplog):
     assert cols.NO_VULN_ID_PATCH_NAME_MATCH_COUNT not in caplog.text
     assert cols.METADATA_UNAVAILABLE_COUNT not in caplog.text
     assert cols.PACKAGE_VERSION_ONLY_COUNT not in caplog.text
-
-
-def test_write_reports_writes_triage_report(tmp_path):
-    """Write both the main report and the derived triage report files."""
-    main_out = tmp_path / "vulns.csv"
-    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
-    df_triaged = pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}])
-
-    write_reports(df_report, main_out, df_triaged=df_triaged)
-
-    assert main_out.exists()
-    assert (tmp_path / "vulns.triage.csv").exists()
-    assert Path(main_out).read_text(encoding="utf-8")
-
-
-def test_write_reports_keeps_triage_report_when_triage_not_requested(tmp_path):
-    """Leave an existing triage report alone when triage was never run."""
-    main_out = tmp_path / "vulns.csv"
-    triage_out = tmp_path / "vulns.triage.csv"
-    df_report = pd.DataFrame([{"vuln_id": "CVE-1"}])
-    write_reports(
-        df_report,
-        main_out,
-        df_triaged=pd.DataFrame([{"vuln_id": "CVE-1", "classify": "triaged"}]),
-    )
-
-    write_reports(df_report, main_out, df_triaged=None)
-
-    assert triage_out.exists()
 
 
 @pytest.mark.parametrize(

@@ -11,7 +11,6 @@ import pytest
 
 from common.errors import SbomnixError
 from nixgraph import main as nixgraph_main
-from nixupdate import nix_outdated
 from provenance import main as provenance_main
 from vulnxscan import osv as osv_cli
 from vulnxscan import vulnxscan_cli
@@ -29,7 +28,6 @@ def test_vulnxscan_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
         impure=False,
         sbom=True,
         whitelist=None,
-        triage=False,
         nixprs=False,
     )
     monkeypatch.setattr(vulnxscan_cli, "getargs", lambda: args)
@@ -65,18 +63,6 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
     ("module", "args", "prep", "patched_name"),
     [
         (
-            nix_outdated,
-            SimpleNamespace(
-                NIXREF=".#broken",
-                buildtime=False,
-                local=False,
-                out="nix_outdated.csv",
-                verbose=0,
-            ),
-            lambda monkeypatch: None,
-            "resolve_nix_target",
-        ),
-        (
             nixgraph_main,
             SimpleNamespace(
                 NIXREF=".#broken",
@@ -102,7 +88,6 @@ def test_osv_invalid_sbom_exits_nonzero(tmp_path, monkeypatch):
                 impure=False,
                 sbom=False,
                 whitelist=None,
-                triage=False,
                 nixprs=False,
             ),
             lambda monkeypatch: monkeypatch.setattr(

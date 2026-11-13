@@ -11,7 +11,6 @@ from types import SimpleNamespace
 import pytest
 
 from common.proc import exec_cmd
-from nixupdate import nix_outdated
 from sbomnix import derivers as sbomnix_derivers
 
 
@@ -132,47 +131,5 @@ def test_find_deriver_rejects_unloadable_structured_deriver(monkeypatch):
                 "nix-command",
             ],
             {"raise_on_error": False, "log_error": False},
-        )
-    ]
-
-
-def test_run_nix_visualize_uses_argv_list(tmp_path, monkeypatch):
-    calls = []
-    output_path = tmp_path / "graph output.csv"
-
-    class FakeTempFile:
-        """Minimal context manager compatible with NamedTemporaryFile."""
-
-        def __init__(self, path):
-            self.name = path.as_posix()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, traceback):
-            return False
-
-    def fake_exec_cmd(cmd, **kwargs):
-        calls.append((cmd, kwargs))
-        return SimpleNamespace(stdout="", returncode=0)
-
-    monkeypatch.setattr(
-        nix_outdated,
-        "NamedTemporaryFile",
-        lambda **_kwargs: FakeTempFile(output_path),
-    )
-    monkeypatch.setattr(nix_outdated, "exec_cmd", fake_exec_cmd)
-
-    returned_path = nix_outdated._run_nix_visualize("/nix/store/my target")
-
-    assert returned_path == output_path
-    assert calls == [
-        (
-            [
-                "nix-visualize",
-                f"--output={output_path.as_posix()}",
-                "/nix/store/my target",
-            ],
-            {},
         )
     ]

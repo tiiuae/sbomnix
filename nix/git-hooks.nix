@@ -10,7 +10,6 @@
     let
       pyrightPythonEnv = pkgs.python3.withPackages (
         pp: with pp; [
-          beautifulsoup4
           colorlog
           dfdiskcache
           filelock

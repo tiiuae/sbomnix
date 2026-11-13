@@ -10,8 +10,6 @@ This repository is home to various command line tools and Python libraries that 
 - [`sbomnix`](#generate-sbom) is a utility that generates SBOMs given a [Nix](https://nixos.org/) flake reference or store path.
 - [`nixgraph`](./doc/nixgraph.md) helps query and visualize dependency graphs for [Nix](https://nixos.org/) packages.
 - [`vulnxscan`](./doc/vulnxscan.md) is a vulnerability scanner demonstrating the usage of SBOMs in running vulnerability scans; see its [end-to-end data flow](./doc/vulnxscan.md#end-to-end-data-flow).
-- [`repology_cli`](./doc/repology_cli.md) and [`repology_cve`](./doc/repology_cli.md#repology-cve-search) are command line clients to [repology.org](https://repology.org/).
-- [`nix_outdated`](./doc/nix_outdated.md) is a utility that finds outdated nix dependencies for given out path, listing the outdated packages in priority order based on how many other packages depend on the given outdated package.
 - [`provenance`](./doc/provenance.md) is a command line tool to generate SLSA v1.0 compliant [provenance](https://slsa.dev/spec/v1.0/provenance) attestation files in json format for any nix flake or derivation.
 
 To automate daily vulnerability scans for a Nix flake project using the tooling provided in this repository, see [flakevuln](https://github.com/tiiuae/flakevuln), available as a reusable GitHub Action and local CLI.
@@ -71,9 +69,9 @@ $ nix develop
 ```
 
 The devshell adds all CLI entry points (`sbomnix`, `nixgraph`,
-`vulnxscan`, `vulnxscan-diff`, `repology_cli`, `repology_cve`, `nix_outdated`,
-`provenance`) to `PATH`. They run against the local source tree, so any
-edits are picked up immediately without reinstalling.
+`vulnxscan`, `vulnxscan-diff`, `provenance`) to `PATH`. They run against the
+local source tree, so any edits are picked up immediately without
+reinstalling.
 
 All tools support a consistent verbosity flag: no flag or `--verbose=0`
 shows INFO output, `-v` or `--verbose=1` enables VERBOSE progress
@@ -92,7 +90,7 @@ For reference, below is a graph of the first two layers of buildtime dependencie
 
 <img src="doc/img/c_hello_world_runtime.svg" width="700">
 
-By default, the tools in this repository work with runtime dependencies. Specifically, unless told otherwise, `sbomnix` generates an SBOM of runtime dependencies, `nixgraph` graphs runtime dependencies, and `vulnxscan` and `nix_outdated` scan runtime dependencies. Since the target must be built to determine runtime dependencies, all these tools will build (force-realise) the target as part of their invocation. All tools also accept a `--buildtime` argument to work with buildtime dependencies instead; as noted above, using `--buildtime` does not require building the target.
+By default, the tools in this repository work with runtime dependencies. Specifically, unless told otherwise, `sbomnix` generates an SBOM of runtime dependencies, `nixgraph` graphs runtime dependencies, and `vulnxscan` scans runtime dependencies. Since the target must be built to determine runtime dependencies, all these tools will build (force-realise) the target as part of their invocation. All tools also accept a `--buildtime` argument to work with buildtime dependencies instead; as noted above, using `--buildtime` does not require building the target.
 
 
 ## Usage Examples

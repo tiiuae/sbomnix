@@ -13,9 +13,7 @@ import pytest
 
 from common.pkgmeta import _dev_version, get_py_pkg_version
 from nixgraph import main as nixgraph_main
-from nixupdate import nix_outdated
 from provenance import main as provenance_main
-from repology import repology_cli, repology_cve
 from sbomnix import main as sbomnix_main
 from vulnxscan import osv as osv_cli
 from vulnxscan import sarif_diff, vulnxscan_cli
@@ -30,15 +28,9 @@ def _stringify(value):
 CLI_ARG_CASES = [
     (sbomnix_main.getargs, [".#pkg"]),
     (nixgraph_main.getargs, [".#pkg"]),
-    (nix_outdated.getargs, [".#pkg"]),
     (vulnxscan_cli.getargs, [".#pkg"]),
     (sarif_diff.getargs, ["--current", "a.sarif", "--markdown", "b.md"]),
     (osv_cli.getargs, ["sbom.json"]),
-    (
-        repology_cli.getargs,
-        ["--pkg_exact", "openssl", "--repository", "nix_unstable"],
-    ),
-    (repology_cve.getargs, ["openssl", "3.1.0"]),
     (provenance_main.getargs, [".#pkg"]),
 ]
 
@@ -48,12 +40,9 @@ CLI_ARG_CASES = [
     [
         sbomnix_main.getargs,
         nixgraph_main.getargs,
-        nix_outdated.getargs,
         vulnxscan_cli.getargs,
         sarif_diff.getargs,
         osv_cli.getargs,
-        repology_cli.getargs,
-        repology_cve.getargs,
         provenance_main.getargs,
     ],
 )
@@ -88,6 +77,18 @@ def test_require_cpe_dictionary_is_opt_in(getargs, target):
 def test_vulnxscan_impure_flag_is_opt_in():
     assert vulnxscan_cli.getargs([".#pkg"]).impure is False
     assert vulnxscan_cli.getargs(["--impure", ".#pkg"]).impure is True
+
+
+def test_vulnxscan_rejects_removed_triage_flag(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        vulnxscan_cli.getargs(["--triage", ".#pkg"])
+
+    assert excinfo.value.code == 2
+    assert "--triage was removed in sbomnix 2.0.0" in capsys.readouterr().err
+
+    with pytest.raises(SystemExit):
+        vulnxscan_cli.getargs(["--help"])
+    assert "--triage" not in capsys.readouterr().out
 
 
 def test_sbomnix_cpe_matching_options_are_mutually_exclusive():
@@ -137,26 +138,8 @@ def test_cli_verbose_level_two_forms_match(getargs, base_argv, verbose_argv):
     ("getargs", "argv", "expected_out"),
     [
         (nixgraph_main.getargs, ["-o", "graph.dot", ".#pkg"], "graph.dot"),
-        (nix_outdated.getargs, ["-o", "nix_outdated.csv", ".#pkg"], "nix_outdated.csv"),
         (vulnxscan_cli.getargs, ["-o", "vulns.csv", ".#pkg"], "vulns.csv"),
         (osv_cli.getargs, ["-o", "osv.csv", "sbom.json"], "osv.csv"),
-        (
-            repology_cli.getargs,
-            [
-                "-o",
-                "repology.csv",
-                "--pkg_exact",
-                "openssl",
-                "--repository",
-                "nix_unstable",
-            ],
-            "repology.csv",
-        ),
-        (
-            repology_cve.getargs,
-            ["-o", "repology_cves.csv", "openssl", "3.1.0"],
-            "repology_cves.csv",
-        ),
         (
             provenance_main.getargs,
             ["-o", "provenance.json", ".#pkg"],
@@ -265,18 +248,3 @@ def test_dev_version_parity_with_nix_package_version():
         f"devshell version {_dev_version()!r} != "
         f"installed METADATA version {installed_version!r}"
     )
-
-
-def test_repology_cli_uses_uppercase_v_for_version_filter():
-    args = repology_cli.getargs(
-        [
-            "-V",
-            "^3\\.1\\.",
-            "--pkg_exact",
-            "openssl",
-            "--repository",
-            "nix_unstable",
-        ]
-    )
-
-    assert args.re_version == "^3\\.1\\."

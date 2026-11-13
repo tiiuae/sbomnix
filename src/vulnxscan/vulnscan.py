@@ -10,25 +10,20 @@ from grype, vulnix, and osv databases
 """
 
 import pandas as pd
-from requests import RequestException
 
 from common import columns as cols
 from common.df import df_to_csv_file
 from common.log import LOG, LOG_SPAM, is_debug_enabled
 from common.proc import exec_cmd
-from repology.exceptions import RepologyError
 from vulnxscan import parsers as vulnxscan_parsers
 from vulnxscan import reporting as vulnxscan_reporting
 from vulnxscan import scanners as vulnxscan_scanners
 from vulnxscan.evidence import (
-    TRIAGE_STATUS,
-    TRIAGE_STATUS_UNAVAILABLE,
     build_evidence_report,
     empty_evidence_document,
     write_evidence_document,
 )
 from vulnxscan.github_prs import GitHubPrLookup
-from vulnxscan.triage import triage_vulnerabilities, unavailable_triage_report
 
 
 class VulnScan:
@@ -39,7 +34,6 @@ class VulnScan:
         self.df_grype = None
         self.df_osv = None
         self.df_report = None
-        self.df_triaged = None
         self.observations = pd.DataFrame()
         self.evidence_document = empty_evidence_document()
         # Key:vuln_id, value:severity
@@ -133,7 +127,6 @@ class VulnScan:
     def _console_report(self):
         vulnxscan_reporting.render_console_report(
             self.df_report,
-            df_triaged=self.df_triaged,
             log=LOG,
         )
 
@@ -158,20 +151,6 @@ class VulnScan:
         if args.whitelist:
             LOG.verbose("Applying whitelist '%s'", args.whitelist)
             self._apply_whitelist(args.whitelist)
-        if args.triage:
-            LOG.verbose("Running vulnerability triage")
-            self.evidence_document[TRIAGE_STATUS] = TRIAGE_STATUS_UNAVAILABLE
-            LOG.warning(
-                "Triage classification is disabled; the 'classify' column is "
-                "left empty. See https://github.com/tiiuae/sbomnix/issues/350"
-            )
-            try:
-                self.df_triaged = triage_vulnerabilities(self.df_report)
-            except (RequestException, RepologyError) as error:
-                self.df_triaged = unavailable_triage_report(self.df_report)
-                LOG.warning(
-                    "Failed running triage: fix availability not included: %s", error
-                )
         if getattr(args, "nixprs", False):
             LOG.verbose("Querying nixpkgs github PRs")
             lookup = GitHubPrLookup()
@@ -180,15 +159,6 @@ class VulnScan:
             ]
             self.df_report[cols.NIXPKGS_PR] = [urls for urls, _ in results]
             self.df_report[cols.NIXPKGS_PR_STATUS] = [status for _, status in results]
-            if self.df_triaged is not None:
-                self.df_triaged = self.df_triaged.merge(
-                    self.df_report[
-                        [cols.FINDING_ID, cols.NIXPKGS_PR, cols.NIXPKGS_PR_STATUS]
-                    ],
-                    on=cols.FINDING_ID,
-                    how="left",
-                    validate="many_to_one",
-                )
         # Rename 'version' to 'version_local'
         self.df_report.columns = [
             cols.VERSION_LOCAL if col == cols.VERSION else col
@@ -202,7 +172,6 @@ class VulnScan:
         vulnxscan_reporting.write_reports(
             self.df_report,
             args.out,
-            df_triaged=self.df_triaged if args.triage else None,
             output_format=output_format,
             evidence_document=self.evidence_document,
             sarif_location=getattr(args, "sarif_location", None),

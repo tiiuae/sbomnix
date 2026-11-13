@@ -22,7 +22,6 @@ from common.errors import (
     WhitelistApplicationError,
 )
 from common.proc import exit_unless_command_exists, exit_unless_nix_artifact
-from repology.reporting import report_cves
 from sbomnix import cpe
 from sbomnix.derivers import require_deriver
 from vulnxscan import whitelist
@@ -141,8 +140,3 @@ def test_df_apply_whitelist_raises_typed_error_without_vuln_id_column():
         match="Missing 'vuln_id' column from df_vulns",
     ):
         whitelist.df_apply_whitelist(df_whitelist, df_vulns)
-
-
-def test_repology_cve_report_returns_false_on_empty_results():
-    assert report_cves(None) is False
-    assert report_cves(pd.DataFrame()) is False

@@ -10,55 +10,8 @@ from types import SimpleNamespace
 import pandas as pd
 
 from common.df import df_from_csv_file
-from repology import repology_cve
 from vulnxscan import osv as osv_cli
 from vulnxscan import sarif_diff
-
-
-def test_repology_cve_main_writes_output_csv(tmp_path, monkeypatch):
-    out_path = tmp_path / "repology_cves.csv"
-    reported = []
-
-    monkeypatch.setattr(
-        repology_cve,
-        "getargs",
-        lambda: SimpleNamespace(
-            PKG_NAME="openssl",
-            PKG_VERSION="3.1.0",
-            out=out_path.as_posix(),
-            verbose=0,
-        ),
-    )
-    monkeypatch.setattr(repology_cve, "set_log_verbosity", lambda _verbosity: None)
-    monkeypatch.setattr(
-        repology_cve,
-        "query_cve",
-        lambda pkg_name, pkg_version: pd.DataFrame(
-            [
-                {
-                    "package": pkg_name,
-                    "version": pkg_version,
-                    "cve": "CVE-2024-1111",
-                }
-            ]
-        ),
-    )
-    monkeypatch.setattr(
-        repology_cve,
-        "report_cves",
-        lambda df: reported.append(df.copy(deep=True)) or True,
-    )
-
-    repology_cve.main()
-
-    assert len(reported) == 1
-    assert df_from_csv_file(out_path).to_dict(orient="records") == [
-        {
-            "package": "openssl",
-            "version": "3.1.0",
-            "cve": "CVE-2024-1111",
-        }
-    ]
 
 
 def test_osv_main_writes_output_csv_with_requested_ecosystems(tmp_path, monkeypatch):

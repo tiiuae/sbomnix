@@ -24,10 +24,6 @@ from vulnxscan.whitelist import df_apply_whitelist, df_drop_whitelisted, load_wh
 _VERSION_DISPLAY_COLUMNS = (
     cols.VERSION,
     cols.VERSION_LOCAL,
-    cols.VERSION_NIXPKGS,
-    cols.VERSION_REPOLOGY,
-    cols.VERSION_SBOM,
-    cols.VERSION_UPSTREAM,
 )
 
 _CONSOLE_HIDDEN_COLUMNS = (cols.SORTCOL, *EVIDENCE_REPORT_COLUMNS)
@@ -53,15 +49,10 @@ def apply_whitelist_annotations(df_report, whitelist_csv):
     df_apply_whitelist(df_whitelist, df_report)
 
 
-def render_console_report(df_report, *, df_triaged=None, log=LOG):
+def render_console_report(df_report, *, log=LOG):
     """Render the console report for the final vulnerability dataframe."""
     log.debug("")
-    if df_triaged is not None:
-        df = df_triaged.copy()
-        if cols.PACKAGE_REPOLOGY in df:
-            df = df.drop(cols.PACKAGE_REPOLOGY, axis=1)
-    else:
-        df = df_report.copy()
+    df = df_report.copy()
     df = df.drop(
         columns=[column for column in _CONSOLE_HIDDEN_COLUMNS if column in df.columns]
     )
@@ -87,24 +78,15 @@ def render_console_report(df_report, *, df_triaged=None, log=LOG):
     )
 
 
-def triage_report_path(out_path, output_format="csv"):
-    """Return the triage CSV path that accompanies ``out_path``."""
-    out_path = pathlib.Path(out_path)
-    parents = out_path.parents[0].resolve().as_posix()
-    suffix = ".csv" if output_format == "sarif" else out_path.suffix
-    return f"{parents}/{out_path.stem}.triage{suffix}"
-
-
-def write_reports(  # noqa: PLR0913
+def write_reports(
     df_report,
     out_path,
     *,
-    df_triaged=None,
     output_format="csv",
     evidence_document=None,
     sarif_location=None,
 ):
-    """Write the main report and optional supplemental triage report."""
+    """Write the main CSV or SARIF report."""
     out_path = pathlib.Path(out_path)
     if output_format == "sarif":
         active_findings = df_drop_whitelisted(df_report.copy())
@@ -116,5 +98,3 @@ def write_reports(  # noqa: PLR0913
         write_sarif(document, out_path)
     else:
         df_to_csv_file(df_report, out_path.resolve().as_posix())
-    if df_triaged is not None:
-        df_to_csv_file(df_triaged, triage_report_path(out_path, output_format))
