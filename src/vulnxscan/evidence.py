@@ -58,6 +58,7 @@ RESOLUTIONS = frozenset(
     }
 )
 
+# No longer emitted since 2.0.0; still accepted so 1.x documents stay valid.
 TRIAGE_STATUS = "triage_status"
 TRIAGE_STATUS_UNAVAILABLE = "unavailable"
 

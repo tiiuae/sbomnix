@@ -83,22 +83,14 @@ def getargs(args=None):
         "only the selected report files are written."
     )
     parser.add_argument("--evidence-out", help=helps, type=pathlib.Path)
-    helps = (
-        "Add more information to vulnxscan output by querying "
-        "repology.org for available package versions in nix-unstable and "
-        "package upstream. This option is intended to help manual analysis. "
-        "Classification is disabled and the 'classify' column is left empty "
-        "(https://github.com/tiiuae/sbomnix/issues/350). "
-        "Output is written to a separate OUT file with 'triage' infix, "
-        "by default: 'vulns.triage.csv'."
-    )
-    parser.add_argument("--triage", help=helps, action="store_true")
+    # Removed in 2.0.0; kept hidden only to reject it with a migration hint.
+    parser.add_argument("--triage", help=argparse.SUPPRESS, action="store_true")
     helps = (
         "Skip OSV API queries. This permits offline scans with locally "
-        "available scanner data unless --triage or --nixprs requests lookups."
+        "available scanner data unless --nixprs requests lookups."
     )
     parser.add_argument("--skip-osv", help=helps, action="store_true")
-    triagegr = parser.add_argument_group("Other arguments")
+    othergr = parser.add_argument_group("Other arguments")
     helps = (
         "Search nixpkgs github for PRs that might include more information "
         "concerning possible nixpkgs fixes, searching by vulnerability ID only. "
@@ -106,11 +98,18 @@ def getargs(args=None):
         "The PR search takes significant "
         "time due to github API rate limits, which is why this feature is "
         "not enabled by default. Adds nixpkgs_pr and nixpkgs_pr_status to "
-        "the ordinary report; does not require --triage or Repology."
+        "the report."
     )
-    triagegr.add_argument("--nixprs", help=helps, action="store_true")
+    othergr.add_argument("--nixprs", help=helps, action="store_true")
     add_version_argument(parser)
     parsed = parser.parse_args(args)
+    if parsed.triage:
+        parser.error(
+            "--triage was removed in sbomnix 2.0.0 together with Repology "
+            "support. Drop --triage and read the main report instead; "
+            "--nixprs still adds nixpkgs PR links. See "
+            "https://github.com/tiiuae/sbomnix/issues/350"
+        )
     if parsed.out is None:
         parsed.out = "vulns.sarif" if parsed.format == "sarif" else "vulns.csv"
     if parsed.sarif_location is not None:
