@@ -159,7 +159,11 @@ def _get_nixpkgs_flakeref_git(meta_json, *, log=LOG):
     if None in [url, rev, ref]:
         log.debug("url, rev, or ref not found: %s", _get_flake_nixpkgs_obj(meta_json))
         return None
-    return f"git+{url}?ref={ref}&rev={rev}"
+    flakeref = f"git+{url}?ref={ref}&rev={rev}"
+    # Without `shallow`, Nix clones the full nixpkgs history.
+    if _get_flake_nixpkgs_val(meta_json, "shallow"):
+        flakeref += "&shallow=1"
+    return flakeref
 
 
 def _get_nixpkgs_flakeref_path(meta_json, *, log=LOG):
