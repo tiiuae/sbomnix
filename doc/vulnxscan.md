@@ -23,7 +23,7 @@ Table of Contents
    * [Find Vulnerabilities Given SBOM as Input](#find-vulnerabilities-given-sbom-as-input)
    * [Find Vulnerabilities Impacting Buildtime and Runtime Dependencies](#find-vulnerabilities-impacting-buildtime-and-runtime-dependencies)
    * [Using Whitelist to Record Manual Analysis Results](#using-whitelist-to-record-manual-analysis-results)
-   * [Triage to Help Manual Analysis](#triage-to-help-manual-analysis)
+   * [Nixpkgs PR Search](#nixpkgs-pr-search)
    * [SARIF Output](#sarif-output)
    * [Component Patch Evidence](#component-patch-evidence)
 * [Footnotes and Future Work](#footnotes-and-future-work)
@@ -102,14 +102,9 @@ flowchart TB
     filtering -->|all findings plus annotations| csv["vulns.csv"]
     filtering -->|active findings only| sarif["vulns.sarif"]
 
-    repology["Repology version lookup"] -. optional .-> triage["Version hints<br/>classification disabled"]
     filtering -. optional .-> nixprs["GitHub Nixpkgs PR search<br/>vulnerability ID only"]
     nixprs -. enriches .-> csv
     nixprs -. enriches .-> sarif
-    nixprs -. enriches .-> triagecsv
-    filtering -.-> triage
-    triage -.-> triagecsv["vulns.triage.csv"]
-    triage -. enriches .-> sarif
 ```
 
 The external stages are documented by [cpedict](https://github.com/tiiuae/cpedict),
@@ -127,7 +122,7 @@ and [Grype DB architecture](https://oss.anchore.com/docs/architecture/grype-db/)
 
 Pass `--skip-osv` to omit OSV API queries. This allows `vulnxscan` to run
 without network access when the Grype database and any Vulnix data are already
-available locally and neither `--triage` nor `--nixprs` is requesting lookups. Reports
+available locally and `--nixprs` is not requesting lookups. Reports
 omit the `osv` scanner column when OSV was not run. For a fully air-gapped
 scan, pre-populate the other scanner data and disable Grype database updates
 with `GRYPE_DB_AUTO_UPDATE=false`.
@@ -338,77 +333,12 @@ The above example `manual_analysis.csv` includes two rules: one for `CVE-2022-08
 
 See flakevuln's [manual_analysis.csv](https://github.com/tiiuae/flakevuln/blob/main/.github/flakevuln/manual_analysis.csv) for a more complete example and usage of non-whitelisting rules to help manual analysis.
 
-### Triage to Help Manual Analysis
-
-`vulnxscan` can help manual analysis with the `--triage` command line option.
-
-With `--triage`, `vulnxscan` still queries repology.org for nix-unstable and
-package upstream version hints in `version_nixpkgs` and `version_upstream`.
-Classification is disabled because Repology CVE data cannot reliably establish
-whether a package is affected. No Repology CVE requests are made, and the
-`classify` column is retained but left empty for every row. Repology also
-blocks non-browser clients, so version lookups may fail. See
-[issue #350](https://github.com/tiiuae/sbomnix/issues/350).
-
-Whenever triage runs on findings, `--evidence-out` records
-`"triage_status": "unavailable"`, even if version lookups succeed. A scan with
-no findings returns before triage and does not include `triage_status`.
-
-If Repology cannot be reached, the scan still writes its main CSV or SARIF and
-a supplemental triage CSV. The fallback triage rows retain whitelist and
-component-evidence fields, while `package_repology`, `version_nixpkgs`,
-`version_upstream`, and `classify` are empty.
-
-The abbreviated example below uses [ghaf](https://github.com/tiiuae/ghaf) as
-the target and illustrates successful version lookups with historical values.
-
-```bash
-# Run vulnxscan:
-#  --buildtime: Scan buildtime dependencies. Scanning buildtime dependencies does not
-#               require building the target, which allows relatively quick scan also for
-#               targets not built earlier. Notice: nix 'buildtime' dependencies are a
-#               superset of runtime dependencies.
-#  --whitelist: Use 'manual_analysis.csv' as a whitelist file.
-#  --triage   : Help manual analysis by querying version info from repology.org.
-$ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --triage
-INFO     Generating SBOM for target '/nix/store/...-nixos-disk-image.drv'
-INFO     CVE-2023-27371 for 'libmicrohttpd' is patched with: ['/nix/store/l53sq07v6hghm7cchcjbrwyvjyjag06r-CVE-2023-27371.patch']
-INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
-INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
-INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
-INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/7gz0nj14469r9dlh8p0j5w5wjj3b6hw4-CVE-2023-2975.patch']
-INFO     CVE-2023-2617 for 'opencv' is patched with: ['/nix/store/vw29nr5nrfs10vv5p3m7rpkqscwrh4sp-CVE-2023-2617.patch']
-...
-
-Potential vulnerabilities impacting version_local:
-
-| vuln_id        | package | severity | version_local | version_nixpkgs | version_upstream | classify |
-|----------------+---------+----------+---------------+-----------------+------------------+----------|
-| CVE-2023-40360 | qemu    | 5.5      | 8.0.2         | 8.1.0           | 8.1.0            |          |
-| CVE-2023-40359 | xterm   | 9.8      | 379           | 384             | 384              |          |
-| CVE-2023-39742 | giflib  | 5.5      | 5.2.1         | 5.2.1           | 5.2.1            |          |
-| CVE-2023-37769 | pixman  | 6.5      | 0.42.2        | 0.42.2          | 0.42.2           |          |
-
-... (output truncated) ...
-
-INFO     Wrote: /home/hrosten/projects/sbomnix-fork/vulns.csv
-INFO     Wrote: /home/hrosten/projects/sbomnix-fork/vulns.triage.csv
-```
-
-For example, the table reports `qemu` 8.0.2 as potentially vulnerable to
-CVE-2023-40360 and shows 8.1.0 as the nix-unstable and upstream version hints.
-Those hints do not establish whether a newer version fixes the vulnerability.
-The same applies when no newer version is listed, as with `giflib` and
-`pixman`. Manual analysis is still required.
-
 ### Nixpkgs PR Search
 
 With `--nixprs`, `vulnxscan` searches GitHub for open/unmerged and merged
-nixpkgs PRs by vulnerability ID. It runs independently of `--triage` and
-Repology, skips whitelisted findings, and adds `nixpkgs_pr` and
-`nixpkgs_pr_status` to the ordinary CSV and console report. Without
-`--nixprs`, both columns are omitted. If `--triage` is also requested, its
-supplemental CSV carries the same links and statuses.
+nixpkgs PRs by vulnerability ID. It skips whitelisted findings and adds
+`nixpkgs_pr` and `nixpkgs_pr_status` to the CSV and console report. Without
+`--nixprs`, both columns are omitted.
 
 ```bash
 $ vulnxscan github:tiiuae/ghaf?ref=main#packages.x86_64-linux.generic-x86_64-release --buildtime --whitelist=manual_analysis.csv --nixprs
@@ -431,6 +361,12 @@ incomplete responses are not persisted. Searches remain rate limited and can
 take significant time, so they are opt-in. PR links are suggestions for manual
 review and do not establish that a vulnerability is fixed. Component
 evidence JSON is unchanged by PR lookup.
+
+The former `--triage` option, its `<stem>.triage.csv` report and its
+Repology-based version hints and classifications were removed in sbomnix
+2.0.0 together with `nix_outdated`, `repology_cli` and `repology_cve`; see
+[issue #350](https://github.com/tiiuae/sbomnix/issues/350). `--triage` is now
+rejected with an error. `--nixprs` does not depend on Repology.
 
 ### SARIF Output
 
@@ -508,11 +444,6 @@ steps:
 
 Replace `flake.nix` with a more precise repository-relative provenance file when available. If no truthful file exists, omit `--sarif-location`; the result remains valid generic SARIF, but GitHub Code Scanning will not display its location-free results. Upload and authentication remain the CI platform's responsibility; SARIF export itself performs no GitHub API calls and requires no GitHub environment variables. Optional `--nixprs` searches call the GitHub API separately.
 
-When `--triage` is combined with SARIF, the main output is SARIF and the
-supplemental triage report remains CSV at `<stem>.triage.csv`. Version hints
-remain available when lookups succeed, but `classify` is always empty. When
-triage runs, the evidence document records `"triage_status": "unavailable"`.
-
 With `--nixprs`, Nixpkgs pull requests found by vulnerability ID also appear
 as package-specific work-item links on each result and as labeled links in
 GitHub's rule-help panel. Each result also records the lookup status in
@@ -522,7 +453,7 @@ GitHub's rule-help panel. Each result also records the lookup status in
 
 Patch filtering answers "is this vulnerability patched?" with a single yes or no. That answer is ambiguous when a Nix closure contains several derivations that share a package name and version but differ in patch metadata: one may carry a patch naming the vulnerability while another does not. Component patch evidence records which derivations a finding resolved to, and what the patch metadata of each one says.
 
-Every report row therefore carries these columns, in both the normal and the `--triage` CSV:
+Every CSV report row therefore carries these columns:
 
 | Column | Meaning |
 | --- | --- |
@@ -542,13 +473,12 @@ A matching patch file name is evidence that a fix was applied, not proof; equall
 Option `--evidence-out PATH` writes the full per-component evidence as JSON. Omitting it leaves the existing CSV behavior untouched.
 
 ```bash
-# Scan buildtime dependencies and record component evidence next to the CSVs
-$ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git --buildtime --triage \
+# Scan buildtime dependencies and record component evidence next to the CSV
+$ vulnxscan github:NixOS/nixpkgs/nixos-unstable#git --buildtime \
     --out=vulns.csv --evidence-out=evidence.json
 ...
 INFO     CVE-2023-2975 for 'openssl' is patched with: ['/nix/store/...-CVE-2023-2975.patch']
 INFO     Wrote: vulns.csv
-INFO     Wrote: vulns.triage.csv
 INFO     Wrote: evidence.json
 ```
 
@@ -563,11 +493,9 @@ The document is written atomically and validated first, so a partial or internal
 }
 ```
 
-Whenever `--triage` runs on findings, the document additionally contains the
-top-level field `"triage_status": "unavailable"` because classification is
-disabled ([issue #350](https://github.com/tiiuae/sbomnix/issues/350)). This is
-set even when version lookups succeed. Scans with no findings return before
-triage and omit this field.
+Documents written by sbomnix 1.x with `--triage` may also contain the
+top-level field `"triage_status": "unavailable"`. sbomnix 2.0.0 no longer
+writes it, but still accepts it when validating a document.
 
 - `observations` holds one entry per normalized scanner observation, before cross-scanner aggregation: `observation_id`, `finding_id`, `scanner`, `vuln_id`, `package`, `version`, the scanner's own `severity`, `component_ref`, and `resolution` (`exact`, `expanded`, or `unresolved`). Optional `description`, `fix_state`, and `fix_versions` fields retain scanner metadata when available. Every raw per-scanner severity is retained here, even though the aggregate finding reports only the highest.
 - `findings` holds one entry per `(vuln_id, package, version)`, with the aggregate `severity`, sorted unique `scanners`, `url`, `sortcol`, the evidence columns listed above, and `suppressed_by_patch_evidence`.

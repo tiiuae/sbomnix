@@ -638,7 +638,6 @@ def test_clean_scan_writes_an_empty_sarif_file(tmp_path):
         sarif_location=None,
         evidence_out=None,
         whitelist=None,
-        triage=False,
     )
 
     VulnScan().report(args, sbom_csv=None)

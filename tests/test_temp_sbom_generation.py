@@ -72,7 +72,6 @@ def test_vulnxscan_cleans_generated_tempfiles_on_failure(
         require_cpe_dictionary=require_cpe_dictionary,
         sbom=False,
         whitelist=None,
-        triage=False,
         nixprs=False,
     )
 
