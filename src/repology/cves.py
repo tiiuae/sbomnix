@@ -26,11 +26,51 @@ def _raise_unexpected_response(log, error=None) -> NoReturn:
     raise repology.exceptions.RepologyUnexpectedResponse(detail) from error
 
 
+def _is_unbounded(range_ver):
+    # Repology writes open-ended ranges with an infinity endpoint,
+    # e.g. "(-∞, 1.0.2)"
+    return range_ver.strip() in {"-∞", "+∞", "∞"}
+
+
+_SIMPLE_VERSION = re.compile(r"^(?P<nums>\d+(?:\.\d+)*)(?P<letters>[a-z]*)$")
+
+
+def _simple_version_key(ver_str):
+    # Dotted numbers with an optional letter suffix, e.g. "1.2.3" or the
+    # OpenSSL style "0.9.8zh", where the letters order after the bare number
+    match = _SIMPLE_VERSION.match(ver_str.strip())
+    if not match:
+        return None
+    nums = [int(num) for num in match.group("nums").split(".")]
+    while len(nums) > 1 and nums[-1] == 0:
+        nums.pop()
+    return (tuple(nums), match.group("letters"))
+
+
+def _compare_versions(ver_a, ver_b):
+    """
+    Return -1, 0 or 1 comparing the two version strings, or None if they
+    can not be compared reliably.
+    """
+    key_a = _simple_version_key(ver_a)
+    key_b = _simple_version_key(ver_b)
+    if key_a is None or key_b is None:
+        return None
+    return (key_a > key_b) - (key_a < key_b)
+
+
+def _is_same_version(version, version_local, impacted_version_text):
+    cmp = _compare_versions(version, impacted_version_text)
+    if cmp is not None:
+        return cmp == 0
+    return parse_version(impacted_version_text) == version_local
+
+
 def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
     """
     Return True if version number is included in the repology affected version
-    string. Also returns true if parsing affected version string fails,
-    in order to avoid false negatives.
+    string. Also returns true if the versions in a range can not be compared
+    reliably, in order to avoid false negatives.
     """
     log.log(log_spam, "Affected version(s): %s", affected_ver_str)
     version_local = parse_version(version)
@@ -49,31 +89,26 @@ def is_affected(version, affected_ver_str, *, log=LOG, log_spam=LOG_SPAM):
             log.fatal("Unexpected version group: %s", affected_ver_str)
             raise repology.exceptions.RepologyUnexpectedResponse
         beg_ind = impacted_group[0]
-        beg_ver_parsed = parse_version(impacted_group[1])
-        if not beg_ver_parsed:
-            return True
+        beg_affected = _is_unbounded(impacted_group[1])
+        if not beg_affected:
+            cmp = _compare_versions(version, impacted_group[1])
+            if cmp is None:
+                return True
+            beg_affected = cmp > 0 or (cmp == 0 and beg_ind == "[")
         end_ind = impacted_group[3]
-        end_ver_parsed = parse_version(impacted_group[2])
-        if not end_ver_parsed:
-            return True
-        beg_affected = False
-        end_affected = False
-        if (version_local > beg_ver_parsed) or (
-            version_local == beg_ver_parsed and beg_ind == "["
-        ):
-            beg_affected = True
-        if (version_local < end_ver_parsed) or (
-            version_local == end_ver_parsed and end_ind == "]"
-        ):
-            end_affected = True
+        end_affected = _is_unbounded(impacted_group[2])
+        if not end_affected:
+            cmp = _compare_versions(version, impacted_group[2])
+            if cmp is None:
+                return True
+            end_affected = cmp < 0 or (cmp == 0 and end_ind == "]")
         if beg_affected and end_affected:
             return True
-    ver_one = r"(?<= )(?<!\()(?P<version>\d[^ $)]+)(?= )"
+    ver_one = r"(?<= )(?<!\()(?P<version>\d[^ $)\]]+)(?= )"
     matches = re.findall(ver_one, affected_ver_str)
     log.log(log_spam, "Parsed single version(s): %s", matches)
     for impacted_version_text in matches:
-        impacted_version = parse_version(impacted_version_text)
-        if impacted_version == version_local:
+        if _is_same_version(version, version_local, impacted_version_text):
             return True
     return False
 
