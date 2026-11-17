@@ -4,10 +4,10 @@
 
 """Package metadata lookup from package sets and flake package outputs.
 
-Python sends compact SBOM component lookup keys to the Nix helper.  The helper
-does package-set specific name lookup and returns derivation identity; this
-module accepts metadata only when the returned drvPath/outPath matches a
-component exactly.
+Python sends SBOM component lookup keys to the Nix helper together with the
+drvPath/outPath identity of the components they stand for.  The helper returns
+metadata only for derivations with one of those identities, and this module
+joins the rows to components by the same exact paths.
 """
 
 import functools
@@ -24,6 +24,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 
 from common import columns as cols
+from common.flakeref import split_nix_attr_path
 from common.log import LOG
 from common.proc import exec_cmd, nix_cmd
 from sbomnix.artifacts import is_non_package_artifact_name
@@ -89,21 +90,12 @@ def nix_system():
 def _eval_package_meta_request(request, *, pkgs_expression=None, impure=False):
     request_json = json.dumps(request, sort_keys=True)
     LOG.debug(
-        "Evaluating package metadata request for system=%s lookup_count=%d input_roots_only=%s json_bytes=%d",
-        request.get("system"),
+        "Evaluating package metadata request for lookup_count=%d json_bytes=%d",
         len(request.get("lookupKeys") or []),
-        request.get("inputRootsOnly"),
         len(request_json),
     )
-    if len(request_json) <= 30_000:
-        return _eval_request(
-            f"request = {_nix_string_literal(request_json)};",
-            pkgs_expression=pkgs_expression,
-            impure=impure,
-        )
-
     # Pure Nix eval can read files relative to its --file entrypoint, but not
-    # arbitrary absolute temp paths passed through --apply.
+    # arbitrary absolute temp paths, so the helper is copied next to the request.
     with TemporaryDirectory(
         prefix="sbomnix_package_meta_",
     ) as tmpdir:
@@ -131,68 +123,12 @@ def _request_file_eval_expression(pkgs_expression):
     )
 
 
-def _nix_string_literal(value):
-    return json.dumps(value).replace("${", r"\${")
-
-
-def _eval_request(request_arg, *, pkgs_expression=None, impure=False):
-    started = time.perf_counter()
-    ret = exec_cmd(
-        _eval_command(
-            _apply_expression(request_arg, pkgs_expression),
-            impure,
-        ),
-        log_error=False,
-    )
-    df = parse_package_metadata(ret.stdout)
-    LOG.verbose(
-        "Evaluated inline package metadata request with %d row(s) in %.3fs",
-        len(df),
-        time.perf_counter() - started,
-    )
-    return df
-
-
 def _eval_file(eval_file, *, impure=False):
-    started = time.perf_counter()
     ret = exec_cmd(
-        _eval_file_command(eval_file, impure),
+        nix_cmd("eval", "--json", "--file", eval_file, impure=impure),
         log_error=False,
     )
-    df = parse_package_metadata(ret.stdout)
-    LOG.verbose(
-        "Evaluated file-backed package metadata request with %d row(s) in %.3fs",
-        len(df),
-        time.perf_counter() - started,
-    )
-    return df
-
-
-def _eval_command(apply_expression, impure):
-    return nix_cmd(
-        "eval",
-        "--json",
-        "--file",
-        package_meta_nix_path().as_posix(),
-        "--apply",
-        apply_expression,
-        impure=impure,
-    )
-
-
-def _eval_file_command(eval_file, impure):
-    return nix_cmd(
-        "eval",
-        "--json",
-        "--file",
-        eval_file,
-        impure=impure,
-    )
-
-
-def _apply_expression(request_arg, pkgs_expression):
-    pkgs_arg = f" pkgs = {pkgs_expression};" if pkgs_expression else ""
-    return f"f: f {{ {request_arg}{pkgs_arg} }}"
+    return parse_package_metadata(ret.stdout)
 
 
 def parse_package_metadata(json_text):
@@ -204,11 +140,8 @@ def parse_package_metadata(json_text):
 
     rows = []
     for drv in derivations:
-        if not isinstance(drv, dict):
-            continue
-        row = _metadata_row(drv)
-        if row[cols.STORE_PATH] or row[META_OUTPUT_PATH]:
-            rows.append(row)
+        if isinstance(drv, dict):
+            rows.extend(_metadata_rows(drv))
     df = pd.DataFrame.from_records(rows)
     if df.empty:
         return df
@@ -222,15 +155,19 @@ def parse_package_metadata(json_text):
     return df
 
 
-def _metadata_row(drv):
+def _metadata_rows(drv):
+    """Return one metadata row per derivation output path."""
     meta = drv.get("meta", {})
     if not isinstance(meta, dict):
         meta = {}
     meta_license = meta.get("license", {})
     meta_maintainers = meta.get("maintainers", {})
-    return {
-        cols.STORE_PATH: drv.get("drvPath", "") or "",
-        META_OUTPUT_PATH: drv.get("path", "") or "",
+    drv_path = drv.get("drvPath", "") or ""
+    out_paths = [path for path in drv.get("outPaths") or [] if path]
+    if not drv_path and not out_paths:
+        return []
+    row = {
+        cols.STORE_PATH: drv_path,
         cols.NAME: drv.get("name", "") or "",
         cols.PNAME: drv.get("pname", "") or "",
         cols.VERSION: drv.get("version", "") or "",
@@ -250,6 +187,7 @@ def _metadata_row(drv):
             key="email",
         ),
     }
+    return [{**row, META_OUTPUT_PATH: out_path} for out_path in out_paths or [""]]
 
 
 def _parse_optional_meta_entry(meta, key):
@@ -264,35 +202,29 @@ def _parse_optional_meta_entry(meta, key):
     return str(meta)
 
 
-def package_meta_lookup_keys_for_components(
-    df_components,
-    *,
-    target_path=None,
-    flakeref=None,
-):
-    """Return compact Nix metadata lookup keys for the given component rows."""
-    target_attr = _flake_package_attr(flakeref)
+def package_meta_lookup_keys_for_components(df_components):
+    """Return Nix metadata lookup keys for the given component rows.
+
+    Components that share a name share a lookup key.  Each key lists the
+    drvPath and output paths of every component it stands for.
+    """
     keys = {}
     for component in _records(df_components):
         if _is_non_package_artifact(component):
             continue
         lookup = _lookup_key_for_component(component)
-        if lookup is None:
+        paths = _component_paths(component)
+        if lookup is None or not paths:
             continue
-        if (
-            target_attr
-            and lookup["version"]
-            and _component_matches_target_path(component, target_path)
-        ):
-            lookup["candidateAttrs"] = [target_attr]
         key = (
             lookup["name"],
             lookup["pname"],
             lookup["version"],
             lookup.get("system", ""),
-            tuple(lookup.get("candidateAttrs", [])),
         )
-        keys[key] = lookup
+        keys.setdefault(key, lookup)["components"].append(paths)
+    for lookup in keys.values():
+        lookup["components"].sort()
     return [keys[key] for key in sorted(keys)]
 
 
@@ -311,10 +243,22 @@ def _lookup_key_for_component(component):
         "name": name,
         "pname": pname,
         "version": version,
+        "components": [],
     }
     if system:
         lookup["system"] = system
     return lookup
+
+
+def _component_paths(component):
+    """Return the drvPath and output paths that identify a component."""
+    outputs = component.get(cols.OUTPUTS, [])
+    if isinstance(outputs, str):
+        outputs = [outputs]
+    elif not isinstance(outputs, (list, tuple, set)):
+        outputs = []
+    paths = [component.get(cols.STORE_PATH, ""), *outputs]
+    return sorted({path for path in map(_clean_lookup_value, paths) if path})
 
 
 def _clean_lookup_value(value):
@@ -325,100 +269,21 @@ def _clean_lookup_value(value):
     return str(value).strip()
 
 
-def _component_matches_target_path(component, target_path):
-    target_path = _clean_lookup_value(target_path)
-    if not target_path:
-        return False
-    if _clean_lookup_value(component.get(cols.STORE_PATH, "")) == target_path:
-        return True
-    if _clean_lookup_value(component.get("out", "")) == target_path:
-        return True
-    outputs = component.get(cols.OUTPUTS, [])
-    if isinstance(outputs, str):
-        outputs = [outputs]
-    elif not isinstance(outputs, (list, tuple, set)):
-        return False
-    return target_path in {_clean_lookup_value(output) for output in outputs}
+def flake_target_attr_paths(flakeref):
+    """Return flake output attr paths that may hold the flakeref target.
 
-
-def _flake_package_attr(flakeref):
-    _flake, separator, attr = str(flakeref or "").partition("#")
-    if not separator:
-        return ""
-    parts = attr.split(".")
-    if len(parts) == 1:
-        return parts[0]
-    if (
-        len(parts) < 3
-        or parts[0] not in {"packages", "legacyPackages"}
-        or not _is_nix_system_name(parts[1])
-    ):
-        return ""
-    return parts[2]
-
-
-def _clean_candidate_attrs(attrs):
-    if isinstance(attrs, str):
-        attrs = [attrs]
-    cleaned = []
-    seen = set()
-    for raw_attr in attrs or []:
-        attr = _clean_lookup_value(raw_attr)
-        if not attr or attr in seen:
-            continue
-        seen.add(attr)
-        cleaned.append(attr)
-    return cleaned
-
-
-def _normalized_lookup_keys(lookup_keys):
-    if isinstance(lookup_keys, dict):
-        lookup_keys = lookup_keys.get("lookupKeys", [])
-    normalized = []
-    seen = set()
-    for lookup in lookup_keys or []:
-        if not isinstance(lookup, dict):
-            continue
-        name = _clean_lookup_value(lookup.get("name", ""))
-        pname = _clean_lookup_value(lookup.get("pname", ""))
-        version = _clean_lookup_value(lookup.get("version", ""))
-        system = _clean_lookup_value(lookup.get("system", ""))
-        if not name:
-            continue
-        if not pname:
-            pname = _pname_from_package_name(name)
-        candidate_attrs = _clean_candidate_attrs(lookup.get("candidateAttrs", []))
-        key = (name, pname, version, system, tuple(candidate_attrs))
-        if key in seen:
-            continue
-        seen.add(key)
-        normalized_lookup = {"name": name, "pname": pname, "version": version}
-        if system:
-            normalized_lookup["system"] = system
-        if candidate_attrs:
-            normalized_lookup["candidateAttrs"] = candidate_attrs
-        normalized.append(normalized_lookup)
-    return sorted(
-        normalized,
-        key=lambda item: (
-            item["name"],
-            item["pname"],
-            item["version"],
-            item.get("system", ""),
-            tuple(item.get("candidateAttrs", [])),
-        ),
-    )
-
-
-def _request_system_groups(flakeref, lookup_keys):
-    fallback_system = _system_from_flakeref(flakeref) or nix_system()
-    groups = {}
-    for lookup in lookup_keys:
-        system = _clean_lookup_value(lookup.get("system", ""))
-        if not _is_nix_system_name(system):
-            system = fallback_system
-        groups.setdefault(system, []).append(lookup)
-    return [(system, groups[system]) for system in sorted(groups)]
+    The order follows the Nix CLI: ``packages`` and ``legacyPackages`` for the
+    target system first, then the attr path as written.
+    """
+    _flake, _separator, fragment = str(flakeref or "").partition("#")
+    attr = fragment.partition("^")[0]
+    system = _system_from_flakeref(flakeref) or nix_system()
+    if not attr:
+        return [["packages", system, "default"], ["defaultPackage", system]]
+    path = split_nix_attr_path(attr)
+    if not path:
+        return []
+    return [["packages", system, *path], ["legacyPackages", system, *path], path]
 
 
 def _is_nix_system_name(system):
@@ -439,12 +304,16 @@ def _system_from_flakeref(flakeref):
     return ""
 
 
-def _request_lookup_keys(lookup_keys):
-    return [_lookup_key_with_candidate_tiers(lookup) for lookup in lookup_keys]
+def _request_lookup_keys(lookup_keys, fallback_system):
+    return [
+        _lookup_key_with_candidate_tiers(lookup, fallback_system)
+        for lookup in lookup_keys
+    ]
 
 
-def _lookup_key_with_candidate_tiers(lookup):
+def _lookup_key_with_candidate_tiers(lookup, fallback_system):
     name = lookup["name"]
+    system = _clean_lookup_value(lookup.get("system", ""))
     version = lookup["version"]
     parsed_pname = _pname_from_package_name(name)
     pname = (
@@ -453,23 +322,18 @@ def _lookup_key_with_candidate_tiers(lookup):
         else lookup["pname"] or parsed_pname
     )
     pname = pname or ""
-    key = {
+    return {
         "name": name,
         "pname": pname,
         "version": version,
-        "candidateTiers": _candidate_tiers(
-            name,
-            pname,
-            version,
-            candidate_attrs=lookup.get("candidateAttrs", []),
-        ),
+        # Sources and other fixed-output derivations have no real system.
+        "system": system if _is_nix_system_name(system) else fallback_system,
+        "components": lookup["components"],
+        "candidateTiers": _candidate_tiers(name, pname, version),
     }
-    if _is_haskell_package_name(name, pname, version):
-        key["collectAllCanonical"] = True
-    return key
 
 
-def _candidate_tiers(name, pname, version="", *, candidate_attrs=None):
+def _candidate_tiers(name, pname, version=""):
     if not pname:
         return []
 
@@ -488,13 +352,6 @@ def _candidate_tiers(name, pname, version="", *, candidate_attrs=None):
     p2 = _strip_suffix(p1) if p1 else None
 
     tiers = []
-    _add_tier(
-        tiers,
-        [
-            _candidate(attr, [_BASE_PACKAGE_SET])
-            for attr in _clean_candidate_attrs(candidate_attrs)
-        ],
-    )
     _add_tier(tiers, [_candidate(pname, specs), _kde_exact_candidate(name, pname)])
     _add_tier(tiers, _perl_candidates(name, pname))
     _add_tier(tiers, _low_loss_rewrite_candidates(pname, rewrite_specs))
@@ -524,11 +381,7 @@ def _add_tier(tiers, candidates):
     for candidate in candidates:
         if not candidate:
             continue
-        key = (
-            candidate["attr"],
-            tuple(candidate["packageSets"]),
-            candidate.get("requirePnameOrName", False),
-        )
+        key = (candidate["attr"], tuple(candidate["packageSets"]))
         if key in seen:
             continue
         seen.add(key)
@@ -537,16 +390,13 @@ def _add_tier(tiers, candidates):
         tiers.append(tier)
 
 
-def _candidate(attr, package_sets, *, require_pname_or_name=False):
+def _candidate(attr, package_sets):
     if not attr:
         return None
-    candidate = {
+    return {
         "attr": attr,
         "packageSets": list(package_sets),
     }
-    if require_pname_or_name:
-        candidate["requirePnameOrName"] = True
-    return candidate
 
 
 def _package_set_hints_for_lookup(name):
@@ -680,7 +530,7 @@ def _low_loss_rewrite_candidates(pname, specs):
 def _rewritten_candidate(pname, rewritten, specs):
     if not rewritten or rewritten == pname:
         return None
-    return _candidate(rewritten, specs, require_pname_or_name=True)
+    return _candidate(rewritten, specs)
 
 
 def _strip_suffix(pname):
@@ -890,52 +740,38 @@ def _metadata_richness(df):
     return df[existing].replace("", pd.NA).notna().sum(axis=1)
 
 
-def _concat_metadata_frames(frames):
-    frames = [frame for frame in frames if frame is not None and not frame.empty]
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True)
-
-
 def _scan_package_meta(  # noqa: PLR0913
     lookup_keys,
     *,
     flakeref=None,
     nixpkgs_path=None,
     pkgs_expression=None,
-    input_roots_only=False,
+    walk_target=True,
+    search_inputs=True,
     impure=False,
 ):
     started = time.perf_counter()
-    lookup_keys = _normalized_lookup_keys(lookup_keys)
     if not lookup_keys:
         return pd.DataFrame()
     flakeref = normalize_flakeref_for_nix_eval(flakeref)
     LOG.debug("Reading package metadata for flakeref: %s", flakeref)
-    frames = []
-    for request_system, system_lookup_keys in _request_system_groups(
-        flakeref, lookup_keys
-    ):
-        LOG.verbose(
-            "Evaluating package metadata for %d lookup(s) on system '%s'",
-            len(system_lookup_keys),
-            request_system,
-        )
-        request = {
-            "flakeref": flakeref or None,
-            "system": request_system,
-            "nixpkgsPath": str(nixpkgs_path) if nixpkgs_path else None,
-            "lookupKeys": _request_lookup_keys(system_lookup_keys),
-            "inputRootsOnly": bool(input_roots_only),
-        }
-        frames.append(
-            _eval_package_meta_request(
-                request,
-                pkgs_expression=pkgs_expression,
-                impure=impure,
-            )
-        )
-    df = _concat_metadata_frames(frames)
+    request = {
+        "flakeref": flakeref or None,
+        "nixpkgsPath": str(nixpkgs_path) if nixpkgs_path else None,
+        "lookupKeys": _request_lookup_keys(
+            lookup_keys,
+            _system_from_flakeref(flakeref) or nix_system(),
+        ),
+        "targetAttrPaths": (
+            flake_target_attr_paths(flakeref) if flakeref and walk_target else []
+        ),
+        "searchInputs": bool(search_inputs),
+    }
+    df = _eval_package_meta_request(
+        request,
+        pkgs_expression=pkgs_expression,
+        impure=impure,
+    )
     LOG.verbose(
         "Read package metadata with %d candidate row(s) in %.3fs",
         len(df),
@@ -944,13 +780,24 @@ def _scan_package_meta(  # noqa: PLR0913
     return df
 
 
+_SCAN_ERRORS = (
+    FileNotFoundError,
+    KeyError,
+    OSError,
+    subprocess.CalledProcessError,
+    TypeError,
+    ValueError,
+)
+
+
 def try_scan_package_meta(  # noqa: PLR0913
     lookup_keys,
     *,
     flakeref=None,
     nixpkgs_path=None,
     pkgs_expression=None,
-    input_roots_only=False,
+    walk_target=True,
+    search_inputs=True,
     impure=False,
 ):
     """Return package metadata dataframe, or None on failure."""
@@ -960,16 +807,10 @@ def try_scan_package_meta(  # noqa: PLR0913
             flakeref=flakeref,
             nixpkgs_path=nixpkgs_path,
             pkgs_expression=pkgs_expression,
-            input_roots_only=input_roots_only,
+            walk_target=walk_target,
+            search_inputs=search_inputs,
             impure=impure,
         )
-    except (
-        FileNotFoundError,
-        KeyError,
-        OSError,
-        subprocess.CalledProcessError,
-        TypeError,
-        ValueError,
-    ):
+    except _SCAN_ERRORS:
         LOG.debug("Failed reading package metadata", exc_info=True)
         return None

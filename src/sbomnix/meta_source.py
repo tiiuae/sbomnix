@@ -221,8 +221,11 @@ class NixpkgsMetaSourceResolver:
         flake, separator, attr = str(flakeref or "").partition("#")
         if not flake:
             return None
-        stable_flake = cls._stable_flake_ref_for_cache(flake)
-        if not stable_flake and cls._should_lock_flake_ref(flake):
+        stable_flake = flake
+        if not (
+            cls._flake_ref_has_stable_lock(flake)
+            or cls._stable_flake_ref_for_cache(flake)
+        ):
             stable_flake = cls._locked_flake_ref_from_metadata(flake, impure=impure)
         if not stable_flake:
             return None
