@@ -1221,6 +1221,66 @@ def test_package_metadata_cache_reuses_identical_scans(monkeypatch):
     assert len(scan_calls) == 7
 
 
+@pytest.mark.parametrize(
+    ("metadata", "expected"),
+    [
+        # A clean git tree keeps its revision.
+        (
+            {
+                "path": "/nix/store/source",
+                "locked": {"narHash": "sha256-test", "rev": "a" * 40, "type": "git"},
+                "url": f"git+file:///repo?ref=refs/heads/main&rev={'a' * 40}&shallow=1",
+            },
+            f"git+file:///repo?ref=refs/heads/main&rev={'a' * 40}&shallow=1",
+        ),
+        (
+            {
+                "path": "/nix/store/source",
+                "locked": {"narHash": "sha256-test", "rev": "b" * 40, "type": "github"},
+                "lockedUrl": f"github:owner/repo/{'b' * 40}?narHash=sha256-test",
+                "url": "ignored",
+            },
+            f"github:owner/repo/{'b' * 40}?narHash=sha256-test",
+        ),
+        # A dirty tree has no revision to pin.
+        (
+            {
+                "path": "/nix/store/source",
+                "locked": {
+                    "narHash": "sha256-test",
+                    "dirtyRev": f"{'c' * 40}-dirty",
+                    "dir": "sub/dir",
+                    "type": "git",
+                },
+                "url": "git+file:///repo?dir=sub/dir",
+            },
+            "path:/nix/store/source?narHash=sha256-test&dir=sub/dir",
+        ),
+        ({"path": "/home/user/repo", "locked": {"narHash": "sha256-test"}}, None),
+    ],
+)
+def test_locked_flake_ref_keeps_pinned_revision(monkeypatch, metadata, expected):
+    monkeypatch.setattr(
+        NixpkgsMetaSourceResolver,
+        "_nix_flake_metadata",
+        staticmethod(lambda _flake, *, impure=False: metadata),
+    )
+
+    locked_ref = NixpkgsMetaSourceResolver._locked_flake_ref_from_metadata(".")
+
+    assert locked_ref == expected
+    if expected:
+        assert NixpkgsMetaSourceResolver._flake_ref_has_stable_lock(expected)
+        assert Meta._package_cache_key(
+            NixpkgsMetaSource(
+                method="flakeref-lock",
+                path="/nix/store/nixpkgs",
+                flakeref_cache_key=f"{expected}#default",
+            ),
+            [_lookup("pkg-1.0", "pkg", "1.0")],
+        )
+
+
 def test_registry_flakeref_cache_key_uses_locked_identity(monkeypatch):
     def fake_locked_ref(flake, *, impure=False):
         assert flake == "nixpkgs"
