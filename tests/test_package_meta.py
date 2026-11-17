@@ -7,6 +7,7 @@
 
 import json
 import shutil
+import subprocess
 from dataclasses import replace
 
 import pandas as pd
@@ -20,18 +21,114 @@ from sbomnix.meta import Meta, NixpkgsMetaSource
 from sbomnix.meta_source import NixpkgsMetaSourceResolver
 
 
-def test_package_meta_lookup_keys_stay_compact():
+def _lookup(name, pname, version, components=None):
+    """Return a lookup key for the given package and component paths."""
+    return {
+        "name": name,
+        "pname": pname,
+        "version": version,
+        "components": components or [[f"/nix/store/{name}.drv"]],
+    }
+
+
+def _nix_identity(expression):
+    """Return [drvPath, outPath...] of the derivation a Nix expression yields."""
+    ret = subprocess.run(
+        [
+            "nix",
+            "eval",
+            "--json",
+            "--impure",
+            "--extra-experimental-features",
+            "nix-command flakes",
+            "--expr",
+            f"let drv = {expression}; in [ drv.drvPath ] ++ "
+            'map (output: drv.${output}.outPath) (drv.outputs or [ "out" ])',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(ret.stdout)
+
+
+def _flake_package_identity(flake_dir, attr):
+    """Return the identity of a package output of a test flake."""
+    return _nix_identity(
+        f'(builtins.getFlake "{flake_dir.as_posix()}")'
+        f".packages.{package_meta.nix_system()}.{attr}"
+    )
+
+
+@pytest.fixture
+def system():
+    """Return the Nix system, skipping the test when nix is not available."""
+    if shutil.which("nix") is None:
+        pytest.skip("nix is not available")
+    return package_meta.nix_system()
+
+
+def _write_flake(tmp_path, flake):
+    flake_dir = tmp_path / "flake"
+    flake_dir.mkdir()
+    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+    return flake_dir
+
+
+def _shadow_package_set(tmp_path, system):
+    """Write a package set with one package and return it with its identity."""
+    package_set_path = tmp_path / "package-set.nix"
+    package_set_path.write_text(
+        """{ system, config ? { } }: {
+  shadow = (derivation {
+    name = "shadow-1.0";
+    inherit system;
+    builder = "/bin/sh";
+    outputs = [ "out" "dev" ];
+    args = [ "-c" "echo out > $out; echo dev > $dev" ];
+  }) // {
+    pname = "shadow";
+    version = "1.0";
+    meta.description = "imported";
+  };
+}
+""",
+        encoding="utf-8",
+    )
+    shadow = _nix_identity(
+        f'(import {package_set_path.as_posix()} {{ system = "{system}"; }}).shadow'
+    )
+    return package_set_path, shadow
+
+
+def test_package_meta_lookup_keys_carry_component_identity():
     df_components = pd.DataFrame(
         [
             {
                 cols.NAME: "python3.13-requests-2.32.5",
                 cols.PNAME: "python3.13-requests",
                 cols.VERSION: "2.32.5",
+                cols.STORE_PATH: "/nix/store/requests.drv",
+                cols.OUTPUTS: ["/nix/store/requests-out", "/nix/store/requests-dist"],
             },
             {
                 cols.NAME: "libcap-ng-0.8.5",
                 cols.PNAME: "libcap-ng",
                 cols.VERSION: "0.8.5",
+                cols.STORE_PATH: "/nix/store/libcap-ng-b.drv",
+                cols.OUTPUTS: ["/nix/store/libcap-ng-b-out"],
+            },
+            {
+                cols.NAME: "libcap-ng-0.8.5",
+                cols.PNAME: "libcap-ng",
+                cols.VERSION: "0.8.5",
+                cols.STORE_PATH: "/nix/store/libcap-ng-a.drv",
+                cols.OUTPUTS: [],
+            },
+            {
+                cols.NAME: "no-identity-1.0",
+                cols.PNAME: "no-identity",
+                cols.VERSION: "1.0",
             },
         ]
     )
@@ -43,11 +140,22 @@ def test_package_meta_lookup_keys_stay_compact():
             "name": "libcap-ng-0.8.5",
             "pname": "libcap-ng",
             "version": "0.8.5",
+            "components": [
+                ["/nix/store/libcap-ng-a.drv"],
+                ["/nix/store/libcap-ng-b-out", "/nix/store/libcap-ng-b.drv"],
+            ],
         },
         {
             "name": "python3.13-requests-2.32.5",
             "pname": "python3.13-requests",
             "version": "2.32.5",
+            "components": [
+                [
+                    "/nix/store/requests-dist",
+                    "/nix/store/requests-out",
+                    "/nix/store/requests.drv",
+                ]
+            ],
         },
     ]
 
@@ -59,11 +167,13 @@ def test_package_meta_lookup_keys_keep_dotted_package_names():
                 cols.NAME: "python3.13-zope.interface-7.2",
                 cols.PNAME: "zope.interface",
                 cols.VERSION: "7.2",
+                cols.STORE_PATH: "/nix/store/zope-interface.drv",
             },
             {
                 cols.NAME: "source.json",
                 cols.PNAME: "source.json",
                 cols.VERSION: "",
+                cols.STORE_PATH: "/nix/store/source-json.drv",
             },
         ]
     )
@@ -75,40 +185,29 @@ def test_package_meta_lookup_keys_keep_dotted_package_names():
             "name": "python3.13-zope.interface-7.2",
             "pname": "zope.interface",
             "version": "7.2",
+            "components": [["/nix/store/zope-interface.drv"]],
         }
     ]
 
 
-def test_short_request_escapes_nix_antiquotation(monkeypatch):
-    captured = {}
-
-    def fake_eval_request(request_arg, **kwargs):
-        captured["request_arg"] = request_arg
-        return pd.DataFrame()
-
-    monkeypatch.setattr(package_meta, "_eval_request", fake_eval_request)
-
-    package_meta._eval_package_meta_request(
-        {"flakeref": "flake#${bad}", "lookupKeys": []}
-    )
-
-    assert r"\${bad}" in captured["request_arg"]
-
-
-def test_large_request_uses_wrapper_file_for_pure_eval(monkeypatch):
+def test_request_uses_wrapper_file_for_pure_eval(monkeypatch):
     captured = {}
 
     def fake_eval_file(eval_file, **kwargs):
         eval_path = package_meta.pathlib.Path(eval_file)
-        captured["request_exists"] = (eval_path.parent / "request.json").is_file()
+        captured["request"] = json.loads(
+            (eval_path.parent / "request.json").read_text(encoding="utf-8")
+        )
         captured["eval"] = eval_path.read_text(encoding="utf-8")
         return pd.DataFrame()
 
     monkeypatch.setattr(package_meta, "_eval_file", fake_eval_file)
 
-    package_meta._eval_package_meta_request({"lookupKeys": [{"name": "x" * 30_000}]})
+    package_meta._eval_package_meta_request(
+        {"flakeref": "flake#${bad}", "lookupKeys": []}
+    )
 
-    assert captured["request_exists"] is True
+    assert captured["request"]["flakeref"] == "flake#${bad}"
     assert "builtins.readFile ./request.json" in captured["eval"]
     assert "requestFile" not in captured["eval"]
 
@@ -130,38 +229,99 @@ def test_try_scan_package_meta_normalizes_current_flake_shorthand(
     )
 
     package_meta.try_scan_package_meta(
-        [{"name": "hello-1.0", "pname": "hello", "version": "1.0"}],
+        [_lookup("hello-1.0", "hello", "1.0")],
         flakeref="#hello",
     )
 
     assert captured["request"]["flakeref"] == f"{tmp_path.as_posix()}#hello"
-    assert "flakePackageAttrPath" not in captured["request"]
 
 
 @pytest.mark.parametrize(
-    ("flakeref", "lookup_keys", "expected_system"),
+    ("flakeref", "expected_fallback"),
     [
-        (
-            "flake#packages.aarch64-linux.foo",
-            [{"name": "foo-1.0", "pname": "foo", "version": "1.0"}],
-            "aarch64-linux",
-        ),
-        (
-            "flake#default",
-            [
-                {
-                    "name": "foo-1.0",
-                    "pname": "foo",
-                    "version": "1.0",
-                    "system": "aarch64-linux",
-                }
-            ],
-            "aarch64-linux",
-        ),
+        ("flake#packages.aarch64-linux.foo", "aarch64-linux"),
+        ("flake#default", "riscv64-linux"),
     ],
 )
-def test_try_scan_package_meta_uses_target_system(
-    monkeypatch, flakeref, lookup_keys, expected_system
+def test_try_scan_package_meta_sends_one_request_for_all_systems(
+    monkeypatch, flakeref, expected_fallback
+):
+    captured = []
+
+    def fake_eval_package_meta_request(request, **kwargs):
+        captured.append(request)
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        package_meta,
+        "_eval_package_meta_request",
+        fake_eval_package_meta_request,
+    )
+    monkeypatch.setattr(package_meta, "nix_system", lambda: "riscv64-linux")
+
+    package_meta.try_scan_package_meta(
+        [
+            {**_lookup("pkg-x86-1.0", "pkg-x86", "1.0"), "system": "x86_64-linux"},
+            {**_lookup("source-patch", "source-patch", ""), "system": "builtin"},
+            {**_lookup("pkg-i686-1.0", "pkg-i686", "1.0"), "system": "i686-linux"},
+            _lookup("pkg-1.0", "pkg", "1.0"),
+        ],
+        flakeref=flakeref,
+    )
+
+    assert len(captured) == 1
+    assert {
+        lookup["name"]: lookup["system"] for lookup in captured[0]["lookupKeys"]
+    } == {
+        "pkg-x86-1.0": "x86_64-linux",
+        # Not a Nix system: looked up for the target system.
+        "source-patch": expected_fallback,
+        "pkg-i686-1.0": "i686-linux",
+        "pkg-1.0": expected_fallback,
+    }
+
+
+@pytest.mark.parametrize(
+    ("flakeref", "walk_target", "expected"),
+    [
+        (
+            "flake#target",
+            True,
+            [
+                ["packages", "aarch64-linux", "target"],
+                ["legacyPackages", "aarch64-linux", "target"],
+                ["target"],
+            ],
+        ),
+        (
+            'flake#packages.aarch64-linux."my.pkg"^dev',
+            True,
+            [
+                ["packages", "aarch64-linux", "packages", "aarch64-linux", "my.pkg"],
+                [
+                    "legacyPackages",
+                    "aarch64-linux",
+                    "packages",
+                    "aarch64-linux",
+                    "my.pkg",
+                ],
+                ["packages", "aarch64-linux", "my.pkg"],
+            ],
+        ),
+        (
+            "flake",
+            True,
+            [
+                ["packages", "aarch64-linux", "default"],
+                ["defaultPackage", "aarch64-linux"],
+            ],
+        ),
+        ("flake#target", False, []),
+        (None, True, []),
+    ],
+)
+def test_try_scan_package_meta_requests_target_attr_paths(
+    monkeypatch, flakeref, walk_target, expected
 ):
     captured = {}
 
@@ -174,103 +334,21 @@ def test_try_scan_package_meta_uses_target_system(
         "_eval_package_meta_request",
         fake_eval_package_meta_request,
     )
-
-    package_meta.try_scan_package_meta(lookup_keys, flakeref=flakeref)
-
-    assert captured["request"]["system"] == expected_system
-
-
-def test_try_scan_package_meta_splits_mixed_system_requests(monkeypatch):
-    captured = []
-
-    def fake_eval_package_meta_request(request, **kwargs):
-        captured.append(request)
-        return pd.DataFrame(
-            [
-                {
-                    cols.STORE_PATH: f"/nix/store/{request['system']}.drv",
-                    package_meta.META_OUTPUT_PATH: "",
-                }
-            ]
-        )
-
-    monkeypatch.setattr(
-        package_meta,
-        "_eval_package_meta_request",
-        fake_eval_package_meta_request,
-    )
-
-    df = package_meta.try_scan_package_meta(
-        [
-            {
-                "name": "pkg-x86-1.0",
-                "pname": "pkg-x86",
-                "version": "1.0",
-                "system": "x86_64-linux",
-            },
-            {
-                "name": "source-patch",
-                "pname": "source-patch",
-                "version": "",
-                "system": "builtin",
-            },
-            {
-                "name": "pkg-aarch-1.0",
-                "pname": "pkg-aarch",
-                "version": "1.0",
-                "system": "aarch64-linux",
-            },
-        ],
-        flakeref="flake#default",
-    )
-
-    fallback_system = package_meta.nix_system()
-    expected_names_by_system = {
-        "aarch64-linux": ["pkg-aarch-1.0"],
-        "x86_64-linux": ["pkg-x86-1.0"],
-    }
-    expected_names_by_system.setdefault(fallback_system, []).append("source-patch")
-    names_by_system = {
-        request["system"]: [lookup["name"] for lookup in request["lookupKeys"]]
-        for request in captured
-    }
-
-    assert names_by_system == expected_names_by_system
-    assert sorted(df[cols.STORE_PATH].to_list()) == [
-        f"/nix/store/{system}.drv" for system in sorted(expected_names_by_system)
-    ]
-
-
-def test_try_scan_package_meta_request_omits_direct_flake_attr_path(monkeypatch):
-    captured = {}
-
-    def fake_eval_package_meta_request(request, **kwargs):
-        captured["request"] = request
-        return pd.DataFrame()
-
-    monkeypatch.setattr(
-        package_meta,
-        "_eval_package_meta_request",
-        fake_eval_package_meta_request,
-    )
+    monkeypatch.setattr(package_meta, "nix_system", lambda: "aarch64-linux")
 
     package_meta.try_scan_package_meta(
-        [{"name": "pkg-1.0", "pname": "pkg", "version": "1.0"}],
-        flakeref="flake#expensive-target",
+        [_lookup("pkg-1.0", "pkg", "1.0")],
+        flakeref=flakeref,
+        walk_target=walk_target,
     )
 
-    assert "flakePackageAttrPath" not in captured["request"]
+    assert captured["request"]["targetAttrPaths"] == expected
 
 
 def test_request_lookup_keys_expand_package_set_candidates():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "python3.13-requests-2.32.5",
-                "pname": "python3.13-requests",
-                "version": "2.32.5",
-            }
-        ]
+        [_lookup("python3.13-requests-2.32.5", "python3.13-requests", "2.32.5")],
+        "x86_64-linux",
     )[0]
 
     assert lookup["pname"] == "requests"
@@ -284,16 +362,9 @@ def test_request_lookup_keys_expand_package_set_candidates():
 
 def test_request_lookup_keys_use_haskell_package_set_hint():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "vector-0.13.2.0",
-                "pname": "vector",
-                "version": "0.13.2.0",
-            }
-        ]
+        [_lookup("vector-0.13.2.0", "vector", "0.13.2.0")], "x86_64-linux"
     )[0]
 
-    assert lookup["collectAllCanonical"] is True
     assert lookup["candidateTiers"][-1] == [
         {
             "attr": "vector",
@@ -304,13 +375,7 @@ def test_request_lookup_keys_use_haskell_package_set_hint():
 
 def test_request_lookup_keys_probe_parsed_name_for_fallback_pname():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "foo-1.0",
-                "pname": "foo-1.0",
-                "version": "",
-            }
-        ]
+        [_lookup("foo-1.0", "foo-1.0", "")], "x86_64-linux"
     )[0]
 
     assert lookup["pname"] == "foo"
@@ -324,13 +389,7 @@ def test_request_lookup_keys_probe_parsed_name_for_fallback_pname():
 
 def test_request_lookup_keys_keep_qt_hint_before_haskell_shape():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "qtbase-6.10.2",
-                "pname": "qtbase",
-                "version": "6.10.2",
-            }
-        ]
+        [_lookup("qtbase-6.10.2", "qtbase", "6.10.2")], "x86_64-linux"
     )[0]
 
     assert lookup["candidateTiers"][0] == [
@@ -344,18 +403,11 @@ def test_request_lookup_keys_keep_qt_hint_before_haskell_shape():
         for tier in lookup["candidateTiers"]
         for candidate in tier
     )
-    assert "collectAllCanonical" not in lookup
 
 
 def test_request_lookup_keys_probe_kde_packages_for_k_prefixed_frameworks():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "kconfig-6.17.0",
-                "pname": "kconfig",
-                "version": "6.17.0",
-            }
-        ]
+        [_lookup("kconfig-6.17.0", "kconfig", "6.17.0")], "x86_64-linux"
     )[0]
 
     assert lookup["candidateTiers"][0] == [
@@ -377,13 +429,7 @@ def test_request_lookup_keys_probe_kde_packages_for_k_prefixed_frameworks():
 
 def test_request_lookup_keys_keep_haskell_hint_for_k_prefixed_packages():
     lookup = package_meta._request_lookup_keys(
-        [
-            {
-                "name": "kan-extensions-5.2.7",
-                "pname": "kan-extensions",
-                "version": "5.2.7",
-            }
-        ]
+        [_lookup("kan-extensions-5.2.7", "kan-extensions", "5.2.7")], "x86_64-linux"
     )[0]
 
     assert lookup["candidateTiers"][0] == [
@@ -402,7 +448,6 @@ def test_request_lookup_keys_keep_haskell_hint_for_k_prefixed_packages():
             "packageSets": ["haskellPackages"],
         }
     ]
-    assert lookup["collectAllCanonical"] is True
 
 
 @pytest.mark.parametrize(
@@ -486,7 +531,7 @@ def test_parse_package_metadata_records_identity_fields():
                 "derivations": [
                     {
                         "drvPath": "/nix/store/pkg.drv",
-                        "path": "/nix/store/pkg-out",
+                        "outPaths": ["/nix/store/pkg-out", "/nix/store/pkg-dev"],
                         "name": "pkg-1.0",
                         "pname": "pkg",
                         "version": "1.0",
@@ -506,9 +551,12 @@ def test_parse_package_metadata_records_identity_fields():
         )
     )
 
+    assert df[package_meta.META_OUTPUT_PATH].to_list() == [
+        "/nix/store/pkg-out",
+        "/nix/store/pkg-dev",
+    ]
+    assert df[cols.STORE_PATH].to_list() == ["/nix/store/pkg.drv"] * 2
     record = df.to_dict("records")[0]
-    assert record[cols.STORE_PATH] == "/nix/store/pkg.drv"
-    assert record[package_meta.META_OUTPUT_PATH] == "/nix/store/pkg-out"
     assert record["meta_description"] == "Package"
     assert record["meta_cpe"] == "cpe:2.3:a:pkg_vendor:pkg:1.0:*:*:*:*:*:*:*"
     assert record["meta_possible_cpes"] == (
@@ -518,11 +566,9 @@ def test_parse_package_metadata_records_identity_fields():
     assert record["meta_license_spdxid"] == "MIT"
 
 
-def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
-
-    system = package_meta.nix_system()
+def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(
+    tmp_path, system
+):
     dep_dir = tmp_path / "dep"
     mk_shadow = """
 { system, description }:
@@ -532,6 +578,7 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
   builder = "/bin/sh";
   outputs = [ "out" "dev" ];
   args = [ "-c" "echo out > $out; echo dev > $dev" ];
+  inherit description;
 }) // {
   pname = "shadow";
   version = "1.0";
@@ -574,6 +621,10 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
     system = "__SYSTEM__";
   in
     {
+    legacyPackages.${system}.shadow = import ./mk-shadow.nix {
+      inherit system;
+      description = "flake-input-root";
+    };
     packages.${system}."input-shadow" = (derivation {
       name = "input-shadow-1.0";
       inherit system;
@@ -601,19 +652,20 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
     dep_dir.mkdir()
     (dep_dir / "flake.nix").write_text(dep_flake, encoding="utf-8")
     (dep_dir / "mk-shadow.nix").write_text(mk_shadow, encoding="utf-8")
-    flake_dir = tmp_path / "flake"
-    flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+    flake_dir = _write_flake(tmp_path, flake)
     (flake_dir / "mk-shadow.nix").write_text(mk_shadow, encoding="utf-8")
 
+    shadow = _flake_package_identity(flake_dir, "shadow")
     df = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
         flakeref=flake_dir.as_posix(),
         nixpkgs_path=package_set_path,
         impure=True,
     )
 
     assert df is not None
+    assert df[cols.STORE_PATH].to_list() == [shadow[0], shadow[0]]
+    assert df[package_meta.META_OUTPUT_PATH].to_list() == shadow[1:]
     assert df["meta_description"].to_list() == ["flake-root", "flake-root"]
     assert df["meta_cpe"].to_list() == [
         "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
@@ -623,7 +675,7 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
     assert df[cols.VERSION].to_list() == ["1.0", "1.0"]
 
     df_fallback = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow-1.0", "version": ""}],
+        [_lookup("shadow-1.0", "shadow-1.0", "", [shadow])],
         flakeref=flake_dir.as_posix(),
         nixpkgs_path=package_set_path,
         impure=True,
@@ -631,24 +683,15 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
 
     assert df_fallback is not None
     assert df_fallback["meta_description"].to_list() == ["flake-root", "flake-root"]
-    assert df_fallback["meta_cpe"].to_list() == [
-        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
-        "cpe:2.3:a:shadow_project:shadow:1.0:*:*:*:*:*:*:*",
-    ]
     assert df_fallback[cols.PNAME].to_list() == ["shadow", "shadow"]
     assert df_fallback[cols.VERSION].to_list() == ["1.0", "1.0"]
 
+    # Package roots of flake inputs are searched after the base roots.
+    input_shadow = _flake_package_identity(dep_dir, "input-shadow")
     df_input = package_meta.try_scan_package_meta(
-        [
-            {
-                "name": "input-shadow-1.0",
-                "pname": "input-shadow",
-                "version": "1.0",
-            }
-        ],
+        [_lookup("input-shadow-1.0", "input-shadow", "1.0", [input_shadow])],
         flakeref=flake_dir.as_posix(),
         nixpkgs_path=package_set_path,
-        input_roots_only=True,
         impure=True,
     )
 
@@ -661,12 +704,43 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(tm
     assert df_input[cols.PNAME].to_list() == ["input-shadow", "input-shadow"]
     assert df_input[cols.VERSION].to_list() == ["1.0", "1.0"]
 
+    # Same-named components are found in every package root that has one.
+    same_named = [
+        shadow,
+        _nix_identity(
+            f'(import {package_set_path.as_posix()} {{ system = "{system}"; }}).shadow'
+        ),
+        _nix_identity(
+            f'(builtins.getFlake "{dep_dir.as_posix()}").legacyPackages.{system}.shadow'
+        ),
+    ]
+    df_all = package_meta.try_scan_package_meta(
+        [_lookup("shadow-1.0", "shadow", "1.0", same_named)],
+        flakeref=flake_dir.as_posix(),
+        nixpkgs_path=package_set_path,
+        impure=True,
+    )
 
-def test_package_meta_preserves_top_level_possible_cpes(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
+    assert df_all is not None
+    assert set(df_all["meta_description"]) == {
+        "flake-root",
+        "imported",
+        "flake-input-root",
+    }
 
-    system = package_meta.nix_system()
+    # A same-named component with another identity gets no metadata.
+    df_other = package_meta.try_scan_package_meta(
+        [_lookup("shadow-1.0", "shadow", "1.0", [["/nix/store/other-shadow.drv"]])],
+        flakeref=flake_dir.as_posix(),
+        nixpkgs_path=package_set_path,
+        impure=True,
+    )
+
+    assert df_other is not None
+    assert df_other.empty
+
+
+def test_package_meta_preserves_top_level_possible_cpes(tmp_path, system):
     flake = """
 {
   outputs = { self }:
@@ -689,12 +763,11 @@ def test_package_meta_preserves_top_level_possible_cpes(tmp_path):
   };
 }
 """.replace("__SYSTEM__", system)
-    flake_dir = tmp_path / "flake"
-    flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+    flake_dir = _write_flake(tmp_path, flake)
 
+    shadow = _flake_package_identity(flake_dir, "shadow")
     df = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
         flakeref=flake_dir.as_posix(),
         impure=True,
     )
@@ -705,11 +778,7 @@ def test_package_meta_preserves_top_level_possible_cpes(tmp_path):
     ]
 
 
-def test_package_meta_ignores_unreadable_identifier_attrs(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
-
-    system = package_meta.nix_system()
+def test_package_meta_ignores_unreadable_identifier_attrs(tmp_path, system):
     flake = """
 {
   outputs = { self }:
@@ -731,12 +800,11 @@ def test_package_meta_ignores_unreadable_identifier_attrs(tmp_path):
   };
 }
 """.replace("__SYSTEM__", system)
-    flake_dir = tmp_path / "flake"
-    flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+    flake_dir = _write_flake(tmp_path, flake)
 
+    shadow = _flake_package_identity(flake_dir, "shadow")
     df = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
         flakeref=flake_dir.as_posix(),
         impure=True,
     )
@@ -747,11 +815,7 @@ def test_package_meta_ignores_unreadable_identifier_attrs(tmp_path):
     assert df["meta_possible_cpes"].to_list() == [""]
 
 
-def test_package_meta_falls_back_from_empty_legacy_cpe_fields(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
-
-    system = package_meta.nix_system()
+def test_package_meta_falls_back_from_empty_legacy_cpe_fields(tmp_path, system):
     flake = """
 {
   outputs = { self }:
@@ -779,12 +843,11 @@ def test_package_meta_falls_back_from_empty_legacy_cpe_fields(tmp_path):
   };
 }
 """.replace("__SYSTEM__", system)
-    flake_dir = tmp_path / "flake"
-    flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
+    flake_dir = _write_flake(tmp_path, flake)
 
+    shadow = _flake_package_identity(flake_dir, "shadow")
     df = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
         flakeref=flake_dir.as_posix(),
         impure=True,
     )
@@ -798,60 +861,77 @@ def test_package_meta_falls_back_from_empty_legacy_cpe_fields(tmp_path):
     ]
 
 
-def test_package_meta_scans_target_flake_attr_when_name_differs(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
-
-    system = package_meta.nix_system()
-    flake = """
+_WALK_FLAKE = """
 {
   outputs = { self }:
   let
     system = "__SYSTEM__";
-  in
-    {
-    packages.${system}.doc = (derivation {
-      name = "ghaf-docs-0.1.0";
+    mkPackage = name: version: attrs: (derivation ({
+      name = "${name}-${version}";
       inherit system;
       builder = "/bin/sh";
-      args = [ "-c" "echo docs > $out" ];
-    }) // {
-      pname = "ghaf-docs";
-      version = "0.1.0";
-      meta.description = "target flake package attr";
+      args = [ "-c" "echo ${name} > $out" ];
+    } // attrs)) // {
+      pname = name;
+      inherit version;
+      meta.description = "${name} description";
+    };
+    # Reachable only as derivation values, not through any package attr.
+    patched = mkPackage "patched" "1.0" { };
+    private = mkPackage "private" "2.0" { nested = [ [ patched ] ]; };
+    structured = mkPackage "structured" "3.0" { };
+    tool = mkPackage "tool" "4.0" { buildInputs = [ private ]; };
+    split = mkPackage "split" "5.0" { outputs = [ "out" "dev" ]; };
+  in
+    {
+    packages.${system} = {
+      inherit tool split;
+      patched = mkPackage "patched" "1.0" { variant = "other"; };
+      # The target name differs from its attr name, and it refers to tool
+      # only through string context.
+      doc = mkPackage "ghaf-docs" "0.1.0" {
+        __structuredAttrs = true;
+        # The output value does not carry the metadata merged into split.
+        deps.inner = [ structured (split.dev // { meta.platforms = [ ]; }) ];
+        script = "${tool}";
+      };
     };
   };
 }
-""".replace("__SYSTEM__", system)
+"""
+
+
+def test_package_meta_walks_target_and_named_derivations(tmp_path, system):
     flake_dir = tmp_path / "flake"
     flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
-
-    components = pd.DataFrame(
-        [
-            {
-                cols.NAME: "ghaf-docs-0.1.0",
-                cols.PNAME: "ghaf-docs",
-                cols.VERSION: "0.1.0",
-                "system": system,
-                cols.STORE_PATH: "/nix/store/placeholder.drv",
-                cols.OUTPUTS: ["/nix/store/placeholder-out"],
-            }
-        ]
+    (flake_dir / "flake.nix").write_text(
+        _WALK_FLAKE.replace("__SYSTEM__", system), encoding="utf-8"
     )
+    flake = f'(builtins.getFlake "{flake_dir.as_posix()}")'
+    doc = _flake_package_identity(flake_dir, "doc")
+    tool = _flake_package_identity(flake_dir, "tool")
+    split = _flake_package_identity(flake_dir, "split")
+    private = _nix_identity(f"builtins.head {flake}.packages.{system}.tool.buildInputs")
+    patched = _nix_identity(
+        f"builtins.head (builtins.head (builtins.head "
+        f"{flake}.packages.{system}.tool.buildInputs).nested)"
+    )
+    structured = _nix_identity(
+        f"builtins.head {flake}.packages.{system}.doc.drvAttrs.deps.inner"
+    )
+    lookup_keys = [
+        _lookup("ghaf-docs-0.1.0", "ghaf-docs", "0.1.0", [doc]),
+        _lookup("patched-1.0", "patched", "1.0", [patched]),
+        _lookup("private-2.0", "private", "2.0", [private]),
+        _lookup("split-5.0", "split", "5.0", [split]),
+        _lookup("structured-3.0", "structured", "3.0", [structured]),
+        _lookup("tool-4.0", "tool", "4.0", [tool]),
+    ]
 
     for flakeref in (
         f"{flake_dir.as_posix()}#packages.{system}.doc",
         f"{flake_dir.as_posix()}#doc",
     ):
-        lookup_keys = package_meta.package_meta_lookup_keys_for_components(
-            components,
-            target_path="/nix/store/placeholder-out",
-            flakeref=flakeref,
-        )
-
-        assert lookup_keys[0]["candidateAttrs"] == ["doc"]
-
         df = package_meta.try_scan_package_meta(
             lookup_keys,
             flakeref=flakeref,
@@ -859,63 +939,45 @@ def test_package_meta_scans_target_flake_attr_when_name_differs(tmp_path):
         )
 
         assert df is not None
-        assert df["meta_description"].to_list() == ["target flake package attr"]
-        assert df[cols.NAME].to_list() == ["ghaf-docs-0.1.0"]
-        assert df[cols.PNAME].to_list() == ["ghaf-docs"]
+        assert dict(zip(df[cols.STORE_PATH], df["meta_description"], strict=True)) == {
+            # The target and what it holds as derivation values.
+            doc[0]: "ghaf-docs description",
+            structured[0]: "structured description",
+            # Found by attr name.
+            tool[0]: "tool description",
+            # Walked as a value without a description, so found by attr name.
+            split[0]: "split description",
+            # Dependencies of the derivation found by attr name.
+            private[0]: "private description",
+            patched[0]: "patched description",
+        }
 
-
-def test_package_meta_skips_target_flake_attr_for_versionless_artifact():
-    system = "x86_64-linux"
-    lookup_keys = package_meta.package_meta_lookup_keys_for_components(
-        pd.DataFrame(
-            [
-                {
-                    cols.NAME: "ghaf-host-disko-images",
-                    cols.PNAME: "ghaf-host-disko-images",
-                    cols.VERSION: "",
-                    "system": system,
-                    cols.STORE_PATH: "/nix/store/placeholder.drv",
-                    cols.OUTPUTS: ["/nix/store/placeholder-out"],
-                }
-            ]
-        ),
-        target_path="/nix/store/placeholder-out",
-        flakeref=f"/flake#packages.{system}.lenovo-x1-carbon-gen11-debug",
+    # Without the target walk only attr names and their dependencies remain.
+    df = package_meta.try_scan_package_meta(
+        lookup_keys,
+        flakeref=f"{flake_dir.as_posix()}#doc",
+        walk_target=False,
+        impure=True,
     )
 
-    assert lookup_keys == [
-        {
-            "name": "ghaf-host-disko-images",
-            "pname": "ghaf-host-disko-images",
-            "version": "",
-            "system": system,
-        }
-    ]
+    assert df is not None
+    assert set(df[cols.STORE_PATH]) == {tool[0], private[0], patched[0], split[0]}
+
+    # Package roots are not evaluated when the walk reaches every component.
+    broken_package_set = tmp_path / "broken-package-set.nix"
+    broken_package_set.write_text("{ ... }: { }.missing\n", encoding="utf-8")
+    df = package_meta.try_scan_package_meta(
+        lookup_keys[:1],
+        flakeref=f"{flake_dir.as_posix()}#doc",
+        nixpkgs_path=broken_package_set,
+        impure=True,
+    )
+
+    assert df is not None
+    assert df[cols.STORE_PATH].to_list() == [doc[0]]
 
 
-def test_package_meta_ignores_broken_optional_flake_package_roots(tmp_path):
-    if shutil.which("nix") is None:
-        pytest.skip("nix is not available")
-
-    system = package_meta.nix_system()
-    mk_shadow = """
-{ system, description }:
-(derivation {
-  name = "shadow-1.0";
-  inherit system;
-  builder = "/bin/sh";
-  outputs = [ "out" "dev" ];
-  args = [ "-c" "echo out > $out; echo dev > $dev" ];
-}) // {
-  pname = "shadow";
-  version = "1.0";
-  meta.description = description;
-}
-"""
-    package_set = """{ system, config ? { } }: {
-  shadow = import ./mk-shadow.nix { inherit system; description = "imported"; };
-}
-"""
+def test_package_meta_ignores_broken_optional_flake_package_roots(tmp_path, system):
     flake = """
 {
   outputs = { self }:
@@ -928,16 +990,10 @@ def test_package_meta_ignores_broken_optional_flake_package_roots(tmp_path):
   };
 }
 """.replace("__SYSTEM__", system)
-
-    package_set_path = tmp_path / "package-set.nix"
-    package_set_path.write_text(package_set, encoding="utf-8")
-    (tmp_path / "mk-shadow.nix").write_text(mk_shadow, encoding="utf-8")
-    flake_dir = tmp_path / "flake"
-    flake_dir.mkdir()
-    (flake_dir / "flake.nix").write_text(flake, encoding="utf-8")
-
+    package_set_path, shadow = _shadow_package_set(tmp_path, system)
+    flake_dir = _write_flake(tmp_path, flake)
     df = package_meta.try_scan_package_meta(
-        [{"name": "shadow-1.0", "pname": "shadow", "version": "1.0"}],
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
         flakeref=flake_dir.as_posix(),
         nixpkgs_path=package_set_path,
         impure=True,
@@ -949,12 +1005,97 @@ def test_package_meta_ignores_broken_optional_flake_package_roots(tmp_path):
     assert df[cols.VERSION].to_list() == ["1.0", "1.0"]
 
 
+def test_package_meta_retries_without_target_walk_when_scan_fails(
+    tmp_path, system, monkeypatch
+):
+    # A missing attribute is an error that builtins.tryEval does not catch.
+    flake = """
+{
+  outputs = { self }: {
+    packages.__SYSTEM__.doc = { }.missing;
+  };
+}
+""".replace("__SYSTEM__", system)
+    package_set_path, shadow = _shadow_package_set(tmp_path, system)
+    flake_dir = _write_flake(tmp_path, flake)
+    requests = []
+    eval_package_meta_request = package_meta._eval_package_meta_request
+
+    def record_request(request, **kwargs):
+        requests.append(request)
+        return eval_package_meta_request(request, **kwargs)
+
+    monkeypatch.setattr(package_meta, "_eval_package_meta_request", record_request)
+
+    df = Meta()._scan_package_source(
+        NixpkgsMetaSource(method="flakeref-lock", path=package_set_path.as_posix()),
+        [_lookup("shadow-1.0", "shadow", "1.0", [shadow])],
+        flakeref=f"{flake_dir.as_posix()}#doc",
+        impure=True,
+    )
+
+    assert df is not None
+    assert df["meta_description"].to_list() == ["imported", "imported"]
+    assert [
+        (bool(request["targetAttrPaths"]), request["searchInputs"])
+        for request in requests
+    ] == [(True, True), (False, False)]
+
+
+@pytest.mark.parametrize(
+    ("names", "expected_walk"),
+    [
+        (["hello-2.12", "glibc-2.40"], True),
+        # A NixOS system references its packages through string context.
+        (["ghaf-host-disko-images", "nixos-system-ghaf-host-25.11"], False),
+    ],
+)
+def test_target_walk_is_skipped_for_nixos_systems(monkeypatch, names, expected_walk):
+    captured = {}
+
+    def fake_scan_package_meta(_lookup_keys, **kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame()
+
+    monkeypatch.setattr(meta_module, "try_scan_package_meta", fake_scan_package_meta)
+    meta = Meta()
+    monkeypatch.setattr(
+        meta,
+        "_resolve_source",
+        lambda **_kwargs: NixpkgsMetaSource(
+            method="flakeref-lock",
+            path="/nix/store/nixpkgs",
+        ),
+    )
+    components = pd.DataFrame(
+        [
+            {
+                cols.NAME: name,
+                cols.PNAME: name,
+                cols.VERSION: "",
+                cols.STORE_PATH: f"/nix/store/{name}.drv",
+                cols.OUTPUTS: [f"/nix/store/{name}"],
+            }
+            for name in names
+        ]
+    )
+
+    meta.get_package_meta_with_source(
+        components=components,
+        buildtime=False,
+        flakeref="./flake#target",
+    )
+
+    assert captured["walk_target"] is expected_walk
+
+
 def test_expression_source_cache_requires_expression_identity():
-    lookup_keys = [{"name": "pkg-1.0", "pname": "pkg", "version": "1.0"}]
+    lookup_keys = [_lookup("pkg-1.0", "pkg", "1.0")]
     source = NixpkgsMetaSource(
         method="flakeref-target",
         path="/nix/store/source",
         flakeref="flake#nixosConfigurations.host.pkgs.path",
+        flakeref_cache_key="path:/nix/store/flake#nixosConfigurations.host",
         expression='builtins.getFlake "flake"',
     )
 
@@ -979,26 +1120,18 @@ def test_mutable_flakeref_cache_uses_locked_identity():
         source,
         flakeref_cache_key="path:/nix/store/source?narHash=sha256-test#default",
     )
-    lookup_keys = [{"name": "pkg-1.0", "pname": "pkg", "version": "1.0"}]
+    lookup_keys = [_lookup("pkg-1.0", "pkg", "1.0")]
 
-    assert (
-        Meta._package_cache_key(
-            source,
-            lookup_keys,
-            flakeref="./flake#default",
-        )
-        is None
-    )
+    assert Meta._package_cache_key(source, lookup_keys) is None
 
-    cache_key = Meta._package_cache_key(
-        stable_source,
-        lookup_keys,
-        flakeref="./flake#default",
-    )
+    cache_key = Meta._package_cache_key(stable_source, lookup_keys)
     assert cache_key is not None
-    assert "path:/nix/store/source?narHash=sha256-test" in cache_key
-    assert "#default" not in cache_key
-    assert "./flake#default" not in cache_key
+    # The target attr is part of the key: the scan walks the target.
+    assert "path:/nix/store/source?narHash=sha256-test#default" in cache_key
+    # So is whether the target is walked.
+    assert cache_key != Meta._package_cache_key(
+        stable_source, lookup_keys, walk_target=False
+    )
     assert (
         meta_module._package_scan_flakeref(
             stable_source,
@@ -1008,7 +1141,7 @@ def test_mutable_flakeref_cache_uses_locked_identity():
     )
 
 
-def test_package_metadata_cache_reuses_overlapping_lookup_sets(monkeypatch):
+def test_package_metadata_cache_reuses_identical_scans(monkeypatch):
     class NullLock:
         lock_file = "test-lock"
 
@@ -1021,35 +1154,27 @@ def test_package_metadata_cache_reuses_overlapping_lookup_sets(monkeypatch):
     class FakeDfCache:
         def __init__(self):
             self.values = {}
-            self.set_calls = []
 
         def get(self, key):
             return self.values.get(key)
 
-        def get_many(self, keys):
-            return {key: self.values.get(key) for key in keys}
-
         def set(self, key, value, ttl=None):
             del ttl
-            self.set_calls.append(key)
             self.values[key] = value.copy(deep=True)
 
-    lookup_a = {"name": "alpha-1.0", "pname": "alpha", "version": "1.0"}
-    lookup_b = {"name": "beta-1.0", "pname": "beta", "version": "1.0"}
-    lookup_c = {"name": "gamma-1.0", "pname": "gamma", "version": "1.0"}
+    lookup_a = _lookup("alpha-1.0", "alpha", "1.0")
+    lookup_b = _lookup("beta-1.0", "beta", "1.0")
     scan_calls = []
+    scan_results = []
 
-    def fake_scan_package_meta(lookup_keys, **_kwargs):
-        scan_calls.append([lookup_key["name"] for lookup_key in lookup_keys])
+    def fake_scan_package_meta(lookup_keys, **kwargs):
+        scan_calls.append(
+            ([lookup_key["name"] for lookup_key in lookup_keys], kwargs["flakeref"])
+        )
+        if scan_results:
+            return scan_results.pop()
         return pd.DataFrame(
-            [
-                {
-                    cols.NAME: lookup_key["name"],
-                    cols.PNAME: lookup_key["pname"],
-                    cols.VERSION: lookup_key["version"],
-                }
-                for lookup_key in lookup_keys
-            ]
+            [{cols.NAME: lookup_key["name"]} for lookup_key in lookup_keys]
         )
 
     monkeypatch.setattr(
@@ -1060,51 +1185,40 @@ def test_package_metadata_cache_reuses_overlapping_lookup_sets(monkeypatch):
     meta = Meta()
     meta.lock = NullLock()
     meta.cache = FakeDfCache()
-    source_alpha = NixpkgsMetaSource(
-        method="flakeref-lock",
-        path="/nix/store/nixpkgs",
-        flakeref_cache_key=(
-            "path:/nix/store/source?narHash=sha256-test#packages.x86_64-linux.alpha"
-        ),
-    )
-    source_beta = NixpkgsMetaSource(
-        method="flakeref-lock",
-        path="/nix/store/nixpkgs",
-        flakeref_cache_key=(
-            "path:/nix/store/source?narHash=sha256-test#packages.x86_64-linux.beta"
-        ),
-    )
+    alpha = "path:/nix/store/source?narHash=sha256-test#alpha"
+    beta = "path:/nix/store/source?narHash=sha256-test#beta"
 
-    meta._scan_package_source(
-        source_alpha,
-        [lookup_a, lookup_b],
-        flakeref="./flake#packages.x86_64-linux.alpha",
-    )
-    df_second = meta._scan_package_source(
-        source_beta,
-        [lookup_b, lookup_c],
-        flakeref="./flake#packages.x86_64-linux.beta",
-    )
-    df_third = meta._scan_package_source(
-        source_beta,
-        [lookup_b, lookup_c],
-        flakeref="./flake#packages.x86_64-linux.beta",
-    )
+    def scan(lookup_keys, flakeref):
+        source = NixpkgsMetaSource(
+            method="flakeref-lock",
+            path="/nix/store/nixpkgs",
+            flakeref_cache_key=flakeref,
+        )
+        return meta._scan_package_source(source, lookup_keys, flakeref=flakeref)
 
-    assert scan_calls == [["alpha-1.0", "beta-1.0"], ["gamma-1.0"]]
-    assert sorted(df_second[cols.NAME].unique()) == [
-        "alpha-1.0",
-        "beta-1.0",
-        "gamma-1.0",
+    df_first = scan([lookup_a, lookup_b], alpha)
+    df_again = scan([lookup_a, lookup_b], alpha)
+    assert df_again.equals(df_first)
+    assert scan_calls == [(["alpha-1.0", "beta-1.0"], alpha)]
+
+    # Another component set or another target is another scan.
+    scan([lookup_a], alpha)
+    scan([lookup_a, lookup_b], beta)
+    assert scan_calls[1:] == [
+        (["alpha-1.0"], alpha),
+        (["alpha-1.0", "beta-1.0"], beta),
     ]
-    assert sorted(df_third[cols.NAME].unique()) == [
-        "alpha-1.0",
-        "beta-1.0",
-        "gamma-1.0",
-    ]
-    assert len(meta.cache.set_calls) == 5
-    assert not any(":lookup:" in key for key in meta.cache.set_calls)
-    assert sum(":lookup-index" in key for key in meta.cache.set_calls) == 2
+
+    # Component identity is part of the lookup set.
+    scan([_lookup("alpha-1.0", "alpha", "1.0", [["/nix/store/other.drv"]])], alpha)
+    assert len(scan_calls) == 4
+
+    # A failed scan is retried, and the retry result is not cached.
+    scan_results.append(None)
+    assert scan([lookup_b], alpha) is not None
+    assert len(scan_calls) == 6
+    assert scan([lookup_b], alpha) is not None
+    assert len(scan_calls) == 7
 
 
 def test_registry_flakeref_cache_key_uses_locked_identity(monkeypatch):
@@ -1123,6 +1237,9 @@ def test_registry_flakeref_cache_key_uses_locked_identity(monkeypatch):
         NixpkgsMetaSourceResolver._stable_flakeref_cache_key("nixpkgs#firefox")
         == "path:/nix/store/registry-source?narHash=sha256-registry#firefox"
     )
+    # A ref that pins its content is kept as it is.
+    pinned = "github:owner/repo?narHash=sha256-test#firefox"
+    assert NixpkgsMetaSourceResolver._stable_flakeref_cache_key(pinned) == pinned
 
 
 def test_current_flake_shorthand_source_resolution_uses_dot(monkeypatch, tmp_path):

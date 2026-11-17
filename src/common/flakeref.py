@@ -257,6 +257,33 @@ def parse_nixos_configuration_ref(
     return match.group("flake"), name
 
 
+def split_nix_attr_path(attr_path: str) -> list[str] | None:
+    """
+    Split a dotted Nix attr path such as ``packages.x86_64-linux."my.pkg"``.
+
+    Quoted segments are decoded. Return None when the path cannot be parsed.
+    """
+    segments = []
+    rest = attr_path
+    while True:
+        if rest.startswith('"'):
+            parsed = _consume_nix_attr_segment(rest)
+            if not parsed:
+                return None
+            segment, tail = parsed
+        else:
+            segment, separator, tail = rest.partition(".")
+            tail = f"{separator}{tail}"
+            if not segment or '"' in segment:
+                return None
+        segments.append(segment)
+        if not tail:
+            return segments
+        if not tail.startswith(".") or len(tail) == 1:
+            return None
+        rest = tail[1:]
+
+
 def quote_nix_attr_segment(name: str) -> str:
     """Return a safely quoted Nix attr path segment."""
     escaped = []

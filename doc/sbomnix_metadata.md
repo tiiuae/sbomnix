@@ -24,21 +24,40 @@ store path does not identify which nixpkgs source produced it.
 
 ## Component matching
 
-Component names, pnames, and versions are used as lookup hints to find possible
-nixpkgs derivations. Those names are not trusted as the final match. The
-metadata helper returns derivation and output identities, and `sbomnix` accepts
-metadata only when the returned `drvPath` or `outPath` matches an SBOM component
-exactly.
+Metadata is accepted only by derivation identity: a nixpkgs derivation
+provides metadata for an SBOM component when its `drvPath` or one of its
+output paths equals the component's derivation or output path. Component
+names are never trusted as a match on their own.
 
-This keeps metadata enrichment tied to the actual components in the SBOM while
-still allowing targeted lookups in package sets.
+`sbomnix` finds the derivations in one Nix evaluation:
+
+1. It walks the derivation values reachable from the flake target through
+   derivation attributes such as `buildInputs`. This finds exactly the
+   derivations the target was built from, including overridden packages,
+   bootstrap packages, and packages from flake inputs.
+2. For components the walk does not reach, such as dependencies referenced
+   only through string context, or reaches only as a value without a description,
+   component names, pnames, and versions are used as hints for attribute
+   lookups in the selected package set. A candidate is used only when its
+   identity matches the component.
+3. The derivations found by name are walked as well, which finds their
+   dependencies that no attribute name leads to.
+
+The first step is skipped when the SBOM contains a NixOS system, as it does
+for NixOS toplevels and for images that reference one: a NixOS system
+references its packages only through string context, so the walk would
+evaluate the whole system a second time and find next to nothing. The target
+itself then gets metadata only when an attribute name leads to it.
+
+Runtime and buildtime SBOMs use the same lookup, so a derivation gets the same
+metadata in both.
 
 ## Flake input packages
 
 Some targets include packages that come from flake inputs rather than the
-primary nixpkgs package set. After scanning the selected package set, `sbomnix`
-may scan package roots exported by the target flake inputs for components that
-remain unmatched.
+primary nixpkgs package set. When a component is not found in the selected
+package set or in the package outputs of the target flake, `sbomnix` also
+looks it up in the package outputs of the target flake inputs.
 
 ## CPE sources
 
@@ -59,10 +78,15 @@ as the final component CPE.
 
 ## Caching and diagnostics
 
-Package metadata lookups are cached by metadata source identity, lookup set,
-lookup mode, and helper implementation fingerprint. With `-v`, `sbomnix` logs
-the selected metadata source, lookup counts, and whether package metadata came
-from a cache hit or a fresh scan.
+Package metadata lookups are cached by metadata source identity, target,
+component set, and helper implementation fingerprint, so repeating a scan does
+not evaluate nixpkgs again. With `-v`, `sbomnix` logs the selected metadata
+source, lookup counts, and whether package metadata came from a cache hit or a
+fresh scan.
+
+If the evaluation fails in the target flake or in one of its inputs, `sbomnix`
+retries the lookup without the target walk and without the package outputs of
+flake inputs. The result of such a retry is not cached.
 
 CycloneDX and SPDX outputs record the selected metadata source in document
 metadata, including fields such as `nixpkgs:metadata_source_method`,
