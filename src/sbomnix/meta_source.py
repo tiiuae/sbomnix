@@ -23,6 +23,11 @@ from sbomnix.flake_metadata import (
     normalize_local_flake_ref,
 )
 
+# Forge flakerefs that pin a full revision, such as github:owner/repo/<rev>.
+_FORGE_REV_REF_RE = re.compile(
+    r"^(?:github|gitlab|sourcehut):[^?#]+/[0-9a-f]{40}(?:[?#]|$)"
+)
+
 
 @dataclass(frozen=True)
 class NixpkgsMetaSource:
@@ -209,6 +214,14 @@ class NixpkgsMetaSourceResolver:
             return None
         if not source_path or not nar_hash or not is_nix_store_path(source_path):
             return None
+        # Prefer the locked ref Nix reports when it pins a revision.  A flake
+        # that reads self.rev then evaluates to the derivations Nix built,
+        # which a path ref to the same source would not.
+        locked_url = meta_json.get("lockedUrl") or meta_json.get("url") or ""
+        if locked.get("rev") and NixpkgsMetaSourceResolver._stable_flake_ref_for_cache(
+            locked_url
+        ):
+            return locked_url
         query = {"narHash": nar_hash}
         locked_dir = locked.get("dir")
         if locked_dir:
@@ -265,7 +278,7 @@ class NixpkgsMetaSourceResolver:
             return flake
         if flake.startswith("/nix/store/"):
             return flake
-        if re.search(r"(?:[?&])rev=", flake):
+        if re.search(r"(?:[?&])rev=", flake) or _FORGE_REV_REF_RE.match(flake):
             return flake
         return None
 
