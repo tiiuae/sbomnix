@@ -174,20 +174,28 @@ let
     )
   );
 
-  mkRoot = attrSet: {
-    base = attrSet;
-    nestedByName = builtins.listToAttrs (
-      builtins.map (name: {
-        inherit name;
-        value = safeAttr attrSet name;
-      }) packageSetNames
-    );
-  };
+  # A root is one or more package sets that are searched together: each attr
+  # holds the list of its values in the sets.
+  mkRoot =
+    attrSets:
+    let
+      merge = sets: builtins.zipAttrsWith (_: values: values) (builtins.filter isAttrs sets);
+    in
+    {
+      base = merge attrSets;
+      nestedByName = builtins.listToAttrs (
+        builtins.map (name: {
+          inherit name;
+          value = merge (builtins.map (attrSet: safeAttr attrSet name) attrSets);
+        }) packageSetNames
+      );
+    };
 
   flakeOutput =
     output: system: flakeValue:
     attrByPath [ output system ] flakeValue;
-  packageRoots = attrSets: builtins.map mkRoot (builtins.filter isAttrs attrSets);
+  packageRoots =
+    attrSets: builtins.map (attrSet: mkRoot [ attrSet ]) (builtins.filter isAttrs attrSets);
 
   flakeInputs = attrByPath [ "inputs" ] flake;
 
@@ -217,10 +225,12 @@ let
         if !searchInputs || !isAttrs flakeInputs then
           [ ]
         else
-          packageRoots (
-            builtins.map (flakeOutput "packages" system) inputs
-            ++ builtins.map (flakeOutput "legacyPackages" system) inputs
-          );
+          [
+            (mkRoot (
+              builtins.map (flakeOutput "packages" system) inputs
+              ++ builtins.map (flakeOutput "legacyPackages" system) inputs
+            ))
+          ];
     };
 
   rootsBySystem = builtins.listToAttrs (
@@ -237,9 +247,11 @@ let
   lookupAttr =
     attr: packageSet:
     let
-      candidate = safeAttr packageSet attr;
+      values = safeAttr packageSet attr;
     in
-    optionals (attr != "" && try false (isDerivation candidate)) [ candidate ];
+    optionals (attr != "" && values != null) (
+      builtins.filter (drv: try false (isDerivation drv)) values
+    );
 
   candidateDrvs =
     root: candidate:

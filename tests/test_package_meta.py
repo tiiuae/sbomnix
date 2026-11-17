@@ -625,21 +625,27 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(
       inherit system;
       description = "flake-input-root";
     };
-    packages.${system}."input-shadow" = (derivation {
-      name = "input-shadow-1.0";
-      inherit system;
-      builder = "/bin/sh";
-      outputs = [ "out" "dev" ];
-      args = [ "-c" "echo out > $out; echo dev > $dev" ];
-    }) // {
-      pname = "input-shadow";
-      version = "1.0";
-      meta.description = "flake-input";
-      meta.identifiers = {
-        cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*";
-        possibleCPEs = [
-          { cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*"; }
-        ];
+    packages.${system} = {
+      shadow = import ./mk-shadow.nix {
+        inherit system;
+        description = "flake-input-package";
+      };
+      "input-shadow" = (derivation {
+        name = "input-shadow-1.0";
+        inherit system;
+        builder = "/bin/sh";
+        outputs = [ "out" "dev" ];
+        args = [ "-c" "echo out > $out; echo dev > $dev" ];
+      }) // {
+        pname = "input-shadow";
+        version = "1.0";
+        meta.description = "flake-input";
+        meta.identifiers = {
+          cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*";
+          possibleCPEs = [
+            { cpe = "cpe:2.3:a:shadow_project:input-shadow:1.0:*:*:*:*:*:*:*"; }
+          ];
+        };
       };
     };
   };
@@ -713,6 +719,9 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(
         _nix_identity(
             f'(builtins.getFlake "{dep_dir.as_posix()}").legacyPackages.{system}.shadow'
         ),
+        _nix_identity(
+            f'(builtins.getFlake "{dep_dir.as_posix()}").packages.{system}.shadow'
+        ),
     ]
     df_all = package_meta.try_scan_package_meta(
         [_lookup("shadow-1.0", "shadow", "1.0", same_named)],
@@ -726,6 +735,7 @@ def test_package_meta_scans_flake_package_roots_and_preserves_output_metadata(
         "flake-root",
         "imported",
         "flake-input-root",
+        "flake-input-package",
     }
 
     # A same-named component with another identity gets no metadata.
