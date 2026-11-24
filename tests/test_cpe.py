@@ -173,6 +173,7 @@ def test_cpe_uses_canonical_product_identifiers(monkeypatch):
     # here rather than be mirrored into the expectation. Do not derive this
     # mapping from the table.
     identities = {
+        "air": "a:air-verse:air",
         "brave": "a:brave:browser",
         "brave-browser": "a:brave:browser",
         "cairo": "a:cairographics:cairo",
